@@ -21,50 +21,50 @@ enum Squares {
 extension Square {
     public static let count = 64
     public static let all = (0..<Square.count)
-
+    
     public var isOnBoard: Bool { UInt(bitPattern: self) < Square.count }
     public var file: Int { self % 8 }
     public var rank: Int { self / 8 }
-
+    
     public var fileIndicator: Character {
         Character(UnicodeScalar(Int(UnicodeScalar("a").value) + file)!)
     }
-
+    
     public var rankIndicator: Character {
         Character(UnicodeScalar(Int(UnicodeScalar("1").value) + rank)!)
     }
-
+    
     public var algebraicNotation: String {
         Int.algebraicNotationTable[self]
     }
-
+    
     internal static func fromAlgebraicNotation(_ name: String) -> Square? {
         var utf8 = name.utf8.makeIterator()
-
+        
         guard let fileByte = utf8.next(),
               let rankByte = utf8.next(),
               utf8.next() == nil else {
             print("fromAlgebraic: expected 2 characters, got '\(name)'")
             return nil
         }
-
+        
         let file = Int(fileByte) - Int(UInt8(ascii: "a"))
         let rank = Int(rankByte) - Int(UInt8(ascii: "1"))
-
+        
         guard UInt(bitPattern: file) < 8,
               UInt(bitPattern: rank) < 8 else {
             print("fromAlgebraic: '\(name)' out of bounds")
             return nil
         }
-
+        
         return rank * 8 + file
     }
-
+    
     private static let algebraicNotationTable: [String] = {
         Square.all.map { square in
             let file = Character(UnicodeScalar(Int(UnicodeScalar("a").value) + square % 8)!)
             let rank = Character(UnicodeScalar(Int(UnicodeScalar("1").value) + square / 8)!)
-
+            
             return String(file) + String(rank)
         }
     }()
