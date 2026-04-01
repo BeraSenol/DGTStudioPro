@@ -9,6 +9,7 @@ enum PieceColor: UInt8, CaseIterable, Codable, Sendable {
     case white = 0
     case black = 1
     
+    // MARK: - Computed Properties
     var opponent: PieceColor {
         self == .white ? .black : .white
     }
@@ -22,6 +23,18 @@ enum PieceType: UInt8, CaseIterable, Codable, Sendable {
     case queen  = 5
     case king   = 6
     
+    // MARK: - Static Constants
+    private static let fenBytes: [UInt8] = [
+        0,                 // 0: Unused padding, raw values 1-6 map directly.
+        UInt8(ascii: "P"), // 1: Pawn
+        UInt8(ascii: "N"), // 2: Knight
+        UInt8(ascii: "B"), // 3: Bishop
+        UInt8(ascii: "R"), // 4: Rook
+        UInt8(ascii: "Q"), // 5: Queen
+        UInt8(ascii: "K"), // 6: King
+    ]
+    
+    // MARK: - Computed Properties
     var materialValue: Int {
         switch self {
         case .pawn:   return 1
@@ -44,30 +57,24 @@ enum PieceType: UInt8, CaseIterable, Codable, Sendable {
         }
     }
     
-    // Index 0 is unused padding so raw values 1-6 map directly.
-    private static let fenBytes: [UInt8] = [
-        0,                  // 0: Unused (Empty Square)
-        UInt8(ascii: "P"),  // 1: Pawn
-        UInt8(ascii: "N"),  // 2: Knight
-        UInt8(ascii: "B"),  // 3: Bishop
-        UInt8(ascii: "R"),  // 4: Rook
-        UInt8(ascii: "Q"),  // 5: Queen
-        UInt8(ascii: "K"),  // 6: King
-    ]
-    
-    // The uppercase FEN byte for this piece type (e.g. 80 for "P").
     var fenByte: UInt8 {
+        // Uppercase FEN byte for this piece type (e.g. 80 for 'P').
         Self.fenBytes[Int(rawValue)]
     }
     
-    // Adding 32 (0x20) converts uppercase ASCII to lowercase.
+    // MARK: - Instance Methods
     func fenCharacter(for color: PieceColor) -> Character {
+        // Adding 32 (0x20) converts uppercase ASCII to lowercase.
         let byte = fenByte &+ (color.rawValue &* 32)
         return Character(UnicodeScalar(byte))
     }
 }
 
 struct Piece: Codable, Equatable, Hashable, Sendable {
+    
+    // MARK: - Static Constants
+    static let empty = Piece(rawValue: 0)
+    
     static let whitePawn   = Piece(.white, .pawn)
     static let whiteKnight = Piece(.white, .knight)
     static let whiteBishop = Piece(.white, .bishop)
@@ -82,19 +89,11 @@ struct Piece: Codable, Equatable, Hashable, Sendable {
     static let blackQueen  = Piece(.black, .queen)
     static let blackKing   = Piece(.black, .king)
     
+    // MARK: - Stored Properties
     let rawValue: UInt8
     
-    static let empty = Piece(rawValue: 0)
-    
+    // MARK: - Computed Properties
     var isOccupied: Bool { rawValue != 0 }
-    
-    init(_ color: PieceColor, _ type: PieceType) {
-        self.rawValue = (color.rawValue << 3) | type.rawValue
-    }
-    
-    init(rawValue: UInt8) {
-        self.rawValue = rawValue
-    }
     
     var color: PieceColor? {
         guard isOccupied else { return nil }
@@ -106,13 +105,22 @@ struct Piece: Codable, Equatable, Hashable, Sendable {
         return PieceType(rawValue: rawValue & 0b111)
     }
     
-    
-    func isColor(_ color: PieceColor) -> Bool {
-        self.color == color
-    }
-    
     var fenCharacter: Character {
         guard let type, let color else { return "." }
         return type.fenCharacter(for: color)
+    }
+    
+    // MARK: - Initializers
+    init(_ color: PieceColor, _ type: PieceType) {
+        self.rawValue = (color.rawValue << 3) | type.rawValue
+    }
+    
+    init(rawValue: UInt8) {
+        self.rawValue = rawValue
+    }
+    
+    // MARK: - Instance Methods
+    func isColor(_ color: PieceColor) -> Bool {
+        self.color == color
     }
 }

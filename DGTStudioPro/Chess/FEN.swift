@@ -6,6 +6,20 @@
 //
 
 struct FEN: Equatable, Sendable {
+    
+    // MARK: - Static Constants
+    static let starting = FEN(
+        position: .starting,
+        activeColor: .white,
+        castlingRights: .all,
+        enPassantTarget: nil,
+        halfmoveClock: 0,
+        fullmoveNumber: 1
+    )
+    
+    static let startingString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    
+    // MARK: - Stored Properties
     let position: Position
     let activeColor: PieceColor
     let castlingRights: CastlingRights
@@ -13,22 +27,7 @@ struct FEN: Equatable, Sendable {
     let halfmoveClock: Int
     let fullmoveNumber: Int
     
-    init(
-        position: Position,
-        activeColor: PieceColor,
-        castlingRights: CastlingRights,
-        enPassantTarget: Square?,
-        halfmoveClock: Int,
-        fullmoveNumber: Int
-    ) {
-        self.position = position
-        self.activeColor = activeColor
-        self.castlingRights = castlingRights
-        self.enPassantTarget = enPassantTarget
-        self.halfmoveClock = halfmoveClock
-        self.fullmoveNumber = fullmoveNumber
-    }
-    
+    // MARK: - Computed Properties
     var string: String {
         let placement: String = piecePlacement
         let color: Character = activeColor == .white ? "w" : "b"
@@ -44,17 +43,6 @@ struct FEN: Equatable, Sendable {
         let ep: String = enPassantTarget?.algebraicNotation ?? "-"
         return "\(placement) \(color) \(castling) \(ep)"
     }
-    
-    static let starting = FEN(
-        position: .starting,
-        activeColor: .white,
-        castlingRights: .all,
-        enPassantTarget: nil,
-        halfmoveClock: 0,
-        fullmoveNumber: 1
-    )
-    
-    static let startingString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
     
     private var piecePlacement: String {
         var result = ""
@@ -84,6 +72,23 @@ struct FEN: Equatable, Sendable {
         }
         
         return result
+    }
+    
+    // MARK: - Initializers
+    init(
+        position: Position,
+        activeColor: PieceColor,
+        castlingRights: CastlingRights,
+        enPassantTarget: Square?,
+        halfmoveClock: Int,
+        fullmoveNumber: Int
+    ) {
+        self.position = position
+        self.activeColor = activeColor
+        self.castlingRights = castlingRights
+        self.enPassantTarget = enPassantTarget
+        self.halfmoveClock = halfmoveClock
+        self.fullmoveNumber = fullmoveNumber
     }
 }
 

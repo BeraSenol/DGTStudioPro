@@ -19,9 +19,20 @@ enum Squares {
 }
 
 extension Square {
+    
+    // MARK: - Static Constants
     public static let count = 64
     public static let all = (0..<Square.count)
     
+    private static let algebraicNotationTable: [String] = {
+        Square.all.map { square in
+            let file = Character(UnicodeScalar(Int(UnicodeScalar("a").value) + square % 8)!)
+            let rank = Character(UnicodeScalar(Int(UnicodeScalar("1").value) + square / 8)!)
+            return String(file) + String(rank)
+        }
+    }()
+    
+    // MARK: - Computed Properties
     public var isOnBoard: Bool { UInt(bitPattern: self) < Square.count }
     public var file: Int { self % 8 }
     public var rank: Int { self / 8 }
@@ -38,6 +49,7 @@ extension Square {
         Int.algebraicNotationTable[self]
     }
     
+    // MARK: - Static Methods
     internal static func fromAlgebraicNotation(_ name: String) -> Square? {
         var utf8 = name.utf8.makeIterator()
         
@@ -59,13 +71,4 @@ extension Square {
         
         return rank * 8 + file
     }
-    
-    private static let algebraicNotationTable: [String] = {
-        Square.all.map { square in
-            let file = Character(UnicodeScalar(Int(UnicodeScalar("a").value) + square % 8)!)
-            let rank = Character(UnicodeScalar(Int(UnicodeScalar("1").value) + square / 8)!)
-            
-            return String(file) + String(rank)
-        }
-    }()
 }

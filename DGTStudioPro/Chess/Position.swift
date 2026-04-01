@@ -6,27 +6,8 @@
 //
 
 struct Position: Codable, Equatable, Sendable {
-    private var squares: [Piece]
     
-    init() {
-        squares = [Piece](repeating: .empty, count: Square.count)
-    }
-    
-    func kingSquare(for color: PieceColor) -> Square? {
-        let king = Piece(color, .king)
-        
-        for square in Square.all {
-            if squares[square] == king { return square }
-        }
-        
-        return nil
-    }
-    
-    subscript(square: Square) -> Piece {
-        get { squares[square] }
-        set { squares[square] = newValue }
-    }
-    
+    // MARK: - Static Constants
     static let starting: Position = {
         var position = Position()
         let backRank: [PieceType] = [.rook, .knight, .bishop, .queen, .king, .bishop, .knight, .rook]
@@ -40,4 +21,29 @@ struct Position: Codable, Equatable, Sendable {
         
         return position
     }()
+    
+    // MARK: - Stored Properties
+    private var squares: [Piece]
+    
+    // MARK: - Initializers
+    init() {
+        squares = [Piece](repeating: .empty, count: Square.count)
+    }
+    
+    // MARK: - Subscripts
+    subscript(square: Square) -> Piece {
+        get { squares[square] }
+        set { squares[square] = newValue }
+    }
+    
+    // MARK: - Instance Methods
+    func kingSquare(for color: PieceColor) -> Square? {
+        let king = Piece(color, .king)
+        
+        for square in Square.all {
+            if squares[square] == king { return square }
+        }
+        
+        return nil
+    }
 }
