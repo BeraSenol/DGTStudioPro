@@ -5,10 +5,10 @@
 //  Created by Supreme Leader on 30/03/2026.
 //
 
-struct Position: Codable, Equatable, Sendable {
-    
+internal struct Position: Codable, Equatable, Sendable {
+
     // MARK: - Static Constants
-    static let starting: Position = {
+    internal static let starting: Position = {
         var position = Position()
         let backRank: [PieceType] = [.rook, .knight, .bishop, .queen, .king, .bishop, .knight, .rook]
         
@@ -26,18 +26,18 @@ struct Position: Codable, Equatable, Sendable {
     private var squares: [Piece]
     
     // MARK: - Initializers
-    init() {
+    internal init() {
         squares = [Piece](repeating: .empty, count: Square.count)
     }
     
     // MARK: - Subscripts
-    subscript(square: Square) -> Piece {
+    internal subscript(square: Square) -> Piece {
         get { squares[square] }
         set { squares[square] = newValue }
     }
     
     // MARK: - Instance Methods
-    func kingSquare(for color: PieceColor) -> Square? {
+    internal func kingSquare(for color: PieceColor) -> Square? {
         let king = Piece(color, .king)
         
         for square in Square.all {

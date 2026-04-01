@@ -9,7 +9,7 @@ import SwiftUI
 import SwiftData
 
 @main
-struct DGTStudioProApp: App {
+private struct DGTStudioProApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

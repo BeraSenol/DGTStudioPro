@@ -5,10 +5,10 @@
 //  Created by Supreme Leader on 30/03/2026.
 //
 
-struct FEN: Equatable, Sendable {
+internal struct FEN: Equatable, Sendable {
     
     // MARK: - Static Constants
-    static let starting = FEN(
+    internal static let starting = FEN(
         position: .starting,
         activeColor: .white,
         castlingRights: .all,
@@ -17,18 +17,18 @@ struct FEN: Equatable, Sendable {
         fullmoveNumber: 1
     )
     
-    static let startingString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    internal static let startingString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
     
     // MARK: - Stored Properties
-    let position: Position
-    let activeColor: PieceColor
-    let castlingRights: CastlingRights
-    let enPassantTarget: Square?
-    let halfmoveClock: Int
-    let fullmoveNumber: Int
+    internal let position: Position
+    internal let activeColor: PieceColor
+    internal let castlingRights: CastlingRights
+    internal let enPassantTarget: Square?
+    internal let halfmoveClock: Int
+    internal let fullmoveNumber: Int
     
     // MARK: - Computed Properties
-    var string: String {
+    internal var string: String {
         let placement: String = piecePlacement
         let color: Character = activeColor == .white ? "w" : "b"
         let castling: String = castlingRights.fen
@@ -36,7 +36,7 @@ struct FEN: Equatable, Sendable {
         return "\(placement) \(color) \(castling) \(enPassant) \(halfmoveClock) \(fullmoveNumber)"
     }
     
-    var positionKey: String {
+    internal var positionKey: String {
         let placement: String = piecePlacement
         let color: Character = activeColor == .white ? "w" : "b"
         let castling: String = castlingRights.fen
@@ -75,7 +75,7 @@ struct FEN: Equatable, Sendable {
     }
     
     // MARK: - Initializers
-    init(
+    internal init(
         position: Position,
         activeColor: PieceColor,
         castlingRights: CastlingRights,
