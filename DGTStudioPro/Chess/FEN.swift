@@ -91,9 +91,3 @@ internal struct FEN: Equatable, Sendable {
         self.fullmoveNumber = fullmoveNumber
     }
 }
-
-private extension Square {
-    var asciiDigit: Character {
-        Character(UnicodeScalar(UInt8(ascii: "0") &+ UInt8(self)))
-    }
-}

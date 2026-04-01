@@ -39,7 +39,7 @@ internal enum BoardStyle: String, CaseIterable, Codable, Sendable {
 }
 
 // MARK: - Theme
-struct Theme: Sendable {
+internal struct Theme: Sendable {
     // MARK: - Stored Properties
     internal let style: BoardStyle
     
