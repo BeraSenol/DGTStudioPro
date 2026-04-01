@@ -73,6 +73,16 @@ internal enum PieceType: UInt8, CaseIterable, Codable, Sendable {
 internal struct Piece: Codable, Equatable, Hashable, Sendable {
     
     // MARK: - Static Constants
+    private static let typeNames: [String] = [
+        "",       // 0: Unused padding, raw values 1-6 map directly.
+        "Pawn",   // 1
+        "Knight", // 2
+        "Bishop", // 3
+        "Rook",   // 4
+        "Queen",  // 5
+        "King",   // 6
+    ]
+    
     internal static let empty = Piece(rawValue: 0)
     
     internal static let whitePawn   = Piece(.white, .pawn)
@@ -108,6 +118,12 @@ internal struct Piece: Codable, Equatable, Hashable, Sendable {
     internal var fenCharacter: Character {
         guard let type, let color else { return "." }
         return type.fenCharacter(for: color)
+    }
+    
+    internal var imageName: String? {
+        guard let color, let type else { return nil }
+        let prefix = color == .white ? "White" : "Black"
+        return prefix + Self.typeNames[Int(type.rawValue)]
     }
     
     // MARK: - Initializers
