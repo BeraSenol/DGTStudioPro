@@ -12,6 +12,7 @@ internal struct SquareView: View, Equatable {
     
     // MARK: - Stored Properties
     internal let piece: Piece
+    internal let pieceID: PieceID
     internal let isLight: Bool
     internal let highlight: SquareHighlight
     internal let squareSize: CGFloat
