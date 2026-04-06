@@ -6,6 +6,9 @@
 //
 
 internal struct Position: Codable, Equatable, Sendable {
+    
+    // MARK: - Static Properties
+    internal static let empty: Position = .init()
 
     // MARK: - Static Constants
     internal static let starting: Position = {
