@@ -12,8 +12,8 @@ internal struct SquareView: View, Equatable {
     
     // MARK: - Stored Properties
     internal let piece: Piece
-    internal let pieceID: PieceID
-    internal let isLight: Bool
+    internal let pieceID: PieceID?
+    internal let isLightSquare: Bool
     internal let highlight: SquareHighlight
     internal let squareSize: CGFloat
     internal let style: BoardStyle
@@ -21,22 +21,22 @@ internal struct SquareView: View, Equatable {
     // MARK: - Static Methods
     internal static func == (lhs: SquareView, rhs: SquareView) -> Bool {
         lhs.piece == rhs.piece &&
-        lhs.isLight == rhs.isLight &&
+        lhs.isLightSquare == rhs.isLightSquare &&
         lhs.highlight == rhs.highlight &&
         lhs.squareSize == rhs.squareSize &&
         lhs.style == rhs.style
     }
     
     // MARK: - Computed Properties
-    private var squareColor: Color {
-        isLight ? style.light : style.dark
+    private var fillColor: Color {
+        isLightSquare ? style.light : style.dark
     }
     
     // MARK: - Body
     internal var body: some View {
         ZStack {
             Rectangle()
-                .fill(squareColor)
+                .fill(fillColor)
             
             if highlight.contains(.lastMove) {
                 Rectangle()

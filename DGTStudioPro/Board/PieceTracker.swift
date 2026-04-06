@@ -12,20 +12,20 @@ internal struct PieceID: Equatable, Hashable, Sendable {
 
 // MARK: - Piece Tracker
 internal struct PieceTracker: Equatable, Sendable {
-
+    
     // MARK: - Static Constants
     internal static let empty = PieceTracker()
-
+    
     // MARK: - Stored Properties
-    internal var identities: [PieceID?]
-
+    private var pieceIdentities: [PieceID?]
+    
     // MARK: - Initializers
     internal init() {
-        identities = [PieceID?](repeating: nil, count: Square.count)
+        pieceIdentities = [PieceID?](repeating: nil, count: Square.count)
     }
-
+    
     // MARK: - Subscripts
     internal subscript (square: Square) -> PieceID? {
-        identities[square]
+        pieceIdentities[square]
     }
 }

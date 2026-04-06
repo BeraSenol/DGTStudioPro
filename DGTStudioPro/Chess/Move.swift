@@ -20,7 +20,6 @@ internal struct Move: Equatable, Hashable, Sendable {
     // Bits 25-31: unused
     
     // MARK: - Static Constants
-    private static let fromShift:          Int = 0
     private static let toShift:            Int = 6
     private static let pieceTypeShift:     Int = 12
     private static let pieceColorShift:    Int = 15
@@ -36,7 +35,7 @@ internal struct Move: Equatable, Hashable, Sendable {
     
     // MARK: - Computed Properties
     internal var from: Square {
-        Int(rawValue >> Self.fromShift) & 0x3F
+        Int(rawValue) & 0x3F
     }
     
     internal var to: Square {

@@ -44,7 +44,7 @@ internal struct FEN: Equatable, Sendable {
         return "\(placement) \(color) \(castling) \(ep)"
     }
     
-    private var piecePlacement: String {
+    internal var piecePlacement: String {
         var result = ""
         result.reserveCapacity(72)
         
@@ -52,7 +52,7 @@ internal struct FEN: Equatable, Sendable {
             if rank < 7 { result.append("/") }
             var emptyRun = 0
             
-            for file in 0..<8 {
+            for file in Square.sides {
                 let piece = position[rank &* 8 &+ file]
                 
                 if piece.isOccupied {

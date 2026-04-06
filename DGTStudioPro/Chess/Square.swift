@@ -22,6 +22,7 @@ extension Square {
     
     // MARK: - Static Constants
     internal static let count = 64
+    internal static let sides = (0..<Square.count / 8)
     internal static let all = (0..<Square.count)
     
     private static let algebraicNotationTable: [String] = {
@@ -32,17 +33,29 @@ extension Square {
         }
     }()
     
+    private static let fileIndicatorTable: [Character] = {
+        Square.sides.map {
+            Character(UnicodeScalar(Int(UnicodeScalar("a").value) + $0)!)
+        }
+    }()
+    
+    private static let rankIndicatorTable: [Character] = {
+        Square.sides.map {
+            Character(UnicodeScalar(Int(UnicodeScalar("1").value) + $0)!)
+        }
+    }()
+    
     // MARK: - Computed Properties
     internal var isOnBoard: Bool { UInt(bitPattern: self) < Square.count }
     internal var file: Int { self % 8 }
     internal var rank: Int { self / 8 }
     
     internal var fileIndicator: Character {
-        Character(UnicodeScalar(Int(UnicodeScalar("a").value) + file)!)
+        Int.fileIndicatorTable[file]
     }
     
     internal var rankIndicator: Character {
-        Character(UnicodeScalar(Int(UnicodeScalar("1").value) + rank)!)
+        Int.rankIndicatorTable[rank]
     }
     
     internal var asciiDigit: Character {

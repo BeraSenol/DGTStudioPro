@@ -9,13 +9,13 @@ internal struct Position: Codable, Equatable, Sendable {
     
     // MARK: - Static Properties
     internal static let empty: Position = .init()
-
+    
     // MARK: - Static Constants
     internal static let starting: Position = {
         var position = Position()
         let backRank: [PieceType] = [.rook, .knight, .bishop, .queen, .king, .bishop, .knight, .rook]
         
-        for file in 0..<8 {
+        for file in Square.sides {
             position[Squares.a1 + file] = Piece(.white, backRank[file])
             position[Squares.a2 + file] = .whitePawn
             position[Squares.a7 + file] = .blackPawn
@@ -29,7 +29,7 @@ internal struct Position: Codable, Equatable, Sendable {
     private var squares: [Piece]
     
     // MARK: - Initializers
-    internal init() {
+    private init() {
         squares = [Piece](repeating: .empty, count: Square.count)
     }
     
