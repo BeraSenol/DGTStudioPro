@@ -9,8 +9,10 @@ import SwiftUI
 import SwiftData
 
 internal struct ContentView: View {
+    // MARK: - Stored Properties
     @Environment(\.modelContext) private var modelContext
 
+    // MARK: - Body
     var body: some View {
         NavigationSplitView {
             List {
@@ -23,8 +25,7 @@ internal struct ContentView: View {
                 pieceTracker: PieceTracker.empty,
                 style: .walnut,
                 perspective: .white,
-                lastMoveFrom: nil,
-                lastMoveTo: nil,
+                lastMove: nil,
                 checkSquare: nil,
                 selectedSquare: nil
             )
