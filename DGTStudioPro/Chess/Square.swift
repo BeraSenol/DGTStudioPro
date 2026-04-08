@@ -25,6 +25,14 @@ extension Square {
     internal static let sides = (0..<Square.count / 8)
     internal static let all = (0..<Square.count)
     
+    internal static func fileCharacter(_ file: Int) -> Character {
+        fileIndicatorTable[file]
+    }
+    
+    internal static func rankCharacter(_ rank: Int) -> Character {
+        rankIndicatorTable[rank]
+    }
+    
     private static let algebraicNotationTable: [String] = {
         Square.all.map { square in
             let file = Character(UnicodeScalar(Int(UnicodeScalar("a").value) + square % 8)!)

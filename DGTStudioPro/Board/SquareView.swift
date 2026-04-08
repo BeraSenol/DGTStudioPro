@@ -40,17 +40,17 @@ internal struct SquareView: View, Equatable {
             
             if highlight.contains(.lastMove) {
                 Rectangle()
-                    .fill(Color.black.opacity(0.12))
+                    .fill(.indigo.opacity(0.12))
             }
             
             if highlight.contains(.check) {
                 Rectangle()
-                    .fill(Color.leatherLight.opacity(0.45))
+                    .fill(.indigo.opacity(0.45))
             }
             
             if highlight.contains(.selected) {
                 Rectangle()
-                    .fill(Color.white.opacity(0.25))
+                    .fill(.indigo.opacity(0.25))
             }
             
             if let imageName = piece.imageName {
