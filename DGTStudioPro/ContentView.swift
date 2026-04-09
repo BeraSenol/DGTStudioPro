@@ -19,17 +19,9 @@ internal struct ContentView: View {
                 
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+            // ContentView.swift — detail becomes:
         } detail: {
-            BoardView(
-                position: Position.empty,
-                pieceTracker: PieceTracker.empty,
-                style: .walnut,
-                perspective: .white,
-                lastMove: nil,
-                checkSquare: nil,
-                selectedSquare: nil
-            )
-            .padding()
+            BoardDestination()
         }
     }
 }
