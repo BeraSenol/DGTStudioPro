@@ -7,14 +7,14 @@
 
 import SwiftUI
 
-// MARK: - Board Style
+// MARK: Board Style
 internal enum BoardStyle: String, CaseIterable, Codable, Sendable {
     case leather
     case rosewood
     case walnut
     case wenge
     
-    // MARK: - Computed Properties
+    // MARK: Computed Properties
     internal var displayName: String {
         self.rawValue.capitalized
     }
@@ -38,12 +38,12 @@ internal enum BoardStyle: String, CaseIterable, Codable, Sendable {
     }
 }
 
-// MARK: - Theme
+// MARK: Theme
 internal struct Theme: Sendable {
-    // MARK: - Stored Properties
+    // MARK: Stored Properties
     internal let style: BoardStyle
     
-    // MARK: - Computed Properties
+    // MARK: Computed Properties
     internal var light: Color { style.light }
     internal var dark:  Color { style.dark }
 }

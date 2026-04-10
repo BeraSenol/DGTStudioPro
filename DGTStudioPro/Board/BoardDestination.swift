@@ -9,14 +9,14 @@ import SwiftUI
 
 // BoardDestination.swift
 internal struct BoardDestination: View {
-
-    // MARK: - Private Properties
+    
+    // MARK: Private Properties
     @State private var isInspectorPresented: Bool = true
-
-    // MARK: - Body
+    
+    // MARK: Body
     internal var body: some View {
         BoardView(
-            position: .starting,
+            position: .empty,
             pieceTracker: .empty,
             style: .walnut,
             perspective: .white,

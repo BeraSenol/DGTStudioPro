@@ -7,10 +7,10 @@
 
 import SwiftUI
 
-// MARK: - Square View
+// MARK: Square View
 internal struct SquareView: View, Equatable {
     
-    // MARK: - Stored Properties
+    // MARK: Stored Properties
     internal let piece: Piece
     internal let pieceID: PieceID?
     internal let isLightSquare: Bool
@@ -18,7 +18,7 @@ internal struct SquareView: View, Equatable {
     internal let squareSize: CGFloat
     internal let style: BoardStyle
     
-    // MARK: - Static Methods
+    // MARK: Static Methods
     internal static func == (lhs: SquareView, rhs: SquareView) -> Bool {
         lhs.piece == rhs.piece &&
         lhs.isLightSquare == rhs.isLightSquare &&
@@ -27,12 +27,12 @@ internal struct SquareView: View, Equatable {
         lhs.style == rhs.style
     }
     
-    // MARK: - Computed Properties
+    // MARK: Computed Properties
     private var fillColor: Color {
         isLightSquare ? style.light : style.dark
     }
     
-    // MARK: - Body
+    // MARK: Body
     internal var body: some View {
         ZStack {
             Rectangle()

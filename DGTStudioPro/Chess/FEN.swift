@@ -7,7 +7,7 @@
 
 internal struct FEN: Equatable, Sendable {
     
-    // MARK: - Static Constants
+    // MARK: Static Constants
     internal static let starting = FEN(
         position: .starting,
         activeColor: .white,
@@ -19,7 +19,7 @@ internal struct FEN: Equatable, Sendable {
     
     internal static let startingString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
     
-    // MARK: - Stored Properties
+    // MARK: Stored Properties
     internal let position: Position
     internal let activeColor: PieceColor
     internal let castlingRights: CastlingRights
@@ -27,7 +27,7 @@ internal struct FEN: Equatable, Sendable {
     internal let halfmoveClock: Int
     internal let fullmoveNumber: Int
     
-    // MARK: - Computed Properties
+    // MARK: Computed Properties
     internal var string: String {
         let placement: String = piecePlacement
         let color: Character = activeColor == .white ? "w" : "b"
@@ -74,7 +74,7 @@ internal struct FEN: Equatable, Sendable {
         return result
     }
     
-    // MARK: - Initializers
+    // MARK: Initializers
     internal init(
         position: Position,
         activeColor: PieceColor,

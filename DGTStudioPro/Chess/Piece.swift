@@ -9,7 +9,7 @@ internal enum PieceColor: UInt8, CaseIterable, Codable, Sendable {
     case white = 0
     case black = 1
     
-    // MARK: - Computed Properties
+    // MARK: Computed Properties
     internal var opponent: PieceColor {
         self == .white ? .black : .white
     }
@@ -23,7 +23,7 @@ internal enum PieceType: UInt8, CaseIterable, Codable, Sendable {
     case queen  = 5
     case king   = 6
     
-    // MARK: - Static Constants
+    // MARK: Static Constants
     private static let fenBytes: [UInt8] = [
         0,                 // 0: Unused padding, raw values 1-6 map directly.
         UInt8(ascii: "P"), // 1: Pawn
@@ -34,7 +34,7 @@ internal enum PieceType: UInt8, CaseIterable, Codable, Sendable {
         UInt8(ascii: "K"), // 6: King
     ]
     
-    // MARK: - Computed Properties
+    // MARK: Computed Properties
     internal var materialValue: Int {
         switch self {
         case .pawn:   return 1
@@ -62,7 +62,7 @@ internal enum PieceType: UInt8, CaseIterable, Codable, Sendable {
         Self.fenBytes[Int(rawValue)]
     }
     
-    // MARK: - Instance Methods
+    // MARK: Instance Methods
     internal func fenCharacter(for color: PieceColor) -> Character {
         // Adding 32 (0x20) converts uppercase ASCII to lowercase.
         let byte = fenByte &+ (color.rawValue &* 32)
@@ -72,7 +72,7 @@ internal enum PieceType: UInt8, CaseIterable, Codable, Sendable {
 
 internal struct Piece: Codable, Equatable, Hashable, Sendable {
     
-    // MARK: - Static Constants
+    // MARK: Static Constants
     private static let typeNames: [String] = [
         "",       // 0: Unused padding, raw values 1-6 map directly.
         "Pawn",   // 1
@@ -99,10 +99,10 @@ internal struct Piece: Codable, Equatable, Hashable, Sendable {
     internal static let blackQueen  = Piece(.black, .queen)
     internal static let blackKing   = Piece(.black, .king)
     
-    // MARK: - Stored Properties
+    // MARK: Stored Properties
     internal let rawValue: UInt8
     
-    // MARK: - Computed Properties
+    // MARK: Computed Properties
     internal var isOccupied: Bool { rawValue != 0 }
     
     internal var color: PieceColor? {
@@ -126,7 +126,7 @@ internal struct Piece: Codable, Equatable, Hashable, Sendable {
         return prefix + Self.typeNames[Int(type.rawValue)]
     }
     
-    // MARK: - Initializers
+    // MARK: Initializers
     internal init(_ color: PieceColor, _ type: PieceType) {
         self.rawValue = (color.rawValue << 3) | type.rawValue
     }
@@ -135,7 +135,7 @@ internal struct Piece: Codable, Equatable, Hashable, Sendable {
         self.rawValue = rawValue
     }
     
-    // MARK: - Instance Methods
+    // MARK: Instance Methods
     internal func isColor(_ color: PieceColor) -> Bool {
         self.color == color
     }

@@ -7,10 +7,10 @@
 
 import SwiftUI
 
-// MARK: - Board Inspector View
+// MARK: Board Inspector View
 internal struct BoardInspectorView: View {
 
-    // MARK: - Body
+    // MARK: Body
     internal var body: some View {
         List {
             metadataSection
@@ -20,22 +20,16 @@ internal struct BoardInspectorView: View {
         .listStyle(.sidebar)
     }
 
-    // MARK: - Instance Methods
+    // MARK: Instance Methods
     private var metadataSection: some View {
         Section {
             LabeledContent("White", value: "—")
             LabeledContent("Black", value: "—")
-            LabeledContent("Event", value: "—")
-            LabeledContent("Date", value: "—")
-            LabeledContent("Result", value: "*")
+            LabeledContent("Round", value: "—")
+            LabeledContent("Result", value: "—")
         } header: {
             Text("Game")
-        } footer: {
-            Text("Connect a DGT board to begin.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
-
     }
 }
 

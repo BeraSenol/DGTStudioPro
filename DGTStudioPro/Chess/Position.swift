@@ -7,10 +7,10 @@
 
 internal struct Position: Codable, Equatable, Sendable {
     
-    // MARK: - Static Properties
+    // MARK: Static Properties
     internal static let empty: Position = .init()
     
-    // MARK: - Static Constants
+    // MARK: Static Constants
     internal static let starting: Position = {
         var position = Position()
         let backRank: [PieceType] = [.rook, .knight, .bishop, .queen, .king, .bishop, .knight, .rook]
@@ -25,21 +25,21 @@ internal struct Position: Codable, Equatable, Sendable {
         return position
     }()
     
-    // MARK: - Stored Properties
+    // MARK: Stored Properties
     private var squares: [Piece]
     
-    // MARK: - Initializers
+    // MARK: Initializers
     private init() {
         squares = [Piece](repeating: .empty, count: Square.count)
     }
     
-    // MARK: - Subscripts
+    // MARK: Subscripts
     internal subscript(square: Square) -> Piece {
         get { squares[square] }
         set { squares[square] = newValue }
     }
     
-    // MARK: - Instance Methods
+    // MARK: Instance Methods
     internal func kingSquare(for color: PieceColor) -> Square? {
         let king = Piece(color, .king)
         

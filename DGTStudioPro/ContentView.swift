@@ -9,17 +9,16 @@ import SwiftUI
 import SwiftData
 
 internal struct ContentView: View {
-    // MARK: - Stored Properties
+    // MARK: Stored Properties
     @Environment(\.modelContext) private var modelContext
     
-    // MARK: - Body
+    // MARK: Body
     internal var body: some View {
         NavigationSplitView {
             List {
                 
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-            // ContentView.swift — detail becomes:
         } detail: {
             BoardDestination()
         }

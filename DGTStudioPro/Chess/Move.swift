@@ -5,7 +5,7 @@
 //  Created by Supreme Leader on 03/04/2026.
 //
 
-// MARK: - Move
+// MARK: Move
 
 internal struct Move: Equatable, Hashable, Sendable {
     // Bits  0-5:  from square
@@ -19,7 +19,7 @@ internal struct Move: Equatable, Hashable, Sendable {
     // Bit  24:    double pawn push flag
     // Bits 25-31: unused
     
-    // MARK: - Static Constants
+    // MARK: Static Constants
     private static let toShift:            Int = 6
     private static let pieceTypeShift:     Int = 12
     private static let pieceColorShift:    Int = 15
@@ -30,10 +30,10 @@ internal struct Move: Equatable, Hashable, Sendable {
     private static let enPassantFlag:      UInt32 = 1 << 23
     private static let doublePawnPushFlag: UInt32 = 1 << 24
     
-    // MARK: - Stored Properties
+    // MARK: Stored Properties
     internal let rawValue: UInt32
     
-    // MARK: - Computed Properties
+    // MARK: Computed Properties
     internal var from: Square {
         Int(rawValue) & 0x3F
     }

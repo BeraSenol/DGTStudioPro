@@ -7,10 +7,10 @@
 
 import SwiftUI
 
-// MARK: - Board View
+// MARK: Board View
 internal struct BoardView: View {
 
-    // MARK: - Stored Properties
+    // MARK: Stored Properties
     internal let position: Position
     internal let pieceTracker: PieceTracker
     internal let style: BoardStyle
@@ -19,7 +19,7 @@ internal struct BoardView: View {
     internal let checkSquare: Square?
     internal let selectedSquare: Square?
 
-    // MARK: - Body
+    // MARK: Body
     internal var body: some View {
         GeometryReader { geometry in
             let totalSide = min(geometry.size.width, geometry.size.height)
@@ -46,7 +46,7 @@ internal struct BoardView: View {
         .aspectRatio(1, contentMode: .fit)
     }
 
-    // MARK: - Instance Methods
+    // MARK: Instance Methods
     private func squareGrid(squareSize: CGFloat) -> some View {
         let borderInset = gridBorderInset(squareSize: squareSize)
         let innerSquareSize = (8 * squareSize - 2 * borderInset) / 8

@@ -20,7 +20,7 @@ internal enum Squares {
 
 extension Square {
     
-    // MARK: - Static Constants
+    // MARK: Static Constants
     internal static let count = 64
     internal static let sides = (0..<Square.count / 8)
     internal static let all = (0..<Square.count)
@@ -53,7 +53,7 @@ extension Square {
         }
     }()
     
-    // MARK: - Computed Properties
+    // MARK: Computed Properties
     internal var isOnBoard: Bool { UInt(bitPattern: self) < Square.count }
     internal var file: Int { self % 8 }
     internal var rank: Int { self / 8 }
@@ -74,7 +74,7 @@ extension Square {
         Int.algebraicNotationTable[self]
     }
     
-    // MARK: - Static Methods
+    // MARK: Static Methods
     internal static func fromAlgebraicNotation(_ name: String) -> Square? {
         var utf8 = name.utf8.makeIterator()
         

@@ -5,16 +5,16 @@
 //  Created by Supreme Leader on 30/03/2026.
 //
 
-// MARK: - Castling Side
+// MARK: Castling Side
 internal enum CastlingSide: Sendable {
     case kingSide
     case queenSide
 }
 
-// MARK: - Castling Rights
+// MARK: Castling Rights
 internal struct CastlingRights: Codable, Equatable, Hashable, Sendable {
     
-    // MARK: - Static Constants
+    // MARK: Static Constants
     private static let whiteKingSideMask: UInt8  = 0b0001
     private static let whiteQueenSideMask: UInt8 = 0b0010
     private static let blackKingSideMask: UInt8  = 0b0100
@@ -23,10 +23,10 @@ internal struct CastlingRights: Codable, Equatable, Hashable, Sendable {
     internal static let none = CastlingRights(rawValue: 0b0000)
     internal static let all  = CastlingRights(rawValue: 0b1111)
     
-    // MARK: - Stored Properties
+    // MARK: Stored Properties
     internal private(set) var rawValue: UInt8
     
-    // MARK: - Computed Properties
+    // MARK: Computed Properties
     internal var whiteKingSide:  Bool { rawValue & Self.whiteKingSideMask  != 0 }
     internal var whiteQueenSide: Bool { rawValue & Self.whiteQueenSideMask != 0 }
     internal var blackKingSide:  Bool { rawValue & Self.blackKingSideMask  != 0 }
@@ -42,7 +42,7 @@ internal struct CastlingRights: Codable, Equatable, Hashable, Sendable {
         return result
     }
     
-    // MARK: - Initializers
+    // MARK: Initializers
     internal init() {
         rawValue = Self.all.rawValue
     }
@@ -51,7 +51,7 @@ internal struct CastlingRights: Codable, Equatable, Hashable, Sendable {
         self.rawValue = rawValue
     }
     
-    // MARK: - Instance Methods
+    // MARK: Instance Methods
     internal func has(_ color: PieceColor, _ side: CastlingSide) -> Bool {
         rawValue & Self.mask(for: color, side).rawValue != 0
     }
@@ -68,7 +68,7 @@ internal struct CastlingRights: Codable, Equatable, Hashable, Sendable {
         )
     }
     
-    // MARK: - Static Methods
+    // MARK: Static Methods
     internal static func mask(for color: PieceColor, _ side: CastlingSide) -> CastlingRights {
         switch (color, side) {
         case (.white, .kingSide):  return CastlingRights(rawValue: whiteKingSideMask)
