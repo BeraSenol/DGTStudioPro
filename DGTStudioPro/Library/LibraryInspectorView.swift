@@ -7,10 +7,10 @@
 
 import SwiftUI
 
-// MARK: - Library Inspector View
+// MARK: Library Inspector View
 internal struct LibraryInspectorView: View {
 
-    // MARK: - Body
+    // MARK: Body
     internal var body: some View {
         List {
             Section {

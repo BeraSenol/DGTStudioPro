@@ -7,10 +7,10 @@
 
 import SwiftUI
 
-// MARK: - Rankings Inspector View
+// MARK: Rankings Inspector View
 internal struct RankingsInspectorView: View {
 
-    // MARK: - Body
+    // MARK: Body
     internal var body: some View {
         List {
             Section {

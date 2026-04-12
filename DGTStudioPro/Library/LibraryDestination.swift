@@ -1,11 +1,18 @@
+//
+//  LibraryDestination.swift
+//  DGTStudioPro
+//
+//  Created by Supreme Leader on 12/04/2026.
+//
+
 import SwiftUI
 
 internal struct LibraryDestination: View {
 
-    // MARK: - Private Properties
+    // MARK: Private Properties
     @State private var isInspectorPresented: Bool = true
 
-    // MARK: - Body
+    // MARK: Body
     internal var body: some View {
         Text("Library")
             .frame(maxWidth: .infinity, maxHeight: .infinity)
