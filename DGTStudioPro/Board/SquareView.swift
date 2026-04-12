@@ -9,7 +9,7 @@ import SwiftUI
 
 // MARK: Square View
 internal struct SquareView: View, Equatable {
-    
+
     // MARK: Stored Properties
     internal let piece: Piece
     internal let pieceID: PieceID?
@@ -32,28 +32,18 @@ internal struct SquareView: View, Equatable {
         lhs.squareSize == rhs.squareSize &&
         lhs.style == rhs.style
     }
-    
+
     // MARK: Body
     internal var body: some View {
         ZStack {
             Rectangle()
                 .fill(fillColor)
-            
-            if highlight.contains(.lastMove) {
-                Rectangle()
-                    .fill(.indigo.opacity(0.12))
-            }
-            
-            if highlight.contains(.check) {
-                Rectangle()
-                    .fill(.indigo.opacity(0.45))
-            }
-            
-            if highlight.contains(.selected) {
-                Rectangle()
-                    .fill(.indigo.opacity(0.25))
-            }
-            
+
+            // TODO: Apply Dynamic Rectangle Color
+            //  if !highlight.isEmpty {
+            //      Rectangle().fill(highlightColor)
+            //  }
+
             if let imageName = piece.imageName {
                 Image(imageName)
                     .resizable()

@@ -29,19 +29,15 @@ internal struct FEN: Equatable, Sendable {
     
     // MARK: Computed Properties
     internal var string: String {
-        let placement: String = piecePlacement
-        let color: Character = activeColor == .white ? "w" : "b"
-        let castling: String = castlingRights.fen
-        let enPassant: String = enPassantTarget?.algebraicNotation ?? "-"
-        return "\(placement) \(color) \(castling) \(enPassant) \(halfmoveClock) \(fullmoveNumber)"
+        "\(positionKey) \(halfmoveClock) \(fullmoveNumber)"
     }
     
     internal var positionKey: String {
         let placement: String = piecePlacement
         let color: Character = activeColor == .white ? "w" : "b"
         let castling: String = castlingRights.fen
-        let ep: String = enPassantTarget?.algebraicNotation ?? "-"
-        return "\(placement) \(color) \(castling) \(ep)"
+        let enPassant: String = enPassantTarget?.algebraicNotation ?? "-"
+        return "\(placement) \(color) \(castling) \(enPassant)"
     }
     
     internal var piecePlacement: String {

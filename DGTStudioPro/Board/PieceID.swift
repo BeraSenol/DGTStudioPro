@@ -7,10 +7,7 @@
 
 // MARK: Piece ID
 internal struct PieceID: Equatable, Hashable, Sendable {
-
-    // MARK: Static Constants
-    internal static let none = PieceID(rawValue: 0xFF)
-
+    
     // MARK: Stored Properties
     internal let rawValue: UInt8
 
