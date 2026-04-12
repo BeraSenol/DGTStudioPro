@@ -17,19 +17,20 @@ internal struct SquareView: View, Equatable {
     internal let highlight: SquareHighlight
     internal let squareSize: CGFloat
     internal let style: BoardStyle
-    
+
+    // MARK: Computed Properties
+    private var fillColor: Color {
+        isLightSquare ? style.light : style.dark
+    }
+
     // MARK: Static Methods
     internal static func == (lhs: SquareView, rhs: SquareView) -> Bool {
         lhs.piece == rhs.piece &&
+        lhs.pieceID == rhs.pieceID &&
         lhs.isLightSquare == rhs.isLightSquare &&
         lhs.highlight == rhs.highlight &&
         lhs.squareSize == rhs.squareSize &&
         lhs.style == rhs.style
-    }
-    
-    // MARK: Computed Properties
-    private var fillColor: Color {
-        isLightSquare ? style.light : style.dark
     }
     
     // MARK: Body

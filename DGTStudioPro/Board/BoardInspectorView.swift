@@ -14,8 +14,6 @@ internal struct BoardInspectorView: View {
     internal var body: some View {
         List {
             metadataSection
-            Divider()
-            Spacer()
         }
         .listStyle(.sidebar)
     }

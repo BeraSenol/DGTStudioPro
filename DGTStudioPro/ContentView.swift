@@ -6,11 +6,8 @@
 //
 
 import SwiftUI
-import SwiftData
 
 internal struct ContentView: View {
-    // MARK: Stored Properties
-    @Environment(\.modelContext) private var modelContext
     
     // MARK: Body
     internal var body: some View {

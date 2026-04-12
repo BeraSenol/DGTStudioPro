@@ -24,20 +24,47 @@ internal struct BoardView: View {
         GeometryReader { geometry in
             let totalSide = min(geometry.size.width, geometry.size.height)
             let squareSize = totalSide / 10
+            let borderInset = gridBorderInset(squareSize: squareSize)
+            let innerSquareSize = (8 * squareSize - 2 * borderInset) / 8
 
             ZStack {
                 boardFrame(size: totalSide, frameThickness: squareSize)
 
                 VStack(spacing: 0) {
-                    fileStrip(squareSize: squareSize, isTop: true)
+                    fileStrip(
+                        squareSize: squareSize,
+                        borderInset: borderInset,
+                        innerSquareSize: innerSquareSize,
+                        isTop: true
+                    )
 
                     HStack(spacing: 0) {
-                        rankStrip(squareSize: squareSize, isLeft: true)
-                        squareGrid(squareSize: squareSize)
-                        rankStrip(squareSize: squareSize, isLeft: false)
+                        rankStrip(
+                            squareSize: squareSize,
+                            borderInset: borderInset,
+                            innerSquareSize: innerSquareSize,
+                            isLeft: true
+                        )
+
+                        squareGrid(
+                            squareSize: squareSize,
+                            borderInset: borderInset,
+                            innerSquareSize: innerSquareSize)
+
+                        rankStrip(
+                            squareSize: squareSize,
+                            borderInset: borderInset,
+                            innerSquareSize: innerSquareSize,
+                            isLeft: false
+                        )
                     }
 
-                    fileStrip(squareSize: squareSize, isTop: false)
+                    fileStrip(
+                        squareSize: squareSize,
+                        borderInset: borderInset,
+                        innerSquareSize: innerSquareSize,
+                        isTop: false
+                    )
                 }
             }
             .frame(width: totalSide, height: totalSide)
@@ -47,15 +74,16 @@ internal struct BoardView: View {
     }
 
     // MARK: Instance Methods
-    private func squareGrid(squareSize: CGFloat) -> some View {
-        let borderInset = gridBorderInset(squareSize: squareSize)
-        let innerSquareSize = (8 * squareSize - 2 * borderInset) / 8
-
-        return VStack(spacing: 0) {
-            ForEach(Square.sides, id: \.self) { visualRow in
+    private func squareGrid(
+        squareSize: CGFloat,
+        borderInset: CGFloat,
+        innerSquareSize: CGFloat
+    ) -> some View {
+        VStack(spacing: 0) {
+            ForEach(Square.ranks, id: \.self) { row in
                 HStack(spacing: 0) {
-                    ForEach(Square.sides, id: \.self) { visualCol in
-                        let sq = square(atVisualRow: visualRow, visualCol: visualCol)
+                    ForEach(Square.files, id: \.self) { col in
+                        let sq = square(atVisualRow: row, visualCol: col)
                         SquareView(
                             piece: position[sq],
                             pieceID: pieceTracker[sq],
@@ -100,6 +128,7 @@ internal struct BoardView: View {
         switch style {
         case .leather:
             EmptyView()
+
         case .walnut:
             Rectangle()
                 .strokeBorder(.black.opacity(0.5), lineWidth: thin)
@@ -158,14 +187,12 @@ internal struct BoardView: View {
         }
     }
 
-    private func fileStrip(squareSize: CGFloat, isTop: Bool) -> some View {
-        let borderInset = gridBorderInset(squareSize: squareSize)
-        let innerSquareSize = (8 * squareSize - 2 * borderInset) / 8
-
-        return HStack(spacing: 0) {
+    private func fileStrip(squareSize: CGFloat, borderInset: CGFloat,
+                           innerSquareSize: CGFloat, isTop: Bool) -> some View {
+        HStack(spacing: 0) {
             Spacer().frame(width: squareSize + borderInset)
 
-            ForEach(Square.sides, id: \.self) { visualCol in
+            ForEach(Square.files, id: \.self) { visualCol in
                 let file = perspective == .white ? visualCol : 7 - visualCol
                 Text(String(Square.fileCharacter(file)))
                     .font(.system(size: squareSize * 0.25, weight: .ultraLight, design: .serif))
@@ -179,14 +206,12 @@ internal struct BoardView: View {
         }
     }
 
-    private func rankStrip(squareSize: CGFloat, isLeft: Bool) -> some View {
-        let borderInset = gridBorderInset(squareSize: squareSize)
-        let innerSquareSize = (8 * squareSize - 2 * borderInset) / 8
-
-        return VStack(spacing: 0) {
+    private func rankStrip(squareSize: CGFloat, borderInset: CGFloat,
+                           innerSquareSize: CGFloat, isLeft: Bool) -> some View {
+        VStack(spacing: 0) {
             Spacer().frame(height: borderInset)
 
-            ForEach(Square.sides, id: \.self) { visualRow in
+            ForEach(Square.ranks, id: \.self) { visualRow in
                 let rank = perspective == .white ? 7 - visualRow : visualRow
                 Text(String(Square.rankCharacter(rank)))
                     .font(.system(size: squareSize * 0.25, weight: .ultraLight, design: .serif))

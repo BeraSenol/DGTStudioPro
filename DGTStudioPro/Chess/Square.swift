@@ -22,7 +22,8 @@ extension Square {
     
     // MARK: Static Constants
     internal static let count = 64
-    internal static let sides = (0..<Square.count / 8)
+    internal static let files = 0..<8
+    internal static let ranks = files
     internal static let all = (0..<Square.count)
     
     internal static func fileCharacter(_ file: Int) -> Character {
@@ -42,13 +43,13 @@ extension Square {
     }()
     
     private static let fileIndicatorTable: [Character] = {
-        Square.sides.map {
+        Square.files.map {
             Character(UnicodeScalar(Int(UnicodeScalar("a").value) + $0)!)
         }
     }()
     
     private static let rankIndicatorTable: [Character] = {
-        Square.sides.map {
+        Square.ranks.map {
             Character(UnicodeScalar(Int(UnicodeScalar("1").value) + $0)!)
         }
     }()
@@ -67,7 +68,8 @@ extension Square {
     }
     
     internal var asciiDigit: Character {
-        Character(UnicodeScalar(UInt8(ascii: "0") &+ UInt8(self)))
+        assert(UInt(bitPattern: self) <= 8, "asciiDigit called with value \(self), expected 0–8")
+        return Character(UnicodeScalar(UInt8(ascii: "0") &+ UInt8(self)))
     }
     
     internal var algebraicNotation: String {

@@ -52,7 +52,7 @@ internal struct FEN: Equatable, Sendable {
             if rank < 7 { result.append("/") }
             var emptyRun = 0
             
-            for file in Square.sides {
+            for file in Square.files {
                 let piece = position[rank &* 8 &+ file]
                 
                 if piece.isOccupied {

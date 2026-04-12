@@ -15,15 +15,11 @@ internal struct PieceTracker: Equatable, Sendable {
         var tracker = PieceTracker()
         var id: UInt8 = 0
 
-        // IDs 0–15: white pieces on ranks 1–2
+        // White's Pieces: IDs 0–15
+        // Black's Pieces: IDs 16–31
         for square in 0..<16 {
             tracker.pieceIdentities[square] = PieceID(rawValue: id)
-            id &+= 1
-        }
-
-        // IDs 16–31: black pieces on ranks 7–8
-        for square in 48..<64 {
-            tracker.pieceIdentities[square] = PieceID(rawValue: id)
+            tracker.pieceIdentities[square + 48] = PieceID(rawValue: id + 16)
             id &+= 1
         }
 
@@ -44,7 +40,7 @@ internal struct PieceTracker: Equatable, Sendable {
         set { pieceIdentities[square] = newValue }
     }
 
-    // MARK: - Instance Methods
+    // MARK: Instance Methods
     internal mutating func applyMove(_ move: Move) {
         if let captured = move.capturedSquare {
             pieceIdentities[captured] = PieceID.none
