@@ -8,17 +8,18 @@
 import SwiftUI
 
 internal struct BoardDestination: View {
-    
+
     // MARK: Private Properties
+    @State private var perspective: PieceColor = .white
     @State private var isInspectorPresented: Bool = true
-    
+
     // MARK: Body
     internal var body: some View {
         BoardView(
-            position: .empty,
+            position: .starting,
             pieceTracker: .empty,
             style: .walnut,
-            perspective: .white,
+            perspective: perspective,
             lastMove: nil,
             checkSquare: nil,
             selectedSquare: nil
@@ -29,6 +30,14 @@ internal struct BoardDestination: View {
                 .inspectorColumnWidth(min: 260, ideal: 300, max: 400)
         }
         .toolbar {
+            ToolbarItem {
+                Button {
+                    perspective = perspective.opponent
+                } label: {
+                    Label("Flip Board", systemImage: "arrow.up.arrow.down")
+                }
+            }
+            ToolbarSpacer()
             ToolbarItem {
                 Button {
                     isInspectorPresented.toggle()
