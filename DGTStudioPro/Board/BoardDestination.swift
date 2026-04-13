@@ -10,6 +10,7 @@ import SwiftUI
 internal struct BoardDestination: View {
 
     // MARK: Private Properties
+    @AppStorage("boardStyle") private var boardStyle: BoardStyle = .walnut
     @State private var perspective: PieceColor = .white
     @State private var isInspectorPresented: Bool = true
 
@@ -18,7 +19,7 @@ internal struct BoardDestination: View {
         BoardView(
             position: .starting,
             pieceTracker: .empty,
-            style: .walnut,
+            style: boardStyle,
             perspective: perspective,
             lastMove: nil,
             checkSquare: nil,
@@ -37,7 +38,6 @@ internal struct BoardDestination: View {
                     Label("Flip Board", systemImage: "arrow.up.arrow.down")
                 }
             }
-            ToolbarSpacer()
             ToolbarItem {
                 Button {
                     isInspectorPresented.toggle()
