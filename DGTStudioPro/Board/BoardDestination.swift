@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-// BoardDestination.swift
 internal struct BoardDestination: View {
     
     // MARK: Private Properties

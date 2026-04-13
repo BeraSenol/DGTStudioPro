@@ -6,13 +6,16 @@
 //
 
 import SwiftUI
-import SwiftData
 
 @main
 private struct DGTStudioProApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+        }
+        
+        Settings {
+            SettingsView()
         }
     }
 }
