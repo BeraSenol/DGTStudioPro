@@ -9,7 +9,7 @@ import SwiftUI
 
 // MARK: Board View
 internal struct BoardView: View {
-
+    
     // MARK: Stored Properties
     internal let position: Position
     internal let pieceTracker: PieceTracker
@@ -18,7 +18,7 @@ internal struct BoardView: View {
     internal let lastMove: LastMove?
     internal let checkSquare: Square?
     internal let selectedSquare: Square?
-
+    
     // MARK: Body
     internal var body: some View {
         GeometryReader { geometry in
@@ -26,10 +26,10 @@ internal struct BoardView: View {
             let squareSize = totalSide / 10
             let borderInset = gridBorderInset(squareSize: squareSize)
             let innerSquareSize = (8 * squareSize - 2 * borderInset) / 8
-
+            
             ZStack {
                 boardFrame(size: totalSide, frameThickness: squareSize)
-
+                
                 VStack(spacing: 0) {
                     fileStrip(
                         squareSize: squareSize,
@@ -37,7 +37,7 @@ internal struct BoardView: View {
                         innerSquareSize: innerSquareSize,
                         isTop: true
                     )
-
+                    
                     HStack(spacing: 0) {
                         rankStrip(
                             squareSize: squareSize,
@@ -45,12 +45,12 @@ internal struct BoardView: View {
                             innerSquareSize: innerSquareSize,
                             isLeft: true
                         )
-
+                        
                         squareGrid(
                             squareSize: squareSize,
                             borderInset: borderInset,
                             innerSquareSize: innerSquareSize)
-
+                        
                         rankStrip(
                             squareSize: squareSize,
                             borderInset: borderInset,
@@ -58,7 +58,7 @@ internal struct BoardView: View {
                             isLeft: false
                         )
                     }
-
+                    
                     fileStrip(
                         squareSize: squareSize,
                         borderInset: borderInset,
@@ -68,12 +68,84 @@ internal struct BoardView: View {
                 }
             }
             .frame(width: totalSide, height: totalSide)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .aspectRatio(1, contentMode: .fit)
     }
-
+    
     // MARK: Instance Methods
+    private func boardFrame(size: CGFloat, frameThickness: CGFloat) -> some View {
+        let trapezoid = Path { path in
+            path.move(to: CGPoint(x: 0, y: 0))
+            path.addLine(to: CGPoint(x: size, y: 0))
+            path.addLine(to: CGPoint(x: size - frameThickness, y: frameThickness))
+            path.addLine(to: CGPoint(x: frameThickness, y: frameThickness))
+            path.closeSubpath()
+        }
+        
+        return ZStack {
+            Rectangle()
+                .fill(style.dark)
+                .frame(width: size, height: size)
+            
+            ForEach(0..<4, id: \.self) { side in
+                ZStack(alignment: .top) {
+                    trapezoid.fill(style.dark)
+                    
+                    if style != .leather {
+                        Image("WoodGrainFine")
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: size, height: frameThickness)
+                            .rotationEffect(.degrees(90))
+                            .blendMode(.overlay)
+                            .opacity(0.25)
+                    }
+                }
+                .frame(width: size, height: size)
+                .clipShape(trapezoid)
+                .rotationEffect(.degrees(Double(side) * 90), anchor: .center)
+            }
+        }
+    }
+    
+    private func fileStrip(squareSize: CGFloat, borderInset: CGFloat,
+                           innerSquareSize: CGFloat, isTop: Bool) -> some View {
+        HStack(spacing: 0) {
+            Spacer().frame(width: squareSize + borderInset)
+            
+            ForEach(Square.files, id: \.self) { visualCol in
+                let file = perspective == .white ? visualCol : 7 - visualCol
+                Text(String(Square.fileCharacter(file)))
+                    .font(.system(size: squareSize * 0.25, weight: .ultraLight, design: .serif))
+                    .foregroundStyle(style.light)
+                    .frame(width: innerSquareSize, height: squareSize)
+                    .offset(y: squareSize * -0.3)
+                    .rotationEffect(isTop ? .degrees(180) : .zero)
+            }
+            
+            Spacer().frame(width: squareSize + borderInset)
+        }
+    }
+    
+    private func rankStrip(squareSize: CGFloat, borderInset: CGFloat,
+                           innerSquareSize: CGFloat, isLeft: Bool) -> some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: borderInset)
+            
+            ForEach(Square.ranks, id: \.self) { visualRow in
+                let rank = perspective == .white ? 7 - visualRow : visualRow
+                Text(String(Square.rankCharacter(rank)))
+                    .font(.system(size: squareSize * 0.25, weight: .ultraLight, design: .serif))
+                    .foregroundStyle(style.light)
+                    .frame(width: squareSize, height: innerSquareSize)
+                    .offset(x: squareSize * 0.3)
+                    .rotationEffect(isLeft ? .zero : .degrees(180))
+            }
+            
+            Spacer().frame(height: borderInset)
+        }
+    }
+    
     private func squareGrid(
         squareSize: CGFloat,
         borderInset: CGFloat,
@@ -83,12 +155,12 @@ internal struct BoardView: View {
             ForEach(Square.ranks, id: \.self) { row in
                 HStack(spacing: 0) {
                     ForEach(Square.files, id: \.self) { col in
-                        let sq = square(atVisualRow: row, visualCol: col)
+                        let square = square(atVisualRow: row, visualCol: col)
                         SquareView(
-                            piece: position[sq],
-                            pieceID: pieceTracker[sq],
-                            isLightSquare: (sq.file + sq.rank) % 2 != 0,
-                            highlight: squareHighlight(for: sq),
+                            piece: position[square],
+                            pieceID: pieceTracker[square],
+                            isLightSquare: (square.file + square.rank) % 2 != 0,
+                            highlight: squareHighlight(for: square),
                             squareSize: innerSquareSize,
                             style: style
                         )
@@ -109,40 +181,29 @@ internal struct BoardView: View {
         .clipped()
         .padding(borderInset)
         .overlay { gridBorder(squareSize: squareSize) }
-        .frame(width: 8 * squareSize, height: 8 * squareSize)
-    }
-
-    private func gridBorderInset(squareSize: CGFloat) -> CGFloat {
-        let thin = squareSize / 30
-        switch style {
-        case .leather:  return 0
-        case .rosewood: return thin * 2
-        case .walnut:   return thin
-        case .wenge:    return thin * 1.5
-        }
     }
     
     @ViewBuilder
     private func gridBorder(squareSize: CGFloat) -> some View {
         let thin = squareSize / 30
-
+        
         switch style {
         case .leather:
             EmptyView()
-
+            
         case .walnut:
             Rectangle()
                 .strokeBorder(.black, lineWidth: thin)
-
+            
         case .rosewood:
             Rectangle()
-                .strokeBorder(style.light, lineWidth: thin / 2)
+                .strokeBorder(style.light, lineWidth: thin / 3)
             Rectangle()
                 .strokeBorder(.black, lineWidth: thin)
-                .padding(thin / 2)
+                .padding(thin / 3)
             Rectangle()
-                .strokeBorder(style.light, lineWidth: thin / 2)
-                .padding(thin / 2 + thin)
+                .strokeBorder(style.light, lineWidth: thin / 3)
+                .padding(thin * 5/3)
 
         case .wenge:
             Rectangle()
@@ -152,92 +213,21 @@ internal struct BoardView: View {
                 .padding(thin)
         }
     }
-
-    private func boardFrame(size: CGFloat, frameThickness: CGFloat) -> some View {
-        let trapezoid = Path { path in
-            path.move(to: CGPoint(x: 0, y: 0))
-            path.addLine(to: CGPoint(x: size, y: 0))
-            path.addLine(to: CGPoint(x: size - frameThickness, y: frameThickness))
-            path.addLine(to: CGPoint(x: frameThickness, y: frameThickness))
-            path.closeSubpath()
-        }
-
-        return ZStack {
-            Rectangle()
-                .fill(style.dark)
-                .frame(width: size, height: size)
-
-            ForEach(0..<4, id: \.self) { side in
-                ZStack(alignment: .top) {
-                    trapezoid.fill(style.dark)
-
-                    if style != .leather {
-                        Image("WoodGrainFine")
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: size, height: frameThickness)
-                            .rotationEffect(.degrees(90))
-                            .blendMode(.overlay)
-                            .opacity(0.25)
-                    }
-                }
-                .frame(width: size, height: size)
-                .clipShape(trapezoid)
-                .rotationEffect(.degrees(Double(side) * 90), anchor: .center)
-            }
+    
+    private func gridBorderInset(squareSize: CGFloat) -> CGFloat {
+        let thin = squareSize / 30
+        switch style {
+        case .leather:  return 0
+        case .rosewood: return thin * 5/3
+        case .walnut:   return thin
+        case .wenge:    return thin * 1.5
         }
     }
-
-    private func fileStrip(squareSize: CGFloat, borderInset: CGFloat,
-                           innerSquareSize: CGFloat, isTop: Bool) -> some View {
-        HStack(spacing: 0) {
-            Spacer().frame(width: squareSize + borderInset)
-
-            ForEach(Square.files, id: \.self) { visualCol in
-                let file = perspective == .white ? visualCol : 7 - visualCol
-                Text(String(Square.fileCharacter(file)))
-                    .font(.system(size: squareSize * 0.25, weight: .ultraLight, design: .serif))
-                    .foregroundStyle(style.light)
-                    .frame(width: innerSquareSize, height: squareSize)
-                    .offset(y: squareSize * -0.3)
-                    .rotationEffect(isTop ? .degrees(180) : .zero)
-            }
-
-            Spacer().frame(width: squareSize + borderInset)
-        }
-    }
-
-    private func rankStrip(squareSize: CGFloat, borderInset: CGFloat,
-                           innerSquareSize: CGFloat, isLeft: Bool) -> some View {
-        VStack(spacing: 0) {
-            Spacer().frame(height: borderInset)
-
-            ForEach(Square.ranks, id: \.self) { visualRow in
-                let rank = perspective == .white ? 7 - visualRow : visualRow
-                Text(String(Square.rankCharacter(rank)))
-                    .font(.system(size: squareSize * 0.25, weight: .ultraLight, design: .serif))
-                    .foregroundStyle(style.light)
-                    .frame(width: squareSize, height: innerSquareSize)
-                    .offset(x: squareSize * 0.3)
-                    .rotationEffect(isLeft ? .zero : .degrees(180))
-            }
-
-            Spacer().frame(height: borderInset)
-        }
-    }
-
+    
     private func square(atVisualRow row: Int, visualCol col: Int) -> Square {
-        if perspective == .white {
-            let rank = 7 - row
-            let file = col
-            return rank * 8 + file
-        } else {
-            let rank = row
-            let file = 7 - col
-            return rank * 8 + file
-        }
+        (row * 8 + col) ^ (perspective == .white ? 56 : 7)
     }
-
+    
     private func squareHighlight(for square: Square) -> SquareHighlight {
         var result = SquareHighlight()
         if square == lastMove?.from || square == lastMove?.to {
@@ -253,6 +243,7 @@ internal struct BoardView: View {
     }
 }
 
+// MARK: Previews
 #Preview("Leather") {
     BoardView(
         position: .starting,
@@ -263,8 +254,7 @@ internal struct BoardView: View {
         checkSquare: nil,
         selectedSquare: nil
     )
-    .frame(width: 800, height: 800)
-    .background(.green)
+    //    .frame(width: 800, height: 800)
 }
 
 #Preview("Rosewood") {
@@ -277,8 +267,7 @@ internal struct BoardView: View {
         checkSquare: nil,
         selectedSquare: nil
     )
-    .frame(width: 800, height: 800)
-    .background(.green)
+        .frame(width: 800, height: 800)
 }
 
 #Preview("Walnut") {
@@ -291,8 +280,7 @@ internal struct BoardView: View {
         checkSquare: nil,
         selectedSquare: nil
     )
-    .frame(width: 800, height: 800)
-    .background(.green)
+    //    .frame(width: 800, height: 800)
 }
 
 #Preview("Wenge") {
@@ -305,6 +293,5 @@ internal struct BoardView: View {
         checkSquare: nil,
         selectedSquare: nil
     )
-    .frame(width: 800, height: 800)
-    .background(.green)
+    //    .frame(width: 800, height: 800)
 }

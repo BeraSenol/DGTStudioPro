@@ -9,79 +9,114 @@ import SwiftUI
 
 // MARK: Settings View
 internal struct SettingsView: View {
-    
+
     // MARK: Private Properties
     @AppStorage("boardStyle") private var boardStyle: BoardStyle = .walnut
-    
+
     // MARK: Body
     internal var body: some View {
         TabView {
             Tab("General", systemImage: "gearshape") {
                 generalTab
             }
-            
+
             Tab("Board", systemImage: "checkerboard.rectangle") {
                 boardTab
             }
         }
-        .frame(width: 450, height: 300)
+        .frame(width: 500)
     }
-    
+
     // MARK: Instance Methods
     private var generalTab: some View {
         Form {
-            Text("General settings will go here.")
-                .foregroundStyle(.secondary)
-        }
-        .padding()
-    }
-    
-    private var boardTab: some View {
-        Form {
-            LabeledContent("Board Style") {
-                HStack(spacing: 12) {
-                    ForEach(BoardStyle.allCases, id: \.self) { style in
-                        boardStyleButton(style)
-                    }
-                }
+            LabeledContent("Analysis Depth") {
+                Text("20")
+                    .foregroundStyle(.secondary)
+            }
+
+            LabeledContent("Hash Size") {
+                Text("128 MB")
+                    .foregroundStyle(.secondary)
+            }
+
+            LabeledContent("Threads") {
+                Text("1")
+                    .foregroundStyle(.secondary)
             }
         }
-        .padding()
+        .formStyle(.grouped)
     }
-    
+
+    private var boardTab: some View {
+        VStack(spacing: 0) {
+            Text("Style")
+
+            HStack(spacing: 20) {
+                ForEach(BoardStyle.allCases, id: \.self) { style in
+                    boardStyleButton(style)
+                }
+            }
+            .padding()
+
+            Spacer()
+        }
+    }
+
     private func boardStyleButton(_ style: BoardStyle) -> some View {
-        Button {
+        let isSelected = boardStyle == style
+
+        return Button {
             boardStyle = style
         } label: {
-            VStack(spacing: 6) {
-                boardPreview(for: style)
-                    .frame(width: 56, height: 56)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            VStack {
+                boardThumbnail(for: style)
+                    .frame(width: 60, height: 60)
+                    .clipShape(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 6)
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
                             .strokeBorder(
-                                boardStyle == style ? Color.accentColor : .secondary.opacity(0.3),
-                                lineWidth: boardStyle == style ? 2 : 1
+                                isSelected ? Color.accentColor : .secondary.opacity(0.25),
+                                lineWidth: isSelected ? 2 : 1
                             )
                     )
-                
+
                 Text(style.displayName)
                     .font(.caption)
-                    .foregroundStyle(boardStyle == style ? .primary : .secondary)
+                    .fontWeight(isSelected ? .semibold : .regular)
+                    .foregroundStyle(isSelected ? .primary : .secondary)
             }
         }
         .buttonStyle(.plain)
     }
-    
-    private func boardPreview(for style: BoardStyle) -> some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                Rectangle().fill(style.light)
-                Rectangle().fill(style.dark)
-            }
-            HStack(spacing: 0) {
-                Rectangle().fill(style.dark)
-                Rectangle().fill(style.light)
+
+    private func boardThumbnail(for style: BoardStyle) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(style.dark)
+
+            VStack(spacing: 0) {
+                ForEach(0..<2, id: \.self) { row in
+                    HStack(spacing: 0) {
+                        ForEach(0..<2, id: \.self) { col in
+                            let radius: CGFloat = 4
+                            Rectangle()
+                                .fill(
+                                    (row + col).isMultiple(of: 2) ? style.light : style.dark
+                                )
+                                .clipShape(
+                                    UnevenRoundedRectangle(
+                                        topLeadingRadius:     row == 0 && col == 0 ? radius : 0,
+                                        bottomLeadingRadius:  row == 1 && col == 0 ? radius : 0,
+                                        bottomTrailingRadius: row == 1 && col == 1 ? radius : 0,
+                                        topTrailingRadius:    row == 0 && col == 1 ? radius : 0
+                                    )
+                                )
+                        }
+                    }
+                }
             }
         }
     }

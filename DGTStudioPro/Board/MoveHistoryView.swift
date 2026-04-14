@@ -8,9 +8,6 @@
 import SwiftUI
 
 // MARK: Move Classification
-/// Six accuracy tiers derived from win-probability loss between consecutive
-/// positions. The color for each tier follows the industry convention
-/// established by major chess platforms.
 internal enum MoveClassification: Sendable {
     case book
     case best
@@ -18,45 +15,35 @@ internal enum MoveClassification: Sendable {
     case inaccuracy
     case mistake
     case blunder
-    
+
     // MARK: Computed Properties
     internal var color: Color {
         switch self {
-        case .book:       return Color(white: 0.55)
-        case .best:       return Color(red: 0.38, green: 0.82, blue: 0.32)
-        case .good:       return Color(red: 0.55, green: 0.75, blue: 0.42)
-        case .inaccuracy: return Color(red: 0.92, green: 0.85, blue: 0.20)
-        case .mistake:    return Color(red: 0.95, green: 0.60, blue: 0.15)
-        case .blunder:    return Color(red: 0.90, green: 0.22, blue: 0.20)
+        case .book:       .brown
+        case .best:       .green
+        case .good:       .mint
+        case .inaccuracy: .yellow
+        case .mistake:    .orange
+        case .blunder:    .red
         }
     }
 }
 
 // MARK: Move History View
-/// Displays the game's move list in standard two-column notation format
-/// (move number, white's half-move, black's half-move). Each half-move is
-/// individually tappable for game navigation and highlights using the board
-/// style's dual-color scheme: `style.light` for white, `style.dark` for black.
-///
-/// Moves are passed as a flat array of SAN strings where even indices are
-/// white's half-moves and odd indices are black's. An optional parallel
-/// `classifications` array attaches accuracy indicators to individual moves.
 internal struct MoveHistoryView: View {
-    
+
     // MARK: Stored Properties
     internal let moves: [String]
     internal let classifications: [MoveClassification?]
     internal let currentMoveIndex: Int?
     internal let style: BoardStyle
     internal let onMoveTapped: ((Int) -> Void)?
-    
+
     // MARK: Computed Properties
-    
-    /// Number of full-move pairs (e.g. "1. e4 e5" is one pair).
     private var pairCount: Int {
         (moves.count + 1) / 2
     }
-    
+
     // MARK: Body
     internal var body: some View {
         if moves.isEmpty {
@@ -65,20 +52,19 @@ internal struct MoveHistoryView: View {
             moveList
         }
     }
-    
+
     // MARK: Instance Methods
-    
     private var emptyState: some View {
-        Text("No moves played")
-            .font(.caption)
+        Text("No moves played yet")
+            .font(.callout)
             .foregroundStyle(.tertiary)
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(.vertical, 16)
     }
-    
+
     private var moveList: some View {
         ScrollViewReader { proxy in
-            ScrollView(.vertical, showsIndicators: false) {
+            ScrollView(.vertical) {
                 LazyVStack(spacing: 0) {
                     ForEach(0 ..< pairCount, id: \.self) { pairIndex in
                         movePairRow(pairIndex: pairIndex)
@@ -86,6 +72,8 @@ internal struct MoveHistoryView: View {
                 }
                 .padding(.vertical, 4)
             }
+            .background(.thinMaterial)
+            .contentMargins(0, for: .scrollContent)
             .onAppear {
                 scrollToCurrent(proxy: proxy, animated: false)
             }
@@ -94,74 +82,72 @@ internal struct MoveHistoryView: View {
             }
         }
     }
-    
-    /// A single row: move number + white's half-move + black's half-move.
+
     private func movePairRow(pairIndex: Int) -> some View {
         let moveNumber = pairIndex + 1
         let whiteIndex = pairIndex * 2
         let blackIndex = whiteIndex + 1
-        
+
         return HStack(spacing: 0) {
             Text("\(moveNumber).")
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundStyle(.tertiary)
                 .frame(width: 30, alignment: .trailing)
-                .padding(.trailing, 4)
-            
+                .padding(.trailing, 12)
+
             moveCell(at: whiteIndex, isWhite: true)
-            
+
             if blackIndex < moves.count {
                 moveCell(at: blackIndex, isWhite: false)
             } else {
-                // Odd number of half-moves — black hasn't replied yet.
                 Spacer()
                     .frame(maxWidth: .infinity)
             }
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 1)
     }
-    
-    /// A single tappable half-move: optional classification dot + SAN text,
-    /// with a highlight background when selected.
+
     private func moveCell(at index: Int, isWhite: Bool) -> some View {
         let san = moves[index]
         let isSelected = index == currentMoveIndex
         let classification = index < classifications.count ? classifications[index] : nil
-        
-        // White moves highlight with the board's light square color;
-        // black moves with the dark square color — mirroring the
-        // evaluation graph's dual-color convention.
-        let highlightColor = isWhite ? style.light : style.dark
-        
+        let highlightColor = Color.secondary
+
         return Button {
             onMoveTapped?(index)
         } label: {
-            HStack(spacing: 3) {
+            HStack(spacing: 5) {
                 if let classification {
                     Circle()
                         .fill(classification.color)
                         .frame(width: 5, height: 5)
+                        .padding(.bottom, 1)
                 }
-                
+
                 Text(san)
-                    .font(.system(size: 12, weight: isSelected ? .semibold : .regular, design: .monospaced))
+                    .font(
+                        .system(
+                            size: 12,
+                            weight: isSelected ? .semibold : .regular,
+                            design: .monospaced
+                        )
+                    )
                     .foregroundStyle(isSelected ? .primary : .secondary)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 6)
             .padding(.vertical, 3)
+            .padding(.horizontal, 6)
             .background(
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .fill(highlightColor.opacity(isSelected ? 0.25 : 0))
+                    .fill(highlightColor.opacity(isSelected ? 0.20 : 0))
             )
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .buttonStyle(.plain)
         .id(index)
     }
-    
+
     private func scrollToCurrent(proxy: ScrollViewProxy, animated: Bool) {
         guard let index = currentMoveIndex else { return }
+
         if animated {
             withAnimation(.easeInOut(duration: 0.2)) {
                 proxy.scrollTo(index, anchor: .center)
@@ -173,7 +159,6 @@ internal struct MoveHistoryView: View {
 }
 
 // MARK: Previews
-
 #Preview("Walnut — Ruy Lopez with Classifications") {
     MoveHistoryView(
         moves: [
@@ -251,7 +236,7 @@ internal struct MoveHistoryView: View {
         } header: {
             Text("Game")
         }
-        
+
         Section {
             EvaluationGraphView(
                 evaluations: [
@@ -269,7 +254,7 @@ internal struct MoveHistoryView: View {
         } header: {
             Text("Evaluation")
         }
-        
+
         Section {
             MoveHistoryView(
                 moves: [

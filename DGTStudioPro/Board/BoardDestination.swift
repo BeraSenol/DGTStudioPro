@@ -17,7 +17,7 @@ internal struct BoardDestination: View {
     // MARK: Body
     internal var body: some View {
         BoardView(
-            position: .starting,
+            position: .empty,
             pieceTracker: .empty,
             style: boardStyle,
             perspective: perspective,
@@ -27,8 +27,19 @@ internal struct BoardDestination: View {
         )
         .padding()
         .inspector(isPresented: $isInspectorPresented) {
-            BoardInspectorView()
-                .inspectorColumnWidth(min: 260, ideal: 300, max: 400)
+            BoardInspectorView(
+                whiteName: "—",
+                blackName: "—",
+                round: "—",
+                result: "—",
+                evaluations: [],
+                moves: [],
+                classifications: [],
+                currentMoveIndex: nil,
+                style: boardStyle,
+                onMoveTapped: nil
+            )
+            .inspectorColumnWidth(min: 260, ideal: 300, max: 400)
         }
         .toolbar {
             ToolbarItem {
@@ -47,4 +58,20 @@ internal struct BoardDestination: View {
             }
         }
     }
+}
+
+// MARK: Previews
+#Preview("Board Destination") {
+    NavigationSplitView {
+        List {
+            Label("Board", systemImage: "checkerboard.rectangle")
+        }
+        .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+    } detail: {
+        BoardDestination()
+    }
+}
+
+#Preview("Standalone") {
+    BoardDestination()
 }
