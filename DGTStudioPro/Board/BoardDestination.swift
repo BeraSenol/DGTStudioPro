@@ -8,7 +8,7 @@
 import SwiftUI
 
 internal struct BoardDestination: View {
-
+    
     // MARK: Private Properties
     @AppStorage("boardStyle") private var boardStyle: BoardStyle = .walnut
     @State private var perspective: PieceColor = .white

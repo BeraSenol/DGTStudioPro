@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-// MARK: Rankings Inspector View
 internal struct RankingsInspectorView: View {
 
     // MARK: Body
@@ -24,6 +23,7 @@ internal struct RankingsInspectorView: View {
     }
 }
 
+// MARK: Previews
 #Preview {
     RankingsInspectorView()
         .frame(width: 300, height: 400)

@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-// MARK: Move Classification
 internal enum MoveClassification: Sendable {
     case book
     case best
@@ -29,7 +28,6 @@ internal enum MoveClassification: Sendable {
     }
 }
 
-// MARK: Move History View
 internal struct MoveHistoryView: View {
 
     // MARK: Stored Properties

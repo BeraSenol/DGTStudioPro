@@ -31,7 +31,6 @@ internal struct ContentView: View {
     }
 }
 
-// MARK: Destination
 private enum Destination: String, CaseIterable, Identifiable {
     case board
     case library
@@ -54,6 +53,7 @@ private enum Destination: String, CaseIterable, Identifiable {
     }
 }
 
+// MARK: Previews
 #Preview {
     ContentView()
 }

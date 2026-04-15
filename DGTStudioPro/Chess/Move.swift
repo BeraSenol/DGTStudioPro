@@ -5,8 +5,6 @@
 //  Created by Supreme Leader on 03/04/2026.
 //
 
-// MARK: Move
-
 internal struct Move: Equatable, Hashable, Sendable {
     // Bits  0-5:  from square
     // Bits  6-11: to square

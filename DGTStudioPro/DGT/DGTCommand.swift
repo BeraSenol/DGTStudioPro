@@ -5,7 +5,6 @@
 //  Created by Supreme Leader on 13/04/2026.
 //
 
-// MARK: DGT Command
 internal enum DGTCommand: UInt8, Sendable {
     case sendReset              = 0x40
     case sendBoard              = 0x42
@@ -17,7 +16,6 @@ internal enum DGTCommand: UInt8, Sendable {
     case returnLongSerialNumber = 0x55
 }
 
-// MARK: DGT Message
 internal enum DGTMessage: UInt8, Sendable {
     case boardDump        = 0x86
     case fieldUpdate      = 0x8E
@@ -28,11 +26,10 @@ internal enum DGTMessage: UInt8, Sendable {
     case longSerialNumber = 0xA2
 }
 
-// MARK: DGT Piece
-/// The DGT piece ordering differs from the app's `PieceType`:
-/// Use the `piece` property to convert to the app's `Piece` type at
-/// the protocol boundary.
 internal enum DGTPiece: UInt8, Sendable {
+    // The DGT piece ordering differs from the app's `PieceType`:
+    // Use the `piece` property to convert to the app's `Piece` type at
+    // the protocol boundary.
     case empty       = 0
     case whitePawn   = 1
     case whiteRook   = 2

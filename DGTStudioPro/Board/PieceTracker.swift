@@ -5,7 +5,6 @@
 //  Created by Supreme Leader on 03/04/2026.
 //
 
-// MARK: Piece Tracker
 internal struct PieceTracker: Equatable, Sendable {
     
     // MARK: Static Constants

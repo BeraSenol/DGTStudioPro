@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-// MARK: Library Inspector View
 internal struct LibraryInspectorView: View {
 
     // MARK: Body
@@ -24,6 +23,7 @@ internal struct LibraryInspectorView: View {
     }
 }
 
+// MARK: Previews
 #Preview {
     LibraryInspectorView()
         .frame(width: 300, height: 400)

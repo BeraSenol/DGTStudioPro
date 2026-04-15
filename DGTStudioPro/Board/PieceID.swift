@@ -5,7 +5,6 @@
 //  Created by Supreme Leader on 10/04/2026.
 //
 
-// MARK: Piece ID
 internal struct PieceID: Equatable, Hashable, Sendable {
     
     // MARK: Stored Properties

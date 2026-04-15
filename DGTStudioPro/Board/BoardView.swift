@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-// MARK: Board View
 internal struct BoardView: View {
     
     // MARK: Stored Properties

@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-// MARK: Evaluation Graph View
 internal struct EvaluationGraphView: View {
 
     // MARK: Stored Properties

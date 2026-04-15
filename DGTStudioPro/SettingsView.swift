@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-// MARK: Settings View
 internal struct SettingsView: View {
 
     // MARK: Private Properties
@@ -122,6 +121,7 @@ internal struct SettingsView: View {
     }
 }
 
+// MARK: Previews
 #Preview {
     SettingsView()
 }

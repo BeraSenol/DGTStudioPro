@@ -5,13 +5,11 @@
 //  Created by Supreme Leader on 30/03/2026.
 //
 
-// MARK: Castling Side
 internal enum CastlingSide: Sendable {
     case kingSide
     case queenSide
 }
 
-// MARK: Castling Rights
 internal struct CastlingRights: Codable, Equatable, Hashable, Sendable {
     
     // MARK: Static Constants
@@ -34,11 +32,14 @@ internal struct CastlingRights: Codable, Equatable, Hashable, Sendable {
     
     internal var fen: String {
         guard rawValue != 0 else { return "-" }
+
         var result = ""
+
         if whiteKingSide  { result.append("K") }
         if whiteQueenSide { result.append("Q") }
         if blackKingSide  { result.append("k") }
         if blackQueenSide { result.append("q") }
+
         return result
     }
     

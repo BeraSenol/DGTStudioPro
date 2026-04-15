@@ -5,7 +5,6 @@
 //  Created by Supreme Leader on 01/04/2026.
 //
 
-// MARK: Square Highlight
 internal struct SquareHighlight: OptionSet, Sendable {
     
     // MARK: Static Constants
