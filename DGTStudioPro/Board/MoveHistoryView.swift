@@ -7,32 +7,10 @@
 
 import SwiftUI
 
-internal enum MoveClassification: Sendable {
-    case book
-    case best
-    case good
-    case inaccuracy
-    case mistake
-    case blunder
-
-    // MARK: Computed Properties
-    internal var color: Color {
-        switch self {
-        case .book:       .brown
-        case .best:       .green
-        case .good:       .mint
-        case .inaccuracy: .yellow
-        case .mistake:    .orange
-        case .blunder:    .red
-        }
-    }
-}
-
 internal struct MoveHistoryView: View {
 
     // MARK: Stored Properties
     internal let moves: [String]
-    internal let classifications: [MoveClassification?]
     internal let currentMoveIndex: Int?
     internal let style: BoardStyle
     internal let onMoveTapped: ((Int) -> Void)?
@@ -107,20 +85,12 @@ internal struct MoveHistoryView: View {
     private func moveCell(at index: Int, isWhite: Bool) -> some View {
         let san = moves[index]
         let isSelected = index == currentMoveIndex
-        let classification = index < classifications.count ? classifications[index] : nil
         let highlightColor = Color.secondary
 
         return Button {
             onMoveTapped?(index)
         } label: {
             HStack(spacing: 5) {
-                if let classification {
-                    Circle()
-                        .fill(classification.color)
-                        .frame(width: 5, height: 5)
-                        .padding(.bottom, 1)
-                }
-
                 Text(san)
                     .font(
                         .system(
@@ -165,12 +135,6 @@ internal struct MoveHistoryView: View {
             "Bb3", "d6", "c3", "O-O", "h3", "Nb8",
             "d4", "Nbd7"
         ],
-        classifications: [
-            .book, .book, .book, .book, .book, .book,
-            .book, .book, .best, .good, .best, .good,
-            .good, .good, .best, .inaccuracy, .good, .mistake,
-            .good, .blunder
-        ],
         currentMoveIndex: 14,
         style: .walnut,
         onMoveTapped: { _ in }
@@ -184,7 +148,6 @@ internal struct MoveHistoryView: View {
         moves: [
             "e4", "e5", "Bc4", "Nc6", "Qh5", "Nf6", "Qxf7#"
         ],
-        classifications: [],
         currentMoveIndex: 6,
         style: .rosewood,
         onMoveTapped: { _ in }
@@ -203,7 +166,6 @@ internal struct MoveHistoryView: View {
             "Qe2", "Qa8", "f3", "Rd8", "Qf2", "Bb4", "Bc2", "Bxc3",
             "bxc3", "Qc8", "Bd3", "Nd5", "c4", "Nf4", "Bf5", "exf5"
         ],
-        classifications: [],
         currentMoveIndex: 38,
         style: .wenge,
         onMoveTapped: { _ in }
@@ -215,7 +177,6 @@ internal struct MoveHistoryView: View {
 #Preview("Empty State") {
     MoveHistoryView(
         moves: [],
-        classifications: [],
         currentMoveIndex: nil,
         style: .walnut,
         onMoveTapped: nil
@@ -260,12 +221,6 @@ internal struct MoveHistoryView: View {
                     "Ba4", "Nf6", "O-O", "Be7", "Re1", "b5",
                     "Bb3", "d6", "c3", "O-O", "h3", "Nb8",
                     "d4", "Nbd7"
-                ],
-                classifications: [
-                    .book, .book, .book, .book, .book, .book,
-                    .book, .book, .best, .good, .best, .good,
-                    .good, .good, .best, .inaccuracy, .good, .mistake,
-                    .good, .blunder
                 ],
                 currentMoveIndex: 14,
                 style: .walnut,
