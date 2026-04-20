@@ -34,7 +34,6 @@ internal struct BoardDestination: View {
                 result: "—",
                 evaluations: [],
                 moves: [],
-                classifications: [],
                 currentMoveIndex: nil,
                 style: boardStyle,
                 onMoveTapped: nil

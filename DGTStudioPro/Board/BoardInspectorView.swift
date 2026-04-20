@@ -16,7 +16,6 @@ internal struct BoardInspectorView: View {
     internal let result: String
     internal let evaluations: [Double]
     internal let moves: [String]
-    internal let classifications: [MoveClassification?]
     internal let currentMoveIndex: Int?
     internal let style: BoardStyle
     internal let onMoveTapped: ((Int) -> Void)?
@@ -60,7 +59,6 @@ internal struct BoardInspectorView: View {
         Section {
             MoveHistoryView(
                 moves: moves,
-                classifications: classifications,
                 currentMoveIndex: currentMoveIndex,
                 style: style,
                 onMoveTapped: onMoveTapped
@@ -92,12 +90,6 @@ internal struct BoardInspectorView: View {
             "Bb3", "d6", "c3", "O-O", "h3", "Nb8",
             "d4", "Nbd7"
         ],
-        classifications: [
-            .book, .book, .book, .book, .book, .book,
-            .book, .book, .best, .good, .best, .good,
-            .good, .good, .best, .inaccuracy, .good, .mistake,
-            .good, .blunder
-        ],
         currentMoveIndex: 14,
         style: .walnut,
         onMoveTapped: { _ in }
@@ -113,7 +105,6 @@ internal struct BoardInspectorView: View {
         result: "—",
         evaluations: [],
         moves: [],
-        classifications: [],
         currentMoveIndex: nil,
         style: .walnut,
         onMoveTapped: nil

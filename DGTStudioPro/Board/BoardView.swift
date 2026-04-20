@@ -184,7 +184,7 @@ internal struct BoardView: View {
     
     @ViewBuilder
     private func gridBorder(squareSize: CGFloat) -> some View {
-        let thin = squareSize / 30
+        let thin = squareSize / 28
         
         switch style {
         case .leather:
@@ -192,13 +192,13 @@ internal struct BoardView: View {
             
         case .walnut:
             Rectangle()
-                .strokeBorder(.black, lineWidth: thin)
-            
+                .strokeBorder(.gridBorder, lineWidth: thin)
+
         case .rosewood:
             Rectangle()
                 .strokeBorder(style.light, lineWidth: thin / 3)
             Rectangle()
-                .strokeBorder(.black, lineWidth: thin)
+                .strokeBorder(.gridBorder, lineWidth: thin)
                 .padding(thin / 3)
             Rectangle()
                 .strokeBorder(style.light, lineWidth: thin / 3)
@@ -214,7 +214,7 @@ internal struct BoardView: View {
     }
     
     private func gridBorderInset(squareSize: CGFloat) -> CGFloat {
-        let thin = squareSize / 30
+        let thin = squareSize / 28
         switch style {
         case .leather:  return 0
         case .rosewood: return thin * 5/3
