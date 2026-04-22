@@ -13,7 +13,7 @@ import os
 internal struct PGNStore {
 
     // MARK: Static Constants
-    private static let logger = Logger(subsystem: "com.dgtstudiopro", category: "pgnstore")
+    private static let logger = Logger(subsystem: "com.berasenol.dgtstudiopro", category: "pgnstore")
 
     // MARK: Stored Properties
     private let modelContext: ModelContext

@@ -37,7 +37,7 @@ extension Square {
     }
     
     private static let logger = Logger(
-        subsystem: "com.yourname.dgtstudiopro",
+        subsystem: "com.berasenol.dgtstudiopro",
         category: "square"
     )
     
