@@ -43,13 +43,13 @@ internal enum DGTPiece: UInt8, Sendable {
     case blackBishop = 10
     case blackKing   = 11
     case blackQueen  = 12
-    
+
     // MARK: Computed Properties
     /// Converts this DGT piece to the app's `Piece` type.
     internal var piece: Piece {
         Self.pieceLookup[Int(rawValue)]
     }
-    
+
     // MARK: Static Constants
     private static let pieceLookup: [Piece] = [
         .empty,        // 0
@@ -57,13 +57,13 @@ internal enum DGTPiece: UInt8, Sendable {
         .whiteRook,    // 2
         .whiteKnight,  // 3
         .whiteBishop,  // 4
-        .whiteKing,    // 5 (DGT=5, App=6)
-        .whiteQueen,   // 6 (DGT=6, App=5)
+        .whiteKing,    // 5
+        .whiteQueen,   // 6
         .blackPawn,    // 7
         .blackRook,    // 8
         .blackKnight,  // 9
         .blackBishop,  // 10
-        .blackKing,    // 11 (DGT=11, App=14)
-        .blackQueen,   // 12 (DGT=12, App=13)
+        .blackKing,    // 11
+        .blackQueen,   // 12
     ]
 }

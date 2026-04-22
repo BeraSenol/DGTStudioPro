@@ -28,10 +28,7 @@ internal struct BoardDestination: View {
         .padding()
         .inspector(isPresented: $isInspectorPresented) {
             BoardInspectorView(
-                whiteName: "—",
-                blackName: "—",
-                round: "—",
-                result: "—",
+                pgn: nil,
                 evaluations: [],
                 moves: [],
                 currentMoveIndex: nil,

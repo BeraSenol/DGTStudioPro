@@ -8,18 +8,15 @@
 import SwiftUI
 
 internal struct BoardInspectorView: View {
-    
+
     // MARK: Stored Properties
-    internal let whiteName: String
-    internal let blackName: String
-    internal let round: String
-    internal let result: String
+    internal let pgn: PGN?
     internal let evaluations: [Double]
     internal let moves: [String]
     internal let currentMoveIndex: Int?
     internal let style: BoardStyle
     internal let onMoveTapped: ((Int) -> Void)?
-    
+
     // MARK: Body
     internal var body: some View {
         List {
@@ -29,19 +26,19 @@ internal struct BoardInspectorView: View {
         }
         .listStyle(.sidebar)
     }
-    
+
     // MARK: Instance Methods
     private var metadataSection: some View {
         Section {
-            LabeledContent("White", value: whiteName)
-            LabeledContent("Black", value: blackName)
-            LabeledContent("Round", value: round)
-            LabeledContent("Result", value: result)
+            LabeledContent("White", value: pgn?.white ?? "-")
+            LabeledContent("Black", value: pgn?.black ?? "-")
+            LabeledContent("Round", value: pgn?.displayRound ?? "-")
+            LabeledContent("Result", value: pgn?.result.rawValue ?? "-")
         } header: {
             Text("Game")
         }
     }
-    
+
     private var evaluationSection: some View {
         Section {
             EvaluationGraphView(
@@ -54,7 +51,7 @@ internal struct BoardInspectorView: View {
             Text("Evaluation")
         }
     }
-    
+
     private var movesSection: some View {
         Section {
             MoveHistoryView(
@@ -72,11 +69,17 @@ internal struct BoardInspectorView: View {
 
 // MARK: Previews
 #Preview("Game Data") {
+    let pgn = PGN(
+        event: "World Championship",
+        site: "Dubai",
+        round: 7,
+        white: "Carlsen",
+        black: "Nepomniachtchi",
+        result: .ongoing
+    )
+
     BoardInspectorView(
-        whiteName: "Carlsen",
-        blackName: "Nepomniachtchi",
-        round: "7",
-        result: "*",
+        pgn: pgn,
         evaluations: [
             0.50, 0.52, 0.51, 0.49, 0.50, 0.52, 0.50, 0.48,
             0.46, 0.44, 0.46, 0.44, 0.42, 0.44, 0.43, 0.45,
@@ -98,11 +101,17 @@ internal struct BoardInspectorView: View {
 }
 
 #Preview("No Game Data") {
+    let pgn = PGN(
+        event: "World Championship",
+        site: "Dubai",
+        round: 7,
+        white: "Carlsen",
+        black: "Nepomniachtchi",
+        result: .ongoing
+    )
+    
     BoardInspectorView(
-        whiteName: "—",
-        blackName: "—",
-        round: "—",
-        result: "—",
+        pgn: pgn,
         evaluations: [],
         moves: [],
         currentMoveIndex: nil,
