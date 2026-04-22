@@ -19,7 +19,7 @@ internal struct PieceTracker: Equatable, Sendable {
         for square in 0..<16 {
             tracker.pieceIdentities[square] = PieceID(rawValue: id)
             tracker.pieceIdentities[square + 48] = PieceID(rawValue: id + 16)
-            id &+= 1
+            id += 1
         }
         
         return tracker

@@ -49,7 +49,7 @@ internal struct FEN: Equatable, Sendable {
             var emptyRun = 0
             
             for file in Square.files {
-                let piece = position[rank &* 8 &+ file]
+                let piece = position[rank * 8 + file]
                 
                 if piece.isOccupied {
                     if emptyRun > 0 {

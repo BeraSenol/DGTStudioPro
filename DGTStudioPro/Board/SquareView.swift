@@ -22,16 +22,6 @@ internal struct SquareView: View, Equatable {
         isLightSquare ? style.light : style.dark
     }
 
-    // MARK: Static Methods
-    internal static func == (lhs: SquareView, rhs: SquareView) -> Bool {
-        lhs.piece == rhs.piece &&
-        lhs.pieceID == rhs.pieceID &&
-        lhs.isLightSquare == rhs.isLightSquare &&
-        lhs.highlight == rhs.highlight &&
-        lhs.squareSize == rhs.squareSize &&
-        lhs.style == rhs.style
-    }
-
     // MARK: Body
     internal var body: some View {
         ZStack {
