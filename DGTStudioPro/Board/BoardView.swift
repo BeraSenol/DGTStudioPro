@@ -112,8 +112,8 @@ internal struct BoardView: View {
         HStack(spacing: 0) {
             Spacer().frame(width: squareSize + borderInset)
             
-            ForEach(Square.files, id: \.self) { visualCol in
-                let file = perspective == .white ? visualCol : 7 - visualCol
+            ForEach(Square.files, id: \.self) { visualColumn in
+                let file = perspective == .white ? visualColumn : 7 - visualColumn
                 Text(String(Square.fileCharacter(file)))
                     .font(.system(size: squareSize * 0.25, weight: .ultraLight, design: .serif))
                     .foregroundStyle(style.light)
@@ -151,10 +151,10 @@ internal struct BoardView: View {
         innerSquareSize: CGFloat
     ) -> some View {
         VStack(spacing: 0) {
-            ForEach(Square.ranks, id: \.self) { row in
+            ForEach(Square.ranks, id: \.self) { visualRow in
                 HStack(spacing: 0) {
-                    ForEach(Square.files, id: \.self) { col in
-                        let square = square(atVisualRow: row, visualCol: col)
+                    ForEach(Square.files, id: \.self) { visualCol in
+                        let square = square(atVisualRow: visualRow, visualColumn: visualCol)
                         SquareView(
                             piece: position[square],
                             pieceID: pieceTracker[square],
@@ -223,8 +223,8 @@ internal struct BoardView: View {
         }
     }
     
-    private func square(atVisualRow row: Int, visualCol col: Int) -> Square {
-        (row * 8 + col) ^ (perspective == .white ? 56 : 7)
+    private func square(visualRow: Int, visualColumn: Int) -> Square {
+        (visualRow * 8 + visualColumn) ^ (perspective == .white ? 56 : 7)
     }
     
     private func squareHighlight(for square: Square) -> SquareHighlight {
