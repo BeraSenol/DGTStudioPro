@@ -27,7 +27,9 @@ internal struct Move: Equatable, Hashable, Sendable {
     private static let castlingFlag:       UInt32 = 1 << 22
     private static let enPassantFlag:      UInt32 = 1 << 23
     private static let doublePawnPushFlag: UInt32 = 1 << 24
-    
+
+    private static let kingSideKingFile: Int = 6
+
     // MARK: Stored Properties
     internal let rawValue: UInt32
     
@@ -84,11 +86,48 @@ internal struct Move: Equatable, Hashable, Sendable {
     
     internal var rookFrom: Square? {
         guard isCastling else { return nil }
-        return to.file == 6 ? to + 1 : to - 2
+        return to.file == Self.kingSideKingFile ? to + 1 : to - 2
     }
     
     internal var rookTo: Square? {
         guard isCastling else { return nil }
-        return to.file == 6 ? to - 1 : to + 1
+        return to.file == Self.kingSideKingFile ? to - 1 : to + 1
+    }
+
+    // MARK: Initializers
+    private init(rawValue: UInt32) {
+        self.rawValue = rawValue
+    }
+
+    // MARK: Static Methods
+    internal static func make(
+        from: Square,
+        to: Square,
+        pieceType: PieceType,
+        pieceColor: PieceColor,
+        capturedPieceType: PieceType? = nil,
+        promotionType: PieceType? = nil,
+        isCastling: Bool = false,
+        isEnPassant: Bool = false,
+        isDoublePawnPush: Bool = false
+    ) -> Move {
+        var raw: UInt32 = 0
+        raw |= UInt32(from) & 0x3F
+        raw |= (UInt32(to) & 0x3F) << toShift
+        raw |= (UInt32(pieceType.rawValue) & 0x07) << pieceTypeShift
+        raw |= (UInt32(pieceColor.rawValue) & 0x01) << pieceColorShift
+
+        if let capturedPieceType {
+            raw |= (UInt32(capturedPieceType.rawValue) & 0x07) << capturedTypeShift
+        }
+        if let promotionType {
+            raw |= (UInt32(promotionType.rawValue) & 0x07) << promotionTypeShift
+        }
+
+        if isCastling       { raw |= castlingFlag }
+        if isEnPassant      { raw |= enPassantFlag }
+        if isDoublePawnPush { raw |= doublePawnPushFlag }
+
+        return Move(rawValue: raw)
     }
 }
