@@ -5,6 +5,8 @@
 //  Created by Supreme Leader on 24/03/2026.
 //
 
+import os
+
 internal typealias Square = Int
 
 internal enum Squares {
@@ -23,7 +25,7 @@ extension Square {
     // MARK: Static Constants
     internal static let count = 64
     internal static let files = 0..<8
-    internal static let ranks = files
+    internal static let ranks = 0..<8
     internal static let all = (0..<Square.count)
     
     internal static func fileCharacter(_ file: Int) -> Character {
@@ -33,6 +35,11 @@ extension Square {
     internal static func rankCharacter(_ rank: Int) -> Character {
         rankIndicatorTable[rank]
     }
+    
+    private static let logger = Logger(
+        subsystem: "com.yourname.dgtstudiopro",
+        category: "square"
+    )
     
     private static let algebraicNotationTable: [String] = {
         Square.all.map { square in
@@ -83,7 +90,7 @@ extension Square {
         guard let fileByte = utf8.next(),
               let rankByte = utf8.next(),
               utf8.next() == nil else {
-            print("fromAlgebraic: expected 2 characters, got '\(name)'")
+            logger.error("fromAlgebraic: expected 2 characters, got '\(name, privacy: .public)'")
             return nil
         }
         
@@ -92,7 +99,7 @@ extension Square {
         
         guard UInt(bitPattern: file) < 8,
               UInt(bitPattern: rank) < 8 else {
-            print("fromAlgebraic: '\(name)' out of bounds")
+            logger.error("fromAlgebraic: '\(name, privacy: .public)' out of bounds")
             return nil
         }
         
