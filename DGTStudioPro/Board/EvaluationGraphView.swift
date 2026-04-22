@@ -17,8 +17,6 @@ internal struct EvaluationGraphView: View {
     // MARK: Body
     internal var body: some View {
         Canvas { context, size in
-            guard evaluations.count >= 2 else { return }
-
             let drawArea = CGRect(
                 x: 0,
                 y: 0,
@@ -27,6 +25,20 @@ internal struct EvaluationGraphView: View {
             )
 
             let midY = drawArea.midY
+            
+            var midline = Path()
+
+            midline.move(to: CGPoint(x: drawArea.minX, y: midY))
+            midline.addLine(to: CGPoint(x: drawArea.maxX, y: midY))
+
+            context.stroke(
+                midline,
+                with: .color(style.light.opacity(0.10)),
+                lineWidth: 0.5
+            )
+
+            guard evaluations.count >= 2 else { return }
+
             let points = evaluationPoints(in: drawArea)
             let curve = curvePath(through: points)
             let area = closedAreaPath(
@@ -48,16 +60,6 @@ internal struct EvaluationGraphView: View {
                 ctx.fill(area, with: .color(style.dark.opacity(0.65)))
             }
 
-            var midline = Path()
-
-            midline.move(to: CGPoint(x: drawArea.minX, y: midY))
-            midline.addLine(to: CGPoint(x: drawArea.maxX, y: midY))
-
-            context.stroke(
-                midline,
-                with: .color(style.light.opacity(0.10)),
-                lineWidth: 0.5
-            )
 
             let curveStroke = StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round)
 
@@ -96,24 +98,6 @@ internal struct EvaluationGraphView: View {
             let x = rect.minX + CGFloat(index) * step
             let y = rect.maxY - CGFloat(probability) * rect.height
             return CGPoint(x: x, y: y)
-        }
-    }
-
-    private func smoothPath(through points: [CGPoint]) -> Path {
-        guard points.count >= 2 else { return Path() }
-
-        return Path { path in
-            path.move(to: points[0])
-
-            if points.count == 2 {
-                path.addLine(to: points[1])
-                return
-            }
-
-            for i in 0 ..< (points.count - 1) {
-                let (cp1, cp2) = catmullRomControlPoints(at: i, in: points)
-                path.addCurve(to: points[i + 1], control1: cp1, control2: cp2)
-            }
         }
     }
 
