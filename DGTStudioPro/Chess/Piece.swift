@@ -99,6 +99,18 @@ internal struct Piece: Codable, Equatable, Hashable, Sendable {
     internal static let blackQueen  = Piece(.black, .queen)
     internal static let blackKing   = Piece(.black, .king)
 
+    private static let imageNames: [String?] = {
+        var table = [String?](repeating: nil, count: 16)
+        for color in PieceColor.allCases {
+            for type in PieceType.allCases {
+                let piece = Piece(color, type)
+                let prefix = color == .white ? "White" : "Black"
+                table[Int(piece.rawValue)] = prefix + Piece.typeNames[Int(type.rawValue)]
+            }
+        }
+        return table
+    }()
+
     // MARK: Stored Properties
     internal let rawValue: UInt8
 
@@ -121,9 +133,7 @@ internal struct Piece: Codable, Equatable, Hashable, Sendable {
     }
 
     internal var imageName: String? {
-        guard let color, let type else { return nil }
-        let prefix = color == .white ? "White" : "Black"
-        return prefix + Self.typeNames[Int(type.rawValue)]
+        Self.imageNames[Int(rawValue)]
     }
 
     // MARK: Initializers
