@@ -69,8 +69,8 @@ internal struct PGNParser {
         return Int(round)
     }
     
-    internal static func parseResult(_ result: String?) -> GameResult {
-        guard let result, let result = GameResult(rawValue: result) else {
+    internal static func parseResult(_ string: String?) -> GameResult {
+        guard let string, let result = GameResult(rawValue: string) else {
             return .ongoing
         }
         return result
