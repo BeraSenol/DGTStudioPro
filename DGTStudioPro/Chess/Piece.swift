@@ -65,7 +65,7 @@ internal enum PieceType: UInt8, CaseIterable, Codable, Sendable {
     // MARK: Instance Methods
     internal func fenCharacter(for color: PieceColor) -> Character {
         // Adding 32 (0x20) converts uppercase ASCII to lowercase.
-        let byte = fenByte &+ (color.rawValue &* 32)
+        let byte = fenByte + (color.rawValue * 32)
         return Character(UnicodeScalar(byte))
     }
 }

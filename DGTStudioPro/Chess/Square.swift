@@ -69,7 +69,7 @@ extension Square {
     
     internal var asciiDigit: Character {
         assert(UInt(bitPattern: self) <= 8, "asciiDigit called with value \(self), expected 0–8")
-        return Character(UnicodeScalar(UInt8(ascii: "0") &+ UInt8(self)))
+        return Character(UnicodeScalar(UInt8(ascii: "0") + UInt8(self)))
     }
     
     internal var algebraicNotation: String {
