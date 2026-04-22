@@ -33,15 +33,15 @@ internal struct PGNParser {
         for line in text.components(separatedBy: .newlines) {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             
-            if let (key, value) = parseTag(trimmed) {
-                tags[key] = value
+            if let tag = parseTag(trimmed) {
+                tags[tag.key] = tag.value
             }
         }
         
         return tags
     }
     
-    internal static func parseTag(_ line: String) -> (String, String)? {
+    internal static func parseTag(_ line: String) -> (key: String, value: String)? {
         guard line.hasPrefix("["), line.hasSuffix("]") else { return nil }
         
         let inner = line.dropFirst().dropLast()
@@ -59,18 +59,18 @@ internal struct PGNParser {
         return (key, value)
     }
     
-    internal static func parseDate(string date: String?) -> Date? {
+    internal static func parseDate(_ date: String?) -> Date? {
         guard let date, !date.contains("?") else { return nil }
         return dateFormatter.date(from: date)
     }
     
-    internal static func parseRound(string round: String?) -> Int? {
+    internal static func parseRound(_ round: String?) -> Int? {
         guard let round else { return nil }
         return Int(round)
     }
     
-    internal static func parseResult(_ string: String?) -> GameResult {
-        guard let string, let result = GameResult(rawValue: string) else {
+    internal static func parseResult(_ result: String?) -> GameResult {
+        guard let result, let result = GameResult(rawValue: result) else {
             return .ongoing
         }
         return result

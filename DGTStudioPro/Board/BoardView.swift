@@ -153,8 +153,8 @@ internal struct BoardView: View {
         VStack(spacing: 0) {
             ForEach(Square.ranks, id: \.self) { visualRow in
                 HStack(spacing: 0) {
-                    ForEach(Square.files, id: \.self) { visualCol in
-                        let square = square(atVisualRow: visualRow, visualColumn: visualCol)
+                    ForEach(Square.files, id: \.self) { visualColumn in
+                        let square = square(visualRow: visualRow, visualColumn: visualColumn)
                         SquareView(
                             piece: position[square],
                             pieceID: pieceTracker[square],
@@ -193,7 +193,7 @@ internal struct BoardView: View {
         case .walnut:
             Rectangle()
                 .strokeBorder(.gridBorder, lineWidth: thin)
-
+            
         case .rosewood:
             Rectangle()
                 .strokeBorder(style.light, lineWidth: thin / 3)
@@ -203,7 +203,7 @@ internal struct BoardView: View {
             Rectangle()
                 .strokeBorder(style.light, lineWidth: thin / 3)
                 .padding(thin * 5/3)
-
+            
         case .wenge:
             Rectangle()
                 .strokeBorder(style.light, lineWidth: thin)
@@ -266,7 +266,7 @@ internal struct BoardView: View {
         checkSquare: nil,
         selectedSquare: nil
     )
-        .frame(width: 800, height: 800)
+    .frame(width: 800, height: 800)
 }
 
 #Preview("Walnut") {
