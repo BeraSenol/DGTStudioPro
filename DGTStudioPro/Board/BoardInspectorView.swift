@@ -68,33 +68,34 @@ internal struct BoardInspectorView: View {
 }
 
 // MARK: Previews
-#Preview("Game Data") {BoardInspectorView(
-    pgn: PGN(
-        event: "World Championship",
-        site: "Dubai",
-        round: 7,
-        white: "Carlsen",
-        black: "Nepomniachtchi",
-        result: .ongoing
-    ),
-    evaluations: [
-        0.50, 0.52, 0.51, 0.49, 0.50, 0.52, 0.50, 0.48,
-        0.46, 0.44, 0.46, 0.44, 0.42, 0.44, 0.43, 0.45,
-        0.42, 0.40, 0.42, 0.44, 0.41, 0.38, 0.40, 0.42,
-        0.38, 0.35, 0.37, 0.40, 0.36, 0.32, 0.35, 0.30,
-        0.34, 0.42, 0.50, 0.58, 0.72, 0.88, 0.96
-    ],
-    moves: [
-        "e4", "e5", "Nf3", "Nc6", "Bb5", "a6",
-        "Ba4", "Nf6", "O-O", "Be7", "Re1", "b5",
-        "Bb3", "d6", "c3", "O-O", "h3", "Nb8",
-        "d4", "Nbd7"
-    ],
-    currentMoveIndex: 14,
-    style: .walnut,
-    onMoveTapped: { _ in }
-)
-.frame(width: 300, height: 600)
+#Preview("Game Data") {
+    BoardInspectorView(
+        pgn: PGN(
+            event: "World Championship",
+            site: "Dubai",
+            round: 7,
+            white: "Carlsen",
+            black: "Nepomniachtchi",
+            result: .ongoing
+        ),
+        evaluations: [
+            0.50, 0.52, 0.51, 0.49, 0.50, 0.52, 0.50, 0.48,
+            0.46, 0.44, 0.46, 0.44, 0.42, 0.44, 0.43, 0.45,
+            0.42, 0.40, 0.42, 0.44, 0.41, 0.38, 0.40, 0.42,
+            0.38, 0.35, 0.37, 0.40, 0.36, 0.32, 0.35, 0.30,
+            0.34, 0.42, 0.50, 0.58, 0.72, 0.88, 0.96
+        ],
+        moves: [
+            "e4", "e5", "Nf3", "Nc6", "Bb5", "a6",
+            "Ba4", "Nf6", "O-O", "Be7", "Re1", "b5",
+            "Bb3", "d6", "c3", "O-O", "h3", "Nb8",
+            "d4", "Nbd7"
+        ],
+        currentMoveIndex: 14,
+        style: .walnut,
+        onMoveTapped: { _ in }
+    )
+    .frame(width: 300, height: 600)
 }
 
 #Preview("No Game Data") {

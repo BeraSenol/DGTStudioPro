@@ -41,13 +41,37 @@ internal struct Position: Codable, Equatable, Sendable {
     }
 
     // MARK: Instance Methods
+    internal func applying(_ move: Move) -> Position {
+        var result = self
+
+        // En passant captures a square other than `move.to`
+        if let captured = move.capturedSquare {
+            result[captured] = .empty
+        }
+
+        result[move.from] = .empty
+
+        if let promotion = move.promotionType {
+            result[move.to] = Piece(move.pieceColor, promotion)
+        } else {
+            result[move.to] = Piece(move.pieceColor, move.pieceType)
+        }
+
+        if move.isCastling, let rookFrom = move.rookFrom, let rookTo = move.rookTo {
+            result[rookTo] = result[rookFrom]
+            result[rookFrom] = .empty
+        }
+
+        return result
+    }
+
     internal func kingSquare(for color: PieceColor) -> Square? {
         let king = Piece(color, .king)
 
         for square in Square.all {
             if squares[square] == king { return square }
         }
-        
+
         return nil
     }
 }

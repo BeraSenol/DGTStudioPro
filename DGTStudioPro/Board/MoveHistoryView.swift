@@ -127,7 +127,7 @@ internal struct MoveHistoryView: View {
 }
 
 // MARK: Previews
-#Preview("Walnut — Ruy Lopez with Classifications") {
+#Preview("Ruy Lopez with Classifications") {
     MoveHistoryView(
         moves: [
             "e4", "e5", "Nf3", "Nc6", "Bb5", "a6",
@@ -143,7 +143,7 @@ internal struct MoveHistoryView: View {
     .background(Color(.windowBackgroundColor))
 }
 
-#Preview("Rosewood — Scholar's Mate") {
+#Preview("Scholar's Mate") {
     MoveHistoryView(
         moves: [
             "e4", "e5", "Bc4", "Nc6", "Qh5", "Nf6", "Qxf7#"
@@ -156,7 +156,7 @@ internal struct MoveHistoryView: View {
     .background(Color(.windowBackgroundColor))
 }
 
-#Preview("Wenge — Long Game") {
+#Preview("Long Game") {
     MoveHistoryView(
         moves: [
             "d4", "Nf6", "c4", "e6", "Nf3", "d5", "Nc3", "Be7",
