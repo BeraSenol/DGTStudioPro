@@ -50,8 +50,8 @@ internal enum PGNParser {
             round: parseRound(tags["Round"]),
             white: tags["White"] ?? "",
             black: tags["Black"] ?? "",
-            result: parseResult(tags["Result"]),
-            moves: moves
+            moves: moves,
+            result: parseResult(tags["Result"])
         )
     }
     

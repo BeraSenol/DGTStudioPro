@@ -21,8 +21,8 @@ private enum PGNPlaceholder: String, Codable {
 }
 
 @Model
-internal final class PGN {
-
+internal final class PGN: Identifiable {
+    
     // MARK: Stored Properties
     internal var event: String
     internal var site: String
@@ -31,12 +31,13 @@ internal final class PGN {
     internal var white: String
     internal var black: String
     internal var result: GameResult
-
+    
     internal var moves: [String]
-
+    
+    internal var id: PersistentIdentifier { persistentModelID }
     internal var importedAt: Date
     internal var contentHash: String
-
+    
     // MARK: Computed Properties
     internal var displayDate: String {
         guard let date else { return PGNPlaceholder.date.rawValue }
