@@ -22,7 +22,7 @@ private enum PGNPlaceholder: String, Codable {
 
 @Model
 internal final class PGN {
-    
+
     // MARK: Stored Properties
     internal var event: String
     internal var site: String
@@ -32,9 +32,10 @@ internal final class PGN {
     internal var black: String
     internal var result: GameResult
 
-    internal var importedAt: Date
-
     internal var moves: [String]
+
+    internal var importedAt: Date
+    internal var contentHash: String
 
     // MARK: Computed Properties
     internal var displayDate: String {
@@ -55,8 +56,9 @@ internal final class PGN {
         round: Int? = nil,
         white: String = PGNPlaceholder.general.rawValue,
         black: String = PGNPlaceholder.general.rawValue,
+        moves: [String] = [],
         result: GameResult = .ongoing,
-        moves: [String] = []
+        contentHash: String = ""
     ) {
         self.event = event
         self.site = site
@@ -65,7 +67,8 @@ internal final class PGN {
         self.white = white
         self.black = black
         self.result = result
-        self.importedAt = .now
         self.moves = moves
+        self.importedAt = .now
+        self.contentHash = contentHash
     }
 }

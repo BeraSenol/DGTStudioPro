@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 private struct DGTStudioProApp: App {
@@ -13,7 +14,8 @@ private struct DGTStudioProApp: App {
         WindowGroup {
             ContentView()
         }
-        
+        .modelContainer(for: PGN.self)
+
         Settings {
             SettingsView()
         }
