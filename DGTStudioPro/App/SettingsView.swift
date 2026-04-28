@@ -10,7 +10,7 @@ import SwiftUI
 internal struct SettingsView: View {
 
     // MARK: Private Properties
-    @AppStorage("boardStyle") private var boardStyle: BoardStyle = .walnut
+    @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
 
     // MARK: Body
     internal var body: some View {

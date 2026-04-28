@@ -12,6 +12,7 @@ import UniformTypeIdentifiers
 internal struct LibraryDestination: View {
 
     // MARK: Private Properties
+    @AppStorage(StorageKeys.libraryViewMode) private var viewMode: CollectionViewMode = .list
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \PGN.importedAt, order: .reverse) private var games: [PGN]
     @State private var pendingDeletion: PGN?
@@ -25,7 +26,7 @@ internal struct LibraryDestination: View {
             if games.isEmpty {
                 emptyState
             } else {
-                gameList
+                modeView
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -38,6 +39,16 @@ internal struct LibraryDestination: View {
                 .inspectorColumnWidth(min: 260, ideal: 300, max: 400)
         }
         .toolbar {
+            ToolbarItem {
+                Picker("View Mode", selection: $viewMode) {
+                    ForEach(CollectionViewMode.allCases) { mode in
+                        Label(mode.displayName, systemImage: mode.systemImage)
+                            .tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+            ToolbarSpacer()
             ToolbarItem {
                 Button {
                     presentOpenPanel()
@@ -78,7 +89,25 @@ internal struct LibraryDestination: View {
         }
     }
 
-    private var gameList: some View {
+    @ViewBuilder
+    private var modeView: some View {
+        switch viewMode {
+        case .icons:   placeholder("Icons")
+        case .list:    listView
+        case .columns: placeholder("Columns")
+        case .gallery: placeholder("Gallery")
+        }
+    }
+
+    private func placeholder(_ name: String) -> some View {
+        ContentUnavailableView(
+            name,
+            systemImage: "hammer",
+            description: Text("\(name) view coming soon.")
+        )
+    }
+
+    private var listView: some View {
         List(games, selection: $selectedPGN) { game in
             VStack(alignment: .leading, spacing: 2) {
                 HStack {
