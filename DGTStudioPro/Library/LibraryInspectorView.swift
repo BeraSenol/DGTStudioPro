@@ -8,15 +8,15 @@
 import SwiftUI
 
 internal struct LibraryInspectorView: View {
-
+    
     // MARK: Stored Properties
     internal let pgn: PGN?
-
+    
     // MARK: Initializers
     internal init(pgn: PGN? = nil) {
         self.pgn = pgn
     }
-
+    
     // MARK: Body
     internal var body: some View {
         List {
@@ -28,7 +28,7 @@ internal struct LibraryInspectorView: View {
         }
         .listStyle(.sidebar)
     }
-
+    
     // MARK: Instance Methods
     private var emptySection: some View {
         Section {
@@ -41,15 +41,15 @@ internal struct LibraryInspectorView: View {
 }
 
 private struct LoadedSection: View {
-
+    
     // MARK: Stored Properties
     @Bindable var pgn: PGN
-
+    
     // MARK: Private Properties
     @FocusState private var isNameFieldFocused: Bool
     @State private var isEditingName: Bool = false
     @State private var draftName: String = ""
-
+    
     // MARK: Body
     var body: some View {
         Section {
@@ -65,7 +65,7 @@ private struct LoadedSection: View {
             Text("Game Details")
         }
     }
-
+    
     // MARK: Instance Methods
     @ViewBuilder
     private var nameRow: some View {
@@ -94,13 +94,13 @@ private struct LoadedSection: View {
             }
         }
     }
-
+    
     private func beginEdit() {
         draftName = pgn.name
         isEditingName = true
         isNameFieldFocused = true
     }
-
+    
     private func commitEdit() {
         let trimmed = draftName.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {
