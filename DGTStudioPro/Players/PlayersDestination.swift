@@ -18,7 +18,7 @@ internal struct PlayersDestination: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .inspector(isPresented: $isInspectorPresented) {
                 PlayersInspectorView()
-                    .inspectorColumnWidth(min: 260, ideal: 300, max: 400)
+                    .inspectorColumnWidth(min: 260, ideal: 320, max: 400)
             }
             .toolbar {
                 ToolbarItem {

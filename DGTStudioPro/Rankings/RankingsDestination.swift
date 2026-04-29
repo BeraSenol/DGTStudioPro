@@ -18,7 +18,7 @@ internal struct RankingsDestination: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .inspector(isPresented: $isInspectorPresented) {
                 RankingsInspectorView()
-                    .inspectorColumnWidth(min: 260, ideal: 300, max: 400)
+                    .inspectorColumnWidth(min: 260, ideal: 320, max: 400)
             }
             .toolbar {
                 ToolbarItem {

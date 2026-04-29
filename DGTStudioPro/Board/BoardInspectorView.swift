@@ -35,7 +35,8 @@ internal struct BoardInspectorView: View {
             LabeledContent("Round", value: pgn?.displayRound ?? "—")
             LabeledContent("Result", value: pgn?.result.rawValue ?? "—")
         } header: {
-            Text("Game")
+            Text(pgn?.name ?? "Game")
+                .textCase(nil)
         }
     }
     

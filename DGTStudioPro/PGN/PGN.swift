@@ -15,6 +15,16 @@ internal enum GameResult: String, CaseIterable, Codable {
     case ongoing   = "*"
 }
 
+internal enum SevenTagRoster: String, CaseIterable, Sendable {
+    case event  = "Event"
+    case site   = "Site"
+    case date   = "Date"
+    case round  = "Round"
+    case white  = "White"
+    case black  = "Black"
+    case result = "Result"
+}
+
 private enum PGNPlaceholder: String, Codable {
     case general = "?"
     case date  = "????.??.??"
@@ -33,12 +43,14 @@ internal final class PGN: Identifiable {
     internal var result: GameResult
     
     internal var moves: [String]
-    
-    internal var id: PersistentIdentifier { persistentModelID }
+
+    internal var name: String = ""
     internal var importedAt: Date
     internal var contentHash: String
-    
+
     // MARK: Computed Properties
+    internal var id: PersistentIdentifier { persistentModelID }
+
     internal var displayDate: String {
         guard let date else { return PGNPlaceholder.date.rawValue }
         return date.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits))
@@ -58,6 +70,7 @@ internal final class PGN: Identifiable {
         white: String = PGNPlaceholder.general.rawValue,
         black: String = PGNPlaceholder.general.rawValue,
         moves: [String] = [],
+        name: String? = nil,
         result: GameResult = .ongoing,
         contentHash: String = ""
     ) {
@@ -69,6 +82,7 @@ internal final class PGN: Identifiable {
         self.black = black
         self.result = result
         self.moves = moves
+        self.name = name ?? "\(white) vs \(black)"
         self.importedAt = .now
         self.contentHash = contentHash
     }

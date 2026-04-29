@@ -1,5 +1,5 @@
 //
-//  Theme.swift
+//  BoardStyle.swift
 //  DGTStudioPro
 //
 //  Created by Supreme Leader on 01/04/2026.
@@ -35,13 +35,4 @@ internal enum BoardStyle: String, CaseIterable, Codable, Sendable {
         case .wenge:    return .wengeDark
         }
     }
-}
-
-internal struct Theme: Sendable {
-    // MARK: Stored Properties
-    internal let style: BoardStyle
-    
-    // MARK: Computed Properties
-    internal var light: Color { style.light }
-    internal var dark:  Color { style.dark }
 }

@@ -35,7 +35,7 @@ internal struct BoardDestination: View {
                 style: boardStyle,
                 onMoveTapped: nil
             )
-            .inspectorColumnWidth(min: 260, ideal: 300, max: 400)
+            .inspectorColumnWidth(min: 260, ideal: 320, max: 400)
         }
         .toolbar {
             ToolbarItem {
