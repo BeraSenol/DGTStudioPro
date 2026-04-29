@@ -37,7 +37,6 @@ internal struct SettingsView: View {
 
     private var boardTab: some View {
         VStack {
-            Text("Style")
             HStack(spacing: 20) {
                 ForEach(BoardStyle.allCases, id: \.self, content: boardStyleButton)
             }

@@ -8,12 +8,12 @@
 import SwiftUI
 
 internal struct BoardDestination: View {
-
+    
     // MARK: Private Properties
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
     @State private var perspective: PieceColor = .white
     @State private var isInspectorPresented: Bool = true
-
+    
     // MARK: Body
     internal var body: some View {
         BoardView(
@@ -45,14 +45,8 @@ internal struct BoardDestination: View {
                     Label("Flip Board", systemImage: "arrow.up.arrow.down")
                 }
             }
-            ToolbarItem {
-                Button {
-                    isInspectorPresented.toggle()
-                } label: {
-                    Label("Inspector", systemImage: "sidebar.trailing")
-                }
-            }
         }
+        .inspectorToggle(isPresented: $isInspectorPresented)
     }
 }
 

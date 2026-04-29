@@ -29,9 +29,6 @@ internal struct SquareView: View, Equatable {
                 .fill(fillColor)
 
             // TODO: Apply Dynamic Rectangle Color
-            //  if !highlight.isEmpty {
-            //      Rectangle().fill(highlightColor)
-            //  }
 
             if let imageName = piece.imageName {
                 Image(imageName)

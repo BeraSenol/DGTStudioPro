@@ -85,7 +85,6 @@ internal struct MoveHistoryView: View {
     private func moveCell(at index: Int, isWhite: Bool) -> some View {
         let san = moves[index]
         let isSelected = index == currentMoveIndex
-        let highlightColor = Color.secondary
 
         return Button {
             onMoveTapped?(index)
@@ -105,7 +104,7 @@ internal struct MoveHistoryView: View {
             .padding(.horizontal, 6)
             .background(
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .fill(highlightColor.opacity(isSelected ? 0.20 : 0))
+                    .fill(.secondary.opacity(isSelected ? 0.20 : 0))
             )
             .frame(maxWidth: .infinity, alignment: .leading)
         }

@@ -100,12 +100,12 @@ internal struct Piece: Codable, Equatable, Hashable, Sendable {
     internal static let blackKing   = Piece(.black, .king)
 
     private static let imageNames: [String?] = {
+        let typeNames = ["", "Pawn", "Knight", "Bishop", "Rook", "Queen", "King"]
         var table = [String?](repeating: nil, count: 16)
         for color in PieceColor.allCases {
             for type in PieceType.allCases {
-                let piece = Piece(color, type)
                 let prefix = color == .white ? "White" : "Black"
-                table[Int(piece.rawValue)] = prefix + Piece.typeNames[Int(type.rawValue)]
+                table[Int(Piece(color, type).rawValue)] = prefix + typeNames[Int(type.rawValue)]
             }
         }
         return table

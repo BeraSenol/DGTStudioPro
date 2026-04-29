@@ -32,14 +32,14 @@ internal struct CastlingRights: Codable, Equatable, Hashable, Sendable {
     
     internal var fen: String {
         guard rawValue != 0 else { return "-" }
-
+        
         var result = ""
-
+        
         if whiteKingSide  { result.append("K") }
         if whiteQueenSide { result.append("Q") }
         if blackKingSide  { result.append("k") }
         if blackQueenSide { result.append("q") }
-
+        
         return result
     }
     
@@ -62,11 +62,10 @@ internal struct CastlingRights: Codable, Equatable, Hashable, Sendable {
     }
     
     internal mutating func revokeAll(for color: PieceColor) {
-        revoke(
-            color == .white
-            ? CastlingRights(rawValue: Self.whiteKingSideMask | Self.whiteQueenSideMask)
-            : CastlingRights(rawValue: Self.blackKingSideMask | Self.blackQueenSideMask)
-        )
+        let mask = color == .white
+        ? Self.whiteKingSideMask | Self.whiteQueenSideMask
+        : Self.blackKingSideMask | Self.blackQueenSideMask
+        rawValue &= ~mask
     }
     
     // MARK: Static Methods
