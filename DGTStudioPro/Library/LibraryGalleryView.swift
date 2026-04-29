@@ -12,12 +12,12 @@ internal struct LibraryGalleryView: View {
     @Binding var selectedPGNs: Set<PGN.ID>
     let boardStyle: BoardStyle
     let onDelete: (PGN) -> Void
-    
+
     private var selectedPGN: PGN? {
         guard let id = selectedPGNs.first else { return nil }
         return games.first(where: { $0.id == id })
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             preview
@@ -25,7 +25,7 @@ internal struct LibraryGalleryView: View {
             thumbnailStrip
         }
     }
-    
+
     @ViewBuilder
     private var preview: some View {
         if let game = selectedPGN ?? games.first {
@@ -43,7 +43,7 @@ internal struct LibraryGalleryView: View {
             )
         }
     }
-    
+
     private func playerHeader(for game: PGN) -> some View {
         VStack(spacing: 6) {
             Text(game.name)
@@ -55,7 +55,7 @@ internal struct LibraryGalleryView: View {
                 .foregroundStyle(.secondary)
         }
     }
-    
+
     // TODO: replay `game.moves` to render the final position once the SAN
     // parser lands in Phase 7. Until then, show the starting position.
     private var board: some View {
@@ -68,9 +68,8 @@ internal struct LibraryGalleryView: View {
             checkSquare: nil,
             selectedSquare: nil
         )
-        .frame(maxWidth: 600, maxHeight: 600)
     }
-    
+
     private var thumbnailStrip: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
@@ -82,7 +81,7 @@ internal struct LibraryGalleryView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
             }
-            .frame(height: 140)
+            .frame(height: 160)
             .background(.thinMaterial)
             .onChange(of: selectedPGNs) { _, newSelection in
                 guard let id = newSelection.first else { return }
@@ -92,22 +91,14 @@ internal struct LibraryGalleryView: View {
             }
         }
     }
-    
+
     private func thumbnail(for game: PGN) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            resultChip(game.result)
-            Spacer(minLength: 0)
-            Text(game.name)
-                .font(.caption)
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(10)
-        .frame(width: 140, height: 110, alignment: .topLeading)
-        .libraryGameCard(
+        LibraryGameCardView(
+            game: game,
             isSelected: selectedPGNs.contains(game.id),
             onSelect: { selectedPGNs = [game.id] },
             onDelete: { onDelete(game) }
         )
+        .frame(width: 180)
     }
 }

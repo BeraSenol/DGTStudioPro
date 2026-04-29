@@ -20,14 +20,6 @@ internal struct RankingsDestination: View {
                 RankingsInspectorView()
                     .inspectorColumnWidth(min: 260, ideal: 320, max: 400)
             }
-            .toolbar {
-                ToolbarItem {
-                    Button {
-                        isInspectorPresented.toggle()
-                    } label: {
-                        Label("Inspector", systemImage: "sidebar.trailing")
-                    }
-                }
-            }
+            .inspectorToggle(isPresented: $isInspectorPresented)
     }
 }

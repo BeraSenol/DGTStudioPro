@@ -7,8 +7,8 @@
 
 import CryptoKit
 import Foundation
-import SwiftData
 import os
+import SwiftData
 
 // MARK: PGN Store
 internal struct PGNStore {

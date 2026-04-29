@@ -7,6 +7,41 @@
 
 import SwiftUI
 
+internal struct LibraryGameCardView: View {
+    let game: PGN
+    let isSelected: Bool
+    let onSelect: () -> Void
+    let onDelete: () -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                resultChip(game.result)
+                Spacer()
+                Text(game.displayDate)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+            Text(game.name)
+                .font(.callout)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Spacer(minLength: 4)
+            Text(game.event)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
+        .padding(12)
+        .libraryGameCard(
+            isSelected: isSelected,
+            onSelect: onSelect,
+            onDelete: onDelete
+        )
+    }
+}
+
 internal struct LibraryGameCardModifier: ViewModifier {
     let isSelected: Bool
     let cornerRadius: CGFloat
@@ -32,6 +67,17 @@ internal struct LibraryGameCardModifier: ViewModifier {
                 }
             }
     }
+}
+
+internal func resultChip(_ result: GameResult) -> some View {
+    Text(result.rawValue)
+        .font(.caption.monospaced())
+        .tracking(1)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .background(.tertiary)
+        .foregroundStyle(.secondary)
+        .clipShape(Capsule())
 }
 
 extension View {
