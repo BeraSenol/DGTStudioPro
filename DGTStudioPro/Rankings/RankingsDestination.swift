@@ -10,16 +10,20 @@ import SwiftUI
 internal struct RankingsDestination: View {
     
     // MARK: Private Properties
-    @State private var isInspectorPresented: Bool = true
+    @State private var isInspectorPresented: Bool = false
     
     // MARK: Body
     internal var body: some View {
-        Text("Rankings")
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .inspector(isPresented: $isInspectorPresented) {
-                RankingsInspectorView()
-                    .inspectorColumnWidth(min: 260, ideal: 320, max: 400)
-            }
-            .inspectorToggle(isPresented: $isInspectorPresented)
+        ContentUnavailableView(
+            "Rankings",
+            systemImage: "list.number",
+            description: Text("Rankings coming soon.")
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .inspector(isPresented: $isInspectorPresented) {
+            RankingsInspectorView()
+                .inspectorColumnWidth(min: 260, ideal: 320, max: 400)
+        }
+        .inspectorToggle(isPresented: $isInspectorPresented)
     }
 }

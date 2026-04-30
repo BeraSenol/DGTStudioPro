@@ -46,10 +46,19 @@ internal struct LibraryGalleryView: View {
 
     private func playerHeader(for game: PGN) -> some View {
         VStack(spacing: 6) {
-            Text(game.name)
-                .font(.system(size: 22, weight: .semibold, design: .serif))
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
+            HStack(spacing: 16) {
+                Text(game.white)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .lineLimit(1)
+                Text("vs")
+                    .foregroundStyle(.secondary)
+                    .fontWeight(.light)
+                Text(game.black)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .lineLimit(1)
+            }
+            .font(.system(size: 22, weight: .semibold, design: .rounded))
+
             Text(game.result.rawValue)
                 .font(.system(size: 14, weight: .regular, design: .monospaced))
                 .foregroundStyle(.secondary)

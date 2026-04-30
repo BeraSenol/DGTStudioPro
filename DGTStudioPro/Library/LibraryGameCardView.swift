@@ -22,17 +22,31 @@ internal struct LibraryGameCardView: View {
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
-            Text(game.name)
-                .font(.callout)
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(game.white)
+                    .font(.callout)
+                    .lineLimit(1)
+                Text("vs")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                Text(game.black)
+                    .font(.callout)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
             Spacer(minLength: 4)
-            Text(game.event)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
+            HStack(alignment: .bottom) {
+                Text(game.event)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                Spacer(minLength: 8)
+                Text("#\(game.displayRound)")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
         }
-        .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
+        .frame(minWidth: 120, maxWidth: .infinity, minHeight: 100, alignment: .topLeading)
         .padding(12)
         .libraryGameCard(
             isSelected: isSelected,

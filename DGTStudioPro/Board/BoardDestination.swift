@@ -12,7 +12,7 @@ internal struct BoardDestination: View {
     // MARK: Private Properties
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
     @State private var perspective: PieceColor = .white
-    @State private var isInspectorPresented: Bool = true
+    @State private var isInspectorPresented: Bool = false
     
     // MARK: Body
     internal var body: some View {
