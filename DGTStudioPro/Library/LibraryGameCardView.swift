@@ -1,111 +1,176 @@
 //
-//  LibraryGameCard.swift
+//  LibraryGameCardView.swift
 //  DGTStudioPro
 //
 //  Created by Supreme Leader on 29/04/2026.
 //
 
 import SwiftUI
+import SwiftData
 
 internal struct LibraryGameCardView: View {
+
+    // MARK: Stored Properties
     let game: PGN
     let isSelected: Bool
     let onSelect: () -> Void
     let onDelete: () -> Void
-    
+
+    // MARK: Body
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                resultChip(game.result)
-                Spacer()
-                Text(game.displayDate)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(game.white)
-                    .font(.callout)
-                    .lineLimit(1)
-                Text("vs")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                Text(game.black)
-                    .font(.callout)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            Spacer(minLength: 4)
-            HStack(alignment: .bottom) {
-                Text(game.event)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                Spacer(minLength: 8)
-                Text("#\(game.displayRound)")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+        VStack(spacing: 4) {
+            documentIcon
+            nameLabel
+            Text(game.displayDate)
+                .font(.caption)
+                .foregroundStyle(.tint)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onSelect)
+        .contextMenu {
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete", systemImage: "trash")
             }
         }
-        .frame(minWidth: 120, maxWidth: .infinity, minHeight: 100, alignment: .topLeading)
-        .padding(12)
-        .libraryGameCard(
-            isSelected: isSelected,
-            onSelect: onSelect,
-            onDelete: onDelete
+    }
+
+    // MARK: Instance Methods
+    private var documentIcon: some View {
+        ZStack {
+            Image(systemName: "doc.fill")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .foregroundStyle(.secondary.opacity(0.35))
+                .frame(width: 96, height: 96)
+
+            Text(displayResult(game.result))
+                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                .foregroundStyle(.primary)
+                .tracking(1)
+                .offset(y: 6)
+        }
+    }
+
+    @ViewBuilder
+    private var nameLabel: some View {
+        Text(game.name)
+            .font(.callout)
+            .lineLimit(2)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(isSelected ? Color.accentColor : .clear)
+            )
+            .foregroundStyle(isSelected ? Color.white : .primary)
+    }
+
+    private func displayResult(_ result: GameResult) -> String {
+        switch result {
+        case .whiteWins: return "1-0"
+        case .blackWins: return "0-1"
+        case .draw:      return "½-½"
+        case .ongoing:   return "*"
+        }
+    }
+}
+
+// MARK: Previews
+private func sampleGame(
+    white: String = "Carlsen",
+    black: String = "Nepomniachtchi",
+    result: GameResult = .whiteWins,
+    name: String? = nil
+) -> PGN {
+    PGN(
+        event: "World Championship",
+        site: "Dubai",
+        white: white,
+        black: black,
+        name: name,
+        result: result
+    )
+}
+
+#Preview("All Results") {
+    HStack(spacing: 12) {
+        LibraryGameCardView(
+            game: sampleGame(result: .whiteWins),
+            isSelected: false,
+            onSelect: {},
+            onDelete: {}
+        )
+        LibraryGameCardView(
+            game: sampleGame(result: .blackWins),
+            isSelected: false,
+            onSelect: {},
+            onDelete: {}
+        )
+        LibraryGameCardView(
+            game: sampleGame(result: .draw),
+            isSelected: false,
+            onSelect: {},
+            onDelete: {}
+        )
+        LibraryGameCardView(
+            game: sampleGame(result: .ongoing),
+            isSelected: false,
+            onSelect: {},
+            onDelete: {}
         )
     }
+    .padding()
+    .frame(width: 720)
+    .modelContainer(for: PGN.self, inMemory: true)
 }
 
-internal struct LibraryGameCardModifier: ViewModifier {
-    let isSelected: Bool
-    let cornerRadius: CGFloat
-    let onSelect: () -> Void
-    let onDelete: () -> Void
-    
-    func body(content: Content) -> some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        content
-            .background(.regularMaterial)
-            .overlay {
-                shape.strokeBorder(
-                    isSelected ? Color.accentColor : .secondary.opacity(0.2),
-                    lineWidth: isSelected ? 2 : 1
-                )
-            }
-            .clipShape(shape)
-            .contentShape(shape)
-            .onTapGesture(perform: onSelect)
-            .contextMenu {
-                Button(role: .destructive, action: onDelete) {
-                    Label("Delete", systemImage: "trash")
-                }
-            }
+#Preview("Selection States") {
+    HStack(spacing: 12) {
+        LibraryGameCardView(
+            game: sampleGame(),
+            isSelected: false,
+            onSelect: {},
+            onDelete: {}
+        )
+        LibraryGameCardView(
+            game: sampleGame(),
+            isSelected: true,
+            onSelect: {},
+            onDelete: {}
+        )
     }
+    .padding()
+    .frame(width: 360)
+    .modelContainer(for: PGN.self, inMemory: true)
 }
 
-internal func resultChip(_ result: GameResult) -> some View {
-    Text(result.rawValue)
-        .font(.caption.monospaced())
-        .tracking(1)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2)
-        .background(.tertiary)
-        .foregroundStyle(.secondary)
-        .clipShape(Capsule())
-}
-
-extension View {
-    internal func libraryGameCard(
-        isSelected: Bool,
-        cornerRadius: CGFloat = 8,
-        onSelect: @escaping () -> Void,
-        onDelete: @escaping () -> Void
-    ) -> some View {
-        modifier(LibraryGameCardModifier(
-            isSelected: isSelected,
-            cornerRadius: cornerRadius,
-            onSelect: onSelect,
-            onDelete: onDelete
-        ))
+#Preview("Custom Name") {
+    HStack(spacing: 12) {
+        LibraryGameCardView(
+            game: sampleGame(
+                white: "Fischer",
+                black: "Spassky",
+                name: "Game of the Century"
+            ),
+            isSelected: false,
+            onSelect: {},
+            onDelete: {}
+        )
+        LibraryGameCardView(
+            game: sampleGame(
+                white: "Fischer",
+                black: "Spassky",
+                name: "Game of the Century"
+            ),
+            isSelected: true,
+            onSelect: {},
+            onDelete: {}
+        )
     }
+    .padding()
+    .frame(width: 360)
+    .modelContainer(for: PGN.self, inMemory: true)
 }

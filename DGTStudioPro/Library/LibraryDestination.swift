@@ -84,10 +84,11 @@ internal struct LibraryDestination: View {
                 onDelete: { pendingDeletion = $0 }
             )
         case .columns:
-            ContentUnavailableView(
-                "Columns",
-                systemImage: "hammer",
-                description: Text("Columns view coming soon.")
+            LibraryColumnsView(
+                games: games,
+                selectedPGNs: $selectedPGNs,
+                boardStyle: boardStyle,
+                onDelete: { pendingDeletion = $0 }
             )
         case .gallery:
             LibraryGalleryView(

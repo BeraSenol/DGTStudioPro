@@ -5,6 +5,7 @@
 //  Created by Supreme Leader on 29/04/2026.
 //
 
+import SwiftData
 import SwiftUI
 
 internal struct LibraryGalleryView: View {
@@ -29,12 +30,7 @@ internal struct LibraryGalleryView: View {
     @ViewBuilder
     private var preview: some View {
         if let game = selectedPGN ?? games.first {
-            VStack(spacing: 16) {
-                playerHeader(for: game)
-                board
-            }
-            .padding(24)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            LibraryGamePreviewView(game: game, boardStyle: boardStyle)
         } else {
             ContentUnavailableView(
                 "No Selection",
@@ -42,41 +38,6 @@ internal struct LibraryGalleryView: View {
                 description: Text("Select a game to preview.")
             )
         }
-    }
-
-    private func playerHeader(for game: PGN) -> some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 16) {
-                Text(game.white)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .lineLimit(1)
-                Text("vs")
-                    .foregroundStyle(.secondary)
-                    .fontWeight(.light)
-                Text(game.black)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .lineLimit(1)
-            }
-            .font(.system(size: 22, weight: .semibold, design: .rounded))
-
-            Text(game.result.rawValue)
-                .font(.system(size: 14, weight: .regular, design: .monospaced))
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    // TODO: replay `game.moves` to render the final position once the SAN
-    // parser lands in Phase 7. Until then, show the starting position.
-    private var board: some View {
-        BoardView(
-            position: .starting,
-            pieceTracker: .starting,
-            style: boardStyle,
-            perspective: .white,
-            lastMove: nil,
-            checkSquare: nil,
-            selectedSquare: nil
-        )
     }
 
     private var thumbnailStrip: some View {
@@ -110,4 +71,63 @@ internal struct LibraryGalleryView: View {
         )
         .frame(width: 180)
     }
+}
+
+// MARK: Previews
+private func galleryPreviewGames() -> [PGN] {
+    [
+        PGN(event: "World Championship", site: "Dubai", round: 11,
+            white: "Carlsen, Magnus", black: "Nepomniachtchi, Ian", result: .whiteWins),
+        PGN(event: "Tata Steel Masters", site: "Wijk aan Zee", round: 7,
+            white: "Giri, Anish", black: "Caruana, Fabiano", result: .draw),
+        PGN(event: "Norway Chess", site: "Stavanger", round: 3,
+            white: "Firouzja, Alireza", black: "Ding, Liren", result: .blackWins)
+    ]
+}
+
+#Preview("With Selection") {
+    @Previewable @State var selection: Set<PGN.ID> = []
+
+    let games = galleryPreviewGames()
+
+    LibraryGalleryView(
+        games: games,
+        selectedPGNs: $selection,
+        boardStyle: .walnut,
+        onDelete: { _ in }
+    )
+    .frame(width: 720, height: 600)
+    .onAppear {
+        // Pre-select the second game so selection styling shows.
+        if let id = games.dropFirst().first?.id {
+            selection = [id]
+        }
+    }
+    .modelContainer(for: PGN.self, inMemory: true)
+}
+
+#Preview("No Selection (Fallback to First)") {
+    @Previewable @State var selection: Set<PGN.ID> = []
+
+    LibraryGalleryView(
+        games: galleryPreviewGames(),
+        selectedPGNs: $selection,
+        boardStyle: .rosewood,
+        onDelete: { _ in }
+    )
+    .frame(width: 720, height: 600)
+    .modelContainer(for: PGN.self, inMemory: true)
+}
+
+#Preview("Empty") {
+    @Previewable @State var selection: Set<PGN.ID> = []
+
+    LibraryGalleryView(
+        games: [],
+        selectedPGNs: $selection,
+        boardStyle: .walnut,
+        onDelete: { _ in }
+    )
+    .frame(width: 720, height: 600)
+    .modelContainer(for: PGN.self, inMemory: true)
 }
