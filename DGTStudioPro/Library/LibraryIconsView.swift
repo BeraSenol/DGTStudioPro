@@ -9,16 +9,28 @@ import SwiftData
 import SwiftUI
 
 internal struct LibraryIconsView: View {
+
+    // MARK: Static Constants
+    private static let columnCount = 5
+    private static let columnSpacing: CGFloat = 16
+
+    // MARK: Stored Properties
     let games: [PGN]
     @Binding var selectedPGNs: Set<PGN.ID>
     let onDelete: (PGN) -> Void
-    
+
+    // MARK: Computed Properties
+    private var columns: [GridItem] {
+        Array(
+            repeating: GridItem(.flexible(minimum: 120), spacing: Self.columnSpacing),
+            count: Self.columnCount
+        )
+    }
+
+    // MARK: Body
     var body: some View {
         ScrollView {
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 16)],
-                spacing: 16
-            ) {
+            LazyVGrid(columns: columns, spacing: Self.columnSpacing) {
                 ForEach(games) { game in
                     LibraryGameCardView(
                         game: game,
@@ -49,7 +61,7 @@ private func iconsPreviewGames() -> [PGN] {
 
 #Preview("With Games") {
     @Previewable @State var selection: Set<PGN.ID> = []
-    
+
     LibraryIconsView(
         games: iconsPreviewGames(),
         selectedPGNs: $selection,
@@ -61,7 +73,7 @@ private func iconsPreviewGames() -> [PGN] {
 
 #Preview("Empty") {
     @Previewable @State var selection: Set<PGN.ID> = []
-    
+
     LibraryIconsView(
         games: [],
         selectedPGNs: $selection,

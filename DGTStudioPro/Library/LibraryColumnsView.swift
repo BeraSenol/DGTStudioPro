@@ -14,9 +14,9 @@ internal enum LibraryGroupingDimension: String, CaseIterable, Identifiable {
     case event
     case player
     case year
-    
+
     internal var id: String { rawValue }
-    
+
     internal var displayName: String {
         switch self {
         case .event:  return "Event"
@@ -24,7 +24,7 @@ internal enum LibraryGroupingDimension: String, CaseIterable, Identifiable {
         case .year:   return "Year"
         }
     }
-    
+
     internal var systemImage: String {
         switch self {
         case .event:  return "trophy"
@@ -39,13 +39,13 @@ internal struct LibraryGroup: Identifiable, Hashable {
     internal let id: String
     internal let displayName: String
     internal let games: [PGN]
-    
+
     internal var gameCount: Int { games.count }
-    
+
     internal static func == (lhs: LibraryGroup, rhs: LibraryGroup) -> Bool {
         lhs.id == rhs.id
     }
-    
+
     internal func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
@@ -53,38 +53,38 @@ internal struct LibraryGroup: Identifiable, Hashable {
 
 // MARK: Columns View
 internal struct LibraryColumnsView: View {
-    
+
     // MARK: Stored Properties
     internal let games: [PGN]
     @Binding internal var selectedPGNs: Set<PGN.ID>
     internal let boardStyle: BoardStyle
     internal let onDelete: (PGN) -> Void
-    
+
     // MARK: Private Properties
     @State private var dimension: LibraryGroupingDimension = .event
     @State private var selectedGroupID: String?
-    
+
     // MARK: Computed Properties
     private var groups: [LibraryGroup] {
         Self.makeGroups(from: games, dimension: dimension)
     }
-    
+
     private var selectedGroup: LibraryGroup? {
         guard let id = selectedGroupID else { return nil }
         return groups.first(where: { $0.id == id })
     }
-    
+
     private var selectedPGN: PGN? {
         guard let id = selectedPGNs.first else { return nil }
         return games.first(where: { $0.id == id })
     }
-    
+
     // MARK: Body
     internal var body: some View {
         HSplitView {
             sidebar
                 .frame(minWidth: 220, idealWidth: 260, maxWidth: 360, maxHeight: .infinity)
-            
+
             detail
                 .frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -96,7 +96,7 @@ internal struct LibraryColumnsView: View {
             selectedPGNs.removeAll()
         }
     }
-    
+
     // MARK: Instance Methods
     private var sidebar: some View {
         VStack(spacing: 0) {
@@ -105,7 +105,7 @@ internal struct LibraryColumnsView: View {
             groupList
         }
     }
-    
+
     private var dimensionPicker: some View {
         Picker("Group By", selection: $dimension) {
             ForEach(LibraryGroupingDimension.allCases) { dim in
@@ -116,7 +116,7 @@ internal struct LibraryColumnsView: View {
         .labelsHidden()
         .padding(8)
     }
-    
+
     @ViewBuilder
     private var groupList: some View {
         if groups.isEmpty {
@@ -145,7 +145,7 @@ internal struct LibraryColumnsView: View {
             .listStyle(.sidebar)
         }
     }
-    
+
     @ViewBuilder
     private var detail: some View {
         Group {
@@ -161,7 +161,7 @@ internal struct LibraryColumnsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     private func groupGames(_ group: LibraryGroup) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -183,7 +183,7 @@ internal struct LibraryColumnsView: View {
             .padding(16)
         }
     }
-    
+
     private func groupHeader(_ group: LibraryGroup) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(group.displayName)
@@ -195,7 +195,7 @@ internal struct LibraryColumnsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
-    
+
     // MARK: Static Methods
     private static func makeGroups(
         from games: [PGN],
@@ -207,27 +207,29 @@ internal struct LibraryColumnsView: View {
         case .year:   return groupByYear(games)
         }
     }
-    
+
     private static func groupByEvent(_ games: [PGN]) -> [LibraryGroup] {
         let buckets = Dictionary(grouping: games, by: \.event)
         return buckets
             .map { LibraryGroup(id: "event:\($0.key)", displayName: $0.key, games: $0.value) }
             .sorted { $0.displayName < $1.displayName }
     }
-    
+
     private static func groupByPlayer(_ games: [PGN]) -> [LibraryGroup] {
         var buckets: [String: [PGN]] = [:]
         for game in games {
-            buckets[game.white, default: []].append(game)
-            if game.black != game.white {
-                buckets[game.black, default: []].append(game)
+            let whiteKey = game.whiteDisplayName
+            let blackKey = game.blackDisplayName
+            buckets[whiteKey, default: []].append(game)
+            if blackKey != whiteKey {
+                buckets[blackKey, default: []].append(game)
             }
         }
         return buckets
             .map { LibraryGroup(id: "player:\($0.key)", displayName: $0.key, games: $0.value) }
             .sorted { $0.displayName < $1.displayName }
     }
-    
+
     private static func groupByYear(_ games: [PGN]) -> [LibraryGroup] {
         let calendar = Calendar.current
         var buckets: [Int?: [PGN]] = [:]
@@ -255,7 +257,7 @@ private func columnsPreviewGames() -> [PGN] {
     let formatter = DateFormatter()
     formatter.dateFormat = "yyyy.MM.dd"
     formatter.locale = Locale(identifier: "en_US_POSIX")
-    
+
     return [
         PGN(event: "World Championship", site: "Dubai",
             date: formatter.date(from: "2021.12.10"),
@@ -286,7 +288,7 @@ private func columnsPreviewGames() -> [PGN] {
 
 #Preview("With Games") {
     @Previewable @State var selection: Set<PGN.ID> = []
-    
+
     LibraryColumnsView(
         games: columnsPreviewGames(),
         selectedPGNs: $selection,
@@ -299,7 +301,7 @@ private func columnsPreviewGames() -> [PGN] {
 
 #Preview("Empty") {
     @Previewable @State var selection: Set<PGN.ID> = []
-    
+
     LibraryColumnsView(
         games: [],
         selectedPGNs: $selection,

@@ -9,13 +9,13 @@ import SwiftUI
 import SwiftData
 
 internal struct LibraryGameCardView: View {
-
+    
     // MARK: Stored Properties
     let game: PGN
     let isSelected: Bool
     let onSelect: () -> Void
     let onDelete: () -> Void
-
+    
     // MARK: Body
     var body: some View {
         VStack(spacing: 4) {
@@ -25,7 +25,7 @@ internal struct LibraryGameCardView: View {
                 .font(.caption)
                 .foregroundStyle(.tint)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(.vertical, 8)
         .contentShape(Rectangle())
         .onTapGesture(perform: onSelect)
@@ -35,24 +35,30 @@ internal struct LibraryGameCardView: View {
             }
         }
     }
-
+    
     // MARK: Instance Methods
     private var documentIcon: some View {
         ZStack {
-            Image(systemName: "doc.fill")
+            Image(systemName: "doc")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .foregroundStyle(.secondary.opacity(0.35))
+                .foregroundStyle(.white)
                 .frame(width: 96, height: 96)
-
+                .fontWeight(.thin)
+            
             Text(displayResult(game.result))
-                .font(.system(size: 18, weight: .bold, design: .monospaced))
-                .foregroundStyle(.primary)
-                .tracking(1)
-                .offset(y: 6)
+                .font(.system(size: 18, weight: .semibold, design: .monospaced))
+                .foregroundStyle(.white)
+                .tracking(game.result == .draw ? 4 : 2)
+                .offset(y: 4)
+        }
+        .padding(6)
+        .background {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(.secondary.opacity(isSelected ? 0.15 : 0))
         }
     }
-
+    
     @ViewBuilder
     private var nameLabel: some View {
         Text(game.name)
@@ -67,7 +73,7 @@ internal struct LibraryGameCardView: View {
             )
             .foregroundStyle(isSelected ? Color.white : .primary)
     }
-
+    
     private func displayResult(_ result: GameResult) -> String {
         switch result {
         case .whiteWins: return "1-0"

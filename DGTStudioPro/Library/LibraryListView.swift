@@ -12,11 +12,11 @@ internal struct LibraryListView: View {
     let games: [PGN]
     @Binding var selectedPGNs: Set<PGN.ID>
     let onDelete: (PGN) -> Void
-    
+
     var body: some View {
         Table(games, selection: $selectedPGNs) {
-            TableColumn("White") { Text($0.white) }
-            TableColumn("Black") { Text($0.black) }
+            TableColumn("White") { Text($0.whiteDisplayName) }
+            TableColumn("Black") { Text($0.blackDisplayName) }
             TableColumn("Result") { game in
                 Text(game.result.rawValue).foregroundStyle(.secondary)
             }
@@ -59,7 +59,7 @@ private func listPreviewGames() -> [PGN] {
 
 #Preview("With Games") {
     @Previewable @State var selection: Set<PGN.ID> = []
-    
+
     LibraryListView(
         games: listPreviewGames(),
         selectedPGNs: $selection,
@@ -71,7 +71,7 @@ private func listPreviewGames() -> [PGN] {
 
 #Preview("Empty") {
     @Previewable @State var selection: Set<PGN.ID> = []
-    
+
     LibraryListView(
         games: [],
         selectedPGNs: $selection,
@@ -80,5 +80,3 @@ private func listPreviewGames() -> [PGN] {
     .frame(width: 720, height: 360)
     .modelContainer(for: PGN.self, inMemory: true)
 }
-
-

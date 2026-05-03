@@ -216,10 +216,12 @@ internal struct LibraryDestination: View {
     }
 
     private func backfillEmptyNames() {
-        let toFix = games.filter { $0.name.isEmpty }
+        let toFix = games.filter { game in
+            game.name.isEmpty || game.name == game.legacyDefaultName
+        }
         guard !toFix.isEmpty else { return }
         for game in toFix {
-            game.name = "\(game.white) vs \(game.black)"
+            game.name = game.defaultDisplayName
         }
         do {
             try modelContext.save()
