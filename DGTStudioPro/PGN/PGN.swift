@@ -41,6 +41,7 @@ internal final class PGN: Identifiable {
     internal var white: String
     internal var black: String
     internal var result: GameResult
+    internal var timeControl: String?
 
     internal var moves: [String]
 
@@ -92,6 +93,7 @@ internal final class PGN: Identifiable {
         moves: [String] = [],
         name: String? = nil,
         result: GameResult = .ongoing,
+        timeControl: String? = nil,
         contentHash: String = ""
     ) {
         self.event = event
@@ -101,6 +103,7 @@ internal final class PGN: Identifiable {
         self.white = white
         self.black = black
         self.result = result
+        self.timeControl = timeControl
         self.moves = moves
         self.name = name ?? "\(Self.displayPlayerName(white)) vs \(Self.displayPlayerName(black))"
         self.importedAt = .now

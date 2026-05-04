@@ -18,6 +18,9 @@ internal struct LibraryDestination: View {
         category: "library"
     )
 
+    // MARK: Stored Properties
+    internal let filter: SmartTag?
+
     // MARK: Private Properties
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
     @AppStorage(StorageKeys.libraryViewMode) private var viewMode: CollectionViewMode = .list
@@ -28,16 +31,50 @@ internal struct LibraryDestination: View {
     @State private var isInspectorPresented: Bool = false
     @State private var importError: ImportError?
 
+    // MARK: Initializers
+    internal init(filter: SmartTag? = nil) {
+        self.filter = filter
+    }
+
     // MARK: Computed Properties
+    private var filteredGames: [PGN] {
+        guard let filter else { return games }
+        return games.filter { filter.matches($0) }
+    }
+
     private var selectedPGN: PGN? {
         guard let id = selectedPGNs.first else { return nil }
-        return games.first(where: { $0.id == id })
+        return filteredGames.first(where: { $0.id == id })
+    }
+
+    private var importErrorBinding: Binding<Bool> {
+        Binding(
+            get: { importError != nil },
+            set: { if !$0 { importError = nil } }
+        )
+    }
+
+    private var pendingDeletionBinding: Binding<Bool> {
+        Binding(
+            get: { pendingDeletion != nil },
+            set: { if !$0 { pendingDeletion = nil } }
+        )
+    }
+
+    private var importErrorTitle: String {
+        guard let importError else { return "" }
+        switch importError.error {
+        case .duplicate:           return "Already Imported"
+        case .missingRequiredTags: return "Missing Required Tags"
+        case .malformedPGN:        return "Malformed PGN"
+        case .fileReadFailed:      return "Couldn't Read File"
+        }
     }
 
     // MARK: Body
     internal var body: some View {
         Group {
-            if games.isEmpty {
+            if filteredGames.isEmpty {
                 emptyState
             } else {
                 modeView
@@ -53,8 +90,25 @@ internal struct LibraryDestination: View {
                 .inspectorColumnWidth(min: 260, ideal: 300, max: 400)
         }
         .toolbar { toolbarContent }
-        .alert(item: $importError, content: alert(for:))
-        .alert(item: $pendingDeletion, content: deletionAlert(for:))
+        .alert(
+            importErrorTitle,
+            isPresented: importErrorBinding,
+            presenting: importError,
+            actions: { error in importErrorActions(for: error) },
+            message: { error in importErrorMessage(for: error) }
+        )
+        .alert(
+            "Delete Game?",
+            isPresented: pendingDeletionBinding,
+            presenting: pendingDeletion,
+            actions: { game in
+                Button("Delete", role: .destructive) { delete(game) }
+                Button("Cancel", role: .cancel) {}
+            },
+            message: { game in
+                Text("\(game.name) will be permanently deleted.")
+            }
+        )
         .onDeleteCommand {
             if let selected = selectedPGN { pendingDeletion = selected }
         }
@@ -73,26 +127,26 @@ internal struct LibraryDestination: View {
         switch viewMode {
         case .icons:
             LibraryIconsView(
-                games: games,
+                games: filteredGames,
                 selectedPGNs: $selectedPGNs,
                 onDelete: { pendingDeletion = $0 }
             )
         case .list:
             LibraryListView(
-                games: games,
+                games: filteredGames,
                 selectedPGNs: $selectedPGNs,
                 onDelete: { pendingDeletion = $0 }
             )
         case .columns:
             LibraryColumnsView(
-                games: games,
+                games: filteredGames,
                 selectedPGNs: $selectedPGNs,
                 boardStyle: boardStyle,
                 onDelete: { pendingDeletion = $0 }
             )
         case .gallery:
             LibraryGalleryView(
-                games: games,
+                games: filteredGames,
                 selectedPGNs: $selectedPGNs,
                 boardStyle: boardStyle,
                 onDelete: { pendingDeletion = $0 }
@@ -126,11 +180,20 @@ internal struct LibraryDestination: View {
         }
     }
 
+    @ViewBuilder
     private var emptyState: some View {
-        ContentUnavailableView {
-            Label("No Games", systemImage: "books.vertical")
-        } description: {
-            Text("Import a PGN file to get started.")
+        if let filter {
+            ContentUnavailableView {
+                Label("No \(filter.displayName) Games", systemImage: "tag")
+            } description: {
+                Text("No games match this tag yet.")
+            }
+        } else {
+            ContentUnavailableView {
+                Label("No Games", systemImage: "books.vertical")
+            } description: {
+                Text("Import a PGN file to get started.")
+            }
         }
     }
 
@@ -163,45 +226,31 @@ internal struct LibraryDestination: View {
         }
     }
 
-    private func alert(for error: ImportError) -> Alert {
+    @ViewBuilder
+    private func importErrorActions(for error: ImportError) -> some View {
         switch error.error {
         case .duplicate(let existing):
-            return Alert(
-                title: Text("Already Imported"),
-                message: Text("\(existing.name) is already in your library."),
-                primaryButton: .default(Text("View Existing")) {
-                    selectedPGNs = [existing.id]
-                },
-                secondaryButton: .cancel()
-            )
-        case .missingRequiredTags(let tags):
-            return Alert(
-                title: Text("Missing Required Tags"),
-                message: Text("The PGN is missing: \(tags.sorted().joined(separator: ", "))."),
-                dismissButton: .default(Text("OK"))
-            )
-        case .malformedPGN(let reason):
-            return Alert(
-                title: Text("Malformed PGN"),
-                message: Text(reason),
-                dismissButton: .default(Text("OK"))
-            )
-        case .fileReadFailed(let url, _):
-            return Alert(
-                title: Text("Couldn't Read File"),
-                message: Text("Failed to read \(url.lastPathComponent)."),
-                dismissButton: .default(Text("OK"))
-            )
+            Button("View Existing") {
+                selectedPGNs = [existing.id]
+            }
+            Button("Cancel", role: .cancel) {}
+        case .missingRequiredTags, .malformedPGN, .fileReadFailed:
+            Button("OK", role: .cancel) {}
         }
     }
 
-    private func deletionAlert(for game: PGN) -> Alert {
-        Alert(
-            title: Text("Delete Game?"),
-            message: Text("\(game.name) will be permanently deleted."),
-            primaryButton: .destructive(Text("Delete")) { delete(game) },
-            secondaryButton: .cancel()
-        )
+    @ViewBuilder
+    private func importErrorMessage(for error: ImportError) -> some View {
+        switch error.error {
+        case .duplicate(let existing):
+            Text("\(existing.name) is already in your library.")
+        case .missingRequiredTags(let tags):
+            Text("The PGN is missing: \(tags.sorted().joined(separator: ", ")).")
+        case .malformedPGN(let reason):
+            Text(reason)
+        case .fileReadFailed(let url, _):
+            Text("Failed to read \(url.lastPathComponent).")
+        }
     }
 
     private func delete(_ pgn: PGN) {

@@ -53,7 +53,8 @@ internal enum PGNParser {
             white: tags[.white] ?? "",
             black: tags[.black] ?? "",
             moves: moves,
-            result: parseResult(tags[.result])
+            result: parseResult(tags[.result]),
+            timeControl: parseTimeControl(tags["TimeControl"])
         )
     }
 
@@ -109,6 +110,11 @@ internal enum PGNParser {
             return .ongoing
         }
         return result
+    }
+
+    internal static func parseTimeControl(_ value: String?) -> String? {
+        guard let value, !value.isEmpty, value != "-" else { return nil }
+        return value
     }
 
     // MARK: Movetext Parsing

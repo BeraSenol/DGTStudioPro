@@ -8,42 +8,65 @@
 import SwiftUI
 
 internal struct ContentView: View {
-    
+
     // MARK: Private Properties
-    @State private var selection: Destination = .board
-    
+    @State private var selection: SidebarSelection = .destination(.board)
+
     // MARK: Body
     internal var body: some View {
         NavigationSplitView {
-            List(Destination.allCases, selection: $selection) { destination in
-                Label(destination.title, systemImage: destination.systemImage)
-                    .tag(destination)
+            List(selection: $selection) {
+                Section("Favorites") {
+                    ForEach(Destination.allCases) { destination in
+                        Label(destination.title, systemImage: destination.systemImage)
+                            .tag(SidebarSelection.destination(destination))
+                    }
+                }
+
+                Section("Tags") {
+                    ForEach(SmartTag.allCases) { tag in
+                        Label {
+                            Text(tag.displayName)
+                        } icon: {
+                            Circle()
+                                .fill(tag.color)
+                                .frame(width: 10, height: 10)
+                        }
+                        .tag(SidebarSelection.tag(tag))
+                    }
+                }
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
         } detail: {
             switch selection {
-            case .board:    BoardDestination()
-            case .library:  LibraryDestination()
-            case .players:  PlayersDestination()
-            case .rankings: RankingsDestination()
+            case .destination(.board):    BoardDestination()
+            case .destination(.library):  LibraryDestination(filter: nil)
+            case .destination(.players):  PlayersDestination()
+            case .destination(.rankings): RankingsDestination()
+            case .tag(let tag):           LibraryDestination(filter: tag)
             }
         }
     }
 }
 
-private enum Destination: String, CaseIterable, Identifiable {
+internal enum SidebarSelection: Hashable {
+    case destination(Destination)
+    case tag(SmartTag)
+}
+
+internal enum Destination: String, CaseIterable, Identifiable, Hashable {
     case board
     case library
     case players
     case rankings
-    
-    var id: String { rawValue }
-    
-    var title: String {
+
+    internal var id: String { rawValue }
+
+    internal var title: String {
         rawValue.capitalized
     }
-    
-    var systemImage: String {
+
+    internal var systemImage: String {
         switch self {
         case .board:    return "checkerboard.rectangle"
         case .library:  return "books.vertical"

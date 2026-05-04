@@ -11,7 +11,7 @@ import SwiftUI
 internal struct LibraryIconsView: View {
 
     // MARK: Static Constants
-    private static let columnCount = 5
+    private static let columnCount = 6
     private static let columnSpacing: CGFloat = 16
 
     // MARK: Stored Properties
