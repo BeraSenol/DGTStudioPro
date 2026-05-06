@@ -52,7 +52,8 @@ internal struct LibraryGameCardView: View {
                 .tracking(game.result == .draw ? 4 : 2)
                 .offset(y: 4)
         }
-        .padding(6)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
         .background {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(.secondary.opacity(isSelected ? 0.15 : 0))
