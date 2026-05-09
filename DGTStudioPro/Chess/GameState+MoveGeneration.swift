@@ -5,15 +5,6 @@
 //  Created by Supreme Leader on 06/05/2026.
 //
 
-//
-//  GameState+MoveGeneration.swift
-//  DGTStudioPro
-//
-//  Phase 7a — pseudo-legal move generation. Pawns shipped first; other piece
-//  types follow in subsequent deliverables. Legal filtering (7c) and SAN
-//  (7e/7f) live in their own files.
-//
-
 extension GameState {
     
     // MARK: Entry Point
@@ -54,6 +45,39 @@ extension GameState {
         }
         
         return moves
+    }
+    
+    // MARK: Legal Move Filter (7c)
+    
+    /// Pseudo-legal moves filtered to remove any that leave the moving side's king in check.
+    internal func legalMoves() -> [Move] {
+        pseudoLegalMoves().filter(isLegal(_:))
+    }
+    
+    /// Whether the moving side's king is currently attacked.
+    internal var isInCheck: Bool {
+        guard let kingSq = position.kingSquare(for: activeColor) else { return false }
+        return position.isSquareAttacked(kingSq, by: activeColor.opponent)
+    }
+    
+    /// In check with no legal moves.
+    internal var isCheckmate: Bool {
+        isInCheck && legalMoves().isEmpty
+    }
+    
+    /// Not in check, but no legal moves.
+    internal var isStalemate: Bool {
+        !isInCheck && legalMoves().isEmpty
+    }
+    
+    /// Apply the move to a hypothetical position and check whether the moving
+    /// side's king is left attacked. This single check naturally handles pins,
+    /// EP discovered checks, moving while in check, and king self-checks —
+    /// no piece-specific reasoning required.
+    private func isLegal(_ move: Move) -> Bool {
+        let next = position.applying(move)
+        guard let kingSq = next.kingSquare(for: activeColor) else { return false }
+        return !next.isSquareAttacked(kingSq, by: activeColor.opponent)
     }
     
     // MARK: Pawn Moves
@@ -241,6 +265,57 @@ extension GameState {
                 moves.append(Move.make(
                     from: square, to: target,
                     pieceType: .king, pieceColor: color
+                ))
+            }
+        }
+        
+        appendCastlingMoves(from: square, into: &moves)
+    }
+    
+    // MARK: Castling (7d)
+    //
+    // Castling has its own conditions because the king's *transit* square must
+    // not be attacked — a constraint the legal filter alone cannot check, since
+    // the filter only sees the king's final square. Destination-square safety
+    // does fall out of the legal filter, so we don't repeat it here.
+    private func appendCastlingMoves(from square: Square, into moves: inout [Move]) {
+        let color = activeColor
+        
+        // Castling rights imply king is on its home square; defensively double-check.
+        let homeSquare = color == .white ? Squares.e1 : Squares.e8
+        guard square == homeSquare else { return }
+        
+        // Cannot castle out of check.
+        guard !position.isSquareAttacked(square, by: color.opponent) else { return }
+        
+        // Kingside
+        if castlingRights.has(color, .kingSide) {
+            let f: Square = color == .white ? Squares.f1 : Squares.f8
+            let g: Square = color == .white ? Squares.g1 : Squares.g8
+            if !position[f].isOccupied
+                && !position[g].isOccupied
+                && !position.isSquareAttacked(f, by: color.opponent) {
+                moves.append(Move.make(
+                    from: square, to: g,
+                    pieceType: .king, pieceColor: color,
+                    isCastling: true
+                ))
+            }
+        }
+        
+        // Queenside (b-file must be empty too — rook traverses it — but isn't part of the king's path)
+        if castlingRights.has(color, .queenSide) {
+            let b: Square = color == .white ? Squares.b1 : Squares.b8
+            let c: Square = color == .white ? Squares.c1 : Squares.c8
+            let d: Square = color == .white ? Squares.d1 : Squares.d8
+            if !position[b].isOccupied
+                && !position[c].isOccupied
+                && !position[d].isOccupied
+                && !position.isSquareAttacked(d, by: color.opponent) {
+                moves.append(Move.make(
+                    from: square, to: c,
+                    pieceType: .king, pieceColor: color,
+                    isCastling: true
                 ))
             }
         }
