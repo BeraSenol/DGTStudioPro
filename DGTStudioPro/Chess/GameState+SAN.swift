@@ -17,9 +17,9 @@ extension GameState {
     /// Strict SAN: the capture marker `x` must be present iff the move is a
     /// capture, and pawn captures must include the source-file disambiguator
     /// (e.g. `exd5`, never `xd5`). Promotion is accepted in three notations
-    /// on read — `e8=Q`, `e8Q`, and `e8(Q)` — and the serializer (7f) emits
-    /// the canonical `e8=Q`. Trailing `+`, `#`, `!`, `?` are stripped
-    /// permissively before parsing.
+    /// on read — `e8=Q`, `e8Q`, and `e8(Q)` — and the serializer emits the
+    /// canonical `e8=Q`. Trailing `+`, `#`, `!`, `?` are stripped permissively
+    /// before parsing.
     ///
     /// Errors are surfaced via `SANParseError`; callers building a per-game
     /// importer (Phase 7g) wrap these to add move-index context.
@@ -47,19 +47,40 @@ extension GameState {
         return try matchMove(tokens, original: san)
     }
     
-    // MARK: Match Helpers
+    // MARK: SAN Serializer (7f)
     
-    /// Filter `legalMoves()` against the SAN-derived constraints.
-    /// Zero matches → `noMatchingMove`. Multiple → `ambiguous` (caller is
-    /// expected to add a disambiguator).
+    /// Produces the canonical Standard Algebraic Notation string for `move`,
+    /// assuming `move` is legal in this game state.
+    ///
+    /// Format: `[piece][disambiguator][x]target[=promotion][+|#]`. Castling
+    /// emits `O-O` / `O-O-O`. Pawn captures always include the file
+    /// disambiguator (`exd5`, even if no other pawn could capture there).
+    /// Promotion uses the canonical `=Q` form. Check / mate suffix is computed
+    /// by applying the move and asking whether the opponent is in check or
+    /// checkmate.
+    internal func san(for move: Move) -> String {
+        if move.isCastling {
+            let castle = move.to.file == 6 ? "O-O" : "O-O-O"
+            return castle + checkOrMateSuffix(after: move)
+        }
+        
+        let piece = move.pieceType.notation               // "" for pawn, NBRQK otherwise
+        let disamb = disambiguator(for: move)
+        let capture = move.isCapture ? "x" : ""
+        let target = move.to.algebraicNotation
+        let promo = move.promotionType.map { "=\($0.notation)" } ?? ""
+        let suffix = checkOrMateSuffix(after: move)
+        
+        return piece + disamb + capture + target + promo + suffix
+    }
+    
+    // MARK: Match Helpers (parser)
+    
     private func matchMove(_ tokens: SANTokens, original: String) throws -> Move {
         let candidates = legalMoves().filter { move in
             if move.pieceType != tokens.pieceType { return false }
             if move.to != tokens.toSquare { return false }
-            // Strict promotion equality: nil ↔ nil, .queen ↔ .queen, etc.
             if move.promotionType != tokens.promotion { return false }
-            // Strict capture marker: `x` ↔ capture (handles EP correctly via
-            // Move.isCapture, which is true whenever capturedPieceType is set).
             if move.isCapture != tokens.isCapture { return false }
             if let f = tokens.fromFile, move.from.file != f { return false }
             if let r = tokens.fromRank, move.from.rank != r { return false }
@@ -74,8 +95,7 @@ extension GameState {
     }
     
     private func matchCastling(kingside: Bool, original: String) throws -> Move {
-        // King's destination file: g (=6) for kingside, c (=2) for queenside.
-        let destinationFile = kingside ? 6 : 2
+        let destinationFile = kingside ? 6 : 2  // g-file or c-file
         let candidates = legalMoves().filter {
             $0.isCastling && $0.to.file == destinationFile
         }
@@ -86,7 +106,50 @@ extension GameState {
         }
     }
     
-    // MARK: Tokenization
+    // MARK: Disambiguation (serializer)
+    
+    /// Computes the SAN disambiguator for `move`, scanning other legal moves
+    /// of the same piece type that reach the same target. FIDE preference
+    /// order: file → rank → both.
+    private func disambiguator(for move: Move) -> String {
+        // Pawn captures always carry the file letter (`exd5`); pawn pushes never.
+        if move.pieceType == .pawn {
+            return move.isCapture ? String(move.from.fileIndicator) : ""
+        }
+        
+        let others = legalMoves().filter {
+            $0 != move
+            && $0.pieceType == move.pieceType
+            && $0.to == move.to
+        }
+        
+        if others.isEmpty { return "" }
+        
+        let conflictOnFile = others.contains { $0.from.file == move.from.file }
+        let conflictOnRank = others.contains { $0.from.rank == move.from.rank }
+        
+        // No file conflict → file letter alone is unique. (FIDE first preference.)
+        if !conflictOnFile {
+            return String(move.from.fileIndicator)
+        }
+        // File conflicts but rank doesn't → rank digit alone is unique.
+        if !conflictOnRank {
+            return String(move.from.rankIndicator)
+        }
+        // Both conflict (rare; needs ≥3 attackers, e.g. promoted-piece scenarios).
+        return move.from.algebraicNotation
+    }
+    
+    // MARK: Check / Mate Suffix (serializer)
+    
+    private func checkOrMateSuffix(after move: Move) -> String {
+        let next = applying(move)
+        if next.isCheckmate { return "#" }
+        if next.isInCheck   { return "+" }
+        return ""
+    }
+    
+    // MARK: Tokenization (parser)
     
     /// Pure string-state tokenizer. Splits an already-cleaned SAN string
     /// (no castling form, no trailing `+`/`#`/`!`/`?`) into syntactic
@@ -177,12 +240,9 @@ extension GameState {
         }
         
         // -- Cross-field validity --------------------------------------------
-        // Promotion is only meaningful on pawn moves.
         if promotion != nil, pieceType != .pawn {
             throw SANParseError.malformed(original)
         }
-        // Strict SAN: pawn captures must specify the source file (`exd5`,
-        // never `xd5`). Non-capture pawn moves never carry a disambiguator.
         if pieceType == .pawn, isCapture, fromFile == nil {
             throw SANParseError.malformed(original)
         }
@@ -239,12 +299,16 @@ extension FEN {
     internal func parseSAN(_ san: String) throws -> Move {
         try GameState(self).parseSAN(san)
     }
+    
+    internal func san(for move: Move) -> String {
+        GameState(self).san(for: move)
+    }
 }
 
 // MARK: - SAN Tokens
 
 /// Parsed components of a SAN move, prior to legal-move matching.
-/// Private to this file: it's an implementation detail of `parseSAN`.
+/// File-private: an implementation detail of `parseSAN`.
 private struct SANTokens {
     let pieceType: PieceType
     let fromFile: Int?

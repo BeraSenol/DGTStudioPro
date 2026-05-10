@@ -46,16 +46,15 @@ internal struct LibraryGamePreviewView: View {
         }
     }
 
-    // TODO: replay `game.moves` to render the final position once the SAN
-    // parser lands in Phase 7. Until then, show the starting position.
     private var board: some View {
-        BoardView(
-            position: .starting,
-            pieceTracker: .starting,
+        let preview = LibraryGamePreviewState.compute(from: game.moves)
+        return BoardView(
+            position: preview.position,
+            pieceTracker: preview.pieceTracker,
             style: boardStyle,
             perspective: .white,
-            lastMove: nil,
-            checkSquare: nil,
+            lastMove: preview.lastMove,
+            checkSquare: preview.checkSquare,
             selectedSquare: nil
         )
     }
@@ -87,6 +86,22 @@ internal struct LibraryGamePreviewView: View {
             result: .draw
         ),
         boardStyle: .rosewood
+    )
+    .frame(width: 500, height: 600)
+    .modelContainer(for: PGN.self, inMemory: true)
+}
+
+#Preview("Scholar's Mate") {
+    LibraryGamePreviewView(
+        game: PGN(
+            event: "Quick Game",
+            site: "Lichess",
+            white: "Beginner",
+            black: "Novice",
+            moves: ["e4", "e5", "Bc4", "Nc6", "Qh5", "Nf6", "Qxf7#"],
+            result: .whiteWins
+        ),
+        boardStyle: .walnut
     )
     .frame(width: 500, height: 600)
     .modelContainer(for: PGN.self, inMemory: true)

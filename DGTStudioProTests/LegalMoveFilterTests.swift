@@ -61,11 +61,14 @@ struct LegalMoveFilterTests {
 
     // MARK: Moving While in Check
     @Test func mustEscapeCheck() {
-        // White king e1 in check from black rook e8. Only king-evasion or interposition allowed.
+        // White king e1 in check from black rook e8. White rook on b1 is
+        // confined to rank 1 / b-file; the friendly king on e1 blocks rank-1
+        // access to the e-file, and b-file moves don't intersect the e-file
+        // either. So no rook move resolves the check.
         var pos = Position.empty
         pos[Squares.e1] = .whiteKing
         pos[Squares.e8] = .blackRook
-        pos[Squares.a4] = .whiteRook  // can't help — would have to interpose on file e
+        pos[Squares.b1] = .whiteRook
         let state = makeState(position: pos)
 
         #expect(state.isInCheck)
@@ -73,8 +76,8 @@ struct LegalMoveFilterTests {
         // King escapes to d1, d2, f1, f2 (e2 still on the rook's file, illegal)
         let kingMoves = allMoves.filter { $0.from == Squares.e1 }
         #expect(Set(kingMoves.map(\.to)) == [Squares.d1, Squares.d2, Squares.f1, Squares.f2])
-        // Rook on a4 has no useful move — none can interpose on the e-file or capture e8
-        let rookMoves = allMoves.filter { $0.from == Squares.a4 }
+        // Rook on b1 has no legal move — none can interpose on the e-file or capture e8
+        let rookMoves = allMoves.filter { $0.from == Squares.b1 }
         #expect(rookMoves.isEmpty)
     }
 

@@ -216,11 +216,11 @@ struct PawnMoveGenerationTests {
     }
     
     // MARK: Total Count
-    @Test func startingPositionGeneratesSixteenWhitePawnMoves() {
-        // Phase 7a only emits pawn moves. Other pieces will add to this in subsequent
-        // deliverables; this test will be superseded by the Perft suite once the
-        // generator is complete.
+    @Test func startingPositionGeneratesTwentyPseudoLegalMoves() {
+        // 16 pawn moves (8 single push + 8 double push) + 4 knight moves
+        // (Nb1 → a3/c3, Ng1 → f3/h3). To be superseded by the Perft suite,
+        // which will exercise all six piece types across multiple positions.
         let count = GameState.starting.pseudoLegalMoves().count
-        #expect(count == 16)  // 8 pawns × 2 (single + double push)
+        #expect(count == 20)
     }
 }
