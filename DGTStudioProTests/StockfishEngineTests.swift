@@ -1,0 +1,156 @@
+//
+//  StockfishEngineTests.swift
+//  DGTStudioPro
+//
+//  Created by Supreme Leader on 15/05/2026.
+//
+
+import Testing
+import Foundation
+@testable import DGTStudioPro
+
+/// Integration tests for `StockfishEngine`. These require a real
+/// Stockfish binary in the app's Resources folder — see
+/// `Engine_README.md` for setup. Tests are conditionally enabled via
+/// `.enabled(if: stockfishAvailable)`; when the binary isn't present
+/// the entire suite is skipped automatically, so CI environments and
+/// fresh checkouts won't see false failures.
+@Suite("Stockfish Engine Integration")
+struct StockfishEngineTests {
+    
+    private static var stockfishAvailable: Bool {
+        StockfishEngine.defaultBinaryURL != nil
+    }
+    
+    // MARK: Lifecycle
+    
+    @Test(.enabled(if: stockfishAvailable))
+    func startsAndIdentifiesEngine() async throws {
+        let url = try #require(StockfishEngine.defaultBinaryURL)
+        let engine = StockfishEngine(binaryURL: url)
+        
+        try await engine.start()
+        defer { Task { await engine.shutdown() } }
+        
+        let name = await engine.engineName
+        let author = await engine.engineAuthor
+        
+        #expect(name != nil, "Engine should have reported its name during handshake")
+        #expect(name?.lowercased().contains("stockfish") == true,
+                "Engine name should mention Stockfish; got \(String(describing: name))")
+        #expect(author != nil, "Engine should have reported its author during handshake")
+    }
+    
+    @Test(.enabled(if: stockfishAvailable))
+    func reportsRunningStateCorrectly() async throws {
+        let url = try #require(StockfishEngine.defaultBinaryURL)
+        let engine = StockfishEngine(binaryURL: url)
+        
+        let runningBeforeStart = await engine.isRunning
+        #expect(runningBeforeStart == false)
+        
+        try await engine.start()
+        let runningAfterStart = await engine.isRunning
+        #expect(runningAfterStart == true)
+        
+        await engine.shutdown()
+        let runningAfterShutdown = await engine.isRunning
+        #expect(runningAfterShutdown == false)
+    }
+    
+    @Test(.enabled(if: stockfishAvailable))
+    func doubleStartThrows() async throws {
+        let url = try #require(StockfishEngine.defaultBinaryURL)
+        let engine = StockfishEngine(binaryURL: url)
+        
+        try await engine.start()
+        defer { Task { await engine.shutdown() } }
+        
+        await #expect(throws: StockfishEngine.EngineError.alreadyStarted) {
+            try await engine.start()
+        }
+    }
+    
+    // MARK: Analysis
+    
+    @Test(.enabled(if: stockfishAvailable))
+    func analyzesStartingPositionToReasonableEval() async throws {
+        let url = try #require(StockfishEngine.defaultBinaryURL)
+        let engine = StockfishEngine(binaryURL: url)
+        try await engine.start()
+        defer { Task { await engine.shutdown() } }
+        
+        let stream = engine.analyze(fen: .starting, depth: 10)
+        var lastEval: Evaluation?
+        var yieldCount = 0
+        for await evaluation in stream {
+            lastEval = evaluation
+            yieldCount += 1
+        }
+        
+        #expect(yieldCount > 0, "Engine should yield at least one evaluation")
+        let final = try #require(lastEval)
+        
+        // Starting position is theoretically slightly white-favored but
+        // any sub-pawn evaluation is reasonable. A mate evaluation here
+        // would indicate something is very wrong.
+        switch final {
+        case .centipawns(let cp):
+            #expect(abs(cp) < 100,
+                    "Expected near-drawn starting evaluation, got \(cp)cp")
+        case .mate:
+            Issue.record("Mate evaluation in starting position is impossible")
+        }
+    }
+    
+    @Test(.enabled(if: stockfishAvailable))
+    func analyzesObviouslyLostPositionAsBlackAdvantage() async throws {
+        // Position where white has just dropped its queen.
+        // FEN: white has no queen, black still has queen — eval should
+        // strongly favor black (negative in white-relative terms).
+        let url = try #require(StockfishEngine.defaultBinaryURL)
+        let engine = StockfishEngine(binaryURL: url)
+        try await engine.start()
+        defer { Task { await engine.shutdown() } }
+        
+        let fen = try FEN(parsing:
+            "rnb1kbnr/pppp1ppp/8/4p3/8/2q5/PPPP1PPP/RNB1KBNR w KQkq -"
+        )
+        
+        let stream = engine.analyze(fen: fen, depth: 10)
+        var lastEval: Evaluation?
+        for await evaluation in stream {
+            lastEval = evaluation
+        }
+        
+        let final = try #require(lastEval)
+        switch final {
+        case .centipawns(let cp):
+            // White is down a queen against a normal black setup;
+            // expect strongly negative eval (deep into black's favor).
+            #expect(cp < -500, "Expected strong black advantage, got \(cp)cp")
+        case .mate(let n):
+            // A forced mate against white is also fine here.
+            #expect(n < 0, "Mate should favor black, got mate(\(n))")
+        }
+    }
+    
+    @Test(.enabled(if: stockfishAvailable))
+    func sequentialAnalysesEachCompleteCleanly() async throws {
+        // Verifies the actor handles back-to-back analyses without
+        // leaking state between them.
+        let url = try #require(StockfishEngine.defaultBinaryURL)
+        let engine = StockfishEngine(binaryURL: url)
+        try await engine.start()
+        defer { Task { await engine.shutdown() } }
+        
+        for _ in 0..<3 {
+            let stream = engine.analyze(fen: .starting, depth: 6)
+            var yieldCount = 0
+            for await _ in stream {
+                yieldCount += 1
+            }
+            #expect(yieldCount > 0, "Each analysis should yield at least once")
+        }
+    }
+}

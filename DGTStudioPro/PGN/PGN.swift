@@ -5,6 +5,13 @@
 //  Created by Supreme Leader on 15/04/2026.
 //
 
+//
+//  PGN.swift
+//  DGTStudioPro
+//
+//  Created by Supreme Leader on 15/04/2026.
+//
+
 import Foundation
 import SwiftData
 
@@ -32,7 +39,7 @@ private enum PGNPlaceholder: String, Codable {
 
 @Model
 internal final class PGN: Identifiable {
-
+    
     // MARK: Stored Properties
     internal var event: String
     internal var site: String
@@ -42,46 +49,68 @@ internal final class PGN: Identifiable {
     internal var black: String
     internal var result: GameResult
     internal var timeControl: String?
-
+    
     internal var moves: [String]
-
+    
+    /// Engine evaluations parallel to ``moves``, indexed by ply. The element
+    /// at index `i` is the evaluation of the position reached *after*
+    /// `moves[i]` is played — matching the Lichess / Chess.com `[%eval ...]`
+    /// PGN convention where the comment follows the move it scored.
+    ///
+    /// Invariant: this array is either empty (no analysis has ever been
+    /// recorded for this game) or exactly the same length as ``moves``.
+    /// Individual entries may be `nil` for plies that weren't analyzed.
+    /// Use ``evaluation(atPly:)`` to read safely against both shapes.
+    internal var evaluations: [Evaluation?] = []
+    
     internal var name: String = ""
     internal var importedAt: Date
     internal var contentHash: String
-
+    
     // MARK: Computed Properties
     internal var id: PersistentIdentifier { persistentModelID }
-
+    
     internal var displayDate: String {
         guard let date else { return PGNPlaceholder.date.rawValue }
         return date.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits))
     }
-
+    
     internal var displayRound: String {
         guard let round else { return PGNPlaceholder.general.rawValue }
         return String(round)
     }
-
+    
     internal var whiteDisplayName: String {
         Self.displayPlayerName(white)
     }
-
+    
     internal var blackDisplayName: String {
         Self.displayPlayerName(black)
     }
-
+    
     /// Default `name` for a game with these players, in display form.
     /// Used both for new imports and the backfill comparison.
     internal var defaultDisplayName: String {
         "\(whiteDisplayName) vs \(blackDisplayName)"
     }
-
+    
     /// Legacy `name` form for games imported before display-name support.
     /// Used by the backfill to recognize a stored default and rewrite it.
     internal var legacyDefaultName: String {
         "\(white) vs \(black)"
     }
-
+    
+    // MARK: Instance Methods
+    /// Returns the evaluation recorded for the position reached after the
+    /// move at `ply` is played, or `nil` if no analysis is present for
+    /// that ply. Safe against both invariant shapes of ``evaluations`` —
+    /// returns `nil` when the array is empty (no analysis ever run) or
+    /// when the entry at that index is itself `nil`.
+    internal func evaluation(atPly ply: Int) -> Evaluation? {
+        guard ply >= 0, ply < evaluations.count else { return nil }
+        return evaluations[ply]
+    }
+    
     // MARK: Initializers
     internal init(
         event: String = PGNPlaceholder.general.rawValue,
@@ -91,6 +120,7 @@ internal final class PGN: Identifiable {
         white: String = PGNPlaceholder.general.rawValue,
         black: String = PGNPlaceholder.general.rawValue,
         moves: [String] = [],
+        evaluations: [Evaluation?] = [],
         name: String? = nil,
         result: GameResult = .ongoing,
         timeControl: String? = nil,
@@ -105,11 +135,12 @@ internal final class PGN: Identifiable {
         self.result = result
         self.timeControl = timeControl
         self.moves = moves
+        self.evaluations = evaluations
         self.name = name ?? "\(Self.displayPlayerName(white)) vs \(Self.displayPlayerName(black))"
         self.importedAt = .now
         self.contentHash = contentHash
     }
-
+    
     // MARK: Static Methods
     /// Transforms a PGN-style "Last, First" player tag into "First Last" form
     /// for display. Inputs without a comma pass through unchanged. Multi-part
@@ -119,10 +150,10 @@ internal final class PGN: Identifiable {
         let trimmed = raw.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return trimmed }
         guard let commaIndex = trimmed.firstIndex(of: ",") else { return trimmed }
-
+        
         let last = trimmed[..<commaIndex].trimmingCharacters(in: .whitespaces)
         let rest = trimmed[trimmed.index(after: commaIndex)...].trimmingCharacters(in: .whitespaces)
-
+        
         if rest.isEmpty { return last }
         if last.isEmpty { return rest }
         return "\(rest) \(last)"
