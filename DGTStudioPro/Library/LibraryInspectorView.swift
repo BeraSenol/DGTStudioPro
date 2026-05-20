@@ -53,6 +53,7 @@ private struct LoadedSection: View {
 
     // MARK: Private Properties
     @Environment(\.modelContext) private var modelContext
+    @Environment(AppState.self) private var appState: AppState?
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
     @State private var driver = GameAnalysisDriver()
     @FocusState private var isNameFieldFocused: Bool
@@ -63,6 +64,7 @@ private struct LoadedSection: View {
     var body: some View {
         Group {
             Section {
+                openButton
                 nameRow
                 LabeledContent("Event",  value: pgn.event)
                 LabeledContent("Site",   value: pgn.site)
@@ -83,6 +85,34 @@ private struct LoadedSection: View {
             // is replaced for a different PGN, the prior driver's task
             // gets cancelled here before the new driver takes over.
             Task { await driver.shutdown() }
+        }
+    }
+
+    // MARK: Open Affordance
+
+    /// "Open in Board" / "Show in Board" button. Open in Board (no
+    /// existing tab) creates a tab and switches the sidebar destination;
+    /// Show in Board (already-open tab) just activates it. The button is
+    /// disabled when the tab cap is hit and this game isn't already
+    /// among the open tabs. When `appState` isn't available (previews
+    /// without an injected AppState), the button hides entirely.
+    @ViewBuilder
+    private var openButton: some View {
+        if let appState {
+            Button {
+                appState.openTab(pgn: pgn)
+            } label: {
+                Label(
+                    appState.isOpen(pgn) ? "Show in Board" : "Open in Board",
+                    systemImage: "checkerboard.rectangle"
+                )
+            }
+            .disabled(!appState.canOpen(pgn))
+            .help(
+                appState.canOpen(pgn)
+                ? "Open this game on the board"
+                : "Tab limit reached — close a tab to open this game"
+            )
         }
     }
 
