@@ -12,13 +12,13 @@ import SwiftData
 
 // MARK: PGN Store
 internal struct PGNStore {
-    
+
     // MARK: Static Constants
     private static let logger = Logger(
         subsystem: "com.berasenol.dgtstudiopro",
         category: "pgnstore"
     )
-    
+
     private static let hashDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy.MM.dd"
@@ -26,7 +26,7 @@ internal struct PGNStore {
         formatter.timeZone = TimeZone(identifier: "UTC")
         return formatter
     }()
-    
+
     // MARK: Errors
     @MainActor
     internal enum Error: Swift.Error {
@@ -35,55 +35,60 @@ internal struct PGNStore {
         case malformedPGN(reason: String)
         case fileReadFailed(URL, underlying: Swift.Error)
     }
-    
+
     // MARK: Stored Properties
     private let modelContext: ModelContext
-    
+
     // MARK: Initializers
     internal init(modelContext: ModelContext) {
         self.modelContext = modelContext
     }
-    
+
     // MARK: Instance Methods
     @discardableResult
     internal func importPGN(text: String) throws -> PGN {
         let pgn = try parse(text)
         let hash = Self.contentHash(for: pgn)
-        
+
         if let existing = try existingPGN(withHash: hash) {
             Self.logger.info("Rejected duplicate PGN with hash \(hash, privacy: .public)")
             throw Error.duplicate(existing: existing)
         }
-        
+
+        // Persist the computed hash on the model so subsequent imports of
+        // the same game can find it via `existingPGN(withHash:)`. Without
+        // this assignment the row is stored with an empty `contentHash`,
+        // every future lookup misses, and deduplication silently no-ops.
+        pgn.contentHash = hash
         modelContext.insert(pgn)
         try modelContext.save()
-        
+
         Self.logger.info(
             "Imported PGN: \(pgn.white, privacy: .public) vs \(pgn.black, privacy: .public) [\(pgn.result.rawValue, privacy: .public)]"
         )
-        
+
         return pgn
     }
-    
+
     @discardableResult
     internal func importPGN(from url: URL) throws -> PGN {
         let text: String
-        
+
         do {
             text = try String(contentsOf: url, encoding: .utf8)
         } catch {
             Self.logger.error("Failed to read PGN at \(url.path, privacy: .public)")
             throw Error.fileReadFailed(url, underlying: error)
         }
-        
+
         return try importPGN(text: text)
     }
-    
+
     internal func delete(_ pgn: PGN) throws {
         modelContext.delete(pgn)
         try modelContext.save()
     }
-    
+
     // MARK: Private Helpers
     private func parse(_ text: String) throws -> PGN {
         do {
@@ -99,7 +104,7 @@ internal struct PGNStore {
             }
         }
     }
-    
+
     private func existingPGN(withHash hash: String) throws -> PGN? {
         var descriptor = FetchDescriptor<PGN>(
             predicate: #Predicate { $0.contentHash == hash }
@@ -107,7 +112,7 @@ internal struct PGNStore {
         descriptor.fetchLimit = 1
         return try modelContext.fetch(descriptor).first
     }
-    
+
     // MARK: Static Methods
     private static func contentHash(for pgn: PGN) -> String {
         let parts: [String] = [
@@ -124,7 +129,7 @@ internal struct PGNStore {
         let digest = Insecure.MD5.hash(data: Data(combined.utf8))
         return digest.compactMap { String(format: "%02x", $0) }.joined()
     }
-    
+
     private static func normalize(_ value: String) -> String {
         value
             .lowercased()

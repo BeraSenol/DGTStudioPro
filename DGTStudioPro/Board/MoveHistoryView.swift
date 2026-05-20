@@ -12,7 +12,6 @@ internal struct MoveHistoryView: View {
     // MARK: Stored Properties
     internal let moves: [String]
     internal let currentMoveIndex: Int?
-    internal let style: BoardStyle
     internal let onMoveTapped: ((Int) -> Void)?
 
     // MARK: Computed Properties
@@ -135,7 +134,6 @@ internal struct MoveHistoryView: View {
             "d4", "Nbd7"
         ],
         currentMoveIndex: 14,
-        style: .walnut,
         onMoveTapped: { _ in }
     )
     .frame(width: 260, height: 240)
@@ -148,7 +146,6 @@ internal struct MoveHistoryView: View {
             "e4", "e5", "Bc4", "Nc6", "Qh5", "Nf6", "Qxf7#"
         ],
         currentMoveIndex: 6,
-        style: .rosewood,
         onMoveTapped: { _ in }
     )
     .frame(width: 260, height: 160)
@@ -166,7 +163,6 @@ internal struct MoveHistoryView: View {
             "bxc3", "Qc8", "Bd3", "Nd5", "c4", "Nf4", "Bf5", "exf5"
         ],
         currentMoveIndex: 38,
-        style: .wenge,
         onMoveTapped: { _ in }
     )
     .frame(width: 260, height: 240)
@@ -177,7 +173,6 @@ internal struct MoveHistoryView: View {
     MoveHistoryView(
         moves: [],
         currentMoveIndex: nil,
-        style: .walnut,
         onMoveTapped: nil
     )
     .frame(width: 260, height: 100)
@@ -222,7 +217,6 @@ internal struct MoveHistoryView: View {
                     "d4", "Nbd7"
                 ],
                 currentMoveIndex: 14,
-                style: .walnut,
                 onMoveTapped: { _ in }
             )
             .frame(height: 200)

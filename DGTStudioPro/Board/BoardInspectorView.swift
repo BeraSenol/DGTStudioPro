@@ -8,7 +8,7 @@
 import SwiftUI
 
 internal struct BoardInspectorView: View {
-    
+
     // MARK: Stored Properties
     internal let pgn: PGN?
     internal let evaluations: [Double]
@@ -16,7 +16,7 @@ internal struct BoardInspectorView: View {
     internal let currentMoveIndex: Int?
     internal let style: BoardStyle
     internal let onMoveTapped: ((Int) -> Void)?
-    
+
     // MARK: Body
     internal var body: some View {
         List {
@@ -26,7 +26,7 @@ internal struct BoardInspectorView: View {
         }
         .listStyle(.sidebar)
     }
-    
+
     // MARK: Instance Methods
     private var metadataSection: some View {
         Section {
@@ -39,7 +39,7 @@ internal struct BoardInspectorView: View {
                 .textCase(nil)
         }
     }
-    
+
     private var evaluationSection: some View {
         Section {
             EvaluationGraphView(
@@ -52,13 +52,12 @@ internal struct BoardInspectorView: View {
             Text("Evaluation")
         }
     }
-    
+
     private var movesSection: some View {
         Section {
             MoveHistoryView(
                 moves: moves,
                 currentMoveIndex: currentMoveIndex,
-                style: style,
                 onMoveTapped: onMoveTapped
             )
             .frame(height: 240)

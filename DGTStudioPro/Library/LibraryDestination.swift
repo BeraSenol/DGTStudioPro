@@ -5,22 +5,29 @@
 //  Created by Supreme Leader on 12/04/2026.
 //
 
+//
+//  LibraryDestination.swift
+//  DGTStudioPro
+//
+//  Created by Supreme Leader on 12/04/2026.
+//
+
 import os
 import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
 internal struct LibraryDestination: View {
-
+    
     // MARK: Static Constants
     private static let logger = Logger(
         subsystem: "com.berasenol.dgtstudiopro",
         category: "library"
     )
-
+    
     // MARK: Stored Properties
     internal let filter: SmartTag?
-
+    
     // MARK: Private Properties
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
     @AppStorage(StorageKeys.libraryViewMode) private var viewMode: CollectionViewMode = .list
@@ -30,37 +37,37 @@ internal struct LibraryDestination: View {
     @State private var selectedPGNs: Set<PGN.ID> = []
     @State private var isInspectorPresented: Bool = false
     @State private var importError: ImportError?
-
+    
     // MARK: Initializers
     internal init(filter: SmartTag? = nil) {
         self.filter = filter
     }
-
+    
     // MARK: Computed Properties
     private var filteredGames: [PGN] {
         guard let filter else { return games }
         return games.filter { filter.matches($0) }
     }
-
+    
     private var selectedPGN: PGN? {
         guard let id = selectedPGNs.first else { return nil }
         return filteredGames.first(where: { $0.id == id })
     }
-
+    
     private var importErrorBinding: Binding<Bool> {
         Binding(
             get: { importError != nil },
             set: { if !$0 { importError = nil } }
         )
     }
-
+    
     private var pendingDeletionBinding: Binding<Bool> {
         Binding(
             get: { pendingDeletion != nil },
             set: { if !$0 { pendingDeletion = nil } }
         )
     }
-
+    
     private var importErrorTitle: String {
         guard let importError else { return "" }
         switch importError.error {
@@ -70,7 +77,7 @@ internal struct LibraryDestination: View {
         case .fileReadFailed:      return "Couldn't Read File"
         }
     }
-
+    
     // MARK: Body
     internal var body: some View {
         Group {
@@ -120,7 +127,7 @@ internal struct LibraryDestination: View {
             if mode == .gallery { isInspectorPresented = true }
         }
     }
-
+    
     // MARK: Instance Methods
     @ViewBuilder
     private var modeView: some View {
@@ -141,7 +148,6 @@ internal struct LibraryDestination: View {
             LibraryColumnsView(
                 games: filteredGames,
                 selectedPGNs: $selectedPGNs,
-                boardStyle: boardStyle,
                 onDelete: { pendingDeletion = $0 }
             )
         case .gallery:
@@ -153,7 +159,7 @@ internal struct LibraryDestination: View {
             )
         }
     }
-
+    
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem {
@@ -179,7 +185,7 @@ internal struct LibraryDestination: View {
             }
         }
     }
-
+    
     @ViewBuilder
     private var emptyState: some View {
         if let filter {
@@ -196,21 +202,21 @@ internal struct LibraryDestination: View {
             }
         }
     }
-
+    
     private func presentOpenPanel() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [UTType(filenameExtension: "pgn") ?? .plainText]
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
-
+        
         if panel.runModal() == .OK {
             importURLs(panel.urls)
         }
     }
-
+    
     private func importURLs(_ urls: [URL]) {
         let store = PGNStore(modelContext: modelContext)
-
+        
         for url in urls {
             do {
                 try store.importPGN(from: url)
@@ -225,7 +231,7 @@ internal struct LibraryDestination: View {
             }
         }
     }
-
+    
     @ViewBuilder
     private func importErrorActions(for error: ImportError) -> some View {
         switch error.error {
@@ -238,7 +244,7 @@ internal struct LibraryDestination: View {
             Button("OK", role: .cancel) {}
         }
     }
-
+    
     @ViewBuilder
     private func importErrorMessage(for error: ImportError) -> some View {
         switch error.error {
@@ -252,10 +258,10 @@ internal struct LibraryDestination: View {
             Text("Failed to read \(url.lastPathComponent).")
         }
     }
-
+    
     private func delete(_ pgn: PGN) {
         selectedPGNs.remove(pgn.id)
-
+        
         let store = PGNStore(modelContext: modelContext)
         do {
             try store.delete(pgn)
@@ -263,7 +269,7 @@ internal struct LibraryDestination: View {
             Self.logger.error("Failed to delete PGN: \(error.localizedDescription, privacy: .public)")
         }
     }
-
+    
     private func backfillEmptyNames() {
         let toFix = games.filter { game in
             game.name.isEmpty || game.name == game.legacyDefaultName
@@ -294,7 +300,7 @@ private struct ImportError: Identifiable {
         for: PGN.self,
         configurations: ModelConfiguration(isStoredInMemoryOnly: true)
     )
-
+    
     let samples: [PGN] = [
         PGN(event: "World Championship", site: "Dubai", round: 11,
             white: "Carlsen, Magnus", black: "Nepomniachtchi, Ian", result: .whiteWins),
@@ -304,7 +310,7 @@ private struct ImportError: Identifiable {
             white: "Firouzja, Alireza", black: "Ding, Liren", result: .blackWins)
     ]
     for sample in samples { container.mainContext.insert(sample) }
-
+    
     return NavigationSplitView {
         List { Label("Library", systemImage: "books.vertical") }
             .navigationSplitViewColumnWidth(min: 80, ideal: 100, max: 120)

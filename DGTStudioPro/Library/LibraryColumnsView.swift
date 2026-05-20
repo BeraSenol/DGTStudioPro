@@ -57,7 +57,6 @@ internal struct LibraryColumnsView: View {
     // MARK: Stored Properties
     internal let games: [PGN]
     @Binding internal var selectedPGNs: Set<PGN.ID>
-    internal let boardStyle: BoardStyle
     internal let onDelete: (PGN) -> Void
 
     // MARK: Private Properties
@@ -292,7 +291,6 @@ private func columnsPreviewGames() -> [PGN] {
     LibraryColumnsView(
         games: columnsPreviewGames(),
         selectedPGNs: $selection,
-        boardStyle: .walnut,
         onDelete: { _ in }
     )
     .frame(width: 900, height: 600)
@@ -305,7 +303,6 @@ private func columnsPreviewGames() -> [PGN] {
     LibraryColumnsView(
         games: [],
         selectedPGNs: $selection,
-        boardStyle: .walnut,
         onDelete: { _ in }
     )
     .frame(width: 900, height: 600)

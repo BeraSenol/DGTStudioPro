@@ -5,6 +5,7 @@
 //  Created by Supreme Leader on 12/04/2026.
 //
 
+import SwiftData
 import SwiftUI
 
 internal struct LibraryInspectorView: View {
@@ -21,7 +22,12 @@ internal struct LibraryInspectorView: View {
     internal var body: some View {
         List {
             if let pgn {
+                // .id forces SwiftUI to re-init this section (and its
+                // GameAnalysisDriver @State) when the user selects a
+                // different game. The prior section's .onDisappear fires
+                // on its way out, cancelling any in-flight analysis.
                 LoadedSection(pgn: pgn)
+                    .id(pgn.id)
             } else {
                 emptySection
             }
@@ -46,23 +52,95 @@ private struct LoadedSection: View {
     @Bindable var pgn: PGN
 
     // MARK: Private Properties
+    @Environment(\.modelContext) private var modelContext
+    @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
+    @State private var driver = GameAnalysisDriver()
     @FocusState private var isNameFieldFocused: Bool
     @State private var isEditingName: Bool = false
     @State private var draftName: String = ""
 
     // MARK: Body
     var body: some View {
+        Group {
+            Section {
+                nameRow
+                LabeledContent("Event",  value: pgn.event)
+                LabeledContent("Site",   value: pgn.site)
+                LabeledContent("Date",   value: pgn.displayDate)
+                LabeledContent("Round",  value: pgn.displayRound)
+                LabeledContent("White",  value: pgn.whiteDisplayName)
+                LabeledContent("Black",  value: pgn.blackDisplayName)
+                LabeledContent("Result", value: pgn.result.rawValue)
+            } header: {
+                Text("Game Details")
+            }
+
+            evaluationSection
+        }
+        .onDisappear {
+            // Fire-and-forget — the engine's 500ms grace period lets `quit`
+            // drain cleanly without blocking view teardown. If the view
+            // is replaced for a different PGN, the prior driver's task
+            // gets cancelled here before the new driver takes over.
+            Task { await driver.shutdown() }
+        }
+    }
+
+    // MARK: Evaluation Section
+    @ViewBuilder
+    private var evaluationSection: some View {
         Section {
-            nameRow
-            LabeledContent("Event",  value: pgn.event)
-            LabeledContent("Site",   value: pgn.site)
-            LabeledContent("Date",   value: pgn.displayDate)
-            LabeledContent("Round",  value: pgn.displayRound)
-            LabeledContent("White",  value: pgn.whiteDisplayName)
-            LabeledContent("Black",  value: pgn.blackDisplayName)
-            LabeledContent("Result", value: pgn.result.rawValue)
+            EvaluationGraphView(
+                evaluations: pgn.evaluations.map {
+                    $0?.whiteWinProbability ?? 0.5
+                },
+                currentMoveIndex: nil,
+                style: boardStyle
+            )
+            .frame(height: 100)
+            .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
+
+            analysisControlRow
         } header: {
-            Text("Game Details")
+            Text("Evaluation")
+        }
+    }
+
+    @ViewBuilder
+    private var analysisControlRow: some View {
+        switch driver.status {
+        case .idle, .done:
+            Button {
+                driver.analyze(pgn: pgn, modelContext: modelContext)
+            } label: {
+                Label(
+                    driver.status == .done ? "Re-analyze" : "Analyze",
+                    systemImage: "wand.and.stars"
+                )
+            }
+
+        case .analyzing(let progress):
+            HStack(spacing: 8) {
+                ProgressView(value: progress)
+                Button {
+                    driver.stop()
+                } label: {
+                    Image(systemName: "stop.fill")
+                }
+                .buttonStyle(.borderless)
+                .help("Stop analysis")
+            }
+
+        case .failed(let message):
+            VStack(alignment: .leading, spacing: 6) {
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Button("Retry") {
+                    driver.analyze(pgn: pgn, modelContext: modelContext)
+                }
+                .buttonStyle(.borderless)
+            }
         }
     }
 

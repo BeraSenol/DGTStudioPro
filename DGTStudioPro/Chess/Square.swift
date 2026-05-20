@@ -5,8 +5,6 @@
 //  Created by Supreme Leader on 24/03/2026.
 //
 
-import os
-
 internal typealias Square = Int
 
 internal enum Squares {
@@ -21,26 +19,21 @@ internal enum Squares {
 }
 
 extension Square {
-    
+
     // MARK: Static Constants
     internal static let count = 64
     internal static let files = 0..<8
     internal static let ranks = 0..<8
     internal static let all = (0..<Square.count)
-    
+
     internal static func fileCharacter(_ file: Int) -> Character {
         fileIndicatorTable[file]
     }
-    
+
     internal static func rankCharacter(_ rank: Int) -> Character {
         rankIndicatorTable[rank]
     }
-    
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "square"
-    )
-    
+
     private static let algebraicNotationTable: [String] = {
         Square.all.map { square in
             let file = Character(UnicodeScalar(Int(UnicodeScalar("a").value) + square % 8)!)
@@ -48,61 +41,59 @@ extension Square {
             return String(file) + String(rank)
         }
     }()
-    
+
     private static let fileIndicatorTable: [Character] = {
         Square.files.map {
             Character(UnicodeScalar(Int(UnicodeScalar("a").value) + $0)!)
         }
     }()
-    
+
     private static let rankIndicatorTable: [Character] = {
         Square.ranks.map {
             Character(UnicodeScalar(Int(UnicodeScalar("1").value) + $0)!)
         }
     }()
-    
+
     // MARK: Computed Properties
     internal var isOnBoard: Bool { UInt(bitPattern: self) < Square.count }
     internal var file: Int { self % 8 }
     internal var rank: Int { self / 8 }
-    
+
     internal var fileIndicator: Character {
         Int.fileIndicatorTable[file]
     }
-    
+
     internal var rankIndicator: Character {
         Int.rankIndicatorTable[rank]
     }
-    
+
     internal var asciiDigit: Character {
         assert(UInt(bitPattern: self) <= 8, "asciiDigit called with value \(self), expected 0–8")
         return Character(UnicodeScalar(UInt8(ascii: "0") + UInt8(self)))
     }
-    
+
     internal var algebraicNotation: String {
         Int.algebraicNotationTable[self]
     }
-    
+
     // MARK: Static Methods
     internal static func fromAlgebraicNotation(_ name: String) -> Square? {
         var utf8 = name.utf8.makeIterator()
-        
+
         guard let fileByte = utf8.next(),
               let rankByte = utf8.next(),
               utf8.next() == nil else {
-            logger.error("fromAlgebraic: expected 2 characters, got '\(name, privacy: .public)'")
             return nil
         }
-        
+
         let file = Int(fileByte) - Int(UInt8(ascii: "a"))
         let rank = Int(rankByte) - Int(UInt8(ascii: "1"))
-        
+
         guard UInt(bitPattern: file) < 8,
               UInt(bitPattern: rank) < 8 else {
-            logger.error("fromAlgebraic: '\(name, privacy: .public)' out of bounds")
             return nil
         }
-        
+
         return rank * 8 + file
     }
 }
