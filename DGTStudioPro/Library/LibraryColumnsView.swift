@@ -57,6 +57,7 @@ internal struct LibraryColumnsView: View {
     // MARK: Stored Properties
     internal let games: [PGN]
     @Binding internal var selectedPGNs: Set<PGN.ID>
+    internal let onOpen: (PGN) -> Void
     internal let onDelete: (PGN) -> Void
 
     // MARK: Private Properties
@@ -174,6 +175,7 @@ internal struct LibraryColumnsView: View {
                             game: game,
                             isSelected: selectedPGNs.contains(game.id),
                             onSelect: { selectedPGNs = [game.id] },
+                            onOpen:   { onOpen(game) },
                             onDelete: { onDelete(game) }
                         )
                     }
@@ -291,6 +293,7 @@ private func columnsPreviewGames() -> [PGN] {
     LibraryColumnsView(
         games: columnsPreviewGames(),
         selectedPGNs: $selection,
+        onOpen: { _ in },
         onDelete: { _ in }
     )
     .frame(width: 900, height: 600)
@@ -303,6 +306,7 @@ private func columnsPreviewGames() -> [PGN] {
     LibraryColumnsView(
         games: [],
         selectedPGNs: $selection,
+        onOpen: { _ in },
         onDelete: { _ in }
     )
     .frame(width: 900, height: 600)

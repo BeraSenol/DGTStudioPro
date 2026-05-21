@@ -5,68 +5,84 @@
 //  Created by Supreme Leader on 24/03/2026.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
+/// Root content of every tab in the unified `WindowGroup`. Each tab
+/// has its own sidebar selection (`@State`), its own per-tab state
+/// bundle (`TabState`), and is bound to a per-window
+/// `PersistentIdentifier?` from the `WindowGroup`.
+///
+/// Tabs opened from `openWindow(value: pgn.persistentModelID)` start
+/// with the sidebar on Board, showing the loaded game. The first tab
+/// at app launch (and any tab opened via ⌘N) has a nil bound value
+/// and starts on Library.
+///
+/// `TabState` is owned here (rather than on each destination) so the
+/// state survives the destination view being recreated when the user
+/// switches the sidebar. See `TabState` for the rationale.
 internal struct ContentView: View {
-
-    // MARK: Private Properties
-
-    /// App-level state — open tabs, sidebar selection. Owned here
-    /// (single source of truth for "where is the user looking?") and
-    /// injected into the environment so descendants can read or mutate
-    /// it without callback threading. See Phase 9 design notes for the
-    /// rationale on why this object exists and lives at this level.
-    @State private var appState = AppState()
-
+    
+    // MARK: Window-Bound State
+    
+    @Binding internal var loadedGameID: PersistentIdentifier?
+    
+    // MARK: Per-Tab State
+    
+    @State private var selection: SidebarSelection
+    @State private var tabState = TabState()
+    
+    // MARK: Initializer
+    
+    internal init(loadedGameID: Binding<PersistentIdentifier?>) {
+        self._loadedGameID = loadedGameID
+        // Start on Board for tabs opened with a specific game, on
+        // Library for tabs opened blank.
+        let initial: SidebarSelection = loadedGameID.wrappedValue != nil
+        ? .destination(.board)
+        : .destination(.library)
+        self._selection = State(initialValue: initial)
+    }
+    
     // MARK: Body
-
+    
     internal var body: some View {
-        @Bindable var appState = appState
-
         NavigationSplitView {
-            sidebar(selection: $appState.sidebarSelection)
-                .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-        } detail: {
-            destinationView(for: appState.sidebarSelection)
-        }
-        .environment(appState)
-    }
-
-    // MARK: Instance Methods
-
-    private func sidebar(selection: Binding<SidebarSelection>) -> some View {
-        List(selection: selection) {
-            Section("Favorites") {
-                ForEach(Destination.allCases) { destination in
-                    Label(destination.title, systemImage: destination.systemImage)
-                        .tag(SidebarSelection.destination(destination))
-                }
-            }
-
-            Section("Tags") {
-                ForEach(SmartTag.allCases) { tag in
-                    Label {
-                        Text(tag.displayName)
-                    } icon: {
-                        Circle()
-                            .fill(tag.color)
-                            .frame(width: 10, height: 10)
+            List(selection: $selection) {
+                Section("Favorites") {
+                    ForEach(Destination.allCases) { destination in
+                        Label(destination.title, systemImage: destination.systemImage)
+                            .tag(SidebarSelection.destination(destination))
                     }
-                    .tag(SidebarSelection.tag(tag))
+                }
+                
+                Section("Tags") {
+                    ForEach(SmartTag.allCases) { tag in
+                        Label {
+                            Text(tag.displayName)
+                        } icon: {
+                            Circle()
+                                .fill(tag.color)
+                                .frame(width: 10, height: 10)
+                        }
+                        .tag(SidebarSelection.tag(tag))
+                    }
                 }
             }
-        }
-    }
-
-    @ViewBuilder
-    private func destinationView(for selection: SidebarSelection) -> some View {
-        switch selection {
-        case .destination(.board):    BoardDestination()
-        case .destination(.library):  LibraryDestination(filter: nil)
-        case .destination(.players):  PlayersDestination()
-        case .destination(.rankings): RankingsDestination()
-        case .tag(let tag):           LibraryDestination(filter: tag)
+            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+        } detail: {
+            switch selection {
+            case .destination(.board):
+                BoardDestination(loadedGameID: $loadedGameID, tabState: tabState)
+            case .destination(.library):
+                LibraryDestination(filter: nil, tabState: tabState)
+            case .destination(.players):
+                PlayersDestination(tabState: tabState)
+            case .destination(.rankings):
+                RankingsDestination(tabState: tabState)
+            case .tag(let tag):
+                LibraryDestination(filter: tag, tabState: tabState)
+            }
         }
     }
 }
@@ -83,13 +99,13 @@ internal enum Destination: String, CaseIterable, Identifiable, Hashable {
     case library
     case players
     case rankings
-
+    
     internal var id: String { rawValue }
-
+    
     internal var title: String {
         rawValue.capitalized
     }
-
+    
     internal var systemImage: String {
         switch self {
         case .board:    return "checkerboard.rectangle"
@@ -103,6 +119,6 @@ internal enum Destination: String, CaseIterable, Identifiable, Hashable {
 // MARK: - Previews
 
 #Preview {
-    ContentView()
+    ContentView(loadedGameID: .constant(nil))
         .modelContainer(for: PGN.self, inMemory: true)
 }

@@ -9,13 +9,14 @@ import SwiftUI
 import SwiftData
 
 internal struct LibraryGameCardView: View {
-    
+
     // MARK: Stored Properties
     let game: PGN
     let isSelected: Bool
     let onSelect: () -> Void
+    let onOpen: () -> Void
     let onDelete: () -> Void
-    
+
     // MARK: Body
     var body: some View {
         VStack(spacing: 4) {
@@ -28,14 +29,23 @@ internal struct LibraryGameCardView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(.vertical, 8)
         .contentShape(Rectangle())
+        // Double-tap first so SwiftUI's gesture-disambiguation pipeline
+        // routes a second click to `onOpen`; the single-tap fallback
+        // selects. Single-click incurs the standard macOS double-click
+        // interval (~250 ms) of latency, which matches Finder/Mail.
+        .onTapGesture(count: 2, perform: onOpen)
         .onTapGesture(perform: onSelect)
         .contextMenu {
+            Button(action: onOpen) {
+                Label("Open in Board", systemImage: "checkerboard.rectangle")
+            }
+            Divider()
             Button(role: .destructive, action: onDelete) {
                 Label("Delete", systemImage: "trash")
             }
         }
     }
-    
+
     // MARK: Instance Methods
     private var documentIcon: some View {
         ZStack {
@@ -45,7 +55,7 @@ internal struct LibraryGameCardView: View {
                 .foregroundStyle(.white)
                 .frame(width: 96, height: 96)
                 .fontWeight(.thin)
-            
+
             Text(displayResult(game.result))
                 .font(.system(size: 18, weight: .semibold, design: .monospaced))
                 .foregroundStyle(.white)
@@ -59,7 +69,7 @@ internal struct LibraryGameCardView: View {
                 .fill(.secondary.opacity(isSelected ? 0.15 : 0))
         }
     }
-    
+
     @ViewBuilder
     private var nameLabel: some View {
         Text(game.name)
@@ -74,7 +84,7 @@ internal struct LibraryGameCardView: View {
             )
             .foregroundStyle(isSelected ? Color.white : .primary)
     }
-    
+
     private func displayResult(_ result: GameResult) -> String {
         switch result {
         case .whiteWins: return "1-0"
@@ -108,24 +118,28 @@ private func sampleGame(
             game: sampleGame(result: .whiteWins),
             isSelected: false,
             onSelect: {},
+            onOpen: {},
             onDelete: {}
         )
         LibraryGameCardView(
             game: sampleGame(result: .blackWins),
             isSelected: false,
             onSelect: {},
+            onOpen: {},
             onDelete: {}
         )
         LibraryGameCardView(
             game: sampleGame(result: .draw),
             isSelected: false,
             onSelect: {},
+            onOpen: {},
             onDelete: {}
         )
         LibraryGameCardView(
             game: sampleGame(result: .ongoing),
             isSelected: false,
             onSelect: {},
+            onOpen: {},
             onDelete: {}
         )
     }
@@ -140,12 +154,14 @@ private func sampleGame(
             game: sampleGame(),
             isSelected: false,
             onSelect: {},
+            onOpen: {},
             onDelete: {}
         )
         LibraryGameCardView(
             game: sampleGame(),
             isSelected: true,
             onSelect: {},
+            onOpen: {},
             onDelete: {}
         )
     }
@@ -164,6 +180,7 @@ private func sampleGame(
             ),
             isSelected: false,
             onSelect: {},
+            onOpen: {},
             onDelete: {}
         )
         LibraryGameCardView(
@@ -174,6 +191,7 @@ private func sampleGame(
             ),
             isSelected: true,
             onSelect: {},
+            onOpen: {},
             onDelete: {}
         )
     }

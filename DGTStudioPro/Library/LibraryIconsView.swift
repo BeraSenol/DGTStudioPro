@@ -17,6 +17,7 @@ internal struct LibraryIconsView: View {
     // MARK: Stored Properties
     let games: [PGN]
     @Binding var selectedPGNs: Set<PGN.ID>
+    let onOpen: (PGN) -> Void
     let onDelete: (PGN) -> Void
 
     // MARK: Computed Properties
@@ -36,6 +37,7 @@ internal struct LibraryIconsView: View {
                         game: game,
                         isSelected: selectedPGNs.contains(game.id),
                         onSelect: { selectedPGNs = [game.id] },
+                        onOpen:   { onOpen(game) },
                         onDelete: { onDelete(game) }
                     )
                 }
@@ -65,6 +67,7 @@ private func iconsPreviewGames() -> [PGN] {
     LibraryIconsView(
         games: iconsPreviewGames(),
         selectedPGNs: $selection,
+        onOpen: { _ in },
         onDelete: { _ in }
     )
     .frame(width: 720, height: 480)
@@ -77,6 +80,7 @@ private func iconsPreviewGames() -> [PGN] {
     LibraryIconsView(
         games: [],
         selectedPGNs: $selection,
+        onOpen: { _ in },
         onDelete: { _ in }
     )
     .frame(width: 720, height: 480)

@@ -9,8 +9,8 @@ import SwiftUI
 
 internal struct PlayersDestination: View {
 
-    // MARK: Private Properties
-    @State private var isInspectorPresented: Bool = false
+    // MARK: Tab State (lives on enclosing `ContentView`)
+    @Bindable internal var tabState: TabState
 
     // MARK: Body
     internal var body: some View {
@@ -20,10 +20,16 @@ internal struct PlayersDestination: View {
             description: Text("Player profiles coming soon.")
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .inspector(isPresented: $isInspectorPresented) {
+        .inspector(isPresented: $tabState.playersInspectorPresented) {
             PlayersInspectorView()
                 .inspectorColumnWidth(min: 260, ideal: 320, max: 400)
         }
-        .inspectorToggle(isPresented: $isInspectorPresented)
+        .inspectorToggle(isPresented: $tabState.playersInspectorPresented)
     }
+}
+
+// MARK: - Previews
+
+#Preview {
+    PlayersDestination(tabState: TabState())
 }

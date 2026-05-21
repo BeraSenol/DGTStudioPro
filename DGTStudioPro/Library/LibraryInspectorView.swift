@@ -53,7 +53,7 @@ private struct LoadedSection: View {
 
     // MARK: Private Properties
     @Environment(\.modelContext) private var modelContext
-    @Environment(AppState.self) private var appState: AppState?
+    @Environment(\.openWindow) private var openWindow
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
     @State private var driver = GameAnalysisDriver()
     @FocusState private var isNameFieldFocused: Bool
@@ -90,30 +90,17 @@ private struct LoadedSection: View {
 
     // MARK: Open Affordance
 
-    /// "Open in Board" / "Show in Board" button. Open in Board (no
-    /// existing tab) creates a tab and switches the sidebar destination;
-    /// Show in Board (already-open tab) just activates it. The button is
-    /// disabled when the tab cap is hit and this game isn't already
-    /// among the open tabs. When `appState` isn't available (previews
-    /// without an injected AppState), the button hides entirely.
-    @ViewBuilder
+    /// "Open" button in the Library inspector. Asks macOS to open a
+    /// window for this game's `persistentModelID`. macOS handles dedup —
+    /// re-clicking activates the existing window. With "Prefer Tabs:
+    /// Always," multiple opened games merge as native tabs of one window.
     private var openButton: some View {
-        if let appState {
-            Button {
-                appState.openTab(pgn: pgn)
-            } label: {
-                Label(
-                    appState.isOpen(pgn) ? "Show in Board" : "Open in Board",
-                    systemImage: "checkerboard.rectangle"
-                )
-            }
-            .disabled(!appState.canOpen(pgn))
-            .help(
-                appState.canOpen(pgn)
-                ? "Open this game on the board"
-                : "Tab limit reached — close a tab to open this game"
-            )
+        Button {
+            openWindow(value: pgn.persistentModelID)
+        } label: {
+            Label("Open", systemImage: "checkerboard.rectangle")
         }
+        .help("Open this game in a new window")
     }
 
     // MARK: Evaluation Section

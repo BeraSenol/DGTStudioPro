@@ -12,6 +12,7 @@ internal struct LibraryGalleryView: View {
     let games: [PGN]
     @Binding var selectedPGNs: Set<PGN.ID>
     let boardStyle: BoardStyle
+    let onOpen: (PGN) -> Void
     let onDelete: (PGN) -> Void
 
     private var selectedPGN: PGN? {
@@ -67,6 +68,7 @@ internal struct LibraryGalleryView: View {
             game: game,
             isSelected: selectedPGNs.contains(game.id),
             onSelect: { selectedPGNs = [game.id] },
+            onOpen:   { onOpen(game) },
             onDelete: { onDelete(game) }
         )
         .frame(width: 180)
@@ -94,6 +96,7 @@ private func galleryPreviewGames() -> [PGN] {
         games: games,
         selectedPGNs: $selection,
         boardStyle: .walnut,
+        onOpen: { _ in },
         onDelete: { _ in }
     )
     .frame(width: 720, height: 600)
@@ -113,6 +116,7 @@ private func galleryPreviewGames() -> [PGN] {
         games: galleryPreviewGames(),
         selectedPGNs: $selection,
         boardStyle: .rosewood,
+        onOpen: { _ in },
         onDelete: { _ in }
     )
     .frame(width: 720, height: 600)
@@ -126,6 +130,7 @@ private func galleryPreviewGames() -> [PGN] {
         games: [],
         selectedPGNs: $selection,
         boardStyle: .walnut,
+        onOpen: { _ in },
         onDelete: { _ in }
     )
     .frame(width: 720, height: 600)

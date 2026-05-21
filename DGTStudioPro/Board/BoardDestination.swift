@@ -5,166 +5,183 @@
 //  Created by Supreme Leader on 09/04/2026.
 //
 
-import SwiftUI
+import os
 import SwiftData
+import SwiftUI
 
-/// Destination that renders the user's active game (the active tab) on
-/// the board, with a tab strip above and the game inspector to the side.
+/// Board destination. When `loadedGameID` is non-nil, looks up the
+/// PGN, builds a `Game`, and renders the board + inspector. When nil,
+/// shows the "Open a Game" landing card.
 ///
-/// Per Phase 9's document-model design: this view doesn't *own* the
-/// active game — it reads it from `AppState` and reacts. Opening a game
-/// from the Library inserts a tab and flips `sidebarSelection` to
-/// `.board`, which lands the user here; switching tabs swaps which
-/// game's `Game` drives the body. No game open → empty state.
+/// `loadedGameID` is bound to the enclosing tab's `WindowGroup` value,
+/// so each native tab has its own game (or none). Switching to Library
+/// in the sidebar doesn't clear the loaded game — it stays "loaded" in
+/// the tab and reappears when the user returns to Board, the same way
+/// Safari tabs preserve their loaded URL across navigation.
+///
+/// Per-tab state (resolved PGN/Game, perspective, inspector visibility)
+/// lives on the enclosing `ContentView`'s `TabState`, NOT on this view.
+/// This destination is recreated by SwiftUI every time the sidebar
+/// switches to and from `.board`; storing live state on `@State` here
+/// would lose scrub position, perspective, and inspector toggle on every
+/// destination round-trip.
 internal struct BoardDestination: View {
+
+    // MARK: Static Constants
+
+    private static let logger = Logger(
+        subsystem: "com.berasenol.dgtstudiopro",
+        category: "boardload"
+    )
+
+    // MARK: Bound State
+
+    @Binding internal var loadedGameID: PersistentIdentifier?
+
+    // MARK: Tab State (lives on enclosing `ContentView`)
+
+    @Bindable internal var tabState: TabState
 
     // MARK: Environment
 
-    @Environment(AppState.self) private var appState
+    @Environment(\.modelContext) private var modelContext
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
-
-    // MARK: Private Properties
-
-    @State private var perspective: PieceColor = .white
-    @State private var isInspectorPresented: Bool = true
 
     // MARK: Body
 
     internal var body: some View {
-        @Bindable var appState = appState
-
-        VStack(spacing: 0) {
-            if !appState.tabs.isEmpty {
-                TabBarView(
-                    tabs:        appState.tabs,
-                    activeTabID: appState.activeTabID,
-                    onActivate:  { appState.activate(id: $0) },
-                    onClose:     { appState.closeTab(id: $0) }
-                )
-                Divider()
+        Group {
+            if let pgn = tabState.boardPGN, let game = tabState.boardGame {
+                content(pgn: pgn, game: game)
+            } else if let loadError = tabState.boardLoadError {
+                errorState(message: loadError)
+            } else if loadedGameID == nil {
+                landingState
+            } else {
+                ProgressView()
+                    .controlSize(.large)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-
-            content
         }
-        .inspector(isPresented: $isInspectorPresented) {
-            inspectorContent
-                .inspectorColumnWidth(min: 260, ideal: 320, max: 400)
-        }
+        .navigationTitle(tabState.boardPGN?.name ?? "Board")
         .toolbar {
             ToolbarItem {
                 Button {
-                    perspective = perspective.opponent
+                    tabState.boardPerspective = tabState.boardPerspective.opponent
                 } label: {
                     Label("Flip Board", systemImage: "arrow.up.arrow.down")
                 }
-                .disabled(appState.activeTab == nil)
+                .disabled(tabState.boardGame == nil)
             }
         }
-        .inspectorToggle(isPresented: $isInspectorPresented)
+        .inspectorToggle(isPresented: $tabState.boardInspectorPresented)
+        .onAppear { loadIfNeeded() }
+        .onChange(of: loadedGameID) { _, _ in loadIfNeeded() }
     }
 
     // MARK: Content
 
-    @ViewBuilder
-    private var content: some View {
-        if let tab = appState.activeTab {
-            BoardView(
-                position:       tab.game.currentState.position,
-                pieceTracker:   tab.game.currentTracker,
-                style:          boardStyle,
-                perspective:    perspective,
-                lastMove:       tab.game.lastMove,
-                checkSquare:    tab.game.checkSquare,
-                selectedSquare: nil
-            )
-            .padding()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
-            emptyState
-        }
-    }
-
-    @ViewBuilder
-    private var inspectorContent: some View {
-        if let tab = appState.activeTab {
+    private func content(pgn: PGN, game: Game) -> some View {
+        BoardView(
+            position:       game.currentState.position,
+            pieceTracker:   game.currentTracker,
+            style:          boardStyle,
+            perspective:    tabState.boardPerspective,
+            lastMove:       game.lastMove,
+            checkSquare:    game.checkSquare,
+            selectedSquare: nil
+        )
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .inspector(isPresented: $tabState.boardInspectorPresented) {
             BoardInspectorView(
-                pgn:              tab.pgn,
-                evaluations:      tab.pgn.evaluations.map {
+                pgn:              pgn,
+                evaluations:      pgn.evaluations.map {
                     $0?.whiteWinProbability ?? 0.5
                 },
-                moves:            tab.pgn.moves,
-                currentMoveIndex: tab.game.currentPly > 0
-                ? tab.game.currentPly - 1
+                moves:            pgn.moves,
+                currentMoveIndex: game.currentPly > 0
+                ? game.currentPly - 1
                 : nil,
                 style:            boardStyle,
                 onMoveTapped:     { index in
-                    // Move-history index `i` corresponds to ply `i + 1`
-                    // (the position reached *after* that move was played).
-                    tab.game.jump(to: index + 1)
+                    game.jump(to: index + 1)
                 }
             )
-        } else {
-            BoardInspectorView(
-                pgn:              nil,
-                evaluations:      [],
-                moves:             [],
-                currentMoveIndex: nil,
-                style:            boardStyle,
-                onMoveTapped:     nil
-            )
+            .inspectorColumnWidth(min: 260, ideal: 320, max: 400)
         }
     }
 
-    // MARK: Empty State
+    // MARK: Landing / Error
 
-    private var emptyState: some View {
+    private var landingState: some View {
         ContentUnavailableView {
-            Label("No Game Open", systemImage: "checkerboard.rectangle")
+            Label("Open a Game", systemImage: "checkerboard.rectangle")
         } description: {
-            Text("Open a game from your library to view it here.")
+            Text("Pick a game from your Library to view it. Each opened game appears in its own tab.")
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func errorState(message: String) -> some View {
+        ContentUnavailableView {
+            Label("Couldn't Open Game", systemImage: "exclamationmark.triangle")
+        } description: {
+            Text(message)
+        }
+    }
+
+    // MARK: Loading
+
+    /// Resolves the bound `loadedGameID` to a concrete PGN + Game and
+    /// caches the result on `tabState`. No-op when the cached PGN
+    /// already matches the ID — important because this is called from
+    /// both `onAppear` (every time the Board destination re-enters the
+    /// view tree on a sidebar switch) and `onChange(of: loadedGameID)`,
+    /// and we don't want to rebuild the `Game` (and lose scrub position)
+    /// when the ID hasn't actually changed.
+    private func loadIfNeeded() {
+        guard let id = loadedGameID else {
+            tabState.boardPGN = nil
+            tabState.boardGame = nil
+            tabState.boardLoadError = nil
+            return
+        }
+
+        if tabState.boardPGN?.persistentModelID == id, tabState.boardGame != nil {
+            return
+        }
+
+        guard let loadedPGN = modelContext.model(for: id) as? PGN else {
+            tabState.boardPGN = nil
+            tabState.boardGame = nil
+            tabState.boardLoadError = "The game could not be found in the library."
+            return
+        }
+
+        do {
+            let newGame = try Game(pgn: loadedPGN)
+            tabState.boardPGN = loadedPGN
+            tabState.boardGame = newGame
+            tabState.boardLoadError = nil
+        } catch let error as Game.BuildError {
+            tabState.boardPGN = nil
+            tabState.boardGame = nil
+            if case .invalidMove(let index, _, _) = error {
+                tabState.boardLoadError = "Move \(index + 1) couldn't be parsed."
+            } else {
+                tabState.boardLoadError = "The game's move list couldn't be parsed."
+            }
+        } catch {
+            tabState.boardPGN = nil
+            tabState.boardGame = nil
+            tabState.boardLoadError = "Couldn't open the game: \(error.localizedDescription)"
+        }
     }
 }
 
 // MARK: - Previews
 
-#Preview("With Active Tab") {
-    let container = try! ModelContainer(
-        for: PGN.self,
-        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
-    )
-    let pgn = PGN(
-        event: "World Championship",
-        site: "Dubai",
-        round: 7,
-        white: "Carlsen",
-        black: "Nepomniachtchi",
-        moves: ["e4", "e5", "Nf3", "Nc6", "Bb5"],
-        result: .ongoing
-    )
-    container.mainContext.insert(pgn)
-
-    let appState = AppState()
-    _ = appState.openTab(pgn: pgn)
-
-    return NavigationSplitView {
-        List { Label("Board", systemImage: "checkerboard.rectangle") }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-    } detail: {
-        BoardDestination()
-    }
-    .environment(appState)
-    .modelContainer(container)
-}
-
-#Preview("Empty") {
-    NavigationSplitView {
-        List { Label("Board", systemImage: "checkerboard.rectangle") }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-    } detail: {
-        BoardDestination()
-    }
-    .environment(AppState())
-    .modelContainer(for: PGN.self, inMemory: true)
+#Preview {
+    BoardDestination(loadedGameID: .constant(nil), tabState: TabState())
+        .modelContainer(for: PGN.self, inMemory: true)
 }

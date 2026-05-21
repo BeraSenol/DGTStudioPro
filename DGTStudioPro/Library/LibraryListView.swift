@@ -11,6 +11,7 @@ import SwiftUI
 internal struct LibraryListView: View {
     let games: [PGN]
     @Binding var selectedPGNs: Set<PGN.ID>
+    let onOpen: (PGN) -> Void
     let onDelete: (PGN) -> Void
 
     var body: some View {
@@ -33,11 +34,24 @@ internal struct LibraryListView: View {
         }
         .contextMenu(forSelectionType: PGN.ID.self) { ids in
             if let id = ids.first, let game = games.first(where: { $0.id == id }) {
+                Button {
+                    onOpen(game)
+                } label: {
+                    Label("Open in Board", systemImage: "checkerboard.rectangle")
+                }
+                Divider()
                 Button(role: .destructive) {
                     onDelete(game)
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
+            }
+        } primaryAction: { ids in
+            // Fires on row double-click *and* on Return when a row is
+            // focused — both routes converge here so we don't need a
+            // separate `.onSubmit` or key-press handler.
+            if let id = ids.first, let game = games.first(where: { $0.id == id }) {
+                onOpen(game)
             }
         }
     }
@@ -63,6 +77,7 @@ private func listPreviewGames() -> [PGN] {
     LibraryListView(
         games: listPreviewGames(),
         selectedPGNs: $selection,
+        onOpen: { _ in },
         onDelete: { _ in }
     )
     .frame(width: 720, height: 360)
@@ -75,6 +90,7 @@ private func listPreviewGames() -> [PGN] {
     LibraryListView(
         games: [],
         selectedPGNs: $selection,
+        onOpen: { _ in },
         onDelete: { _ in }
     )
     .frame(width: 720, height: 360)
