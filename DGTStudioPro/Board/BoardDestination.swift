@@ -141,6 +141,7 @@ internal struct BoardDestination: View {
     /// when the ID hasn't actually changed.
     private func loadIfNeeded() {
         guard let id = loadedGameID else {
+            Self.logger.debug("loadIfNeeded: loadedGameID is nil — clearing")
             tabState.boardPGN = nil
             tabState.boardGame = nil
             tabState.boardLoadError = nil
@@ -148,13 +149,21 @@ internal struct BoardDestination: View {
         }
 
         if tabState.boardPGN?.persistentModelID == id, tabState.boardGame != nil {
+            Self.logger.debug(
+                "loadIfNeeded: cache hit for '\(self.tabState.boardPGN?.name ?? "?", privacy: .public)' — no reload"
+            )
             return
         }
+
+        Self.logger.debug("loadIfNeeded: resolving id \(String(describing: id), privacy: .public)")
 
         guard let loadedPGN = modelContext.model(for: id) as? PGN else {
             tabState.boardPGN = nil
             tabState.boardGame = nil
             tabState.boardLoadError = "The game could not be found in the library."
+            Self.logger.error(
+                "PGN lookup failed for id \(String(describing: id), privacy: .public)"
+            )
             return
         }
 
@@ -163,18 +172,35 @@ internal struct BoardDestination: View {
             tabState.boardPGN = loadedPGN
             tabState.boardGame = newGame
             tabState.boardLoadError = nil
+            Self.logger.info(
+                "Opened game: \(loadedPGN.name, privacy: .public) [\(loadedPGN.moves.count) plies]"
+            )
         } catch let error as Game.BuildError {
             tabState.boardPGN = nil
             tabState.boardGame = nil
-            if case .invalidMove(let index, _, _) = error {
+            if case .invalidMove(let index, let san, let underlying) = error {
                 tabState.boardLoadError = "Move \(index + 1) couldn't be parsed."
+                Self.logger.error(
+                    """
+                    Game.init failed for \(loadedPGN.name, privacy: .public): \
+                    move \(index + 1) (index \(index)) SAN '\(san, privacy: .public)' \
+                    failed with \(String(describing: underlying), privacy: .public). \
+                    Prior moves: [\(loadedPGN.moves.prefix(index).joined(separator: " "), privacy: .public)]
+                    """
+                )
             } else {
                 tabState.boardLoadError = "The game's move list couldn't be parsed."
+                Self.logger.error(
+                    "Game.init failed for \(loadedPGN.name, privacy: .public): \(String(describing: error), privacy: .public)"
+                )
             }
         } catch {
             tabState.boardPGN = nil
             tabState.boardGame = nil
             tabState.boardLoadError = "Couldn't open the game: \(error.localizedDescription)"
+            Self.logger.error(
+                "Game.init failed unexpectedly for \(loadedPGN.name, privacy: .public): \(error.localizedDescription, privacy: .public)"
+            )
         }
     }
 }

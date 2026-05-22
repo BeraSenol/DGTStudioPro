@@ -21,6 +21,12 @@ internal struct DGTStudioProApp: App {
         }
     }()
 
+    /// Shared registry of open games with unsaved changes. Same
+    /// create-once-on-the-App, inject-into-every-tab pattern as
+    /// `sharedContainer`. Used by the Library's delete path to decide
+    /// whether closing a deleted game's tab needs a discard confirmation.
+    @State private var openGames = OpenGamesRegistry()
+
     var body: some Scene {
         // One unified `WindowGroup` parameterised by an optional
         // `PersistentIdentifier`. Tabs with a nil value land on Library;
@@ -37,6 +43,7 @@ internal struct DGTStudioProApp: App {
         // same group. Hence one group, content varies by bound value.
         WindowGroup("DGT Studio Pro", for: PersistentIdentifier.self) { $gameID in
             ContentView(loadedGameID: $gameID)
+                .environment(openGames)
         }
         .modelContainer(sharedContainer)
 

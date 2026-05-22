@@ -8,10 +8,10 @@
 import SwiftUI
 
 internal struct RankingsDestination: View {
-    
+
     // MARK: Tab State (lives on enclosing `ContentView`)
     @Bindable internal var tabState: TabState
-    
+
     // MARK: Body
     internal var body: some View {
         ContentUnavailableView(
@@ -20,6 +20,7 @@ internal struct RankingsDestination: View {
             description: Text("Rankings coming soon.")
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .navigationTitle("Rankings")
         .inspector(isPresented: $tabState.rankingsInspectorPresented) {
             RankingsInspectorView()
                 .inspectorColumnWidth(min: 260, ideal: 320, max: 400)

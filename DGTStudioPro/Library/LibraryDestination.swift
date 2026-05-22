@@ -29,10 +29,13 @@ internal struct LibraryDestination: View {
     @AppStorage(StorageKeys.libraryViewMode) private var viewMode: CollectionViewMode = .list
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismissWindow) private var dismissWindow
+    @Environment(OpenGamesRegistry.self) private var openGames
     @Query(sort: \PGN.importedAt, order: .reverse) private var games: [PGN]
     @State private var pendingDeletion: PGN?
+    @State private var pendingDirtyDeletion: PGN?
     @State private var selectedPGNs: Set<PGN.ID> = []
-    @State private var importError: ImportError?
+    @State private var importProgress: ImportProgress?
 
     // MARK: Initializers
     internal init(filter: SmartTag? = nil, tabState: TabState) {
@@ -51,28 +54,24 @@ internal struct LibraryDestination: View {
         return filteredGames.first(where: { $0.id == id })
     }
 
-    private var importErrorBinding: Binding<Bool> {
+    private var importSheetBinding: Binding<Bool> {
         Binding(
-            get: { importError != nil },
-            set: { if !$0 { importError = nil } }
+            get: { importProgress != nil },
+            set: { if !$0 { importProgress = nil } }
         )
     }
 
-    private var pendingDeletionBinding: Binding<Bool> {
-        Binding(
-            get: { pendingDeletion != nil },
-            set: { if !$0 { pendingDeletion = nil } }
-        )
+    private var pendingDeletionBinding: Binding<Bool> {        Binding(
+        get: { pendingDeletion != nil },
+        set: { if !$0 { pendingDeletion = nil } }
+    )
     }
 
-    private var importErrorTitle: String {
-        guard let importError else { return "" }
-        switch importError.error {
-        case .duplicate:           return "Already Imported"
-        case .missingRequiredTags: return "Missing Required Tags"
-        case .malformedPGN:        return "Malformed PGN"
-        case .fileReadFailed:      return "Couldn't Read File"
-        }
+    private var pendingDirtyDeletionBinding: Binding<Bool> {
+        Binding(
+            get: { pendingDirtyDeletion != nil },
+            set: { if !$0 { pendingDirtyDeletion = nil } }
+        )
     }
 
     // MARK: Body
@@ -85,7 +84,9 @@ internal struct LibraryDestination: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .navigationTitle(filter?.displayName ?? "Library")
         .dropDestination(for: URL.self) { urls, _ in
+            Self.logger.info("Drop received: \(urls.count) URL(s)")
             importURLs(urls)
             return true
         }
@@ -94,13 +95,13 @@ internal struct LibraryDestination: View {
                 .inspectorColumnWidth(min: 260, ideal: 300, max: 400)
         }
         .toolbar { toolbarContent }
-        .alert(
-            importErrorTitle,
-            isPresented: importErrorBinding,
-            presenting: importError,
-            actions: { error in importErrorActions(for: error) },
-            message: { error in importErrorMessage(for: error) }
-        )
+        .sheet(isPresented: importSheetBinding) {
+            if let importProgress {
+                ImportStatusView(progress: importProgress) {
+                    self.importProgress = nil
+                }
+            }
+        }
         .alert(
             "Delete Game?",
             isPresented: pendingDeletionBinding,
@@ -111,6 +112,20 @@ internal struct LibraryDestination: View {
             },
             message: { game in
                 Text("\(game.name) will be permanently deleted.")
+            }
+        )
+        .alert(
+            "Discard Unsaved Changes?",
+            isPresented: pendingDirtyDeletionBinding,
+            presenting: pendingDirtyDeletion,
+            actions: { game in
+                Button("Delete Anyway", role: .destructive) {
+                    performDelete(game)
+                }
+                Button("Cancel", role: .cancel) {}
+            },
+            message: { game in
+                Text("\(game.name) is open with unsaved changes. Deleting it will discard those changes and close its tab.")
             }
         )
         .onDeleteCommand {
@@ -166,6 +181,7 @@ internal struct LibraryDestination: View {
     /// views stay window-system-unaware. macOS handles dedup, tabbing
     /// (with "Prefer Tabs: Always"), and restoration.
     private func openGame(_ pgn: PGN) {
+        Self.logger.info("Open requested: '\(pgn.name, privacy: .public)'")
         openWindow(value: pgn.persistentModelID)
     }
 
@@ -224,52 +240,69 @@ internal struct LibraryDestination: View {
     }
 
     private func importURLs(_ urls: [URL]) {
+        guard !urls.isEmpty else { return }
+        Task { await runImport(urls) }
+    }
+
+    /// Imports a batch, recording a per-file result and never aborting on
+    /// a failure — a bad file in the middle no longer drops the files
+    /// after it. Runs on the main actor (PGNStore touches the
+    /// `ModelContext`), yielding between files so the progress bar in the
+    /// status sheet animates as work proceeds.
+    @MainActor
+    private func runImport(_ urls: [URL]) async {
+        Self.logger.info("Import batch starting: \(urls.count) URL(s)")
         let store = PGNStore(modelContext: modelContext)
+        importProgress = ImportProgress(total: urls.count)
 
         for url in urls {
+            let outcome: ImportResult.Outcome
             do {
-                try store.importPGN(from: url)
+                let pgn = try store.importPGN(from: url)
+                outcome = .imported(name: pgn.name)
             } catch let error as PGNStore.Error {
                 Self.logger.error("Import failed for \(url.lastPathComponent, privacy: .public)")
-                importError = ImportError(url: url, error: error)
-                return
+                outcome = .failed(error)
             } catch {
                 Self.logger.error("Import failed for \(url.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
-                importError = ImportError(url: url, error: .fileReadFailed(url, underlying: error))
-                return
+                outcome = .failed(.fileReadFailed(url, underlying: error))
             }
+
+            importProgress?.results.append(
+                ImportResult(fileName: url.lastPathComponent, outcome: outcome)
+            )
+            // Let SwiftUI render the updated progress before the next file.
+            await Task.yield()
         }
+
+        importProgress?.isFinished = true
+        let imported = importProgress?.importedCount ?? 0
+        Self.logger.info("Import batch complete: \(imported)/\(urls.count) imported")
     }
 
-    @ViewBuilder
-    private func importErrorActions(for error: ImportError) -> some View {
-        switch error.error {
-        case .duplicate(let existing):
-            Button("View Existing") {
-                selectedPGNs = [existing.id]
-            }
-            Button("Cancel", role: .cancel) {}
-        case .missingRequiredTags, .malformedPGN, .fileReadFailed:
-            Button("OK", role: .cancel) {}
-        }
-    }
-
-    @ViewBuilder
-    private func importErrorMessage(for error: ImportError) -> some View {
-        switch error.error {
-        case .duplicate(let existing):
-            Text("\(existing.name) is already in your library.")
-        case .missingRequiredTags(let tags):
-            Text("The PGN is missing: \(tags.sorted().joined(separator: ", ")).")
-        case .malformedPGN(let reason):
-            Text(reason)
-        case .fileReadFailed(let url, _):
-            Text("Failed to read \(url.lastPathComponent).")
-        }
-    }
-
+    /// Entry point from the "Delete Game?" confirmation. Routes to a
+    /// second discard confirmation if the game is open with unsaved
+    /// changes; otherwise deletes and closes immediately.
     private func delete(_ pgn: PGN) {
+        if openGames.isDirty(pgn.persistentModelID) {
+            pendingDirtyDeletion = pgn
+        } else {
+            performDelete(pgn)
+        }
+    }
+
+    /// Performs the deletion and closes any tab showing this game.
+    /// `dismissWindow(value:)` targets the window/tab presenting the
+    /// given value regardless of which tab invokes it, and is a harmless
+    /// no-op when no tab is open for the game.
+    private func performDelete(_ pgn: PGN) {
+        let id = pgn.persistentModelID
         selectedPGNs.remove(pgn.id)
+        openGames.markClean(id)
+
+        // Close the open tab (if any) before the model is torn down, so
+        // the tab never renders against a tombstoned PGN.
+        dismissWindow(value: id)
 
         let store = PGNStore(modelContext: modelContext)
         do {
@@ -296,13 +329,6 @@ internal struct LibraryDestination: View {
     }
 }
 
-// MARK: Supporting Types
-private struct ImportError: Identifiable {
-    let id = UUID()
-    let url: URL
-    let error: PGNStore.Error
-}
-
 // MARK: Previews
 #Preview("With Games") {
     let container = try! ModelContainer(
@@ -327,6 +353,7 @@ private struct ImportError: Identifiable {
         LibraryDestination(tabState: TabState())
     }
     .modelContainer(container)
+    .environment(OpenGamesRegistry())
 }
 
 #Preview("Empty") {
@@ -337,4 +364,5 @@ private struct ImportError: Identifiable {
         LibraryDestination(tabState: TabState())
     }
     .modelContainer(for: PGN.self, inMemory: true)
+    .environment(OpenGamesRegistry())
 }

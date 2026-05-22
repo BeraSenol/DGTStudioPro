@@ -51,7 +51,9 @@ internal struct PGNStore {
         let hash = Self.contentHash(for: pgn)
 
         if let existing = try existingPGN(withHash: hash) {
-            Self.logger.info("Rejected duplicate PGN with hash \(hash, privacy: .public)")
+            Self.logger.info(
+                "Rejected duplicate: '\(pgn.name, privacy: .public)' matches existing '\(existing.name, privacy: .public)' hash=\(hash, privacy: .public)"
+            )
             throw Error.duplicate(existing: existing)
         }
 
@@ -64,7 +66,7 @@ internal struct PGNStore {
         try modelContext.save()
 
         Self.logger.info(
-            "Imported PGN: \(pgn.white, privacy: .public) vs \(pgn.black, privacy: .public) [\(pgn.result.rawValue, privacy: .public)]"
+            "Imported: '\(pgn.name, privacy: .public)' \(pgn.white, privacy: .public) vs \(pgn.black, privacy: .public) [\(pgn.result.rawValue, privacy: .public)] plies=\(pgn.moves.count)"
         )
 
         return pgn
@@ -85,6 +87,7 @@ internal struct PGNStore {
     }
 
     internal func delete(_ pgn: PGN) throws {
+        Self.logger.info("Deleting: '\(pgn.name, privacy: .public)'")
         modelContext.delete(pgn)
         try modelContext.save()
     }

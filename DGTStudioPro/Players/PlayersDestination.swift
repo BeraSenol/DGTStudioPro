@@ -20,6 +20,7 @@ internal struct PlayersDestination: View {
             description: Text("Player profiles coming soon.")
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .navigationTitle("Players")
         .inspector(isPresented: $tabState.playersInspectorPresented) {
             PlayersInspectorView()
                 .inspectorColumnWidth(min: 260, ideal: 320, max: 400)

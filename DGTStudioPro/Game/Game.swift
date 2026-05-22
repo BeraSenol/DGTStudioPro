@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import os
 
 /// Live, ephemeral working model for a single chess game.
 ///
@@ -26,6 +27,13 @@ import Foundation
 @Observable
 @MainActor
 internal final class Game {
+
+    // MARK: Static Constants
+
+    private static let logger = Logger(
+        subsystem: "com.berasenol.dgtstudiopro",
+        category: "game"
+    )
 
     // MARK: Errors
 
@@ -127,6 +135,17 @@ internal final class Game {
             do {
                 move = try state.parseSAN(san)
             } catch let error as SANParseError {
+                Self.logger.error(
+                    """
+                    SAN parse failed for '\(pgn.name, privacy: .public)' \
+                    at move \(index + 1) (index \(index)): \
+                    SAN='\(san, privacy: .public)' \
+                    sideToMove=\(String(describing: state.activeColor), privacy: .public) \
+                    fenBefore='\(FEN(state).string, privacy: .public)' \
+                    error=\(String(describing: error), privacy: .public) \
+                    priorMoves=[\(pgn.moves.prefix(index).joined(separator: " "), privacy: .public)]
+                    """
+                )
                 throw BuildError.invalidMove(
                     index: index, san: san, underlying: error
                 )
@@ -144,6 +163,10 @@ internal final class Game {
         self.trackers = trackers
         self.moves = moves
         self.currentPly = moves.count
+
+        Self.logger.info(
+            "Built Game '\(pgn.name, privacy: .public)' [\(moves.count) plies]"
+        )
     }
 
     // MARK: Navigation
