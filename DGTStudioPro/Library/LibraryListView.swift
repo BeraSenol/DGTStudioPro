@@ -16,7 +16,10 @@ internal struct LibraryListView: View {
 
     var body: some View {
         Table(games, selection: $selectedPGNs) {
-            TableColumn("White") { Text($0.whiteDisplayName) }
+            TableColumn("White") { game in
+                Text(game.whiteDisplayName)
+                    .accessibilityIdentifier("gameRow.\(game.name)")
+            }
             TableColumn("Black") { Text($0.blackDisplayName) }
             TableColumn("Result") { game in
                 Text(game.result.rawValue).foregroundStyle(.secondary)
@@ -32,6 +35,7 @@ internal struct LibraryListView: View {
             }
             .width(60)
         }
+        .accessibilityIdentifier("library.gamesTable")
         .contextMenu(forSelectionType: PGN.ID.self) { ids in
             if let id = ids.first, let game = games.first(where: { $0.id == id }) {
                 Button {

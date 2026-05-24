@@ -9,6 +9,7 @@ import SwiftUI
 
 internal struct InspectorToggleModifier: ViewModifier {
     @Binding var isPresented: Bool
+    var identifier: String = "inspector.toggle"
 
     func body(content: Content) -> some View {
         content.toolbar {
@@ -18,13 +19,17 @@ internal struct InspectorToggleModifier: ViewModifier {
                 } label: {
                     Label("Inspector", systemImage: "sidebar.trailing")
                 }
+                .accessibilityIdentifier(identifier)
             }
         }
     }
 }
 
 extension View {
-    internal func inspectorToggle(isPresented: Binding<Bool>) -> some View {
-        modifier(InspectorToggleModifier(isPresented: isPresented))
+    internal func inspectorToggle(
+        isPresented: Binding<Bool>,
+        identifier: String = "inspector.toggle"
+    ) -> some View {
+        modifier(InspectorToggleModifier(isPresented: isPresented, identifier: identifier))
     }
 }

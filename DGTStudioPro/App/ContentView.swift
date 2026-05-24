@@ -53,6 +53,7 @@ internal struct ContentView: View {
                     ForEach(Destination.allCases) { destination in
                         Label(destination.title, systemImage: destination.systemImage)
                             .tag(SidebarSelection.destination(destination))
+                            .accessibilityIdentifier("sidebar.\(destination.rawValue)")
                     }
                 }
                 
@@ -66,10 +67,12 @@ internal struct ContentView: View {
                                 .frame(width: 10, height: 10)
                         }
                         .tag(SidebarSelection.tag(tag))
+                        .accessibilityIdentifier("sidebar.tag.\(tag.rawValue)")
                     }
                 }
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+            .accessibilityIdentifier("sidebar")
         } detail: {
             switch selection {
             case .destination(.board):

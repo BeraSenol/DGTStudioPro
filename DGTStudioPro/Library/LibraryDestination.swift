@@ -11,19 +11,19 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 internal struct LibraryDestination: View {
-
+    
     // MARK: Static Constants
     private static let logger = Logger(
         subsystem: "com.berasenol.dgtstudiopro",
         category: "library"
     )
-
+    
     // MARK: Stored Properties
     internal let filter: SmartTag?
-
+    
     // MARK: Tab State (lives on enclosing `ContentView`)
     @Bindable internal var tabState: TabState
-
+    
     // MARK: Private Properties
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
     @AppStorage(StorageKeys.libraryViewMode) private var viewMode: CollectionViewMode = .list
@@ -36,53 +36,55 @@ internal struct LibraryDestination: View {
     @State private var pendingDirtyDeletion: PGN?
     @State private var selectedPGNs: Set<PGN.ID> = []
     @State private var importProgress: ImportProgress?
-
+    
     // MARK: Initializers
     internal init(filter: SmartTag? = nil, tabState: TabState) {
         self.filter = filter
         self.tabState = tabState
     }
-
+    
     // MARK: Computed Properties
     private var filteredGames: [PGN] {
         guard let filter else { return games }
         return games.filter { filter.matches($0) }
     }
-
+    
     private var selectedPGN: PGN? {
         guard let id = selectedPGNs.first else { return nil }
         return filteredGames.first(where: { $0.id == id })
     }
-
+    
     private var importSheetBinding: Binding<Bool> {
         Binding(
             get: { importProgress != nil },
             set: { if !$0 { importProgress = nil } }
         )
     }
-
+    
     private var pendingDeletionBinding: Binding<Bool> {        Binding(
         get: { pendingDeletion != nil },
         set: { if !$0 { pendingDeletion = nil } }
     )
     }
-
+    
     private var pendingDirtyDeletionBinding: Binding<Bool> {
         Binding(
             get: { pendingDirtyDeletion != nil },
             set: { if !$0 { pendingDirtyDeletion = nil } }
         )
     }
-
+    
     // MARK: Body
     internal var body: some View {
         Group {
             if filteredGames.isEmpty {
                 emptyState
+                    .accessibilityIdentifier("library.emptyState")
             } else {
                 modeView
             }
         }
+        .accessibilityIdentifier("library.content")
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle(filter?.displayName ?? "Library")
         .dropDestination(for: URL.self) { urls, _ in
@@ -139,7 +141,7 @@ internal struct LibraryDestination: View {
             if mode == .gallery { tabState.libraryInspectorPresented = true }
         }
     }
-
+    
     // MARK: Instance Methods
     @ViewBuilder
     private var modeView: some View {
@@ -151,6 +153,7 @@ internal struct LibraryDestination: View {
                 onOpen:   openGame,
                 onDelete: { pendingDeletion = $0 }
             )
+            .accessibilityIdentifier("library.mode.icons")
         case .list:
             LibraryListView(
                 games: filteredGames,
@@ -158,6 +161,7 @@ internal struct LibraryDestination: View {
                 onOpen:   openGame,
                 onDelete: { pendingDeletion = $0 }
             )
+            .accessibilityIdentifier("library.mode.list")
         case .columns:
             LibraryColumnsView(
                 games: filteredGames,
@@ -165,6 +169,7 @@ internal struct LibraryDestination: View {
                 onOpen:   openGame,
                 onDelete: { pendingDeletion = $0 }
             )
+            .accessibilityIdentifier("library.mode.columns")
         case .gallery:
             LibraryGalleryView(
                 games: filteredGames,
@@ -173,9 +178,10 @@ internal struct LibraryDestination: View {
                 onOpen:   openGame,
                 onDelete: { pendingDeletion = $0 }
             )
+            .accessibilityIdentifier("library.mode.gallery")
         }
     }
-
+    
     /// Single resolution point for "open a game in its own window."
     /// Threaded into every Library view as the `onOpen` callback so the
     /// views stay window-system-unaware. macOS handles dedup, tabbing
@@ -184,22 +190,31 @@ internal struct LibraryDestination: View {
         Self.logger.info("Open requested: '\(pgn.name, privacy: .public)'")
         openWindow(value: pgn.persistentModelID)
     }
-
+    
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem {
+            // NOTE: On macOS a `.segmented` Picker built from
+            // `Label(_:systemImage:)` renders icon-only, and each segment
+            // is exposed to UI tests as a radioButton keyed by its SF
+            // Symbol name (e.g. "square.grid.2x2"), NOT by any
+            // per-segment accessibilityIdentifier. The identifier below
+            // only tags the picker container; tests address the segments
+            // by symbol name. See DGTStudioProUITests.
             Picker("View Mode", selection: $viewMode) {
                 ForEach(CollectionViewMode.allCases) { mode in
                     Label(mode.displayName, systemImage: mode.systemImage).tag(mode)
                 }
             }
             .pickerStyle(.segmented)
+            .accessibilityIdentifier("library.viewModePicker")
         }
         ToolbarSpacer()
         ToolbarItem {
             Button(action: presentOpenPanel) {
                 Label("Import PGN", systemImage: "square.and.arrow.down")
             }
+            .accessibilityIdentifier("library.importButton")
         }
         ToolbarSpacer()
         ToolbarItem {
@@ -208,9 +223,10 @@ internal struct LibraryDestination: View {
             } label: {
                 Label("Inspector", systemImage: "sidebar.trailing")
             }
+            .accessibilityIdentifier("library.inspectorToggle")
         }
     }
-
+    
     @ViewBuilder
     private var emptyState: some View {
         if let filter {
@@ -227,23 +243,23 @@ internal struct LibraryDestination: View {
             }
         }
     }
-
+    
     private func presentOpenPanel() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [UTType(filenameExtension: "pgn") ?? .plainText]
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
-
+        
         if panel.runModal() == .OK {
             importURLs(panel.urls)
         }
     }
-
+    
     private func importURLs(_ urls: [URL]) {
         guard !urls.isEmpty else { return }
         Task { await runImport(urls) }
     }
-
+    
     /// Imports a batch, recording a per-file result and never aborting on
     /// a failure — a bad file in the middle no longer drops the files
     /// after it. Runs on the main actor (PGNStore touches the
@@ -254,7 +270,7 @@ internal struct LibraryDestination: View {
         Self.logger.info("Import batch starting: \(urls.count) URL(s)")
         let store = PGNStore(modelContext: modelContext)
         importProgress = ImportProgress(total: urls.count)
-
+        
         for url in urls {
             let outcome: ImportResult.Outcome
             do {
@@ -267,19 +283,19 @@ internal struct LibraryDestination: View {
                 Self.logger.error("Import failed for \(url.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
                 outcome = .failed(.fileReadFailed(url, underlying: error))
             }
-
+            
             importProgress?.results.append(
                 ImportResult(fileName: url.lastPathComponent, outcome: outcome)
             )
             // Let SwiftUI render the updated progress before the next file.
             await Task.yield()
         }
-
+        
         importProgress?.isFinished = true
         let imported = importProgress?.importedCount ?? 0
         Self.logger.info("Import batch complete: \(imported)/\(urls.count) imported")
     }
-
+    
     /// Entry point from the "Delete Game?" confirmation. Routes to a
     /// second discard confirmation if the game is open with unsaved
     /// changes; otherwise deletes and closes immediately.
@@ -290,7 +306,7 @@ internal struct LibraryDestination: View {
             performDelete(pgn)
         }
     }
-
+    
     /// Performs the deletion and closes any tab showing this game.
     /// `dismissWindow(value:)` targets the window/tab presenting the
     /// given value regardless of which tab invokes it, and is a harmless
@@ -299,11 +315,11 @@ internal struct LibraryDestination: View {
         let id = pgn.persistentModelID
         selectedPGNs.remove(pgn.id)
         openGames.markClean(id)
-
+        
         // Close the open tab (if any) before the model is torn down, so
         // the tab never renders against a tombstoned PGN.
         dismissWindow(value: id)
-
+        
         let store = PGNStore(modelContext: modelContext)
         do {
             try store.delete(pgn)
@@ -311,7 +327,7 @@ internal struct LibraryDestination: View {
             Self.logger.error("Failed to delete PGN: \(error.localizedDescription, privacy: .public)")
         }
     }
-
+    
     private func backfillEmptyNames() {
         let toFix = games.filter { game in
             game.name.isEmpty || game.name == game.legacyDefaultName
@@ -335,7 +351,7 @@ internal struct LibraryDestination: View {
         for: PGN.self,
         configurations: ModelConfiguration(isStoredInMemoryOnly: true)
     )
-
+    
     let samples: [PGN] = [
         PGN(event: "World Championship", site: "Dubai", round: 11,
             white: "Carlsen, Magnus", black: "Nepomniachtchi, Ian", result: .whiteWins),
@@ -345,7 +361,7 @@ internal struct LibraryDestination: View {
             white: "Firouzja, Alireza", black: "Ding, Liren", result: .blackWins)
     ]
     for sample in samples { container.mainContext.insert(sample) }
-
+    
     return NavigationSplitView {
         List { Label("Library", systemImage: "books.vertical") }
             .navigationSplitViewColumnWidth(min: 80, ideal: 100, max: 120)

@@ -72,9 +72,13 @@ internal struct BoardDestination: View {
                     Label("Flip Board", systemImage: "arrow.up.arrow.down")
                 }
                 .disabled(tabState.boardGame == nil)
+                .accessibilityIdentifier("board.flipButton")
             }
         }
-        .inspectorToggle(isPresented: $tabState.boardInspectorPresented)
+        .inspectorToggle(
+            isPresented: $tabState.boardInspectorPresented,
+            identifier: "board.inspectorToggle"
+        )
         .onAppear { loadIfNeeded() }
         .onChange(of: loadedGameID) { _, _ in loadIfNeeded() }
     }
@@ -93,6 +97,7 @@ internal struct BoardDestination: View {
         )
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityIdentifier("board")
         .inspector(isPresented: $tabState.boardInspectorPresented) {
             BoardInspectorView(
                 pgn:              pgn,
@@ -120,6 +125,7 @@ internal struct BoardDestination: View {
         } description: {
             Text("Pick a game from your Library to view it. Each opened game appears in its own tab.")
         }
+        .accessibilityIdentifier("board.landing")
     }
 
     private func errorState(message: String) -> some View {
@@ -128,6 +134,7 @@ internal struct BoardDestination: View {
         } description: {
             Text(message)
         }
+        .accessibilityIdentifier("board.error")
     }
 
     // MARK: Loading

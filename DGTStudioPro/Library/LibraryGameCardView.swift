@@ -44,6 +44,11 @@ internal struct LibraryGameCardView: View {
                 Label("Delete", systemImage: "trash")
             }
         }
+        // Collapse the card into a single addressable element for UI
+        // tests. Without `.combine`, macOS exposes only the inner static
+        // texts and the identifier never lands on a tappable element.
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("gameCard.\(game.name)")
     }
 
     // MARK: Instance Methods

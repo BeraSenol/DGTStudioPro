@@ -20,12 +20,16 @@ internal struct RankingsDestination: View {
             description: Text("Rankings coming soon.")
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityIdentifier("rankings.content")
         .navigationTitle("Rankings")
         .inspector(isPresented: $tabState.rankingsInspectorPresented) {
             RankingsInspectorView()
                 .inspectorColumnWidth(min: 260, ideal: 320, max: 400)
         }
-        .inspectorToggle(isPresented: $tabState.rankingsInspectorPresented)
+        .inspectorToggle(
+            isPresented: $tabState.rankingsInspectorPresented,
+            identifier: "rankings.inspectorToggle"
+        )
     }
 }
 

@@ -141,6 +141,11 @@ internal struct BoardView: View {
                             squareSize: layout.innerSquareSize,
                             style: style
                         )
+                        // e.g. "square.e4" — stable algebraic handle for
+                        // UI tests (esp. keyboard-nav verification).
+                        .accessibilityIdentifier(
+                            "square.\(Square.fileCharacter(square.file))\(Square.rankCharacter(square.rank))"
+                        )
                     }
                 }
             }
