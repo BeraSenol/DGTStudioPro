@@ -29,6 +29,23 @@
 		C5D920DA2F732FE9003D0A74 /* DGTStudioProUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DGTStudioProUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C58C80EE2FC6F5A40021F314 /* Exceptions for "DGTStudioProTests" folder in "DGTStudioPro" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Support/DGTBoardSimulator.swift,
+			);
+			target = C5D920C02F732FE8003D0A74 /* DGTStudioPro */;
+		};
+		C58C80EF2FC6F5A40021F314 /* Exceptions for "DGTStudioProTests" folder in "DGTStudioProTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Support/DGTBoardSimulator.swift,
+			);
+			target = C5D920CF2F732FE9003D0A74 /* DGTStudioProTests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		C5D920C32F732FE8003D0A74 /* DGTStudioPro */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -37,6 +54,10 @@
 		};
 		C5D920D32F732FE9003D0A74 /* DGTStudioProTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C58C80EE2FC6F5A40021F314 /* Exceptions for "DGTStudioProTests" folder in "DGTStudioPro" target */,
+				C58C80EF2FC6F5A40021F314 /* Exceptions for "DGTStudioProTests" folder in "DGTStudioProTests" target */,
+			);
 			path = DGTStudioProTests;
 			sourceTree = "<group>";
 		};

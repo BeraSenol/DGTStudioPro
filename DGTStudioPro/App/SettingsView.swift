@@ -5,12 +5,27 @@
 //  Created by Supreme Leader on 13/04/2026.
 //
 
+import os
+import SwiftData
 import SwiftUI
 
 internal struct SettingsView: View {
 
+    // MARK: Static Constants
+    private static let logger = Logger(
+        subsystem: "com.berasenol.dgtstudiopro",
+        category: "pgnstore"
+    )
+
     // MARK: Private Properties
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
+
+    @Environment(\.modelContext) private var modelContext
+    @Query private var allGames: [PGN]
+
+    @State private var showEraseConfirmation = false
+    @State private var showEraseError = false
+    @State private var eraseErrorMessage = ""
 
     // MARK: Body
     internal var body: some View {
@@ -21,11 +36,14 @@ internal struct SettingsView: View {
             Tab("Board", systemImage: "checkerboard.rectangle") {
                 boardTab
             }
+            Tab("Data", systemImage: "externaldrive") {
+                dataTab
+            }
         }
         .frame(width: 500)
     }
 
-    // MARK: Instance Methods
+    // MARK: General
     private var generalTab: some View {
         Form {
             LabeledContent("Analysis Depth", value: "20")
@@ -35,6 +53,7 @@ internal struct SettingsView: View {
         .formStyle(.grouped)
     }
 
+    // MARK: Board
     private var boardTab: some View {
         VStack {
             HStack(spacing: 20) {
@@ -84,9 +103,72 @@ internal struct SettingsView: View {
             }
         }
     }
+
+    // MARK: Data
+    private var dataTab: some View {
+        Form {
+            Section("Library") {
+                LabeledContent("Stored Games", value: "\(allGames.count)")
+            }
+
+            Section {
+                Button(role: .destructive) {
+                    showEraseConfirmation = true
+                } label: {
+                    Label("Erase Library…", systemImage: "trash")
+                }
+                .disabled(allGames.isEmpty)
+                .accessibilityIdentifier("settings.eraseLibraryButton")
+            } header: {
+                Text("Reset")
+            } footer: {
+                Text(
+                    "Permanently deletes every game in your library. This cannot be "
+                    + "undone. Any open game tabs will revert to the live board view."
+                )
+            }
+        }
+        .formStyle(.grouped)
+        .alert("Erase Entire Library?", isPresented: $showEraseConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button(
+                "Erase \(allGames.count) Game\(allGames.count == 1 ? "" : "s")",
+                role: .destructive
+            ) {
+                eraseLibrary()
+            }
+        } message: {
+            Text("This permanently deletes all \(allGames.count) games. This action cannot be undone.")
+        }
+        .alert("Couldn't Erase Library", isPresented: $showEraseError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(eraseErrorMessage)
+        }
+    }
+
+    // MARK: Actions
+
+    /// Batch-deletes every `PGN` in a single transaction. Open Board tabs aren't
+    /// closed here (that would require window enumeration from this separate
+    /// scene); instead each one's `loadIfNeeded` fails its lookup on the next
+    /// pass and falls back to the live mirror — acceptable for a deliberate,
+    /// nuclear reset.
+    private func eraseLibrary() {
+        do {
+            try modelContext.delete(model: PGN.self)
+            try modelContext.save()
+            Self.logger.info("Library erased via Settings")
+        } catch {
+            Self.logger.error("Library erase failed: \(error.localizedDescription, privacy: .public)")
+            eraseErrorMessage = error.localizedDescription
+            showEraseError = true
+        }
+    }
 }
 
 // MARK: Previews
 #Preview {
     SettingsView()
+        .modelContainer(for: PGN.self, inMemory: true)
 }

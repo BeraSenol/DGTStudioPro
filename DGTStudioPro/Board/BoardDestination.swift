@@ -9,15 +9,22 @@ import os
 import SwiftData
 import SwiftUI
 
-/// Board destination. When `loadedGameID` is non-nil, looks up the
-/// PGN, builds a `Game`, and renders the board + inspector. When nil,
-/// shows the "Open a Game" landing card.
+/// Board destination. When `loadedGameID` is non-nil, looks up the PGN,
+/// builds a `Game`, and renders the board + inspector. When nil, it still
+/// shows a board — the live DGT mirror (`connection.physicalBoard`, empty
+/// until a board is connected), which is the M1 raw-mirror surface. There
+/// is no landing/error card; the board is always on screen.
+///
+/// The live mirror branch overlays a 50%-opacity ghost rook on
+/// `session.castlingGhostSquare` during a mid-castle (king moved, rook not
+/// yet). The PGN-replay branch deliberately doesn't — ghost rendering is
+/// about the *physical* board vs the live game's state, which is orthogonal
+/// to scrubbing a finished PGN.
 ///
 /// `loadedGameID` is bound to the enclosing tab's `WindowGroup` value,
 /// so each native tab has its own game (or none). Switching to Library
 /// in the sidebar doesn't clear the loaded game — it stays "loaded" in
-/// the tab and reappears when the user returns to Board, the same way
-/// Safari tabs preserve their loaded URL across navigation.
+/// the tab and reappears when the user returns to Board.
 ///
 /// Per-tab state (resolved PGN/Game, perspective, inspector visibility)
 /// lives on the enclosing `ContentView`'s `TabState`, NOT on this view.
@@ -45,6 +52,8 @@ internal struct BoardDestination: View {
     // MARK: Environment
 
     @Environment(\.modelContext) private var modelContext
+    @Environment(DGTConnection.self) private var connection
+    @Environment(DGTLiveSession.self) private var session
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
 
     // MARK: Body
@@ -53,14 +62,12 @@ internal struct BoardDestination: View {
         Group {
             if let pgn = tabState.boardPGN, let game = tabState.boardGame {
                 content(pgn: pgn, game: game)
-            } else if let loadError = tabState.boardLoadError {
-                errorState(message: loadError)
-            } else if loadedGameID == nil {
-                landingState
             } else {
-                ProgressView()
-                    .controlSize(.large)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // No game loaded → still always show a board. It mirrors the
+                // physical DGT board live (empty until one is connected),
+                // which is also the M1 raw-mirror surface and the surface
+                // that carries the castling ghost during live play.
+                mirrorBoard
             }
         }
         .navigationTitle(tabState.boardPGN?.name ?? "Board")
@@ -71,7 +78,9 @@ internal struct BoardDestination: View {
                 } label: {
                     Label("Flip Board", systemImage: "arrow.up.arrow.down")
                 }
-                .disabled(tabState.boardGame == nil)
+                // Enabled even with no game so it serves as the manual
+                // orientation toggle for the live mirror (view-only flip,
+                // separate from the decoder's coordinate transform).
                 .accessibilityIdentifier("board.flipButton")
             }
         }
@@ -79,25 +88,58 @@ internal struct BoardDestination: View {
             isPresented: $tabState.boardInspectorPresented,
             identifier: "board.inspectorToggle"
         )
+        .dgtConnectionToolbar()
+        // Phase 11: publish the active game so GameNavigationCommands' arrow
+        // keys can scrub it.
+        .focusedSceneValue(\.activeGame, tabState.boardGame)
         .onAppear { loadIfNeeded() }
         .onChange(of: loadedGameID) { _, _ in loadIfNeeded() }
+    }
+
+    // MARK: Board Surface
+
+    /// The board itself, shared by the game view and the live mirror. Both
+    /// render the same `BoardView` with the same padding, sizing, and
+    /// `"board"` accessibility identifier — only the inputs differ. Keeping
+    /// this in one place means the identifier and the modifier tail can't
+    /// drift between the two branches.
+    private func boardSurface(
+        position: Position,
+        tracker: PieceTracker,
+        lastMove: LastMove?,
+        checkSquare: Square?,
+        ghostSquare: Square?,
+        ghostPiece: Piece?
+    ) -> some View {
+        BoardView(
+            position:       position,
+            pieceTracker:   tracker,
+            style:          boardStyle,
+            perspective:    tabState.boardPerspective,
+            lastMove:       lastMove,
+            checkSquare:    checkSquare,
+            selectedSquare: nil,
+            ghostSquare:    ghostSquare,
+            ghostPiece:     ghostPiece
+        )
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityIdentifier("board")
     }
 
     // MARK: Content
 
     private func content(pgn: PGN, game: Game) -> some View {
-        BoardView(
-            position:       game.currentState.position,
-            pieceTracker:   game.currentTracker,
-            style:          boardStyle,
-            perspective:    tabState.boardPerspective,
-            lastMove:       game.lastMove,
-            checkSquare:    game.checkSquare,
-            selectedSquare: nil
+        // PGN-replay path: no ghost. Ghosts only make sense against the
+        // live physical board.
+        boardSurface(
+            position:    game.currentState.position,
+            tracker:     game.currentTracker,
+            lastMove:    game.lastMove,
+            checkSquare: game.checkSquare,
+            ghostSquare: nil,
+            ghostPiece:  nil
         )
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityIdentifier("board")
         .inspector(isPresented: $tabState.boardInspectorPresented) {
             BoardInspectorView(
                 pgn:              pgn,
@@ -117,24 +159,23 @@ internal struct BoardDestination: View {
         }
     }
 
-    // MARK: Landing / Error
+    // MARK: Live Mirror
 
-    private var landingState: some View {
-        ContentUnavailableView {
-            Label("Open a Game", systemImage: "checkerboard.rectangle")
-        } description: {
-            Text("Pick a game from your Library to view it. Each opened game appears in its own tab.")
-        }
-        .accessibilityIdentifier("board.landing")
-    }
-
-    private func errorState(message: String) -> some View {
-        ContentUnavailableView {
-            Label("Couldn't Open Game", systemImage: "exclamationmark.triangle")
-        } description: {
-            Text(message)
-        }
-        .accessibilityIdentifier("board.error")
+    /// The board shown whenever no game is loaded. Renders the DGT
+    /// connection's live `physicalBoard` (empty when nothing is connected),
+    /// using an empty `PieceTracker` since the raw mirror has no move history
+    /// or piece-identity continuity. The ghost rook is bound to
+    /// `DGTLiveSession.castlingGhostSquare/Piece` — non-nil during a
+    /// mid-castle, nil otherwise.
+    private var mirrorBoard: some View {
+        boardSurface(
+            position:    connection.physicalBoard,
+            tracker:     .empty,
+            lastMove:    nil,
+            checkSquare: nil,
+            ghostSquare: session.castlingGhostSquare,
+            ghostPiece:  session.castlingGhostPiece
+        )
     }
 
     // MARK: Loading
@@ -217,4 +258,6 @@ internal struct BoardDestination: View {
 #Preview {
     BoardDestination(loadedGameID: .constant(nil), tabState: TabState())
         .modelContainer(for: PGN.self, inMemory: true)
+        .environment(DGTConnection())
+        .environment(DGTLiveSession())
 }

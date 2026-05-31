@@ -27,6 +27,12 @@ import Testing
 ///     proves that the only source of `(from, to)` collision is promotion,
 ///     which the board resolves physically (the player places the actual
 ///     promoted piece).
+///
+/// `@MainActor` on the suite: the chess-core value types (`Piece`, `Position`,
+/// `Move`) carry main-actor-isolated `Equatable` conformances under Swift 6
+/// default-MainActor isolation, so a nonisolated suite can't compare them.
+/// Matching the rest of the Chess suites, this one is isolated to the main actor.
+@MainActor
 @Suite("Move Footprint & Coordinate Identity")
 struct MoveFootprintTests {
     
@@ -237,10 +243,12 @@ struct MoveFootprintTests {
     }
     
     @Test func promotionPositionActuallyExercisesTheCollisionPath() throws {
-        // Guards the test above against passing vacuously: Position 4 must
+        // Guards the test above against passing vacuously: Position 5 must
         // contain at least one (from,to) pair with all four promotion
         // choices, otherwise "only promotions collide" proves nothing.
-        let state = GameState(try FEN(parsing: Self.referenceFENs[3].fen))  // Position 4
+        // (Position 4's a7 pawn is blocked and has no root promotions for
+        // White to move — the dxc8=Q/R/B/N fan-out lives in Position 5.)
+        let state = GameState(try FEN(parsing: Self.referenceFENs[4].fen))  // Position 5
         let moves = state.legalMoves()
         
         var byFromTo: [String: Int] = [:]

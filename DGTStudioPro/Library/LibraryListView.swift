@@ -12,7 +12,7 @@ internal struct LibraryListView: View {
     let games: [PGN]
     @Binding var selectedPGNs: Set<PGN.ID>
     let onOpen: (PGN) -> Void
-    let onDelete: (PGN) -> Void
+    let onDeleteIDs: (Set<PGN.ID>) -> Void
 
     var body: some View {
         Table(games, selection: $selectedPGNs) {
@@ -37,17 +37,25 @@ internal struct LibraryListView: View {
         }
         .accessibilityIdentifier("library.gamesTable")
         .contextMenu(forSelectionType: PGN.ID.self) { ids in
-            if let id = ids.first, let game = games.first(where: { $0.id == id }) {
+            // `ids` is the set the menu acts on: the full selection when a
+            // selected row is right-clicked, otherwise just that row. Open is
+            // a single-game action; Delete operates on the whole set.
+            if ids.count == 1, let id = ids.first, let game = games.first(where: { $0.id == id }) {
                 Button {
                     onOpen(game)
                 } label: {
                     Label("Open in Board", systemImage: "checkerboard.rectangle")
                 }
                 Divider()
+            }
+            if !ids.isEmpty {
                 Button(role: .destructive) {
-                    onDelete(game)
+                    onDeleteIDs(ids)
                 } label: {
-                    Label("Delete", systemImage: "trash")
+                    Label(
+                        ids.count > 1 ? "Delete \(ids.count) Games" : "Delete",
+                        systemImage: "trash"
+                    )
                 }
             }
         } primaryAction: { ids in
@@ -82,7 +90,7 @@ private func listPreviewGames() -> [PGN] {
         games: listPreviewGames(),
         selectedPGNs: $selection,
         onOpen: { _ in },
-        onDelete: { _ in }
+        onDeleteIDs: { _ in }
     )
     .frame(width: 720, height: 360)
     .modelContainer(for: PGN.self, inMemory: true)
@@ -95,7 +103,7 @@ private func listPreviewGames() -> [PGN] {
         games: [],
         selectedPGNs: $selection,
         onOpen: { _ in },
-        onDelete: { _ in }
+        onDeleteIDs: { _ in }
     )
     .frame(width: 720, height: 360)
     .modelContainer(for: PGN.self, inMemory: true)

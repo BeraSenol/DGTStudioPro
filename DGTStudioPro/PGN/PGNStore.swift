@@ -92,6 +92,18 @@ internal struct PGNStore {
         try modelContext.save()
     }
 
+    /// Deletes several games in one transaction (a single `save`), so a
+    /// multi-select delete of many games doesn't fan out into one save per
+    /// game. A no-op for an empty array.
+    internal func delete(_ pgns: [PGN]) throws {
+        guard !pgns.isEmpty else { return }
+        Self.logger.info("Deleting \(pgns.count) game(s) in batch")
+        for pgn in pgns {
+            modelContext.delete(pgn)
+        }
+        try modelContext.save()
+    }
+
     // MARK: Private Helpers
     private func parse(_ text: String) throws -> PGN {
         do {

@@ -17,6 +17,15 @@ internal struct BoardView: View {
     internal let lastMove: LastMove?
     internal let checkSquare: Square?
     internal let selectedSquare: Square?
+    /// Square at which to render a 50%-opacity ghost piece (the mid-castle
+    /// "rook hasn't moved yet" cue from `DGTLiveSession`). Both `ghostSquare`
+    /// and `ghostPiece` must be non-nil for the ghost to render. Defaulted so
+    /// existing call sites compile unchanged.
+    internal var ghostSquare: Square? = nil
+    /// Piece to render at `ghostSquare`. `SquareView` only draws it when that
+    /// square is actually empty — so a stray real piece on the ghost square
+    /// (e.g. mid-fumble) hides the ghost rather than overlapping it.
+    internal var ghostPiece: Piece? = nil
 
     // MARK: Body
     internal var body: some View {
@@ -139,7 +148,8 @@ internal struct BoardView: View {
                             isLightSquare: (square.file + square.rank) % 2 != 0,
                             highlight: squareHighlight(for: square),
                             squareSize: layout.innerSquareSize,
-                            style: style
+                            style: style,
+                            ghostPiece: (square == ghostSquare) ? ghostPiece : nil
                         )
                         // e.g. "square.e4" — stable algebraic handle for
                         // UI tests (esp. keyboard-nav verification).
@@ -282,4 +292,51 @@ private struct Layout {
         selectedSquare: nil
     )
     .frame(width: 3800, height: 3800)
+}
+
+// White kingside castle in progress: king has moved e1 → g1, the real
+// rook is still on h1, and a ghost rook is rendered on f1 awaiting the
+// physical move.
+#Preview("Kingside Castle Ghost") {
+    var position = Position.starting
+    // Clear f1 and g1 (bishop, knight), move king e1 → g1.
+    position[Squares.f1] = .empty
+    position[Squares.g1] = .whiteKing
+    position[Squares.e1] = .empty
+
+    return BoardView(
+        position: position,
+        pieceTracker: .empty,
+        style: .walnut,
+        perspective: .white,
+        lastMove: LastMove(from: Squares.e1, to: Squares.g1),
+        checkSquare: nil,
+        selectedSquare: nil,
+        ghostSquare: Squares.f1,
+        ghostPiece: .whiteRook
+    )
+    .frame(width: 600, height: 600)
+}
+
+// Black queenside castle in progress: king e8 → c8, rook still on a8,
+// ghost rook on d8.
+#Preview("Queenside Castle Ghost (Black)") {
+    var position = Position.starting
+    position[Squares.b8] = .empty
+    position[Squares.c8] = .blackKing
+    position[Squares.d8] = .empty
+    position[Squares.e8] = .empty
+
+    return BoardView(
+        position: position,
+        pieceTracker: .empty,
+        style: .rosewood,
+        perspective: .black,
+        lastMove: LastMove(from: Squares.e8, to: Squares.c8),
+        checkSquare: nil,
+        selectedSquare: nil,
+        ghostSquare: Squares.d8,
+        ghostPiece: .blackRook
+    )
+    .frame(width: 600, height: 600)
 }

@@ -9,8 +9,9 @@ import SwiftData
 import SwiftUI
 
 @main
+@MainActor
 internal struct DGTStudioProApp: App {
-    
+
     /// Shared `ModelContainer` for the whole app. Multiple tabs share
     /// one container so `PersistentIdentifier`s round-trip correctly.
     ///
@@ -29,13 +30,56 @@ internal struct DGTStudioProApp: App {
             fatalError("Failed to create shared ModelContainer: \(error)")
         }
     }()
-    
+
     /// Shared registry of open games with unsaved changes. Same
     /// create-once-on-the-App, inject-into-every-tab pattern as
     /// `sharedContainer`. Used by the Library's delete path to decide
     /// whether closing a deleted game's tab needs a discard confirmation.
     @State private var openGames = OpenGamesRegistry()
-    
+
+    // The three app-global DGT observables.
+    //
+    // ALL FOUR registries (these three plus `openGames`) must be injected
+    // into the WindowGroup content below, or any destination that reads one
+    // traps at runtime with "No Observable object of type … found."
+    // `BoardDestination` reads `dgtConnection` AND `dgtSession`, so the Board
+    // destination — and opening any game in a tab, which starts on Board —
+    // depends on both being present. (This is exactly the injection that was
+    // missing: ghost-rook rendering was "preview-correct" but the real app
+    // crashed the moment Board was shown, because the previews injected these
+    // and the App did not.)
+    //
+    // They are constructed and wired in `init()` rather than inline in the
+    // content closure, because that closure runs once per window/tab — an
+    // inline `connection.onBoardChanged = …` would re-point the hook on every
+    // new tab. `App.init()` runs exactly once.
+    @State private var dgtConnection: DGTConnection
+    @State private var dgtSession: DGTLiveSession
+    @State private var sessionLog: DGTSessionLog
+
+    // The struct is `@MainActor` (above), so this init runs on the main actor
+    // and may touch the `@MainActor` members of the DGT objects it wires. The
+    // module's default actor isolation is `nonisolated`, so without that
+    // annotation this would not compile — it touches main-actor-isolated state.
+    init() {
+        let log = DGTSessionLog()
+        let connection = DGTConnection()
+        let session = DGTLiveSession()
+
+        // One diagnostic timeline shared by both objects, and the connection's
+        // board changes feed the live session's quiescence driver. Wiring
+        // happens here, once, not in view lifecycle.
+        connection.sessionLog = log
+        session.sessionLog = log
+        connection.onBoardChanged = { [weak session] board in
+            session?.boardChanged(board)
+        }
+
+        _dgtConnection = State(initialValue: connection)
+        _dgtSession = State(initialValue: session)
+        _sessionLog = State(initialValue: log)
+    }
+
     var body: some Scene {
         // One unified `WindowGroup` parameterised by an optional
         // `PersistentIdentifier`. Tabs with a nil value land on Library;
@@ -59,12 +103,16 @@ internal struct DGTStudioProApp: App {
         WindowGroup("DGT Studio Pro", for: PersistentIdentifier.self) { $gameID in
             ContentView(loadedGameID: $gameID)
                 .environment(openGames)
+                .environment(dgtConnection)
+                .environment(dgtSession)
+                .environment(sessionLog)
         }
         .modelContainer(sharedContainer)
         .defaultLaunchBehavior(.presented)
-        
+
         Settings {
             SettingsView()
         }
+        .modelContainer(sharedContainer)
     }
 }

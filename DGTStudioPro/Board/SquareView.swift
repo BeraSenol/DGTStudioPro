@@ -16,6 +16,12 @@ internal struct SquareView: View, Equatable {
     internal let highlight: SquareHighlight
     internal let squareSize: CGFloat
     internal let style: BoardStyle
+    /// Optional ghost piece to render at 50% opacity *when the square is empty*
+    /// — the mid-castle "rook hasn't moved yet" cue from `DGTLiveSession`. The
+    /// square stays ignorant of castling semantics: it renders whatever
+    /// `Piece` it's handed, ghost or not. Defaults to nil so existing call
+    /// sites compile unchanged.
+    internal var ghostPiece: Piece? = nil
 
     // MARK: Computed Properties
     private var fillColor: Color {
@@ -36,6 +42,15 @@ internal struct SquareView: View, Equatable {
                     .renderingMode(.original)
                     .aspectRatio(contentMode: .fit)
                     .padding(squareSize * 0.06)
+            } else if let ghost = ghostPiece, let imageName = ghost.imageName {
+                // Ghost is only drawn when the real square is empty — once the
+                // physical rook lands, the ghost is occluded by the real piece.
+                Image(imageName)
+                    .resizable()
+                    .renderingMode(.original)
+                    .aspectRatio(contentMode: .fit)
+                    .padding(squareSize * 0.06)
+                    .opacity(0.5)
             }
         }
         .frame(width: squareSize, height: squareSize)
@@ -84,75 +99,69 @@ internal struct SquareView: View, Equatable {
     }
 }
 
-// Every highlight state on the same square — verifies that
-// the TODO highlight overlay will look correct once wired up.
+// Highlight permutations on the same square — verifies that the TODO
+// highlight overlay will look correct once wired up.
 #Preview("Highlight States") {
     HStack(spacing: 4) {
         SquareView(
-            piece: .whiteKing,
-            pieceID: PieceID(rawValue: 4),
-            isLightSquare: true,
-            highlight: SquareHighlight(),
-            squareSize: 80,
-            style: .walnut
+            piece: .whiteKing, pieceID: PieceID(rawValue: 4),
+            isLightSquare: true, highlight: SquareHighlight(),
+            squareSize: 80, style: .walnut
         )
         SquareView(
-            piece: .whiteKing,
-            pieceID: PieceID(rawValue: 4),
-            isLightSquare: true,
-            highlight: .lastMove,
-            squareSize: 80,
-            style: .walnut
+            piece: .whiteKing, pieceID: PieceID(rawValue: 4),
+            isLightSquare: true, highlight: .lastMove,
+            squareSize: 80, style: .walnut
         )
         SquareView(
-            piece: .whiteKing,
-            pieceID: PieceID(rawValue: 4),
-            isLightSquare: true,
-            highlight: .check,
-            squareSize: 80,
-            style: .walnut
+            piece: .whiteKing, pieceID: PieceID(rawValue: 4),
+            isLightSquare: true, highlight: .check,
+            squareSize: 80, style: .walnut
         )
         SquareView(
-            piece: .whiteKing,
-            pieceID: PieceID(rawValue: 4),
-            isLightSquare: true,
-            highlight: .selected,
-            squareSize: 80,
-            style: .walnut
+            piece: .whiteKing, pieceID: PieceID(rawValue: 4),
+            isLightSquare: true, highlight: .selected,
+            squareSize: 80, style: .walnut
         )
         SquareView(
-            piece: .whiteKing,
-            pieceID: PieceID(rawValue: 4),
-            isLightSquare: true,
-            highlight: [.check, .lastMove],
-            squareSize: 80,
-            style: .walnut
+            piece: .whiteKing, pieceID: PieceID(rawValue: 4),
+            isLightSquare: true, highlight: [.check, .lastMove],
+            squareSize: 80, style: .walnut
         )
     }
     .padding()
 }
 
-// Same square rendered in each board style — catches color
-// discrepancies between styles at a glance.
-#Preview("All Styles") {
-    HStack(spacing: 4) {
+// Ghost rook in the four board styles — left square shows the ghost
+// (empty square + ghostPiece), right shows what it looks like once the
+// real rook lands (ghost is occluded by the real piece).
+#Preview("Castling Ghost") {
+    VStack(spacing: 0) {
         ForEach(BoardStyle.allCases, id: \.self) { style in
-            VStack(spacing: 0) {
+            HStack(spacing: 0) {
                 SquareView(
-                    piece: .blackQueen,
-                    pieceID: PieceID(rawValue: 28),
-                    isLightSquare: true,
-                    highlight: SquareHighlight(),
-                    squareSize: 80,
-                    style: style
+                    piece: .empty, pieceID: nil,
+                    isLightSquare: true, highlight: SquareHighlight(),
+                    squareSize: 80, style: style,
+                    ghostPiece: .whiteRook
                 )
                 SquareView(
-                    piece: .whitePawn,
-                    pieceID: PieceID(rawValue: 8),
-                    isLightSquare: false,
-                    highlight: SquareHighlight(),
-                    squareSize: 80,
-                    style: style
+                    piece: .whiteRook, pieceID: PieceID(rawValue: 7),
+                    isLightSquare: false, highlight: SquareHighlight(),
+                    squareSize: 80, style: style,
+                    ghostPiece: .whiteRook
+                )
+                SquareView(
+                    piece: .empty, pieceID: nil,
+                    isLightSquare: false, highlight: SquareHighlight(),
+                    squareSize: 80, style: style,
+                    ghostPiece: .blackRook
+                )
+                SquareView(
+                    piece: .blackRook, pieceID: PieceID(rawValue: 23),
+                    isLightSquare: true, highlight: SquareHighlight(),
+                    squareSize: 80, style: style,
+                    ghostPiece: .blackRook
                 )
             }
         }
@@ -160,41 +169,48 @@ internal struct SquareView: View, Equatable {
     .padding()
 }
 
-// Tests the piece padding at different square sizes — the 6%
-// inset should scale proportionally without clipping or looking
-// too loose at extremes.
+// Same square rendered in each board style.
+#Preview("All Styles") {
+    HStack(spacing: 4) {
+        ForEach(BoardStyle.allCases, id: \.self) { style in
+            VStack(spacing: 0) {
+                SquareView(
+                    piece: .blackQueen, pieceID: PieceID(rawValue: 28),
+                    isLightSquare: true, highlight: SquareHighlight(),
+                    squareSize: 80, style: style
+                )
+                SquareView(
+                    piece: .whitePawn, pieceID: PieceID(rawValue: 8),
+                    isLightSquare: false, highlight: SquareHighlight(),
+                    squareSize: 80, style: style
+                )
+            }
+        }
+    }
+    .padding()
+}
+
 #Preview("Size Scaling") {
     HStack(alignment: .bottom, spacing: 8) {
         SquareView(
-            piece: .whiteQueen,
-            pieceID: PieceID(rawValue: 3),
-            isLightSquare: false,
-            highlight: SquareHighlight(),
-            squareSize: 40,
-            style: .rosewood
+            piece: .whiteQueen, pieceID: PieceID(rawValue: 3),
+            isLightSquare: false, highlight: SquareHighlight(),
+            squareSize: 40, style: .rosewood
         )
         SquareView(
-            piece: .whiteQueen,
-            pieceID: PieceID(rawValue: 3),
-            isLightSquare: false,
-            highlight: SquareHighlight(),
-            squareSize: 80,
-            style: .rosewood
+            piece: .whiteQueen, pieceID: PieceID(rawValue: 3),
+            isLightSquare: false, highlight: SquareHighlight(),
+            squareSize: 80, style: .rosewood
         )
         SquareView(
-            piece: .whiteQueen,
-            pieceID: PieceID(rawValue: 3),
-            isLightSquare: false,
-            highlight: SquareHighlight(),
-            squareSize: 120,
-            style: .rosewood
+            piece: .whiteQueen, pieceID: PieceID(rawValue: 3),
+            isLightSquare: false, highlight: SquareHighlight(),
+            squareSize: 120, style: .rosewood
         )
     }
     .padding()
 }
 
-// All six piece types for both colors — a quick visual inventory
-// to confirm every piece image loads and renders correctly.
 #Preview("All Pieces") {
     VStack(spacing: 0) {
         HStack(spacing: 0) {
@@ -203,12 +219,9 @@ internal struct SquareView: View, Equatable {
                 .whiteRook, .whiteQueen, .whiteKing
             ].enumerated()), id: \.offset) { index, piece in
                 SquareView(
-                    piece: piece,
-                    pieceID: PieceID(rawValue: UInt8(index)),
-                    isLightSquare: index % 2 == 0,
-                    highlight: SquareHighlight(),
-                    squareSize: 70,
-                    style: .wenge
+                    piece: piece, pieceID: PieceID(rawValue: UInt8(index)),
+                    isLightSquare: index % 2 == 0, highlight: SquareHighlight(),
+                    squareSize: 70, style: .wenge
                 )
             }
         }
@@ -218,12 +231,9 @@ internal struct SquareView: View, Equatable {
                 .blackRook, .blackQueen, .blackKing
             ].enumerated()), id: \.offset) { index, piece in
                 SquareView(
-                    piece: piece,
-                    pieceID: PieceID(rawValue: UInt8(index + 16)),
-                    isLightSquare: index % 2 != 0,
-                    highlight: SquareHighlight(),
-                    squareSize: 70,
-                    style: .wenge
+                    piece: piece, pieceID: PieceID(rawValue: UInt8(index + 16)),
+                    isLightSquare: index % 2 != 0, highlight: SquareHighlight(),
+                    squareSize: 70, style: .wenge
                 )
             }
         }

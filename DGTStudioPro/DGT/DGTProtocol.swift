@@ -1,5 +1,5 @@
 //
-//  DGTCommand.swift
+//  DGTProtocol.swift
 //  DGTStudioPro
 //
 //  Created by Supreme Leader on 13/04/2026.
@@ -43,13 +43,13 @@ internal enum DGTPiece: UInt8, Sendable {
     case blackBishop = 10
     case blackKing   = 11
     case blackQueen  = 12
-
+    
     // MARK: Computed Properties
     /// Converts this DGT piece to the app's `Piece` type.
     internal var piece: Piece {
         Self.pieceLookup[Int(rawValue)]
     }
-
+    
     // MARK: Static Constants
     private static let pieceLookup: [Piece] = [
         .empty,        // 0
