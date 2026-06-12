@@ -5,123 +5,76 @@
 //  Created by Supreme Leader on 10/05/2026.
 //
 
-//
-//  LibraryGamePreviewView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 03/05/2026.
-//
+import Foundation
 
-import SwiftData
-import SwiftUI
-
-internal struct LibraryGamePreviewView: View {
+/// The derived board state a Library preview renders: the position reached by
+/// walking a game's SAN moves, plus the piece-identity tracker, the last move
+/// (for the highlight), and the side-to-move's king square when in check.
+///
+/// A pure value type — it holds only chess-core values and is computed by
+/// `compute(from:)`. `LibraryGamePreviewView` builds one from `game.moves` to
+/// show a thumbnail of the final position without constructing a full `Game`.
+///
+/// The walk mirrors `Game`'s per-ply walk (`parseSAN` → `applyMove` →
+/// `applying`), but is **non-throwing**: the first SAN that fails to parse
+/// stops the walk and the state reached so far is returned, so a preview always
+/// renders *something* (the last legal position) rather than failing. This is
+/// the right tradeoff for a thumbnail — unlike `Game.init`, which throws on
+/// corrupt data so the caller can surface a diagnostic.
+internal struct LibraryGamePreviewState: Equatable {
     
     // MARK: Stored Properties
-    internal let game: PGN
-    internal let boardStyle: BoardStyle
     
-    // MARK: Derived State
+    /// Position after the (successfully parsed) moves.
+    internal var position: Position
     
-    /// Cached walk of `game.moves`. Recomputed only when the game changes
-    /// (keyed on `game.id` in `.task` below), never on a plain body
-    /// re-evaluation — a long master game re-parses 80+ SAN strings, and the
-    /// gallery rebuilds this view every time the selection changes. A board
-    /// style change re-renders but reuses the cached walk (style doesn't
-    /// affect the position), which is why the key is `game.id` alone.
-    @State private var preview: LibraryGamePreviewState = .starting
+    /// Piece-identity tracker after the same moves, so the board view keeps
+    /// stable identity across captures, promotions, and castling.
+    internal var pieceTracker: PieceTracker
     
-    // MARK: Body
-    internal var body: some View {
-        VStack(spacing: 16) {
-            playerHeader
-            board
+    /// The most recent successfully applied move, or `nil` if none were
+    /// applied (empty list, or the first move failed to parse).
+    internal var lastMove: LastMove?
+    
+    /// The side-to-move's king square when that side is in check; `nil`
+    /// otherwise. Drives the king-in-check highlight.
+    internal var checkSquare: Square?
+    
+    // MARK: Starting State
+    
+    /// The standard starting position with no moves played. Equivalent to
+    /// `compute(from: [])` (and pinned to be so by the tests).
+    internal static let starting = compute(from: [])
+    
+    // MARK: Computation
+    
+    /// Walks the SAN `moves` from the standard start, returning the state at
+    /// the end of the walk.
+    ///
+    /// Non-throwing by design: parsing stops at the first move that fails (an
+    /// unrecognised or illegal SAN), and the state after the last *successful*
+    /// move is returned. An empty list yields the starting state.
+    internal static func compute(from moves: [String]) -> LibraryGamePreviewState {
+        var state: GameState = .starting
+        var tracker: PieceTracker = .starting
+        var lastMove: LastMove?
+        
+        for san in moves {
+            guard let move = try? state.parseSAN(san) else { break }
+            tracker.applyMove(move)
+            state = state.applying(move)
+            lastMove = LastMove(from: move.from, to: move.to)
         }
-        .padding(24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .task(id: game.id) {
-            preview = LibraryGamePreviewState.compute(from: game.moves)
-        }
-    }
-    
-    // MARK: Instance Methods
-    private var playerHeader: some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 16) {
-                Text(game.whiteDisplayName)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .lineLimit(1)
-                Text("vs")
-                    .foregroundStyle(.secondary)
-                    .fontWeight(.light)
-                Text(game.blackDisplayName)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .lineLimit(1)
-            }
-            .font(.system(size: 22, weight: .semibold, design: .rounded))
-            
-            Text(game.result.rawValue)
-                .font(.system(size: 14, weight: .regular, design: .monospaced))
-                .foregroundStyle(.secondary)
-        }
-    }
-    
-    private var board: some View {
-        BoardView(
-            position: preview.position,
-            pieceTracker: preview.pieceTracker,
-            style: boardStyle,
-            perspective: .white,
-            lastMove: preview.lastMove,
-            checkSquare: preview.checkSquare,
-            selectedSquare: nil
+        
+        let checkSquare = state.isInCheck
+        ? state.position.kingSquare(for: state.activeColor)
+        : nil
+        
+        return LibraryGamePreviewState(
+            position: state.position,
+            pieceTracker: tracker,
+            lastMove: lastMove,
+            checkSquare: checkSquare
         )
     }
-}
-
-// MARK: Previews
-#Preview("White Wins") {
-    LibraryGamePreviewView(
-        game: PGN(
-            event: "World Championship",
-            site: "Dubai",
-            white: "Carlsen, Magnus",
-            black: "Nepomniachtchi, Ian",
-            result: .whiteWins
-        ),
-        boardStyle: .walnut
-    )
-    .frame(width: 500, height: 600)
-    .modelContainer(for: PGN.self, inMemory: true)
-}
-
-#Preview("Draw") {
-    LibraryGamePreviewView(
-        game: PGN(
-            event: "Tata Steel Masters",
-            site: "Wijk aan Zee",
-            white: "Giri, Anish",
-            black: "Caruana, Fabiano",
-            result: .draw
-        ),
-        boardStyle: .rosewood
-    )
-    .frame(width: 500, height: 600)
-    .modelContainer(for: PGN.self, inMemory: true)
-}
-
-#Preview("Scholar's Mate") {
-    LibraryGamePreviewView(
-        game: PGN(
-            event: "Quick Game",
-            site: "Lichess",
-            white: "Beginner",
-            black: "Novice",
-            moves: ["e4", "e5", "Bc4", "Nc6", "Qh5", "Nf6", "Qxf7#"],
-            result: .whiteWins
-        ),
-        boardStyle: .walnut
-    )
-    .frame(width: 500, height: 600)
-    .modelContainer(for: PGN.self, inMemory: true)
 }
