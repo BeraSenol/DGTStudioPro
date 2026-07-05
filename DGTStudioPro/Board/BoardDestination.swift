@@ -15,11 +15,20 @@ import SwiftUI
 /// until a board is connected), which is the M1 raw-mirror surface. There
 /// is no landing/error card; the board is always on screen.
 ///
-/// The live mirror branch overlays a 50%-opacity ghost rook on
+/// The live branch is the M3 live-play surface: a status HUD above the
+/// board (`LiveGameHUDView`, driven by session + connection state), the
+/// live game's last-move/check highlights overlaid on the mirrored
+/// physical position, the new-game dialog (auto-offered on start-position
+/// detection, or manual via the HUD), and the live inspector
+/// (`LiveGameInspectorView`). From M4 it also presents the crash-safety
+/// resume offer: when the session finds a draft at launch
+/// (`session.pendingDraft`), an alert forks between Resume and Delete —
+/// Decision #3's only two options — with a delete-only variant for a
+/// corrupt draft file. It also overlays a 50%-opacity ghost rook on
 /// `session.castlingGhostSquare` during a mid-castle (king moved, rook not
-/// yet). The PGN-replay branch deliberately doesn't — ghost rendering is
-/// about the *physical* board vs the live game's state, which is orthogonal
-/// to scrubbing a finished PGN.
+/// yet). The PGN-replay branch deliberately has none of this — live
+/// surfaces are about the *physical* board vs the live game's state, which
+/// is orthogonal to scrubbing a finished PGN.
 ///
 /// `loadedGameID` is bound to the enclosing tab's `WindowGroup` value,
 /// so each native tab has its own game (or none). Switching to Library
@@ -32,89 +41,60 @@ import SwiftUI
 /// switches to and from `.board`; storing live state on `@State` here
 /// would lose scrub position, perspective, and inspector toggle on every
 /// destination round-trip.
-///
-/// M3 — the mirror branch is the *live-play* surface. A `LiveGameHUDView`
-/// banner reports the session's state; last-move and check overlays come
-/// from the running `LiveGame` while the position itself keeps mirroring
-/// the *physical* board (so mid-move and recovery states render what's
-/// actually on the table). The tracker stays `.empty` as a documented
-/// tradeoff: mid-move the physical position can diverge from the legal one,
-/// and a tracker keyed to the legal game could mis-key the piece-identity
-/// animation — v1.x polish, not M3. The inspector hosts the live roster,
-/// transcript, and lifecycle controls; the new-game dialog presents both
-/// offer-driven (session detects the start position) and manually (toolbar
-/// or HUD button), funneling into one flow.
 internal struct BoardDestination: View {
-    
+
     // MARK: Static Constants
-    
+
     private static let logger = Logger(
         subsystem: "com.berasenol.dgtstudiopro",
         category: "boardload"
     )
-    
+
     // MARK: Bound State
-    
+
     @Binding internal var loadedGameID: PersistentIdentifier?
-    
+
     // MARK: Tab State (lives on enclosing `ContentView`)
-    
+
     @Bindable internal var tabState: TabState
-    
-    // MARK: Live-Play Presentation (M3)
-    
-    /// Whether the new-game roster dialog is showing. `@State` is fine here
-    /// (unlike scrub/perspective state): if the destination is recreated
-    /// mid-presentation, the sheet re-presents from the session's still-set
-    /// `shouldOfferNewGame` in `onAppear` — nothing durable is lost.
-    @State private var newGameSheetPresented = false
-    
-    /// Set when starting a new game would clobber an unfinished game with
-    /// recorded moves — holds the requested roster while the destructive
-    /// "Replace Current Game?" confirmation is up. Same presenting-binding
-    /// idiom as the Library's delete confirmations.
-    @State private var pendingReplacementRoster: LiveGame.Roster?
-    
+
     // MARK: Environment
-    
+
     @Environment(\.modelContext) private var modelContext
     @Environment(DGTConnection.self) private var connection
     @Environment(DGTLiveSession.self) private var session
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
-    
+
+    // MARK: View State
+
+    /// True while the HUD's manual "New Game…" button has requested the
+    /// dialog. Combined with `session.shouldOfferNewGame` into the sheet's
+    /// presentation binding; transient by design (a sidebar round-trip
+    /// recreates this destination and simply closes the sheet).
+    @State private var manualNewGameRequested = false
+
+    /// True after "Keep for Now" on the corrupt-draft alert, so it doesn't
+    /// re-present every render for the rest of this visit. The file stays on
+    /// disk as diagnostics; the offer returns at the next launch (or the
+    /// next visit to Board). Transient by design, like the flag above.
+    @State private var corruptOfferDeferred = false
+
     // MARK: Body
-    
+
     internal var body: some View {
         Group {
             if let pgn = tabState.boardPGN, let game = tabState.boardGame {
                 content(pgn: pgn, game: game)
             } else {
-                // No game loaded → still always show a board. It mirrors the
-                // physical DGT board live (empty until one is connected),
-                // which is also the M1 raw-mirror surface and the surface
-                // that carries the castling ghost during live play.
-                mirrorBoard
+                // No game loaded → the live-play surface: always a board
+                // (mirroring the physical DGT board, empty until one is
+                // connected — the M1 raw mirror), plus the M3 HUD, live
+                // overlays, new-game dialog, and live inspector.
+                liveSurface
             }
         }
         .navigationTitle(tabState.boardPGN?.name ?? "Board")
         .toolbar {
-            // Manual entry into the M3.4 new-game flow. Hidden while a PGN is
-            // loaded (the toolbar then belongs to replay), inert without a
-            // connected board — and it funnels into the exact same
-            // sheet/confirmation flow as the offer-driven path, so there is
-            // only one way a game starts.
-            ToolbarItem {
-                if tabState.boardPGN == nil {
-                    Button {
-                        newGameSheetPresented = true
-                    } label: {
-                        Label("New Game", systemImage: "plus.square")
-                    }
-                    .disabled(!connection.isConnected)
-                    .help("Start recording a new game from the board")
-                    .accessibilityIdentifier("board.newGameButton")
-                }
-            }
             ToolbarItem {
                 Button {
                     tabState.boardPerspective = tabState.boardPerspective.opponent
@@ -135,49 +115,12 @@ internal struct BoardDestination: View {
         // Phase 11: publish the active game so GameNavigationCommands' arrow
         // keys can scrub it.
         .focusedSceneValue(\.activeGame, tabState.boardGame)
-        .onAppear {
-            loadIfNeeded()
-            // An offer that arrived while this destination was off-screen
-            // (sidebar on Library, say) must still surface when the user
-            // returns to Board.
-            if session.shouldOfferNewGame {
-                newGameSheetPresented = true
-            }
-        }
+        .onAppear { loadIfNeeded() }
         .onChange(of: loadedGameID) { _, _ in loadIfNeeded() }
-        // Offer-driven entry into the M3.4 flow: the session detected the
-        // standard start position with no (unfinished) game running.
-        .onChange(of: session.shouldOfferNewGame) { _, offered in
-            if offered {
-                newGameSheetPresented = true
-            }
-        }
-        // The sheet (and the alert below) attach to the whole destination —
-        // not just the mirror branch — so an offer isn't silently lost while
-        // a PGN happens to be loaded in this tab.
-        .sheet(isPresented: $newGameSheetPresented, onDismiss: consumePendingOffer) {
-            LiveGameRosterSheet(intent: .create) { roster in
-                requestStartGame(roster)
-            }
-        }
-        .alert(
-            "Replace Current Game?",
-            isPresented: replaceGameBinding,
-            presenting: pendingReplacementRoster
-        ) { roster in
-            Button("Replace", role: .destructive) {
-                session.startNewGame(roster: roster)
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: { _ in
-            Text(
-                "A game is in progress. Starting a new one discards it — \(session.liveGame?.plyCount ?? 0) recorded plies will be lost."
-            )
-        }
     }
-    
+
     // MARK: Board Surface
-    
+
     /// The board itself, shared by the game view and the live mirror. Both
     /// render the same `BoardView` with the same padding, sizing, and
     /// `"board"` accessibility identifier — only the inputs differ. Keeping
@@ -206,9 +149,9 @@ internal struct BoardDestination: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier("board")
     }
-    
+
     // MARK: Content
-    
+
     private func content(pgn: PGN, game: Game) -> some View {
         // PGN-replay path: no ghost. Ghosts only make sense against the
         // live physical board.
@@ -238,23 +181,188 @@ internal struct BoardDestination: View {
             .inspectorColumnWidth(min: 260, ideal: 320, max: 400)
         }
     }
-    
+
+    // MARK: Live Surface
+
+    /// The full live-play surface (M3): the mirror board with the status
+    /// HUD inset above it, the live inspector, and the new-game dialog.
+    private var liveSurface: some View {
+        mirrorBoard
+            .safeAreaInset(edge: .top, spacing: 0) {
+                LiveGameHUDView(phase: hudPhase) {
+                    manualNewGameRequested = true
+                }
+            }
+            .inspector(isPresented: $tabState.boardInspectorPresented) {
+                liveInspector
+                    .inspectorColumnWidth(min: 260, ideal: 320, max: 400)
+            }
+            .sheet(isPresented: isNewGameSheetPresented) {
+                NewLiveGameSheet(
+                    onStart: { roster in
+                        session.startNewGame(roster: roster)
+                        manualNewGameRequested = false
+                    },
+                    onNotNow: { isNewGameSheetPresented.wrappedValue = false },
+                    // A resumable draft counts as an unfinished game too:
+                    // starting fresh overwrites its file, so it gets the same
+                    // destructive confirmation (a *corrupt* file is not a
+                    // game — overwriting it needs no ceremony).
+                    replacesUnfinishedGame: session.liveGame?.isFinished == false
+                    || session.resumableDraft != nil
+                )
+            }
+        // M4.3 — the resume offer. A modal fork, not a HUD banner,
+        // because Decision #3 makes this a genuine either/or the player
+        // should answer before anything else touches the draft.
+            .alert(
+                "Resume unfinished game?",
+                isPresented: isResumeOfferPresented,
+                presenting: session.resumableDraft
+            ) { _ in
+                Button("Resume") { session.resumePendingDraft() }
+                Button("Delete", role: .destructive) { session.deletePendingDraft() }
+            } message: { draft in
+                Text(resumeOfferMessage(for: draft))
+            }
+        // The corrupt-draft variant: resume isn't on the table, and
+        // "Keep for Now" leaves the file on disk as diagnostics.
+            .alert(
+                "Saved game can't be read",
+                isPresented: isCorruptDraftOfferPresented
+            ) {
+                Button("Delete", role: .destructive) { session.deletePendingDraft() }
+                Button("Keep for Now", role: .cancel) { corruptOfferDeferred = true }
+            } message: {
+                Text(
+                    "A game saved by a previous session couldn't be loaded. "
+                    + "Deleting it can't be undone; keeping it leaves the file "
+                    + "in place in case it's needed for diagnostics."
+                )
+            }
+    }
+
+    /// Derives the HUD phase from session + connection state, in priority
+    /// order: connection truth first (a pulled cable outranks everything —
+    /// M7 refines this into "reconnecting…"), then recovery, then the
+    /// gentle correction nudge, then setup, then the game itself, then the
+    /// idle invitation.
+    private var hudPhase: LiveGameHUDView.Phase {
+        guard connection.isConnected else { return .disconnected }
+
+        if session.needsRecovery {
+            return .recovering(lastSAN: session.liveGame?.sanMoves.last)
+        }
+        if let hint = session.correctionHint {
+            return .correction(message: hint.message)
+        }
+        if session.awaitingPhysicalSetup {
+            return .awaitingSetup
+        }
+        if let game = session.liveGame {
+            return game.isFinished
+            ? .finished(result: game.result)
+            : .playing(
+                sideToMove: game.currentState.activeColor,
+                lastSAN: game.sanMoves.last,
+                ply: game.plyCount
+            )
+        }
+        return .idle
+    }
+
+    /// Presents the new-game sheet whenever the session offers one
+    /// (`shouldOfferNewGame`) or the HUD requested one manually. Dismissal
+    /// through the binding (swipe, ⎋, Not Now) counts as "Not Now" — it
+    /// clears the manual request and tells the session not to re-prompt
+    /// until the board leaves and returns to the start.
+    /// Presents the resume alert while a resumable draft pends. The setter
+    /// deliberately ignores dismissal: the offer is answered by its buttons
+    /// (which clear `pendingDraft`, flipping the getter), never by evasion —
+    /// Decision #3 is a fork, not a suggestion.
+    private var isResumeOfferPresented: Binding<Bool> {
+        Binding(
+            get: { session.resumableDraft != nil },
+            set: { _ in }
+        )
+    }
+
+    /// Presents the corrupt-draft alert until answered or deferred for this
+    /// visit ("Keep for Now" sets `corruptOfferDeferred`).
+    private var isCorruptDraftOfferPresented: Binding<Bool> {
+        Binding(
+            get: { session.pendingDraftIsCorrupt && !corruptOfferDeferred },
+            set: { _ in }
+        )
+    }
+
+    /// The resume alert's body: who was playing, how far they got, when the
+    /// draft was last written — and a heads-up when the draft is already
+    /// decided (finished but not yet archived; archiving lands in M5).
+    private func resumeOfferMessage(for draft: LiveGameDraft) -> String {
+        let plies = draft.sanMoves.count
+        var lines = [
+            "\(draft.white) vs \(draft.black) — \(plies) \(plies == 1 ? "move" : "moves").",
+            "Last saved \(draft.updatedAt.formatted(date: .abbreviated, time: .shortened))."
+        ]
+        if draft.result != .ongoing {
+            lines.append(
+                "This game already finished (\(draft.result.rawValue)) "
+                + "but hasn't been saved to the Library yet."
+            )
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private var isNewGameSheetPresented: Binding<Bool> {
+        Binding(
+            get: { session.shouldOfferNewGame || manualNewGameRequested },
+            set: { presented in
+                guard !presented else { return }
+                manualNewGameRequested = false
+                if session.shouldOfferNewGame {
+                    session.dismissNewGameOffer()
+                }
+            }
+        )
+    }
+
+    /// Inspector content for the live branch: the live game's details and
+    /// controls when one exists, otherwise a hint (so the inspector toggle
+    /// is never a dead switch on the mirror).
+    @ViewBuilder
+    private var liveInspector: some View {
+        if let game = session.liveGame {
+            LiveGameInspectorView(
+                game: game,
+                onUpdateRoster: { session.updateRoster($0) },
+                onResign: { session.resign($0) },
+                onAgreeDraw: { session.agreeDraw() },
+                onDiscard: { session.discardGame() }
+            )
+        } else {
+            ContentUnavailableView(
+                "No Live Game",
+                systemImage: "checkerboard.rectangle",
+                description: Text(
+                    "Start a game from the board to see its details and moves here."
+                )
+            )
+        }
+    }
+
     // MARK: Live Mirror
-    
-    /// The board shown whenever no game is loaded — M3's live-play surface.
-    /// The *position* always mirrors the physical board (empty when nothing
-    /// is connected) so setup, mid-move, and recovery states render what's
-    /// actually on the table; the *overlays* (last move, check) come from the
-    /// running `LiveGame` when there is one, and the ghost rook from the
-    /// session during a mid-castle. Tracker stays `.empty` — see the type
-    /// doc for the identity-animation tradeoff.
-    ///
-    /// The HUD rides a top `safeAreaInset` (not an overlay) so the board
-    /// itself stays centered in the *remaining* space rather than sliding
-    /// under the banner. The live inspector attaches here, on the mirror
-    /// branch, so the existing toolbar toggle is never a dead button: PGN
-    /// branch → `BoardInspectorView`, mirror branch → `LiveGameInspectorView`
-    /// (which shows its own quiet empty state when no game is running).
+
+    /// The board shown whenever no game is loaded. The *position* always
+    /// renders the DGT connection's live `physicalBoard` (empty when nothing
+    /// is connected) with an empty `PieceTracker` — mid-move, the physical
+    /// and legal positions diverge, so identity-keyed animation against the
+    /// physical board could mis-key (tracker parity stays a v1.x item). Only
+    /// the *overlays* come from the live game (M3.2): last-move and check
+    /// highlights, plus the mid-castle ghost rook from the session. The
+    /// check highlight keys off the legal game state, so mid-move it can sit
+    /// on a square the king has physically just left — same accepted
+    /// tradeoff, resolved at the next settle.
     private var mirrorBoard: some View {
         boardSurface(
             position:    connection.physicalBoard,
@@ -264,19 +372,10 @@ internal struct BoardDestination: View {
             ghostSquare: session.castlingGhostSquare,
             ghostPiece:  session.castlingGhostPiece
         )
-        .safeAreaInset(edge: .top) {
-            LiveGameHUDView(onNewGame: { newGameSheetPresented = true })
-                .padding(.horizontal)
-                .padding(.top, 10)
-        }
-        .inspector(isPresented: $tabState.boardInspectorPresented) {
-            LiveGameInspectorView()
-                .inspectorColumnWidth(min: 260, ideal: 320, max: 400)
-        }
     }
-    
+
     // MARK: Loading
-    
+
     /// Resolves the bound `loadedGameID` to a concrete PGN + Game and
     /// caches the result on `tabState`. No-op when the cached PGN
     /// already matches the ID — important because this is called from
@@ -292,16 +391,16 @@ internal struct BoardDestination: View {
             tabState.boardLoadError = nil
             return
         }
-        
+
         if tabState.boardPGN?.persistentModelID == id, tabState.boardGame != nil {
             Self.logger.debug(
                 "loadIfNeeded: cache hit for '\(self.tabState.boardPGN?.name ?? "?", privacy: .public)' — no reload"
             )
             return
         }
-        
+
         Self.logger.debug("loadIfNeeded: resolving id \(String(describing: id), privacy: .public)")
-        
+
         guard let loadedPGN = modelContext.model(for: id) as? PGN else {
             tabState.boardPGN = nil
             tabState.boardGame = nil
@@ -311,7 +410,7 @@ internal struct BoardDestination: View {
             )
             return
         }
-        
+
         do {
             let newGame = try Game(pgn: loadedPGN)
             tabState.boardPGN = loadedPGN
@@ -347,44 +446,6 @@ internal struct BoardDestination: View {
                 "Game.init failed unexpectedly for \(loadedPGN.name, privacy: .public): \(error.localizedDescription, privacy: .public)"
             )
         }
-    }
-    
-    // MARK: Live-Play Flow (M3)
-    
-    /// Single funnel for starting a game from the roster sheet (offer-driven
-    /// or manual). The roadmap's "confirm if a game is unfinished" is refined
-    /// to *unfinished with recorded moves*: a 0-ply shell has nothing to
-    /// lose, and confirming over it would punish the common "opened the
-    /// dialog, typo'd, start over" path. Finished games are replaced
-    /// silently too — they're decided; nothing in-flight is lost. (M5's
-    /// archive step is where finished games get preserved.)
-    private func requestStartGame(_ roster: LiveGame.Roster) {
-        if let game = session.liveGame, !game.isFinished, game.plyCount > 0 {
-            pendingReplacementRoster = roster
-        } else {
-            session.startNewGame(roster: roster)
-        }
-    }
-    
-    /// Runs on every sheet dismissal — Start, Not Now, and Esc alike — so the
-    /// session's offer flag is always consumed exactly once, whatever path
-    /// closed the sheet. (After Start, `startNewGame` has already cleared the
-    /// flag and this is a no-op.) Without this, dismissing with Esc would
-    /// leave the offer armed and the sheet would immediately re-present.
-    private func consumePendingOffer() {
-        if session.shouldOfferNewGame {
-            session.dismissNewGameOffer()
-        }
-    }
-    
-    /// Presenting-binding over `pendingReplacementRoster`, same idiom as the
-    /// Library's delete confirmations: presented iff a roster is staged;
-    /// dismissal clears it.
-    private var replaceGameBinding: Binding<Bool> {
-        Binding(
-            get: { pendingReplacementRoster != nil },
-            set: { if !$0 { pendingReplacementRoster = nil } }
-        )
     }
 }
 

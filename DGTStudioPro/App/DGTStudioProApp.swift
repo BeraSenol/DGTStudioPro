@@ -75,6 +75,13 @@ internal struct DGTStudioProApp: App {
             session?.boardChanged(board)
         }
 
+        // Draft persistence (M4): the session owns when to save/delete; the
+        // store owns the file. Loading here — once, after wiring — is what
+        // turns a relaunch into the Resume / Delete offer on the Board HUD.
+        let draftStore = LiveGameDraftStore()
+        session.draftStore = draftStore
+        session.loadPendingDraft()
+
         _dgtConnection = State(initialValue: connection)
         _dgtSession = State(initialValue: session)
         _sessionLog = State(initialValue: log)

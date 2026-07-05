@@ -11,10 +11,9 @@ internal enum StorageKeys {
     internal static let playersViewMode = "playersViewMode"
     internal static let rankingsViewMode = "rankingsViewMode"
 
-    // New-game dialog defaults (M3.4): the recurring tags — event, site, and
-    // the owner's own name on White — pre-fill the next dialog. Black is
-    // deliberately *not* persisted: the opponent changes every game.
-    internal static let defaultEvent = "defaultEvent"
-    internal static let defaultSite = "defaultSite"
+    // New-game dialog persisted defaults (M3.4): pre-filled on open,
+    // written back on Start. Deliberately just the recurring tags.
+    internal static let defaultEvent       = "defaultEvent"
+    internal static let defaultSite        = "defaultSite"
     internal static let defaultWhitePlayer = "defaultWhitePlayer"
 }
