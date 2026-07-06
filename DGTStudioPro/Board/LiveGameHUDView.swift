@@ -19,9 +19,9 @@ import SwiftUI
 /// Accessibility: one dotted, lowercase identifier per phase
 /// (`live.hud.<phase>`) — identifiers are a tested contract.
 internal struct LiveGameHUDView: View {
-
+    
     // MARK: Phase
-
+    
     /// Everything the banner can say. Derivation (including priority between
     /// overlapping session flags) lives in `BoardDestination.hudPhase`.
     internal enum Phase: Equatable {
@@ -42,26 +42,36 @@ internal struct LiveGameHUDView: View {
         /// The board can't be explained by any legal move — restore the last
         /// legal position. Minimal v1 banner; per-square guidance is M6.
         case recovering(lastSAN: String?)
-        /// Terminal result reached. The archive flow (M5) picks up here.
+        /// Terminal result reached and safely in the Library.
         case finished(result: GameResult)
+        /// Terminal result reached but the Library save failed — the game
+        /// is held (draft kept, new-game suppressed) until Retry succeeds
+        /// or the player discards from the inspector.
+        case archiveFailed(result: GameResult, message: String)
     }
-
+    
     // MARK: Stored Properties
-
+    
     internal let phase: Phase
-
+    
     /// Invoked by the "New Game…" button (shown while `idle` / `finished`).
     /// Presenting the dialog is the destination's job.
     internal let onNewGame: () -> Void
-
+    
+    /// Invoked by the "Retry" button (shown while `archiveFailed`). The
+    /// matching Discard lives in the inspector behind its existing
+    /// destructive confirmation, so the HUD stays state-free. Defaulted so
+    /// existing call sites and previews stay valid.
+    internal var onRetryArchive: () -> Void = {}
+    
     // MARK: Body
-
+    
     internal var body: some View {
         HStack(spacing: 10) {
             Image(systemName: symbolName)
                 .font(.title3)
                 .foregroundStyle(tint)
-
+            
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.headline)
@@ -71,14 +81,21 @@ internal struct LiveGameHUDView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-
+            
             Spacer(minLength: 12)
-
+            
             if showsNewGameButton {
                 Button("New Game…", action: onNewGame)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
                     .accessibilityIdentifier("live.hud.newgame")
+            }
+            
+            if case .archiveFailed = phase {
+                Button("Retry", action: onRetryArchive)
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .accessibilityIdentifier("live.hud.retryarchive")
             }
         }
         .padding(.horizontal, 14)
@@ -93,16 +110,16 @@ internal struct LiveGameHUDView: View {
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier(accessibilityIdentifier)
     }
-
+    
     // MARK: Phase Presentation
-
+    
     private var showsNewGameButton: Bool {
         switch phase {
         case .idle, .finished: true
         default: false
         }
     }
-
+    
     private var title: String {
         switch phase {
         case .disconnected:
@@ -116,12 +133,14 @@ internal struct LiveGameHUDView: View {
         case .correction:
             "One correction needed"
         case .recovering:
-            "Board doesn't match the game"
+            "Illegal move or disturbed pieces"
         case .finished(let result):
             Self.headline(for: result)
+        case .archiveFailed(let result, _):
+            Self.headline(for: result) + " — not saved yet"
         }
     }
-
+    
     private var subtitle: String? {
         switch phase {
         case .disconnected:
@@ -136,13 +155,15 @@ internal struct LiveGameHUDView: View {
         case .correction(let message):
             message
         case .recovering(let lastSAN):
-            lastSAN.map { "Restore the position after \($0)." }
-            ?? "Restore the starting position."
+            lastSAN.map { "Restore the position after \($0) — square-by-square guidance is below." }
+            ?? "Restore the starting position — square-by-square guidance is below."
         case .finished:
-            "Start a new game whenever you're ready."
+            "Saved to your Library. Start a new game whenever you're ready."
+        case .archiveFailed(_, let message):
+            "\(message) Retry, or discard the game from the inspector."
         }
     }
-
+    
     private var symbolName: String {
         switch phase {
         case .disconnected:  "cable.connector.horizontal"
@@ -152,9 +173,10 @@ internal struct LiveGameHUDView: View {
         case .correction:    "lightbulb"
         case .recovering:    "exclamationmark.triangle.fill"
         case .finished:      "flag.checkered"
+        case .archiveFailed: "exclamationmark.arrow.circlepath"
         }
     }
-
+    
     private var tint: Color {
         switch phase {
         case .disconnected:  .secondary
@@ -164,9 +186,10 @@ internal struct LiveGameHUDView: View {
         case .correction:    .orange
         case .recovering:    .red
         case .finished:      .green
+        case .archiveFailed: .orange
         }
     }
-
+    
     private var accessibilityIdentifier: String {
         switch phase {
         case .disconnected:  "live.hud.disconnected"
@@ -176,9 +199,10 @@ internal struct LiveGameHUDView: View {
         case .correction:    "live.hud.correction"
         case .recovering:    "live.hud.recovering"
         case .finished:      "live.hud.finished"
+        case .archiveFailed: "live.hud.archivefailed"
         }
     }
-
+    
     /// A human headline for a terminal result. `.ongoing` is unreachable
     /// from the `finished` phase but kept total for safety.
     private static func headline(for result: GameResult) -> String {
@@ -210,6 +234,13 @@ internal struct LiveGameHUDView: View {
         )
         LiveGameHUDView(phase: .recovering(lastSAN: "Qxf7"), onNewGame: {})
         LiveGameHUDView(phase: .finished(result: .whiteWins), onNewGame: {})
+        LiveGameHUDView(
+            phase: .archiveFailed(
+                result: .whiteWins,
+                message: "The Library couldn't be written."
+            ),
+            onNewGame: {}
+        )
     }
     .padding(.bottom)
     .frame(width: 520)

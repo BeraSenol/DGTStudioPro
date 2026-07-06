@@ -13,19 +13,20 @@ import SwiftUI
 /// fields (with prompts) instead — friendlier to type into — and convert
 /// at the boundary: `"?"` → `""` when seeding a form, trimmed `""` → `"?"`
 /// when committing one. Keeping both directions next to each other makes
-/// the round-trip obviously symmetric.
-private func formValue(_ tag: String) -> String {
+/// the round-trip obviously symmetric. `internal` (not `private`): M5's
+/// `EditGameInfoSheet` stages the same round-trip for an archived PGN.
+internal func formValue(_ tag: String) -> String {
     tag == "?" ? "" : tag
 }
 
-private func tagValue(_ field: String) -> String {
+internal func tagValue(_ field: String) -> String {
     let trimmed = field.trimmingCharacters(in: .whitespacesAndNewlines)
     return trimmed.isEmpty ? "?" : trimmed
 }
 
 /// Applies `tagValue` normalization across a whole roster before it leaves
-/// a form (game start or details save).
-private func normalized(_ roster: LiveGame.Roster) -> LiveGame.Roster {
+/// a form (game start, details save, or the archive sheet's Save Changes).
+internal func normalized(_ roster: LiveGame.Roster) -> LiveGame.Roster {
     var result = roster
     result.event = tagValue(roster.event)
     result.site  = tagValue(roster.site)
@@ -45,6 +46,13 @@ internal struct LiveGameRosterForm: View {
     // MARK: Bound State
     
     @Binding internal var roster: LiveGame.Roster
+    
+    /// Accessibility-identifier prefix for the six fields. The live sheets
+    /// use the default; M5's archive-confirmation sheet passes
+    /// `"archive.form"` so its fields test under the documented
+    /// `archive.form.*` names without duplicating the form. Declared after
+    /// `roster` (and defaulted) so existing call sites compile unchanged.
+    internal var identifierPrefix = "live.form"
     
     /// `Roster.date` is optional (a PGN date can be unknown), but the v1
     /// dialog always supplies one (default today — the locked decision), so
@@ -66,14 +74,14 @@ internal struct LiveGameRosterForm: View {
                     text: $roster.white,
                     prompt: Text("White player")
                 )
-                .accessibilityIdentifier("live.form.white")
+                .accessibilityIdentifier("\(identifierPrefix).white")
                 
                 TextField(
                     "Black",
                     text: $roster.black,
                     prompt: Text("Black player")
                 )
-                .accessibilityIdentifier("live.form.black")
+                .accessibilityIdentifier("\(identifierPrefix).black")
             }
             
             Section("Event") {
@@ -82,21 +90,21 @@ internal struct LiveGameRosterForm: View {
                     text: $roster.event,
                     prompt: Text("Casual Game")
                 )
-                .accessibilityIdentifier("live.form.event")
+                .accessibilityIdentifier("\(identifierPrefix).event")
                 
                 TextField(
                     "Site",
                     text: $roster.site,
                     prompt: Text("Home")
                 )
-                .accessibilityIdentifier("live.form.site")
+                .accessibilityIdentifier("\(identifierPrefix).site")
                 
                 DatePicker(
                     "Date",
                     selection: dateBinding,
                     displayedComponents: .date
                 )
-                .accessibilityIdentifier("live.form.date")
+                .accessibilityIdentifier("\(identifierPrefix).date")
                 
                 TextField(
                     "Round",
@@ -104,7 +112,7 @@ internal struct LiveGameRosterForm: View {
                     format: .number,
                     prompt: Text("Optional")
                 )
-                .accessibilityIdentifier("live.form.round")
+                .accessibilityIdentifier("\(identifierPrefix).round")
             }
         }
         .formStyle(.grouped)

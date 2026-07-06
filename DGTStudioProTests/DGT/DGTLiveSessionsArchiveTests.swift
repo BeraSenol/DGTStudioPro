@@ -1,0 +1,412 @@
+//
+//  DGTLiveSessionsArchiveTests.swift
+//  DGTStudioPro
+//
+//  Created by Supreme Leader on 06/07/2026.
+//
+
+import Testing
+import Foundation
+import SwiftData
+@testable import DGTStudioPro
+
+/// Coverage for the M5 archive flow on `DGTLiveSession`: the Library save
+/// fires on the `isFinished` transition itself — from the auto-detected
+/// result in settle, from `resign`/`agreeDraw`, and from resuming an
+/// already-decided draft (the self-heal). Success (fresh or deduplicated)
+/// retires the draft; failure keeps it and suppresses new-game entry until
+/// `retryArchive()` succeeds or the player explicitly discards. A nil
+/// `onGameFinished` hook means headless: no archive, the draft stays the
+/// safety net — which is exactly why the pre-M5 suite still passes
+/// unchanged.
+///
+/// Most tests wire a *real* `PGNStore` over an in-memory container, so the
+/// session→store seam is exercised end to end; the failure tests use
+/// `FlakyArchiveDoor` because a genuine SwiftData save failure can't be
+/// forced deterministically.
+///
+/// Timing note: same convention as `DGTLiveSessionTests` — synchronous
+/// tests hold the main actor so the quiescence `Task` never runs; the
+/// settle-driven test awaits 450 ms per board (> the 300 ms window).
+@MainActor
+@Suite("DGT Live Session — Archive (M5)")
+struct DGTLiveSessionArchiveTests {
+    
+    // MARK: Helpers
+    
+    private static func makeContext() throws -> ModelContext {
+        let container = try ModelContainer(
+            for: PGN.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        return ModelContext(container)
+    }
+    
+    private static func temporaryStore() -> LiveGameDraftStore {
+        LiveGameDraftStore(
+            directory: FileManager.default.temporaryDirectory
+                .appending(path: UUID().uuidString)
+        )
+    }
+    
+    /// A pinned date so deduplication tests never straddle a midnight
+    /// rollover (the content hash formats dates as yyyy.MM.dd in UTC).
+    private static let fixedDate = Date(timeIntervalSince1970: 1_780_000_000)
+    
+    private static func roster(
+        white: String = "Alice",
+        black: String = "Bob"
+    ) -> LiveGame.Roster {
+        .init(
+            event: "Club Night",
+            site: "Home",
+            date: fixedDate,
+            round: 3,
+            white: white,
+            black: black
+        )
+    }
+    
+    /// A session wired like the app wires it: a temp-directory draft store
+    /// and a *real* `PGNStore.archive` behind `onGameFinished`.
+    private static func archivingSession(
+        context: ModelContext
+    ) -> (session: DGTLiveSession, drafts: LiveGameDraftStore) {
+        let session = DGTLiveSession()
+        let drafts = temporaryStore()
+        session.draftStore = drafts
+        let store = PGNStore(modelContext: context)
+        session.onGameFinished = { try store.archive($0) }
+        return (session, drafts)
+    }
+    
+    private static func libraryCount(in context: ModelContext) throws -> Int {
+        try context.fetchCount(FetchDescriptor<PGN>())
+    }
+    
+    /// A controllable archive door for the failure paths: throws while
+    /// `shouldFail`, otherwise delegates to the real store — so Retry can
+    /// be tested as "the transient condition cleared".
+    @MainActor
+    private final class FlakyArchiveDoor {
+        struct Failure: Swift.Error {}
+        var shouldFail = true
+        private let store: PGNStore
+        init(store: PGNStore) { self.store = store }
+        func archive(_ game: LiveGame) throws -> PGNStore.ArchiveResult {
+            guard !shouldFail else { throw Failure() }
+            return try store.archive(game)
+        }
+    }
+    
+    private static func flakySession(
+        context: ModelContext
+    ) -> (session: DGTLiveSession, drafts: LiveGameDraftStore, door: FlakyArchiveDoor) {
+        let session = DGTLiveSession()
+        let drafts = temporaryStore()
+        session.draftStore = drafts
+        let door = FlakyArchiveDoor(store: PGNStore(modelContext: context))
+        session.onGameFinished = { try door.archive($0) }
+        return (session, drafts, door)
+    }
+    
+    // MARK: Finish Paths — Success
+    
+    @Test func resignArchivesTheGameAndRetiresTheDraft() throws {
+        let context = try Self.makeContext()
+        let (session, drafts) = Self.archivingSession(context: context)
+        session.startNewGame(roster: Self.roster())
+        let game = try #require(session.liveGame)
+        game.commit(try game.currentState.parseSAN("e4"))
+        
+        session.resign(.white)
+        
+        #expect(session.archiveOutcome == .archived)
+        #expect(session.archivedPGN?.result == .blackWins)
+        #expect(session.archivedPGN?.moves == ["e4"])
+        #expect(try Self.libraryCount(in: context) == 1)
+        // The game is safe in the Library — the draft's job is done.
+        #expect(try drafts.load() == nil)
+        // The finished game stays on screen (mode is still game-bearing).
+        #expect(session.liveGame?.isFinished == true)
+    }
+    
+    @Test func agreeDrawArchives() throws {
+        let context = try Self.makeContext()
+        let (session, drafts) = Self.archivingSession(context: context)
+        session.startNewGame(roster: Self.roster())
+        
+        session.agreeDraw()
+        
+        #expect(session.archiveOutcome == .archived)
+        #expect(session.archivedPGN?.result == .draw)
+        #expect(try Self.libraryCount(in: context) == 1)
+        #expect(try drafts.load() == nil)
+    }
+    
+    /// End to end through the settle path: fool's mate on the board feed
+    /// auto-detects the result, archives on the transition, retires the
+    /// draft — then piece handling doesn't trip recovery (the pre-M5 seam),
+    /// and the start position becomes the "play again" signal.
+    @Test func mateArchivesAndTheStartPositionOffersTheNextGame() async throws {
+        let context = try Self.makeContext()
+        let (session, drafts) = Self.archivingSession(context: context)
+        session.boardChanged(.starting)
+        session.startNewGame(roster: Self.roster())   // already set up → playing
+        
+        var state = GameState.starting
+        var states: [GameState] = []
+        for san in ["f3", "e5", "g4", "Qh4"] {
+            state = state.applying(try state.parseSAN(san))
+            states.append(state)
+        }
+        for reached in states {
+            session.boardChanged(reached.position)
+            try await Task.sleep(for: .milliseconds(450))   // > 300 ms quiescence
+        }
+        
+        #expect(session.liveGame?.isFinished == true)
+        #expect(session.liveGame?.result == .blackWins)
+        #expect(session.archiveOutcome == .archived)
+        #expect(try Self.libraryCount(in: context) == 1)
+        #expect(try drafts.load() == nil)
+        
+        // Clearing pieces after the finish must not enter recovery…
+        session.boardChanged(states[0].position)   // any mid-clear board
+        try await Task.sleep(for: .milliseconds(450))
+        #expect(session.needsRecovery == false)
+        
+        // …and restoring the start position offers the next game.
+        session.boardChanged(.starting)
+        try await Task.sleep(for: .milliseconds(450))
+        #expect(session.shouldOfferNewGame == true)
+    }
+    
+    /// Requirement 8: a finished game that already exists in the Library
+    /// (here: archived earlier by the store) deduplicates as *success*.
+    @Test func finishingATwinDeduplicatesAsSuccess() throws {
+        let context = try Self.makeContext()
+        let store = PGNStore(modelContext: context)
+        
+        let twin = LiveGame(roster: Self.roster())
+        twin.commit(try twin.currentState.parseSAN("e4"))
+        twin.resign(.white)
+        let seeded = try store.archive(twin)
+        
+        let (session, _) = Self.archivingSession(context: context)
+        session.startNewGame(roster: Self.roster())
+        let game = try #require(session.liveGame)
+        game.commit(try game.currentState.parseSAN("e4"))
+        session.resign(.white)
+        
+        #expect(session.archiveOutcome == .deduplicated)
+        #expect(session.archivedPGN?.persistentModelID == seeded.pgn.persistentModelID)
+        #expect(try Self.libraryCount(in: context) == 1)
+    }
+    
+    // MARK: Finish Paths — Failure
+    
+    /// A failed archive keeps the draft *current* (it now carries the
+    /// decided result, so a crash before Retry still self-heals at the next
+    /// launch) and suppresses the new-game offer.
+    @Test func failedArchiveKeepsTheDraftAndSuppressesTheOffer() async throws {
+        let context = try Self.makeContext()
+        let (session, drafts, _) = Self.flakySession(context: context)
+        session.startNewGame(roster: Self.roster())
+        
+        session.resign(.white)
+        
+        guard case .failed = session.archiveOutcome else {
+            Issue.record("Expected .failed, got \(String(describing: session.archiveOutcome))")
+            return
+        }
+        #expect(session.archivedPGN == nil)
+        #expect(try drafts.load()?.result == .blackWins)
+        #expect(try Self.libraryCount(in: context) == 0)
+        
+        // The start position must NOT offer a new game while unresolved.
+        session.boardChanged(.starting)
+        try await Task.sleep(for: .milliseconds(450))
+        #expect(session.shouldOfferNewGame == false)
+    }
+    
+    /// The suppression is structural: `startNewGame` refuses outright while
+    /// the finished game hasn't reached the Library.
+    @Test func failedArchiveRefusesANewGame() throws {
+        let context = try Self.makeContext()
+        let (session, _, _) = Self.flakySession(context: context)
+        session.startNewGame(roster: Self.roster())
+        session.resign(.white)
+        
+        session.startNewGame(roster: Self.roster(white: "Carol", black: "Dave"))
+        
+        #expect(session.liveGame?.roster.white == "Alice")
+        #expect(session.liveGame?.isFinished == true)
+        guard case .failed = session.archiveOutcome else {
+            Issue.record("Expected the failure to survive the refused start")
+            return
+        }
+    }
+    
+    @Test func retryAfterFailureArchivesAndLiftsTheSuppression() throws {
+        let context = try Self.makeContext()
+        let (session, drafts, door) = Self.flakySession(context: context)
+        session.startNewGame(roster: Self.roster())
+        session.resign(.white)
+        guard case .failed = session.archiveOutcome else {
+            Issue.record("Precondition: first archive attempt should fail")
+            return
+        }
+        
+        door.shouldFail = false
+        session.retryArchive()
+        
+        #expect(session.archiveOutcome == .archived)
+        #expect(try Self.libraryCount(in: context) == 1)
+        #expect(try drafts.load() == nil)
+        
+        // Suppression lifted: a fresh game can begin.
+        session.startNewGame(roster: Self.roster(white: "Carol", black: "Dave"))
+        #expect(session.liveGame?.roster.white == "Carol")
+        #expect(session.archiveOutcome == nil)
+        #expect(session.archivedPGN == nil)
+    }
+    
+    /// The other exit from a failed archive: the player explicitly discards
+    /// (the inspector's existing destructive confirmation is the UI guard).
+    @Test func discardAfterFailureClearsTheSuppression() throws {
+        let context = try Self.makeContext()
+        let (session, drafts, _) = Self.flakySession(context: context)
+        session.startNewGame(roster: Self.roster())
+        session.resign(.white)
+        
+        session.discardGame()
+        
+        #expect(session.liveGame == nil)
+        #expect(session.archiveOutcome == nil)
+        #expect(session.archivedPGN == nil)
+        #expect(try drafts.load() == nil)
+    }
+    
+    // MARK: Resume Self-Heal
+    
+    /// A decided draft means a previous run stopped between the finish and
+    /// a successful save: resuming archives it immediately, skips the setup
+    /// gate (nothing is left to track), and retires the file.
+    @Test func resumingAFinishedDraftSelfHeals() throws {
+        let context = try Self.makeContext()
+        let drafts = Self.temporaryStore()
+        let original = LiveGame(roster: Self.roster())
+        original.commit(try original.currentState.parseSAN("e4"))
+        original.resign(.white)
+        try drafts.save(original.draftSnapshot)
+        
+        let session = DGTLiveSession()
+        session.draftStore = drafts
+        let store = PGNStore(modelContext: context)
+        session.onGameFinished = { try store.archive($0) }
+        session.loadPendingDraft()
+        session.resumePendingDraft()
+        
+        #expect(session.pendingDraft == nil)
+        #expect(session.liveGame?.isFinished == true)
+        #expect(session.awaitingPhysicalSetup == false)
+        #expect(session.archiveOutcome == .archived)
+        #expect(try Self.libraryCount(in: context) == 1)
+        #expect(try drafts.load() == nil)
+    }
+    
+    /// If the self-heal's archive also fails, the draft survives on disk —
+    /// a finished game is never lost.
+    @Test func selfHealFailureKeepsTheDraft() throws {
+        let context = try Self.makeContext()
+        let drafts = Self.temporaryStore()
+        let original = LiveGame(roster: Self.roster())
+        original.resign(.white)
+        try drafts.save(original.draftSnapshot)
+        
+        let session = DGTLiveSession()
+        session.draftStore = drafts
+        let door = FlakyArchiveDoor(store: PGNStore(modelContext: context))
+        session.onGameFinished = { try door.archive($0) }
+        session.loadPendingDraft()
+        session.resumePendingDraft()
+        
+        guard case .failed = session.archiveOutcome else {
+            Issue.record("Expected .failed, got \(String(describing: session.archiveOutcome))")
+            return
+        }
+        #expect(session.liveGame?.isFinished == true)
+        #expect(try drafts.load()?.result == .blackWins)
+        #expect(try Self.libraryCount(in: context) == 0)
+    }
+    
+    // MARK: Acknowledgment
+    
+    /// Dismissing the confirmation sheet clears the *success* outcome (so
+    /// it won't re-present) but keeps the archived row reachable for
+    /// post-archive detail edits.
+    @Test func acknowledgeClearsSuccessButKeepsTheRow() throws {
+        let context = try Self.makeContext()
+        let (session, _) = Self.archivingSession(context: context)
+        session.startNewGame(roster: Self.roster())
+        session.resign(.white)
+        #expect(session.archiveOutcome == .archived)
+        
+        session.acknowledgeArchive()
+        
+        #expect(session.archiveOutcome == nil)
+        #expect(session.archivedPGN != nil)
+    }
+    
+    /// A failure can only be cleared by a successful retry or an explicit
+    /// discard — never by evasion.
+    @Test func acknowledgeDoesNotClearAFailure() throws {
+        let context = try Self.makeContext()
+        let (session, _, _) = Self.flakySession(context: context)
+        session.startNewGame(roster: Self.roster())
+        session.resign(.white)
+        
+        session.acknowledgeArchive()
+        
+        guard case .failed = session.archiveOutcome else {
+            Issue.record("Expected the failure to survive acknowledgment")
+            return
+        }
+    }
+    
+    // MARK: Headless (nil hook)
+    
+    /// With no `onGameFinished` wired — every pre-M5 unit test — finishing
+    /// skips archiving and keeps the draft current: the safety net stands.
+    @Test func headlessSessionKeepsTheDraft() throws {
+        let session = DGTLiveSession()
+        let drafts = Self.temporaryStore()
+        session.draftStore = drafts
+        session.startNewGame(roster: Self.roster())
+        
+        session.resign(.white)
+        
+        #expect(session.archiveOutcome == nil)
+        #expect(session.archivedPGN == nil)
+        #expect(try drafts.load()?.result == .blackWins)
+    }
+    
+    // MARK: Post-Archive Edits
+    
+    /// Once archived, roster edits flow through the PGN door at the caller;
+    /// the session must not resurrect a draft file for an archived game
+    /// (it would re-offer an already-saved game at the next launch).
+    @Test func rosterEditAfterArchiveDoesNotResurrectTheDraft() throws {
+        let context = try Self.makeContext()
+        let (session, drafts) = Self.archivingSession(context: context)
+        session.startNewGame(roster: Self.roster())
+        session.resign(.white)
+        #expect(try drafts.load() == nil)
+        
+        session.updateRoster(Self.roster(white: "Carol", black: "Dave"))
+        
+        #expect(session.liveGame?.roster.white == "Carol")
+        #expect(try drafts.load() == nil)
+    }
+}

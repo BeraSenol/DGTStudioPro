@@ -196,6 +196,8 @@ private struct ImportResultRow: View {
             return reason
         case .failed(.fileReadFailed):
             return "Couldn't read the file."
+        case .failed(.ongoingGame):
+            return "Game is ongoing."
         }
     }
 }

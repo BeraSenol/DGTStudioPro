@@ -63,6 +63,7 @@ internal struct BoardDestination: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(DGTConnection.self) private var connection
     @Environment(DGTLiveSession.self) private var session
+    @Environment(DGTSessionLog.self) private var sessionLog
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
 
     // MARK: View State
@@ -78,6 +79,11 @@ internal struct BoardDestination: View {
     /// disk as diagnostics; the offer returns at the next launch (or the
     /// next visit to Board). Transient by design, like the flag above.
     @State private var corruptOfferDeferred = false
+
+    /// True for a beat after recovery auto-resolves, flashing "Position
+    /// restored — play continues." under the HUD (M6.2). Transient by
+    /// design, like the flags above.
+    @State private var showsRestoredFlash = false
 
     // MARK: Body
 
@@ -132,18 +138,22 @@ internal struct BoardDestination: View {
         lastMove: LastMove?,
         checkSquare: Square?,
         ghostSquare: Square?,
-        ghostPiece: Piece?
+        ghostPiece: Piece?,
+        attentionSquares: Set<Square> = [],
+        targetSquares: Set<Square> = []
     ) -> some View {
         BoardView(
-            position:       position,
-            pieceTracker:   tracker,
-            style:          boardStyle,
-            perspective:    tabState.boardPerspective,
-            lastMove:       lastMove,
-            checkSquare:    checkSquare,
-            selectedSquare: nil,
-            ghostSquare:    ghostSquare,
-            ghostPiece:     ghostPiece
+            position:         position,
+            pieceTracker:     tracker,
+            style:            boardStyle,
+            perspective:      tabState.boardPerspective,
+            lastMove:         lastMove,
+            checkSquare:      checkSquare,
+            selectedSquare:   nil,
+            ghostSquare:      ghostSquare,
+            ghostPiece:       ghostPiece,
+            attentionSquares: attentionSquares,
+            targetSquares:    targetSquares
         )
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -189,8 +199,57 @@ internal struct BoardDestination: View {
     private var liveSurface: some View {
         mirrorBoard
             .safeAreaInset(edge: .top, spacing: 0) {
-                LiveGameHUDView(phase: hudPhase) {
-                    manualNewGameRequested = true
+                VStack(spacing: 8) {
+                    LiveGameHUDView(
+                        phase: hudPhase,
+                        onNewGame: { manualNewGameRequested = true },
+                        onRetryArchive: { session.retryArchive() }
+                    )
+
+                    // M6.2 — the restore checklist, live under the banner
+                    // while recovering; M6.3's Export Diagnostics… rides on
+                    // it (a desync is when the log is worth saving). The
+                    // empty-guidance guard covers the brief window where
+                    // the board is already fixed but the session's next
+                    // settle hasn't exited recovery yet.
+                    if let guidance = recoveryGuidance, !guidance.isEmpty {
+                        RecoveryGuidanceView(
+                            guidance: guidance,
+                            onExportDiagnostics: { sessionLog.exportViaSavePanel() }
+                        )
+                        .padding(.bottom, 8)
+                    }
+
+                    if showsRestoredFlash {
+                        Label(
+                            "Position restored — play continues.",
+                            systemImage: "checkmark.circle.fill"
+                        )
+                        .font(.callout.weight(.medium))
+                        .foregroundStyle(.green)
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 10)
+                        .background(.regularMaterial, in: Capsule())
+                        .padding(.bottom, 8)
+                        .transition(.opacity)
+                        .accessibilityIdentifier("live.recovery.restoredflash")
+                        .task {
+                            // Auto-dismiss; cancellation on disappear is
+                            // the cleanup.
+                            try? await Task.sleep(for: .seconds(2.5))
+                            withAnimation { showsRestoredFlash = false }
+                        }
+                    }
+                }
+                .animation(.default, value: session.needsRecovery)
+                .onChange(of: session.needsRecovery) { wasRecovering, isRecovering in
+                    // Flash only on a genuine auto-exit back into play —
+                    // discard / new-game also clear the flag, but they
+                    // change the whole surface, where a flash is noise.
+                    if wasRecovering, !isRecovering,
+                       let game = session.liveGame, !game.isFinished {
+                        withAnimation { showsRestoredFlash = true }
+                    }
                 }
             }
             .inspector(isPresented: $tabState.boardInspectorPresented) {
@@ -240,6 +299,22 @@ internal struct BoardDestination: View {
                     + "in place in case it's needed for diagnostics."
                 )
             }
+        // M5 — the archive confirmation. Auto-presents when a finished game
+        // lands in the Library (fresh or deduplicated); dismissal
+        // acknowledges the outcome so it won't re-present, while the
+        // archived row stays editable from the inspector.
+            .sheet(isPresented: isArchiveConfirmationPresented) {
+                if let pgn = session.archivedPGN {
+                    EditGameInfoSheet(
+                        pgn: pgn,
+                        deduplicated: session.archiveOutcome == .deduplicated,
+                        onSave: { roster in
+                            applyEditedInfo(roster, to: pgn)
+                            session.updateRoster(roster)
+                        }
+                    )
+                }
+            }
     }
 
     /// Derives the HUD phase from session + connection state, in priority
@@ -260,9 +335,15 @@ internal struct BoardDestination: View {
             return .awaitingSetup
         }
         if let game = session.liveGame {
-            return game.isFinished
-            ? .finished(result: game.result)
-            : .playing(
+            if game.isFinished {
+                // A failed archive outranks the plain finished banner: the
+                // player must Retry or discard before anything else (M5).
+                if case .failed(let message) = session.archiveOutcome {
+                    return .archiveFailed(result: game.result, message: message)
+                }
+                return .finished(result: game.result)
+            }
+            return .playing(
                 sideToMove: game.currentState.activeColor,
                 lastSAN: game.sanMoves.last,
                 ply: game.plyCount
@@ -298,7 +379,8 @@ internal struct BoardDestination: View {
 
     /// The resume alert's body: who was playing, how far they got, when the
     /// draft was last written — and a heads-up when the draft is already
-    /// decided (finished but not yet archived; archiving lands in M5).
+    /// decided (finished but not yet archived; resuming triggers the M5
+    /// self-heal archive).
     private func resumeOfferMessage(for draft: LiveGameDraft) -> String {
         let plies = draft.sanMoves.count
         var lines = [
@@ -312,6 +394,48 @@ internal struct BoardDestination: View {
             )
         }
         return lines.joined(separator: "\n")
+    }
+
+    /// Presents the archive confirmation while a *successful* outcome is
+    /// unacknowledged. Dismissal (Done, ⎋, swipe) acknowledges it; a
+    /// failure never presents this sheet — it lives on the HUD as
+    /// Retry-or-discard.
+    private var isArchiveConfirmationPresented: Binding<Bool> {
+        Binding(
+            get: {
+                session.archiveOutcome == .archived
+                || session.archiveOutcome == .deduplicated
+            },
+            set: { presented in
+                guard !presented else { return }
+                session.acknowledgeArchive()
+            }
+        )
+    }
+
+    /// Applies edited details to the archived Library row and refreshes its
+    /// content hash — the one-hash/two-doors invariant: any in-place edit
+    /// must call `PGNStore.refreshHash(of:)` or future deduplication
+    /// silently rots. Also renames the row when it still carried the
+    /// default "White vs Black" name, so the title tracks the players.
+    private func applyEditedInfo(_ roster: LiveGame.Roster, to pgn: PGN) {
+        let hadDefaultName = pgn.name == pgn.defaultDisplayName
+
+        pgn.event = roster.event
+        pgn.site  = roster.site
+        pgn.date  = roster.date
+        pgn.round = roster.round
+        pgn.white = roster.white
+        pgn.black = roster.black
+        if hadDefaultName { pgn.name = pgn.defaultDisplayName }
+
+        do {
+            try PGNStore(modelContext: modelContext).refreshHash(of: pgn)
+        } catch {
+            Self.logger.error(
+                "refreshHash failed after archive edit: \(error.localizedDescription, privacy: .public)"
+            )
+        }
     }
 
     private var isNewGameSheetPresented: Binding<Bool> {
@@ -335,7 +459,14 @@ internal struct BoardDestination: View {
         if let game = session.liveGame {
             LiveGameInspectorView(
                 game: game,
-                onUpdateRoster: { session.updateRoster($0) },
+                onUpdateRoster: { roster in
+                    session.updateRoster(roster)
+                    // Post-archive, Edit Details keeps the Library row in
+                    // step too (the one-hash discipline lives in the helper).
+                    if let pgn = session.archivedPGN {
+                        applyEditedInfo(roster, to: pgn)
+                    }
+                },
                 onResign: { session.resign($0) },
                 onAgreeDraw: { session.agreeDraw() },
                 onDiscard: { session.discardGame() }
@@ -365,12 +496,27 @@ internal struct BoardDestination: View {
     /// tradeoff, resolved at the next settle.
     private var mirrorBoard: some View {
         boardSurface(
-            position:    connection.physicalBoard,
-            tracker:     .empty,
-            lastMove:    session.liveGame?.lastMove,
-            checkSquare: session.liveGame?.checkSquare,
-            ghostSquare: session.castlingGhostSquare,
-            ghostPiece:  session.castlingGhostPiece
+            position:         connection.physicalBoard,
+            tracker:          .empty,
+            lastMove:         session.liveGame?.lastMove,
+            checkSquare:      session.liveGame?.checkSquare,
+            ghostSquare:      session.castlingGhostSquare,
+            ghostPiece:       session.castlingGhostPiece,
+            attentionSquares: recoveryGuidance?.attentionSquares ?? [],
+            targetSquares:    recoveryGuidance?.targetSquares ?? []
+        )
+    }
+
+    /// The live restore checklist while `recovering` (M6.2), nil otherwise.
+    /// Recomputed on every observable change of `connection.physicalBoard`,
+    /// so highlights and the instruction list shrink as squares are fixed —
+    /// a 64-square diff per render is cheap (reach for `.task(id:)`
+    /// memoization only if profiling ever demands it).
+    private var recoveryGuidance: RecoveryGuidance? {
+        guard session.needsRecovery, let game = session.liveGame else { return nil }
+        return RecoveryGuidance(
+            physical: connection.physicalBoard,
+            target: game.currentState.position
         )
     }
 

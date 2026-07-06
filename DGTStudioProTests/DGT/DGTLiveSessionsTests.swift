@@ -423,9 +423,10 @@ struct DGTLiveSessionTests {
         #expect(try store.load()?.white == "White")
     }
 
-    /// A finished-but-unarchived draft (archiving lands in M5) resumes with
-    /// its manual result re-applied — the game comes back decided, not
-    /// half-forgotten.
+    /// A finished-but-unarchived draft resumes with its manual result
+    /// re-applied — the game comes back decided, not half-forgotten. This
+    /// suite runs headless (nil `onGameFinished`), so no archive fires here;
+    /// the wired self-heal path lives in `DGTLiveSessionArchiveTests`.
     @Test func resumeOfAFinishedDraftReappliesTheResult() throws {
         let store = temporaryStore()
         let original = LiveGame(roster: roster())

@@ -8,7 +8,7 @@
 import SwiftUI
 
 internal struct SquareView: View, Equatable {
-
+    
     // MARK: Stored Properties
     internal let piece: Piece
     internal let pieceID: PieceID?
@@ -22,20 +22,32 @@ internal struct SquareView: View, Equatable {
     /// `Piece` it's handed, ghost or not. Defaults to nil so existing call
     /// sites compile unchanged.
     internal var ghostPiece: Piece? = nil
-
+    
     // MARK: Computed Properties
     private var fillColor: Color {
         isLightSquare ? style.light : style.dark
     }
-
+    
     // MARK: Body
     internal var body: some View {
         ZStack {
             Rectangle()
                 .fill(fillColor)
-
-            // TODO: Apply Dynamic Rectangle Color
-
+            
+            // Highlight *fills* sit under the piece; *strokes* are added
+            // after the piece image below, so borders are never occluded.
+            // Check paints over last-move when both apply — the king in
+            // danger outranks "this just moved".
+            if highlight.contains(.lastMove) {
+                Rectangle().fill(.yellow.opacity(0.35))
+            }
+            if highlight.contains(.check) {
+                Rectangle().fill(.red.opacity(0.40))
+            }
+            if highlight.contains(.attention) {
+                Rectangle().fill(.red.opacity(0.22))
+            }
+            
             if let imageName = piece.imageName {
                 Image(imageName)
                     .resizable()
@@ -51,6 +63,31 @@ internal struct SquareView: View, Equatable {
                     .aspectRatio(contentMode: .fit)
                     .padding(squareSize * 0.06)
                     .opacity(0.5)
+            }
+            
+            if highlight.contains(.selected) {
+                Rectangle().strokeBorder(
+                    Color.accentColor,
+                    lineWidth: max(2, squareSize * 0.05)
+                )
+            }
+            if highlight.contains(.attention) {
+                // Solid red border: "fix this square" (remove / swap).
+                Rectangle().strokeBorder(
+                    .red.opacity(0.9),
+                    lineWidth: max(2, squareSize * 0.055)
+                )
+            }
+            if highlight.contains(.target) {
+                // Dashed green border: "a piece belongs here" — reads as a
+                // drop target without claiming anything is wrong.
+                Rectangle().strokeBorder(
+                    .green.opacity(0.9),
+                    style: StrokeStyle(
+                        lineWidth: max(2, squareSize * 0.05),
+                        dash: [squareSize * 0.14]
+                    )
+                )
             }
         }
         .frame(width: squareSize, height: squareSize)
@@ -99,8 +136,8 @@ internal struct SquareView: View, Equatable {
     }
 }
 
-// Highlight permutations on the same square — verifies that the TODO
-// highlight overlay will look correct once wired up.
+// Highlight permutations on the same square — including the M6 recovery
+// styles (.attention solid red, .target dashed green).
 #Preview("Highlight States") {
     HStack(spacing: 4) {
         SquareView(
@@ -126,6 +163,16 @@ internal struct SquareView: View, Equatable {
         SquareView(
             piece: .whiteKing, pieceID: PieceID(rawValue: 4),
             isLightSquare: true, highlight: [.check, .lastMove],
+            squareSize: 80, style: .walnut
+        )
+        SquareView(
+            piece: .blackPawn, pieceID: PieceID(rawValue: 18),
+            isLightSquare: true, highlight: .attention,
+            squareSize: 80, style: .walnut
+        )
+        SquareView(
+            piece: .empty, pieceID: nil,
+            isLightSquare: true, highlight: .target,
             squareSize: 80, style: .walnut
         )
     }

@@ -80,6 +80,17 @@ internal struct DGTStudioProApp: App {
         // turns a relaunch into the Resume / Delete offer on the Board HUD.
         let draftStore = LiveGameDraftStore()
         session.draftStore = draftStore
+
+        // The archive door (M5): one PGNStore over the shared container's
+        // main context; the session invokes it on every `isFinished`
+        // transition (archive-first, before any UI) and on the resume
+        // self-heal. Wired before `loadPendingDraft()` so any draft resumed
+        // this run always has the door available.
+        let pgnStore = PGNStore(modelContext: sharedContainer.mainContext)
+        session.onGameFinished = { game in
+            try pgnStore.archive(game)
+        }
+
         session.loadPendingDraft()
 
         _dgtConnection = State(initialValue: connection)

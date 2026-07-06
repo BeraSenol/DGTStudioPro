@@ -34,6 +34,21 @@ internal struct PGNStore {
         case missingRequiredTags(Set<String>)
         case malformedPGN(reason: String)
         case fileReadFailed(URL, underlying: Swift.Error)
+        /// `archive(_:)` was handed a game whose result is still `*` —
+        /// Decision #3: no ongoing game ever reaches the Library.
+        case ongoingGame
+    }
+
+    /// What `archive(_:)` produced. Unlike import — where a hash match is
+    /// an *error* (the user tried to add a game they already have) — a
+    /// match on archive is *success* (requirement 8: the finished game is
+    /// in the Library, which is all that was promised).
+    @MainActor
+    internal struct ArchiveResult {
+        /// The Library row the game landed on — fresh or pre-existing.
+        internal let pgn: PGN
+        /// True when an identical game was already stored.
+        internal let deduplicated: Bool
     }
 
     // MARK: Stored Properties
@@ -84,6 +99,59 @@ internal struct PGNStore {
         }
 
         return try importPGN(text: text)
+    }
+
+    /// The second door (M5): archives a finished live game into the
+    /// Library. Shares `contentHash` with import — one hash, two doors —
+    /// so a game that was also imported (or archived twice, e.g. by the
+    /// resume self-heal after a crash mid-save) deduplicates instead of
+    /// duplicating. `@MainActor` because it reads the `@MainActor`
+    /// `LiveGame` and returns a model-bearing result.
+    @MainActor
+    @discardableResult
+    internal func archive(_ game: LiveGame) throws -> ArchiveResult {
+        guard game.isFinished, game.result != .ongoing else {
+            throw Error.ongoingGame
+        }
+
+        let pgn = PGN(
+            event: game.roster.event,
+            site: game.roster.site,
+            date: game.roster.date,
+            round: game.roster.round,
+            white: game.roster.white,
+            black: game.roster.black,
+            moves: game.sanMoves,
+            result: game.result
+        )
+        let hash = Self.contentHash(for: pgn)
+
+        if let existing = try existingPGN(withHash: hash) {
+            Self.logger.info(
+                "Archive deduplicated: matches existing '\(existing.name, privacy: .public)' hash=\(hash, privacy: .public)"
+            )
+            return ArchiveResult(pgn: existing, deduplicated: true)
+        }
+
+        pgn.contentHash = hash
+        modelContext.insert(pgn)
+        try modelContext.save()
+
+        Self.logger.info(
+            "Archived: '\(pgn.name, privacy: .public)' \(pgn.white, privacy: .public) vs \(pgn.black, privacy: .public) [\(pgn.result.rawValue, privacy: .public)] plies=\(pgn.moves.count)"
+        )
+        return ArchiveResult(pgn: pgn, deduplicated: false)
+    }
+
+    /// Recomputes and persists `contentHash` after an in-place edit (the
+    /// archive-confirmation sheet, future Library edits). Every field the
+    /// hash covers is user-editable there; skipping this call would let
+    /// future deduplication silently rot against stale hashes — which is
+    /// why the invariant reads "any in-place edit must call `refreshHash`".
+    internal func refreshHash(of pgn: PGN) throws {
+        pgn.contentHash = Self.contentHash(for: pgn)
+        try modelContext.save()
+        Self.logger.info("Refreshed content hash for '\(pgn.name, privacy: .public)'")
     }
 
     internal func delete(_ pgn: PGN) throws {
