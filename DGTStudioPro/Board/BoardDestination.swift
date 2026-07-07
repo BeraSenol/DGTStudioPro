@@ -99,6 +99,16 @@ internal struct BoardDestination: View {
                 liveSurface
             }
         }
+        // M8.2 — a failed load falls back to the live mirror by design
+        // (there is no landing/error card; the board is always on screen),
+        // which used to make the failure silent: the tab looked like an
+        // ordinary live tab. The banner makes it loud without blocking
+        // anything.
+        .overlay(alignment: .bottom) {
+            if let message = tabState.boardLoadError {
+                boardLoadErrorBanner(message)
+            }
+        }
         .navigationTitle(tabState.boardPGN?.name ?? "Board")
         .toolbar {
             ToolbarItem {
@@ -123,6 +133,50 @@ internal struct BoardDestination: View {
         .focusedSceneValue(\.activeGame, tabState.boardGame)
         .onAppear { loadIfNeeded() }
         .onChange(of: loadedGameID) { _, _ in loadIfNeeded() }
+    }
+
+    // MARK: Load Error (M8.2)
+
+    /// The load-error banner, in the HUD's visual language (same `.bar`
+    /// background, stroke, and paddings; orange like `archiveFailed` —
+    /// informative, blocking nothing). Dismiss clears `loadedGameID`,
+    /// converting the tab into an honest live tab: `loadIfNeeded()`'s nil
+    /// branch then clears the error and the caches. Merely clearing the
+    /// error string would leave the dead ID bound and the banner would
+    /// return on the next Board visit — unbinding is the real resolution,
+    /// and matches Erase Library's "open tabs revert to the live board"
+    /// intent.
+    private func boardLoadErrorBanner(_ message: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.title3)
+                .foregroundStyle(.orange)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Couldn't open the game")
+                    .font(.headline)
+                Text(message)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 12)
+
+            Button("Dismiss") { loadedGameID = nil }
+                .controlSize(.small)
+                .accessibilityIdentifier("board.loaderror.dismiss")
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(.bar, in: RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(Color.orange.opacity(0.35), lineWidth: 1)
+        )
+        .padding(.horizontal)
+        .padding(.bottom, 8)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("board.loaderror")
     }
 
     // MARK: Board Surface
@@ -318,11 +372,13 @@ internal struct BoardDestination: View {
     }
 
     /// Derives the HUD phase from session + connection state, in priority
-    /// order: connection truth first (a pulled cable outranks everything —
-    /// M7 refines this into "reconnecting…"), then recovery, then the
-    /// gentle correction nudge, then setup, then the game itself, then the
-    /// idle invitation.
+    /// order: connection truth first — a pulled cable outranks everything,
+    /// and M7.3 splits it: an active auto-reconnect loop reads as
+    /// "reconnecting…", anything else non-connected as plain disconnected —
+    /// then recovery, then the gentle correction nudge, then setup, then
+    /// the game itself, then the idle invitation.
     private var hudPhase: LiveGameHUDView.Phase {
+        if connection.isReconnecting { return .reconnecting }
         guard connection.isConnected else { return .disconnected }
 
         if session.needsRecovery {

@@ -75,6 +75,15 @@ internal struct DGTStudioProApp: App {
             session?.boardChanged(board)
         }
 
+        // M7.3 — a board vanishing mid-game auto-reconnects instead of
+        // showing the failure banner. "Mid-game" is any game-bearing mode
+        // (`liveGame` non-nil, finished-on-screen included); the loop
+        // re-asks on every lap, so a discard or return to idle stands it
+        // down. Wired here, once, like every other hook.
+        connection.shouldAutoReconnect = { [weak session] in
+            session?.liveGame != nil
+        }
+
         // Draft persistence (M4): the session owns when to save/delete; the
         // store owns the file. Loading here — once, after wiring — is what
         // turns a relaunch into the Resume / Delete offer on the Board HUD.
@@ -92,6 +101,16 @@ internal struct DGTStudioProApp: App {
         }
 
         session.loadPendingDraft()
+
+        // M7.2 — reconnect to the remembered board at launch (the Settings
+        // toggle and the remembered-device check both live inside the
+        // call). A Task from this main-actor init runs after init returns,
+        // so first render isn't held hostage to IOKit enumeration plus the
+        // serial handshake. Skipped under UI tests: a developer's real
+        // remembered board must not hijack a deterministic run.
+        if !UITestSeed.isActive {
+            Task { await connection.autoConnectAtLaunch() }
+        }
 
         _dgtConnection = State(initialValue: connection)
         _dgtSession = State(initialValue: session)
@@ -127,6 +146,18 @@ internal struct DGTStudioProApp: App {
         }
         .modelContainer(sharedContainer)
         .defaultLaunchBehavior(.presented)
+        // M8.1 — install the long-built Game menu (First/Previous/Next/Last
+        // with the ←/→/Home/End shortcuts). The publishing side
+        // (`.focusedSceneValue(\.activeGame, …)`) has been live in
+        // `BoardDestination` since Phase 11; this is the missing scene
+        // half. M8.3 — the Diagnostics menu rides in the same block,
+        // wiring the last unsurfaced diagnostics features; it takes the
+        // app-global objects directly because diagnostics are app-scoped,
+        // not per-tab.
+        .commands {
+            GameNavigationCommands()
+            DiagnosticsCommands(connection: dgtConnection, sessionLog: sessionLog)
+        }
 
         Settings {
             SettingsView()

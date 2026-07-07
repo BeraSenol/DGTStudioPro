@@ -27,6 +27,10 @@ internal struct LiveGameHUDView: View {
     internal enum Phase: Equatable {
         /// No board connected — point at the connection toolbar.
         case disconnected
+        /// The board vanished mid-game and the auto-reconnect loop (M7.3)
+        /// is retrying. Replugging resumes seamlessly — or through
+        /// recovery, if pieces moved while the board was dark.
+        case reconnecting
         /// Connected, no game running: invite setup or a manual New Game.
         case idle
         /// A game exists but the physical pieces don't match its position
@@ -124,6 +128,8 @@ internal struct LiveGameHUDView: View {
         switch phase {
         case .disconnected:
             "No board connected"
+        case .reconnecting:
+            "Board disconnected — reconnecting…"
         case .idle:
             "Board connected"
         case .awaitingSetup:
@@ -145,6 +151,8 @@ internal struct LiveGameHUDView: View {
         switch phase {
         case .disconnected:
             "Connect your DGT board to record games live."
+        case .reconnecting:
+            "Plug the board back in — the game picks up where it left off."
         case .idle:
             "Set up the pieces to be offered a game, or start one now."
         case .awaitingSetup:
@@ -167,6 +175,7 @@ internal struct LiveGameHUDView: View {
     private var symbolName: String {
         switch phase {
         case .disconnected:  "cable.connector.horizontal"
+        case .reconnecting:  "arrow.triangle.2.circlepath"
         case .idle:          "checkmark.circle"
         case .awaitingSetup: "checkerboard.rectangle"
         case .playing:       "record.circle"
@@ -180,6 +189,7 @@ internal struct LiveGameHUDView: View {
     private var tint: Color {
         switch phase {
         case .disconnected:  .secondary
+        case .reconnecting:  .orange
         case .idle:          .green
         case .awaitingSetup: .blue
         case .playing:       .red
@@ -193,6 +203,7 @@ internal struct LiveGameHUDView: View {
     private var accessibilityIdentifier: String {
         switch phase {
         case .disconnected:  "live.hud.disconnected"
+        case .reconnecting:  "live.hud.reconnecting"
         case .idle:          "live.hud.idle"
         case .awaitingSetup: "live.hud.awaitingsetup"
         case .playing:       "live.hud.playing"
@@ -220,6 +231,7 @@ internal struct LiveGameHUDView: View {
 #Preview("All Phases") {
     VStack(spacing: 0) {
         LiveGameHUDView(phase: .disconnected, onNewGame: {})
+        LiveGameHUDView(phase: .reconnecting, onNewGame: {})
         LiveGameHUDView(phase: .idle, onNewGame: {})
         LiveGameHUDView(phase: .awaitingSetup, onNewGame: {})
         LiveGameHUDView(

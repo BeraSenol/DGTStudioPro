@@ -12,13 +12,14 @@ import SwiftUI
 ///
 /// It is a thin view over the app-global `DGTConnection`: it never opens a port
 /// or talks to IOKit itself, it just drives `search()` / `connect(to:)` /
-/// `disconnect()` and renders `connection.status`. The four resting states map
-/// to four panels:
+/// `disconnect()` and renders `connection.status`. The five resting states map
+/// to five panels:
 ///
 /// - `.disconnected` / `.searching` → pick a device from the discovered list
 /// - `.connecting`  → the handshake progress indicator (open + init sequence,
 ///   resolving once the board's first dump arrives)
 /// - `.connected`   → the board's reported identity, plus Disconnect
+/// - `.reconnecting` → the M7.3 retry loop: keep waiting, or stand it down
 /// - `.failed`      → the error, with Try Again
 ///
 /// The user confirms the device explicitly (the Connect button) before the
@@ -43,7 +44,11 @@ internal struct DGTConnectionView: View {
         }
         .frame(width: 420, height: 380)
         .onAppear {
-            // Scan as soon as the dialog opens, unless we're already live.
+            // Scan as soon as the dialog opens — unless we're already live,
+            // or the M7.3 reconnect loop is mid-flight: `search()` tears the
+            // loop down, and a player opening this sheet mid-reconnect wants
+            // to see (or stop) the retry, not a device list.
+            if connection.isReconnecting { return }
             if !connection.isConnected { connection.search() }
         }
         .accessibilityIdentifier("dgt.connectSheet")
@@ -68,6 +73,7 @@ internal struct DGTConnectionView: View {
         switch connection.status {
         case .disconnected, .searching: "Connect to Board"
         case .connecting:               "Connecting…"
+        case .reconnecting:             "Reconnecting…"
         case .connected:                "Board Connected"
         case .failed:                   "Connection Failed"
         }
@@ -77,7 +83,7 @@ internal struct DGTConnectionView: View {
         switch connection.status {
         case .disconnected, .searching:
             "Select the serial port your DGT e-Board is connected to."
-        case .connecting, .connected, .failed:
+        case .connecting, .reconnecting, .connected, .failed:
             nil
         }
     }
@@ -91,6 +97,8 @@ internal struct DGTConnectionView: View {
             deviceList
         case .connecting(let device):
             connectingPanel(device)
+        case .reconnecting(let device):
+            reconnectingPanel(device)
         case .connected(let device):
             connectedPanel(device)
         case .failed(let message):
@@ -130,6 +138,27 @@ internal struct DGTConnectionView: View {
         }
         .padding()
         .accessibilityIdentifier("dgt.connectingPanel")
+    }
+
+    /// M7.3 — the retry loop's face in the dialog: what happened, that the
+    /// app is handling it, and how to stand it down. The loop itself lives
+    /// in `DGTConnection`; this panel is pure status.
+    private func reconnectingPanel(_ device: DGTSerialDevice) -> some View {
+        VStack(spacing: 14) {
+            ProgressView()
+                .controlSize(.large)
+            Text("Reconnecting to \(device.name)…")
+                .font(.callout)
+            Text(
+                "The board disconnected during a game. Plug it back in — "
+                + "the game resumes where it left off."
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+        }
+        .padding()
+        .accessibilityIdentifier("dgt.reconnectingPanel")
     }
 
     private func connectedPanel(_ device: DGTSerialDevice) -> some View {
@@ -198,6 +227,22 @@ internal struct DGTConnectionView: View {
                     Task { await connection.disconnect() }
                 }
                 .accessibilityIdentifier("dgt.cancelButton")
+
+            case .reconnecting:
+                // Standing the loop down is deliberate but not destructive —
+                // nothing is lost; the game stays right there on screen.
+                // Ends in `.disconnected`, then `search()` swaps this panel
+                // for the device list in place.
+                Button("Stop Trying") {
+                    Task {
+                        await connection.stopReconnecting()
+                        connection.search()
+                    }
+                }
+                .accessibilityIdentifier("dgt.stopReconnectingButton")
+                Spacer()
+                Button("Close") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
 
             case .connected:
                 Button("Disconnect", role: .destructive) {

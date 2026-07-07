@@ -44,8 +44,10 @@ internal struct DGTConnectionToolbarModifier: ViewModifier {
     @ViewBuilder
     private var label: some View {
         switch connection.status {
-        case .connecting:
-            // A spinner in the toolbar communicates the in-progress handshake.
+        case .connecting, .reconnecting:
+            // A spinner in the toolbar communicates the in-progress
+            // handshake — or the M7.3 retry loop working to get the board
+            // back (the HUD carries the words; this is just the pulse).
             ProgressView()
                 .controlSize(.small)
         default:
@@ -74,6 +76,7 @@ internal struct DGTConnectionToolbarModifier: ViewModifier {
         switch connection.status {
         case .disconnected, .searching: "Connect a DGT e-Board"
         case .connecting:               "Connecting to board…"
+        case .reconnecting:             "Board disconnected — reconnecting…"
         case .connected:                "Board connected — show details"
         case .failed:                   "Connection failed — try again"
         }

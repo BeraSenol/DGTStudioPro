@@ -12,9 +12,9 @@
 /// status machine) stays in `DGTConnection` and is manual-checklist
 /// territory.
 internal enum DGTAutoConnectPolicy {
-
+    
     // MARK: Launch (M7.2)
-
+    
     /// The launch decision: which device, if any, to connect to silently.
     /// Requires the feature enabled *and* the remembered device currently
     /// attached, matched by `path` — the stable identity
@@ -37,9 +37,9 @@ internal enum DGTAutoConnectPolicy {
         }
         return devices.first { $0.path == rememberedPath }
     }
-
+    
     // MARK: Reconnect Lap (M7.3)
-
+    
     /// The three things one lap of the mid-game reconnect loop can decide.
     internal enum ReconnectLap: Equatable {
         /// The game ended or was discarded — stand down quietly. (Success,
@@ -51,7 +51,7 @@ internal enum DGTAutoConnectPolicy {
         /// The vanished device's path has reappeared — attempt to open it.
         case attempt
     }
-
+    
     /// Decides a reconnect lap. `gameActive` is re-asked every lap (via
     /// `DGTConnection.shouldAutoReconnect`) so a discard mid-loop stands
     /// the retry down; `stop` outranks `attempt` — a discarded game ends

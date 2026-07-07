@@ -8,7 +8,6 @@
 import Testing
 @testable import DGTStudioPro
 
-@MainActor
 @Suite("Position")
 struct PositionTests {
 

@@ -16,4 +16,13 @@ internal enum StorageKeys {
     internal static let defaultEvent       = "defaultEvent"
     internal static let defaultSite        = "defaultSite"
     internal static let defaultWhitePlayer = "defaultWhitePlayer"
+
+    // DGT board connection (M7): the last successfully connected device —
+    // path is the stable identity, the name rides along for logs/UI — plus
+    // the launch auto-connect preference. Written by `DGTConnection` on the
+    // `.connected` transition; read by `autoConnectAtLaunch()`. An absent
+    // `autoConnectOnLaunch` reads as true everywhere (the roadmap default).
+    internal static let rememberedDevicePath = "rememberedDevicePath"
+    internal static let rememberedDeviceName = "rememberedDeviceName"
+    internal static let autoConnectOnLaunch  = "autoConnectOnLaunch"
 }

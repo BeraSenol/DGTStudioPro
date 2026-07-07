@@ -19,6 +19,7 @@ internal struct SettingsView: View {
 
     // MARK: Private Properties
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
+    @AppStorage(StorageKeys.autoConnectOnLaunch) private var autoConnectOnLaunch = true
 
     @Environment(\.modelContext) private var modelContext
     @Query private var allGames: [PGN]
@@ -46,9 +47,24 @@ internal struct SettingsView: View {
     // MARK: General
     private var generalTab: some View {
         Form {
-            LabeledContent("Analysis Depth", value: "20")
-            LabeledContent("Hash Size", value: "128 MB")
-            LabeledContent("Threads", value: "1")
+            Section {
+                Toggle("Connect to board automatically", isOn: $autoConnectOnLaunch)
+                    .accessibilityIdentifier("settings.autoConnectToggle")
+            } header: {
+                Text("DGT Board")
+            } footer: {
+                Text(
+                    "At launch, silently reconnects to the last board you "
+                    + "used, if it's attached. Mid-game reconnection is "
+                    + "always on."
+                )
+            }
+
+            Section("Engine") {
+                LabeledContent("Analysis Depth", value: "20")
+                LabeledContent("Hash Size", value: "128 MB")
+                LabeledContent("Threads", value: "1")
+            }
         }
         .formStyle(.grouped)
     }

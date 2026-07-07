@@ -27,17 +27,11 @@ import Testing
 ///     proves that the only source of `(from, to)` collision is promotion,
 ///     which the board resolves physically (the player places the actual
 ///     promoted piece).
-///
-/// `@MainActor` on the suite: the chess-core value types (`Piece`, `Position`,
-/// `Move`) carry main-actor-isolated `Equatable` conformances under Swift 6
-/// default-MainActor isolation, so a nonisolated suite can't compare them.
-/// Matching the rest of the Chess suites, this one is isolated to the main actor.
-@MainActor
 @Suite("Move Footprint & Coordinate Identity")
 struct MoveFootprintTests {
-    
+
     // MARK: Footprint Helper
-    
+
     /// The set of squares whose contents differ between two positions —
     /// i.e. the lifts and places a board would register for the transition.
     private func changedSquares(_ before: Position, _ after: Position) -> Set<Square> {
@@ -47,15 +41,15 @@ struct MoveFootprintTests {
         }
         return changed
     }
-    
+
     private func position(_ build: (inout Position) -> Void) -> Position {
         var pos = Position.empty
         build(&pos)
         return pos
     }
-    
+
     // MARK: Quiet & Capture Footprints
-    
+
     @Test func quietPushTouchesExactlyTwoSquares() {
         let move = Move.make(
             from: Squares.e2, to: Squares.e4,
@@ -65,7 +59,7 @@ struct MoveFootprintTests {
         let after = Position.starting.applying(move)
         #expect(changedSquares(.starting, after) == [Squares.e2, Squares.e4])
     }
-    
+
     @Test func captureTouchesExactlyFromAndTo() {
         let before = position {
             $0[Squares.a1] = .whiteRook
@@ -83,9 +77,9 @@ struct MoveFootprintTests {
         #expect(after[Squares.a7] == .whiteRook)
         #expect(after[Squares.a1] == .empty)
     }
-    
+
     // MARK: En Passant Footprint (the three-square pattern)
-    
+
     @Test func enPassantTouchesThreeSquaresIncludingTheOffsetCapture() {
         let before = position {
             $0[Squares.e5] = .whitePawn
@@ -98,7 +92,7 @@ struct MoveFootprintTests {
             isEnPassant: true
         )
         let after = before.applying(move)
-        
+
         // Three squares change, and the captured pawn lifts from d5 — NOT
         // from the destination d6. A tracker keying captures off `to` would
         // miss this; it must consult move.capturedSquare.
@@ -109,9 +103,9 @@ struct MoveFootprintTests {
         #expect(after[Squares.d5] == .empty)
         #expect(after[Squares.e5] == .empty)
     }
-    
+
     // MARK: Castling Footprint (two pieces, four squares)
-    
+
     @Test func kingsideCastlingTouchesKingAndRookSquares() {
         let before = position {
             $0[Squares.e1] = .whiteKing
@@ -123,7 +117,7 @@ struct MoveFootprintTests {
             isCastling: true
         )
         let after = before.applying(move)
-        
+
         // Four squares, two pieces in motion — the board sees two lifts and
         // two places, and the rook squares come from move.rookFrom/rookTo.
         #expect(changedSquares(before, after) == [Squares.e1, Squares.g1, Squares.h1, Squares.f1])
@@ -132,7 +126,7 @@ struct MoveFootprintTests {
         #expect(after[Squares.g1] == .whiteKing)
         #expect(after[Squares.f1] == .whiteRook)
     }
-    
+
     @Test func queensideCastlingTouchesKingAndRookSquares() {
         let before = position {
             $0[Squares.e1] = .whiteKing
@@ -148,9 +142,9 @@ struct MoveFootprintTests {
         #expect(move.rookFrom == Squares.a1)
         #expect(move.rookTo == Squares.d1)
     }
-    
+
     // MARK: Promotion Footprint (square count small, identity changes)
-    
+
     @Test func pushPromotionTouchesTwoSquaresButChangesPieceType() {
         let before = position { $0[Squares.e7] = .whitePawn }
         let move = Move.make(
@@ -166,7 +160,7 @@ struct MoveFootprintTests {
         #expect(after[Squares.e8] == .whiteQueen)
         #expect(after[Squares.e8].type != .pawn)
     }
-    
+
     @Test func capturePromotionTouchesFromAndDiagonalTo() {
         let before = position {
             $0[Squares.e7] = .whitePawn
@@ -182,9 +176,9 @@ struct MoveFootprintTests {
         #expect(changedSquares(before, after) == [Squares.e7, Squares.f8])
         #expect(after[Squares.f8] == .whiteQueen)
     }
-    
+
     // MARK: Coordinate Identity Invariant
-    
+
     /// Reference positions (the perft suite's set) spanning castling, pins,
     /// en passant and dense promotion fan-out.
     private static let referenceFENs: [(name: String, fen: String)] = [
@@ -194,18 +188,18 @@ struct MoveFootprintTests {
         ("Position 4", "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq -"),
         ("Position 5", "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ -"),
     ]
-    
+
     /// The full identity key the tracker resolves against: from-square,
     /// to-square, and (only ever set for promotions) the promoted type.
     private func identityKey(_ move: Move) -> String {
         "\(move.from)-\(move.to)-\(move.promotionType?.rawValue ?? 0)"
     }
-    
+
     @Test func fromToPromotionUniquelyIdentifiesEveryLegalMove() throws {
         for entry in Self.referenceFENs {
             let state = GameState(try FEN(parsing: entry.fen))
             let moves = state.legalMoves()
-            
+
             var seen: [String: Move] = [:]
             for move in moves {
                 let key = identityKey(move)
@@ -218,7 +212,7 @@ struct MoveFootprintTests {
             #expect(seen.count == moves.count)
         }
     }
-    
+
     @Test func onlyPromotionsCauseFromToCollisions() throws {
         // Without the promotion component, (from,to) collisions may exist —
         // but every colliding move must be a promotion. This pins WHY the
@@ -227,12 +221,12 @@ struct MoveFootprintTests {
         for entry in Self.referenceFENs {
             let state = GameState(try FEN(parsing: entry.fen))
             let moves = state.legalMoves()
-            
+
             var byFromTo: [String: [Move]] = [:]
             for move in moves {
                 byFromTo["\(move.from)-\(move.to)", default: []].append(move)
             }
-            
+
             for (key, group) in byFromTo where group.count > 1 {
                 #expect(
                     group.allSatisfy { $0.promotionType != nil },
@@ -241,7 +235,7 @@ struct MoveFootprintTests {
             }
         }
     }
-    
+
     @Test func promotionPositionActuallyExercisesTheCollisionPath() throws {
         // Guards the test above against passing vacuously: Position 5 must
         // contain at least one (from,to) pair with all four promotion
@@ -250,7 +244,7 @@ struct MoveFootprintTests {
         // White to move — the dxc8=Q/R/B/N fan-out lives in Position 5.)
         let state = GameState(try FEN(parsing: Self.referenceFENs[4].fen))  // Position 5
         let moves = state.legalMoves()
-        
+
         var byFromTo: [String: Int] = [:]
         for move in moves where move.promotionType != nil {
             byFromTo["\(move.from)-\(move.to)", default: 0] += 1
