@@ -11,7 +11,7 @@ import SwiftUI
 @main
 @MainActor
 internal struct DGTStudioProApp: App {
-
+    
     /// Shared `ModelContainer` for the whole app. Multiple tabs share
     /// one container so `PersistentIdentifier`s round-trip correctly.
     ///
@@ -30,13 +30,13 @@ internal struct DGTStudioProApp: App {
             fatalError("Failed to create shared ModelContainer: \(error)")
         }
     }()
-
+    
     /// Shared registry of open games with unsaved changes. Same
     /// create-once-on-the-App, inject-into-every-tab pattern as
     /// `sharedContainer`. Used by the Library's delete path to decide
     /// whether closing a deleted game's tab needs a discard confirmation.
     @State private var openGames = OpenGamesRegistry()
-
+    
     // The three app-global DGT observables.
     //
     // ALL FOUR registries (these three plus `openGames`) must be injected
@@ -56,7 +56,7 @@ internal struct DGTStudioProApp: App {
     @State private var dgtConnection: DGTConnection
     @State private var dgtSession: DGTLiveSession
     @State private var sessionLog: DGTSessionLog
-
+    
     // The struct is `@MainActor` (above), so this init runs on the main actor
     // and may touch the `@MainActor` members of the DGT objects it wires. The
     // module's default actor isolation is `nonisolated`, so without that
@@ -65,7 +65,7 @@ internal struct DGTStudioProApp: App {
         let log = DGTSessionLog()
         let connection = DGTConnection()
         let session = DGTLiveSession()
-
+        
         // One diagnostic timeline shared by both objects, and the connection's
         // board changes feed the live session's quiescence driver. Wiring
         // happens here, once, not in view lifecycle.
@@ -74,7 +74,7 @@ internal struct DGTStudioProApp: App {
         connection.onBoardChanged = { [weak session] board in
             session?.boardChanged(board)
         }
-
+        
         // M7.3 — a board vanishing mid-game auto-reconnects instead of
         // showing the failure banner. "Mid-game" is any game-bearing mode
         // (`liveGame` non-nil, finished-on-screen included); the loop
@@ -83,13 +83,13 @@ internal struct DGTStudioProApp: App {
         connection.shouldAutoReconnect = { [weak session] in
             session?.liveGame != nil
         }
-
+        
         // Draft persistence (M4): the session owns when to save/delete; the
         // store owns the file. Loading here — once, after wiring — is what
         // turns a relaunch into the Resume / Delete offer on the Board HUD.
         let draftStore = LiveGameDraftStore()
         session.draftStore = draftStore
-
+        
         // The archive door (M5): one PGNStore over the shared container's
         // main context; the session invokes it on every `isFinished`
         // transition (archive-first, before any UI) and on the resume
@@ -99,24 +99,37 @@ internal struct DGTStudioProApp: App {
         session.onGameFinished = { game in
             try pgnStore.archive(game)
         }
-
+        
         session.loadPendingDraft()
-
+        
         // M7.2 — reconnect to the remembered board at launch (the Settings
         // toggle and the remembered-device check both live inside the
         // call). A Task from this main-actor init runs after init returns,
         // so first render isn't held hostage to IOKit enumeration plus the
-        // serial handshake. Skipped under UI tests: a developer's real
-        // remembered board must not hijack a deterministic run.
-        if !UITestSeed.isActive {
+        // serial handshake.
+        //
+        // Skipped under UI tests (a developer's real remembered board must
+        // not hijack a deterministic run) AND under unit tests: ⌘U launches
+        // this very app as the test host, and a board attached during a
+        // run would put serial I/O, the staggered init handshake, and live
+        // board-change traffic on the main actor for the entire suite —
+        // competing with timing-sensitive tests (the 300 ms quiescence
+        // window) and feeding the app-global session real hardware events
+        // mid-run. The test host must stay hermetic. XCTest marks its host
+        // process with these environment variables (Swift Testing runs
+        // under the same harness in Xcode).
+        let environment = ProcessInfo.processInfo.environment
+        let isUnitTestHost = environment["XCTestConfigurationFilePath"] != nil
+        || environment["XCTestSessionIdentifier"] != nil
+        if !UITestSeed.isActive && !isUnitTestHost {
             Task { await connection.autoConnectAtLaunch() }
         }
-
+        
         _dgtConnection = State(initialValue: connection)
         _dgtSession = State(initialValue: session)
         _sessionLog = State(initialValue: log)
     }
-
+    
     var body: some Scene {
         // One unified `WindowGroup` parameterised by an optional
         // `PersistentIdentifier`. Tabs with a nil value land on Library;
@@ -158,7 +171,7 @@ internal struct DGTStudioProApp: App {
             GameNavigationCommands()
             DiagnosticsCommands(connection: dgtConnection, sessionLog: sessionLog)
         }
-
+        
         Settings {
             SettingsView()
         }

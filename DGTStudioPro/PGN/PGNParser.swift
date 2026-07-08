@@ -25,10 +25,23 @@ internal enum PGNParser {
         GameResult.allCases.map(\.rawValue)
     )
 
+    /// Parses `[Date "yyyy.MM.dd"]` tags — pinned to **UTC** so that
+    /// parse → `PGNStore.hashDateFormatter` (also UTC) is a perfect
+    /// round-trip. A PGN date is a calendar day with no timezone of its
+    /// own; the app's one convention is "PGN dates are UTC days."
+    ///
+    /// Without the pin this formatter used the machine's local zone, so in
+    /// any timezone east of UTC an imported "2026.05.28" parsed to local
+    /// midnight — May 27 in UTC — and hash-formatted back as "2026.05.27",
+    /// silently breaking one-hash/two-doors deduplication against a
+    /// same-day archived twin (requirement 8's import door). West-of-UTC
+    /// *display* of UTC-midnight dates is the mirror wrinkle; the fully
+    /// general fix — calendar-date storage — is parked in the roadmap.
     private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy.MM.dd"
         formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "UTC")
         return formatter
     }()
 
