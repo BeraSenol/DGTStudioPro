@@ -20,7 +20,7 @@ internal struct RankingsDestination: View {
             description: Text("Rankings coming soon.")
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityIdentifier("rankings.content")
+        .accessibilityIdentifier(AccessibilityID.rankingsContent)
         .navigationTitle("Rankings")
         .inspector(isPresented: $tabState.rankingsInspectorPresented) {
             RankingsInspectorView()

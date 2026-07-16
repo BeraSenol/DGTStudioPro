@@ -11,6 +11,16 @@ import os
 import SwiftData
 
 // MARK: PGN Store
+
+/// All Library persistence goes through here — import, archive, delete, and
+/// the one-hash/two-doors `refreshHash`. `@MainActor` as a whole (July 2026
+/// review): every method fronts the app's main-context `ModelContext`, and
+/// the previous per-member annotations (`archive`, the nested
+/// `Error`/`ArchiveResult`) understated that — the type was only ever safe
+/// because a non-`Sendable` struct can't cross isolation, which is an
+/// accident of shape, not a statement of intent. Nested types and members
+/// now infer the isolation from the type.
+@MainActor
 internal struct PGNStore {
 
     // MARK: Static Constants
@@ -19,16 +29,30 @@ internal struct PGNStore {
         category: "pgnstore"
     )
 
-    private static let hashDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy.MM.dd"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: "UTC")
-        return formatter
+    /// UTC Gregorian calendar backing the hash's date rendering.
+    private static let hashCalendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        return calendar
     }()
 
+    /// Renders a date for the content hash. **Persistence contract**: every
+    /// `contentHash` already stored in every Library was computed against
+    /// this exact "yyyy.MM.dd"-in-UTC rendering (previously a shared
+    /// `DateFormatter` with `en_US_POSIX`), so it must keep producing
+    /// byte-identical output forever — or a migration must rewrite every
+    /// stored hash, and dedupe silently rots in the meantime. Rendering via
+    /// `DateComponents` instead of the formatter answers the July 2026
+    /// review's concurrency question by removing the shared reference-type
+    /// state entirely: `Calendar` is a `Sendable` value and the arithmetic
+    /// is deterministic by construction. Internal (not private) so the pin
+    /// test can hold the format without going through a full import.
+    internal static func hashDateString(from date: Date) -> String {
+        let parts = hashCalendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d.%02d.%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    }
+
     // MARK: Errors
-    @MainActor
     internal enum Error: Swift.Error {
         case duplicate(existing: PGN)
         case missingRequiredTags(Set<String>)
@@ -43,7 +67,6 @@ internal struct PGNStore {
     /// an *error* (the user tried to add a game they already have) — a
     /// match on archive is *success* (requirement 8: the finished game is
     /// in the Library, which is all that was promised).
-    @MainActor
     internal struct ArchiveResult {
         /// The Library row the game landed on — fresh or pre-existing.
         internal let pgn: PGN
@@ -105,9 +128,8 @@ internal struct PGNStore {
     /// Library. Shares `contentHash` with import — one hash, two doors —
     /// so a game that was also imported (or archived twice, e.g. by the
     /// resume self-heal after a crash mid-save) deduplicates instead of
-    /// duplicating. `@MainActor` because it reads the `@MainActor`
-    /// `LiveGame` and returns a model-bearing result.
-    @MainActor
+    /// duplicating. (Reads the `@MainActor` `LiveGame` and returns a
+    /// model-bearing result — covered by the type's isolation.)
     @discardableResult
     internal func archive(_ game: LiveGame) throws -> ArchiveResult {
         guard game.isFinished, game.result != .ongoing else {
@@ -201,7 +223,7 @@ internal struct PGNStore {
         let parts: [String] = [
             normalize(pgn.event),
             normalize(pgn.site),
-            pgn.date.map(hashDateFormatter.string(from:)) ?? "",
+            pgn.date.map(hashDateString(from:)) ?? "",
             pgn.round.map(String.init) ?? "",
             normalize(pgn.white),
             normalize(pgn.black),

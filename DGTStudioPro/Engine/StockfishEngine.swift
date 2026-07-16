@@ -30,6 +30,28 @@ import os
 /// await engine.shutdown()
 /// ```
 ///
+/// **Startup failures (F4):** `start()` *throws* rather than suspending
+/// forever. Three exits guard the handshake: the process terminating
+/// before it's ready (a wrong-architecture or instantly-crashing binary),
+/// its stdout closing, or a handshake timeout (default 5 s — a binary
+/// that launches and never speaks UCI, e.g. not actually a UCI engine).
+/// The previous design awaited `uciok` on a non-throwing continuation
+/// with no timeout: a dead binary left `start()` suspended permanently,
+/// the caller's cancellation couldn't resume it, and the runtime logged a
+/// leaked-continuation warning while the analysis driver sat at
+/// "analyzing" forever. On any startup failure the half-started process
+/// is terminated and torn down, so a retry can `start()` fresh.
+///
+/// **Inbound pipeline (F2):** stdout chunks flow through one ordered
+/// `AsyncStream<Data>` consumed by a single actor task — the readability
+/// handler's serial callback queue yields in order, so line assembly can
+/// never see swapped chunks. (The previous design spawned one unstructured
+/// `Task` per chunk; separate tasks carry no ordering guarantee, which
+/// could interleave UCI lines under load.) Buffering as `Data` and
+/// splitting on `\n` also fixes a silent byte-drop: decoding each chunk to
+/// `String` up front returned nil — and discarded the chunk — whenever a
+/// read happened to split a multi-byte codepoint.
+///
 /// **Cancellation:** if the Task consuming the stream is cancelled
 /// (e.g. the user navigates away from a game), the stream's
 /// `onTermination` handler sends `stop` to Stockfish to abort the
@@ -41,55 +63,68 @@ import os
 /// and begins the new one. The per-analysis UUID ensures the prior's
 /// termination handler doesn't disrupt the new analysis.
 internal actor StockfishEngine {
-    
+
     // MARK: Static Constants
-    
+
     private static let logger = Logger(
         subsystem: "com.berasenol.dgtstudiopro",
         category: "engine"
     )
-    
+
     private static let uciLogger = Logger(
         subsystem: "com.berasenol.dgtstudiopro",
         category: "uci"
     )
-    
+
     // MARK: Errors
-    
+
     internal enum EngineError: Error, Equatable {
         case binaryNotFound
         case startupFailed(String)
         case alreadyStarted
         case notStarted
     }
-    
+
     // MARK: Stored State
-    
+
     private let binaryURL: URL
-    
+
     private var process: Process?
     private var stdinHandle: FileHandle?
     private var stdoutHandle: FileHandle?
-    private var stdoutBuffer: String = ""
-    
+
+    /// Raw stdout bytes awaiting a complete `\n`-terminated line. `Data`,
+    /// not `String` — see the type doc's F2 note on split codepoints.
+    private var stdoutBuffer = Data()
+
+    /// Feeds stdout chunks to `stdoutTask`, in arrival order (F2). Finished
+    /// by the handler on EOF (engine exited / closed stdout) or by
+    /// `teardown()`.
+    private var stdoutContinuation: AsyncStream<Data>.Continuation?
+
+    /// The single actor-isolated consumer of the stdout stream.
+    private var stdoutTask: Task<Void, Never>?
+
     private(set) var engineName: String?
     private(set) var engineAuthor: String?
-    
+
     // Analysis state — one active at a time in the eval-only phase.
     private var currentContinuation: AsyncStream<Evaluation>.Continuation?
     private var currentSideToMove: PieceColor = .white
     private var currentAnalysisID: UUID?
-    
-    // One-shot handshake continuations.
-    private var uciOKContinuation: CheckedContinuation<Void, Never>?
-    private var readyOKContinuation: CheckedContinuation<Void, Never>?
-    
+
+    // One-shot handshake continuations. Throwing (F4): resumed with success
+    // by `uciok`/`readyok`, or with `EngineError.startupFailed` by process
+    // termination, stdout EOF, or the handshake timeout.
+    private var uciOKContinuation: CheckedContinuation<Void, any Error>?
+    private var readyOKContinuation: CheckedContinuation<Void, any Error>?
+
     // MARK: Initialization
-    
+
     internal init(binaryURL: URL) {
         self.binaryURL = binaryURL
     }
-    
+
     /// Resolves the bundled Stockfish binary, if present. Returns nil
     /// when the binary isn't in the app's Resources — typically because
     /// the developer hasn't run through the steps in `Engine_README.md`,
@@ -98,28 +133,34 @@ internal actor StockfishEngine {
     internal static var defaultBinaryURL: URL? {
         Bundle.main.url(forResource: "stockfish", withExtension: nil)
     }
-    
+
     /// Reports whether the engine subprocess is currently running.
     /// Useful for UI state ("Start engine" vs "Engine running") and
     /// for tests that verify clean lifecycle transitions.
     internal var isRunning: Bool {
         process?.isRunning ?? false
     }
-    
+
     // MARK: Lifecycle
-    
+
     /// Spawns the subprocess and performs the UCI handshake (sends
     /// `uci`, awaits `uciok`; sends `isready`, awaits `readyok`).
     /// After this returns, the engine is ready to accept analysis
     /// requests.
-    internal func start() async throws {
+    ///
+    /// Throws `EngineError.startupFailed` when the process exits or goes
+    /// silent before completing the handshake, or when `handshakeTimeout`
+    /// elapses first (F4). A failed start leaves nothing behind — the
+    /// half-started process is terminated and all state cleared — so the
+    /// caller may retry.
+    internal func start(handshakeTimeout: Duration = .seconds(5)) async throws {
         guard process == nil else {
             Self.logger.error("start() called but engine is already running")
             throw EngineError.alreadyStarted
         }
-        
+
         Self.logger.info("Starting engine at \(self.binaryURL.path, privacy: .public)")
-        
+
         let proc = Process()
         proc.executableURL = binaryURL
         let stdin = Pipe()
@@ -128,82 +169,222 @@ internal actor StockfishEngine {
         proc.standardInput = stdin
         proc.standardOutput = stdout
         proc.standardError = stderr
-        
-        // Bounce stdout chunks into the actor.
-        stdout.fileHandleForReading.readabilityHandler = { [weak self] handle in
-            let data = handle.availableData
-            guard !data.isEmpty,
-                  let chunk = String(data: data, encoding: .utf8)
-            else { return }
-            Task { [weak self] in
-                await self?.ingestStdoutChunk(chunk)
+
+        // The ordered stdout pipeline (F2) — see the type doc. The handler
+        // captures no `self`; it only bridges bytes into the stream. Raw
+        // `read(2)` keeps a dead pipe from raising through `availableData`,
+        // and 0/-1 becomes the end-of-stream signal.
+        let (chunks, stdoutContinuation) = AsyncStream.makeStream(of: Data.self)
+        self.stdoutContinuation = stdoutContinuation
+        stdout.fileHandleForReading.readabilityHandler = { handle in
+            var buffer = [UInt8](repeating: 0, count: 4096)
+            let count = Darwin.read(handle.fileDescriptor, &buffer, buffer.count)
+            if count > 0 {
+                stdoutContinuation.yield(Data(buffer[0..<count]))
+            } else if count < 0 && (errno == EAGAIN || errno == EINTR) {
+                // Spurious wakeup — the next callback retries.
+            } else {
+                // EOF or fatal read error — the engine exited or closed
+                // stdout. End the pipeline; `engineOutputEnded()` reacts.
+                handle.readabilityHandler = nil
+                stdoutContinuation.finish()
             }
         }
-        
+
+        // One long-lived, actor-isolated consumer: line assembly and
+        // dispatch run here, in chunk-arrival order.
+        stdoutTask = Task {
+            for await chunk in chunks {
+                ingestStdoutChunk(chunk)
+            }
+            engineOutputEnded()
+        }
+
+        // F4: the engine dying — at any point, including the clean `quit`
+        // during `shutdown()` — must never strand a waiter. Termination
+        // fails any pending handshake, finishes any live analysis stream,
+        // and tears down (all idempotent, so overlapping exits are safe).
+        proc.terminationHandler = { [weak self] process in
+            let status = process.terminationStatus
+            Task { [weak self] in
+                await self?.processDidTerminate(status: status)
+            }
+        }
+
         do {
             try proc.run()
         } catch {
             Self.logger.error(
                 "Engine subprocess failed to launch: \(error.localizedDescription, privacy: .public)"
             )
+            teardown()
             throw EngineError.startupFailed(error.localizedDescription)
         }
-        
+
         self.process = proc
         self.stdinHandle = stdin.fileHandleForWriting
         self.stdoutHandle = stdout.fileHandleForReading
-        
-        // UCI handshake. The continuation is registered synchronously
-        // inside withCheckedContinuation's body before the function
-        // suspends, so there's no race with stdout arrival.
-        try writeLine("uci")
-        await withCheckedContinuation { cont in
-            uciOKContinuation = cont
+
+        // UCI handshake. Each continuation is registered synchronously
+        // inside withCheckedThrowingContinuation's body before the function
+        // suspends, so there's no race with stdout arrival; the timeout
+        // task, termination handler, and stdout-EOF path can each resume it
+        // with a failure (exactly one wins — `failHandshake` nils as it
+        // resumes).
+        do {
+            try writeLine("uci")
+            try await awaitHandshake(timeout: handshakeTimeout, awaiting: "uciok") {
+                self.uciOKContinuation = $0
+            }
+
+            try writeLine("isready")
+            try await awaitHandshake(timeout: handshakeTimeout, awaiting: "readyok") {
+                self.readyOKContinuation = $0
+            }
+        } catch {
+            // A half-started engine must not leak (F4): kill it and clear
+            // everything so a retry can `start()` fresh. The termination
+            // handler will fire for the kill and no-op against the already
+            // torn-down state. Foreign errors (e.g. an EPIPE from writing
+            // `uci` into a pipe whose reader already died) are wrapped so
+            // `start()`'s failure surface is uniformly `EngineError`.
+            Self.logger.error(
+                "Engine startup failed: \(String(describing: error), privacy: .public) — terminating subprocess"
+            )
+            if proc.isRunning { proc.terminate() }
+            teardown()
+            throw (error as? EngineError)
+            ?? EngineError.startupFailed("UCI handshake failed: \(error.localizedDescription)")
         }
-        
-        try writeLine("isready")
-        await withCheckedContinuation { cont in
-            readyOKContinuation = cont
-        }
-        
+
         Self.logger.info(
             "Engine ready: name='\(self.engineName ?? "?", privacy: .public)' author='\(self.engineAuthor ?? "?", privacy: .public)'"
         )
     }
-    
+
     /// Shuts the engine down: terminates any in-flight analysis,
     /// sends `quit`, gives the subprocess a brief grace period to exit
-    /// cleanly, then force-terminates if necessary.
+    /// cleanly, then force-terminates if necessary. Safe to call when
+    /// not started (no-op) and after a failed `start()` (also a no-op —
+    /// the failure path already tore down).
     internal func shutdown() async {
         guard let proc = process else { return }
-        
+
         Self.logger.info("Shutting down engine")
-        
+
         // Tear down any in-flight analysis.
         currentContinuation?.finish()
         currentContinuation = nil
         currentAnalysisID = nil
-        
+
         try? writeLine("quit")
-        
+
         // Grace period for the engine to drain `quit`. Async sleep
-        // keeps the actor's executor free during the wait.
+        // keeps the actor's executor free during the wait. (The clean
+        // exit fires `processDidTerminate` during this sleep; it runs
+        // `teardown()` itself, and the repeat below is a guarded no-op.)
         try? await Task.sleep(for: .milliseconds(500))
         if proc.isRunning {
             Self.logger.info("Engine did not exit within grace period; force-terminating")
             proc.terminate()
         }
-        
+
+        teardown()
+
+        Self.logger.info("Engine shutdown complete")
+    }
+
+    /// Fires for every process exit — the clean `quit` during `shutdown()`,
+    /// a startup-failure kill, and an unexpected mid-session crash alike.
+    /// Anything still waiting on the engine must not wait forever (F4):
+    /// fail any pending handshake, finish any live analysis stream, tear
+    /// down. Idempotent: a deliberate teardown that already ran leaves
+    /// `process` nil, and this becomes a no-op.
+    private func processDidTerminate(status: Int32) {
+        guard process != nil else { return }
+        Self.logger.error("Engine terminated (status \(status, privacy: .public))")
+        failHandshake(
+            with: EngineError.startupFailed(
+                "The engine exited (status \(status)) before completing the UCI handshake."
+            )
+        )
+        currentContinuation?.finish()
+        currentContinuation = nil
+        currentAnalysisID = nil
+        teardown()
+    }
+
+    /// Runs when the stdout stream finishes. A deliberate teardown already
+    /// cleared `process` — nothing to do. Otherwise the engine closed its
+    /// stdout while still tracked (a crash's first symptom): no further
+    /// responses are coming, so fail any pending handshake and finish any
+    /// live analysis stream now. Process bookkeeping is left to the
+    /// termination handler, which follows immediately behind.
+    private func engineOutputEnded() {
+        guard process != nil else { return }
+        Self.logger.error("Engine stdout ended while the process was still tracked")
+        failHandshake(
+            with: EngineError.startupFailed(
+                "The engine closed its output before completing the UCI handshake."
+            )
+        )
+        currentContinuation?.finish()
+        currentContinuation = nil
+        currentAnalysisID = nil
+    }
+
+    /// Clears every piece of subprocess state: read source, pipeline,
+    /// handles, process reference. Idempotent by construction — every line
+    /// tolerates already-cleared state — so the shutdown path, the
+    /// termination handler, and the startup-failure path can overlap safely.
+    private func teardown() {
         stdoutHandle?.readabilityHandler = nil
+        stdoutContinuation?.finish()
+        stdoutContinuation = nil
+        stdoutTask = nil
+        stdoutBuffer = Data()
         process = nil
         stdinHandle = nil
         stdoutHandle = nil
-        
-        Self.logger.info("Engine shutdown complete")
     }
-    
+
+    // MARK: Handshake (F4)
+
+    /// Awaits one handshake response with a deadline. `register` stores the
+    /// throwing continuation (synchronously, before any suspension); the
+    /// timeout task resumes it with `startupFailed` if the response doesn't
+    /// arrive first. Whichever of {response, timeout, termination, EOF}
+    /// runs first wins — `failHandshake` and the response handlers all nil
+    /// the continuation as they resume it.
+    private func awaitHandshake(
+        timeout: Duration,
+        awaiting expected: String,
+        register: (CheckedContinuation<Void, any Error>) -> Void
+    ) async throws {
+        let timeoutTask = Task {
+            try? await Task.sleep(for: timeout)
+            guard !Task.isCancelled else { return }
+            failHandshake(
+                with: EngineError.startupFailed(
+                    "Timed out waiting for the engine's '\(expected)'."
+                )
+            )
+        }
+        defer { timeoutTask.cancel() }
+        try await withCheckedThrowingContinuation(register)
+    }
+
+    /// Resumes any pending handshake continuation with `error`, exactly
+    /// once each. No-op when nothing is pending.
+    private func failHandshake(with error: EngineError) {
+        uciOKContinuation?.resume(throwing: error)
+        uciOKContinuation = nil
+        readyOKContinuation?.resume(throwing: error)
+        readyOKContinuation = nil
+    }
+
     // MARK: Analysis
-    
+
     /// Begins analysis of `fen` to `depth` plies. Returns an
     /// `AsyncStream<Evaluation>` that yields progressively-deeper
     /// evaluations as Stockfish reports them, then completes when
@@ -230,7 +411,7 @@ internal actor StockfishEngine {
             }
         }
     }
-    
+
     private func beginAnalysis(
         fen: FEN,
         depth: Int,
@@ -239,15 +420,15 @@ internal actor StockfishEngine {
         let analysisID = UUID()
         let priorContinuation = currentContinuation
         let hadPriorAnalysis = priorContinuation != nil
-        
+
         currentContinuation = continuation
         currentSideToMove = fen.activeColor
         currentAnalysisID = analysisID
-        
+
         Self.logger.debug(
             "beginAnalysis id=\(analysisID, privacy: .public) depth=\(depth) fen='\(fen.string, privacy: .public)' replacing=\(hadPriorAnalysis)"
         )
-        
+
         // Capture analysisID in the termination closure so it can be
         // compared against currentAnalysisID at termination time. If the
         // current analysis has been replaced by a newer one, this
@@ -257,7 +438,7 @@ internal actor StockfishEngine {
                 await self?.handleStreamTermination(forAnalysisID: analysisID)
             }
         }
-        
+
         do {
             // If a prior analysis is active, abort its search before
             // sending the new position. Stockfish processes commands
@@ -276,13 +457,13 @@ internal actor StockfishEngine {
             currentContinuation = nil
             currentAnalysisID = nil
         }
-        
+
         // Notify the prior consumer that its stream is over. Its
         // termination handler will fire but will see currentAnalysisID
         // no longer matches and will no-op.
         priorContinuation?.finish()
     }
-    
+
     private func handleStreamTermination(forAnalysisID id: UUID) async {
         guard currentAnalysisID == id else {
             // Stale termination signal from a replaced analysis. Ignore.
@@ -290,26 +471,36 @@ internal actor StockfishEngine {
         }
         try? writeLine("stop")
     }
-    
+
     // MARK: Stdout Ingestion
-    
+
     /// Appends raw stdout bytes to the line buffer and flushes any
     /// complete lines to the response handler. UCI is line-oriented,
-    /// but read chunks don't necessarily align with line boundaries.
-    private func ingestStdoutChunk(_ chunk: String) {
-        stdoutBuffer += chunk
-        while let newlineRange = stdoutBuffer.range(of: "\n") {
-            let line = String(stdoutBuffer[..<newlineRange.lowerBound])
-            stdoutBuffer.removeSubrange(..<newlineRange.upperBound)
+    /// but read chunks don't necessarily align with line boundaries —
+    /// or even with codepoint boundaries, which is why the buffer is
+    /// `Data` and decoding happens per complete line (F2). Runs only on
+    /// `stdoutTask`, in chunk-arrival order.
+    private func ingestStdoutChunk(_ chunk: Data) {
+        stdoutBuffer.append(chunk)
+        while let newlineIndex = stdoutBuffer.firstIndex(of: 0x0A) {
+            var lineData = stdoutBuffer[stdoutBuffer.startIndex..<newlineIndex]
+            if lineData.last == 0x0D {  // tolerate \r\n
+                lineData = lineData.dropLast()
+            }
+            // `String(decoding:)` never fails — invalid sequences become
+            // U+FFFD instead of silently discarding the line. UCI output
+            // is ASCII in practice; this is belt and braces.
+            let line = String(decoding: lineData, as: UTF8.self)
+            stdoutBuffer.removeSubrange(stdoutBuffer.startIndex...newlineIndex)
             handleStdoutLine(line)
         }
     }
-    
+
     /// Parses a single complete line from stdout and dispatches by
     /// response type.
     private func handleStdoutLine(_ line: String) {
         Self.uciLogger.debug("recv: \(line, privacy: .public)")
-        
+
         guard let response = UCIProtocol.parse(line) else {
             // Empty lines are normal between sections; only log non-empty
             // unparseables so we can spot real engine drift.
@@ -318,37 +509,37 @@ internal actor StockfishEngine {
             }
             return
         }
-        
+
         switch response {
         case .info(let info):
             guard let score = info.score else { return }
             let evaluation = score.toEvaluation(sideToMove: currentSideToMove)
             currentContinuation?.yield(evaluation)
-            
+
         case .bestMove:
             currentContinuation?.finish()
             currentContinuation = nil
             currentAnalysisID = nil
-            
+
         case .id(let key, let value):
             switch key {
             case "name":   engineName = value
             case "author": engineAuthor = value
             default:       break
             }
-            
+
         case .uciOK:
-            uciOKContinuation?.resume()
+            uciOKContinuation?.resume(returning: ())
             uciOKContinuation = nil
-            
+
         case .readyOK:
-            readyOKContinuation?.resume()
+            readyOKContinuation?.resume(returning: ())
             readyOKContinuation = nil
         }
     }
-    
+
     // MARK: Stdin
-    
+
     /// Writes a single UCI command line (newline appended) to the
     /// engine's stdin. Synchronous from the actor's perspective —
     /// `FileHandle.write(contentsOf:)` doesn't suspend.

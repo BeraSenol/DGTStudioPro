@@ -147,12 +147,12 @@ internal struct LibraryDestination: View {
         Group {
             if filteredGames.isEmpty {
                 emptyState
-                    .accessibilityIdentifier("library.emptyState")
+                    .accessibilityIdentifier(AccessibilityID.libraryEmptyState)
             } else {
                 modeView
             }
         }
-        .accessibilityIdentifier("library.content")
+        .accessibilityIdentifier(AccessibilityID.libraryContent)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle(filter?.displayName ?? "Library")
         .dropDestination(for: URL.self) { urls, _ in
@@ -185,7 +185,7 @@ internal struct LibraryDestination: View {
                 onOpen:   openGame,
                 onDelete: { pendingDeletion = $0 }
             )
-            .accessibilityIdentifier("library.mode.icons")
+            .accessibilityIdentifier(AccessibilityID.libraryModeIcons)
         case .list:
             LibraryListView(
                 games: filteredGames,
@@ -193,7 +193,7 @@ internal struct LibraryDestination: View {
                 onOpen:   openGame,
                 onDeleteIDs: { requestDelete(ids: $0) }
             )
-            .accessibilityIdentifier("library.mode.list")
+            .accessibilityIdentifier(AccessibilityID.libraryModeList)
         case .columns:
             LibraryColumnsView(
                 games: filteredGames,
@@ -201,7 +201,7 @@ internal struct LibraryDestination: View {
                 onOpen:   openGame,
                 onDelete: { pendingDeletion = $0 }
             )
-            .accessibilityIdentifier("library.mode.columns")
+            .accessibilityIdentifier(AccessibilityID.libraryModeColumns)
         case .gallery:
             LibraryGalleryView(
                 games: filteredGames,
@@ -210,7 +210,7 @@ internal struct LibraryDestination: View {
                 onOpen:   openGame,
                 onDelete: { pendingDeletion = $0 }
             )
-            .accessibilityIdentifier("library.mode.gallery")
+            .accessibilityIdentifier(AccessibilityID.libraryModeGallery)
         }
     }
 
@@ -239,14 +239,14 @@ internal struct LibraryDestination: View {
                 }
             }
             .pickerStyle(.segmented)
-            .accessibilityIdentifier("library.viewModePicker")
+            .accessibilityIdentifier(AccessibilityID.libraryViewModePicker)
         }
         ToolbarSpacer()
         ToolbarItem {
             Button(action: presentOpenPanel) {
                 Label("Import PGN", systemImage: "square.and.arrow.down")
             }
-            .accessibilityIdentifier("library.importButton")
+            .accessibilityIdentifier(AccessibilityID.libraryImportButton)
         }
         ToolbarSpacer()
         ToolbarItem {
@@ -257,7 +257,7 @@ internal struct LibraryDestination: View {
             }
             .disabled(selectedPGNs.isEmpty)
             .help(selectedPGNs.count > 1 ? "Delete \(selectedPGNs.count) selected games" : "Delete selected game")
-            .accessibilityIdentifier("library.deleteButton")
+            .accessibilityIdentifier(AccessibilityID.libraryDeleteButton)
         }
         ToolbarSpacer()
         ToolbarItem {
@@ -266,7 +266,7 @@ internal struct LibraryDestination: View {
             } label: {
                 Label("Inspector", systemImage: "sidebar.trailing")
             }
-            .accessibilityIdentifier("library.inspectorToggle")
+            .accessibilityIdentifier(AccessibilityID.libraryInspectorToggle)
         }
     }
 

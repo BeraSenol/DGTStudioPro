@@ -20,20 +20,38 @@ import Foundation
 ///
 /// ## Timing note
 ///
-/// `boardChanged(_:)` arms a 300 ms quiescence `Task`; `settle` runs only when
-/// it fires. In the **synchronous** tests below, that task is scheduled but
-/// never executes (the test holds the main actor straight through, so `settle`
-/// can't interleave) — the assertions are therefore deterministic, observing
-/// state set by the synchronous lifecycle calls alone. The handful of tests
-/// that genuinely need `settle` are grouped under "Timer-Driven Settle" and
-/// `await` past the quiescence window; those are timing-dependent by nature
-/// (a heavily loaded machine could in principle need a longer margin).
+/// `boardChanged(_:)` arms a quiescence `Task` (`session.quiescence`, 300 ms
+/// in production); `settle` runs only when it fires. In the **synchronous**
+/// tests below, that task is scheduled but never executes (the test holds the
+/// main actor straight through, so `settle` can't interleave) — the
+/// assertions are therefore deterministic, observing state set by the
+/// synchronous lifecycle calls alone. The tests that genuinely need `settle`
+/// are grouped under "Timer-Driven Settle": they shrink `quiescence` to
+/// 10 ms and `poll(until:)` for the *outcome* instead of sleeping a fixed
+/// margin (F7 — the old fixed 450 ms waits raced the scheduler under
+/// parallel-suite load, a test-only flake with a session-bug signature;
+/// polling is load-independent).
 @MainActor
 @Suite("DGT Live Session")
 struct DGTLiveSessionTests {
 
     private func roster() -> LiveGame.Roster {
         .init(white: "White", black: "Black")
+    }
+
+    /// Polls `condition` every 10 ms until it holds or `timeout` elapses,
+    /// then asserts it. Timer-driven tests await *outcomes*, not clocks —
+    /// see the suite's timing note (F7).
+    private func poll(
+        timeout: Duration = .seconds(2),
+        until condition: () -> Bool
+    ) async throws {
+        let deadline = ContinuousClock.now + timeout
+        while ContinuousClock.now < deadline {
+            if condition() { return }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(condition(), "Timed out after \(timeout) waiting for condition")
     }
 
     // MARK: Idle
@@ -154,18 +172,16 @@ struct DGTLiveSessionTests {
         #expect(session.liveGame == nil)
     }
 
-    // MARK: Timer-Driven Settle (timing-dependent)
+    // MARK: Timer-Driven Settle (quiescence-driven, polled)
 
     /// After the quiescence window elapses on the start position while idle,
-    /// the session offers a new game; dismissing clears the offer. Awaits a
-    /// generous margin past the 300 ms window.
+    /// the session offers a new game; dismissing clears the offer.
     @Test func settlingOnStartPositionOffersANewGame() async throws {
         let session = DGTLiveSession()
+        session.quiescence = .milliseconds(10)
         session.boardChanged(.starting)
 
-        try await Task.sleep(for: .milliseconds(450))   // > 300 ms quiescence
-
-        #expect(session.shouldOfferNewGame == true)
+        try await poll { session.shouldOfferNewGame }
 
         session.dismissNewGameOffer()
         #expect(session.shouldOfferNewGame == false)
@@ -176,6 +192,7 @@ struct DGTLiveSessionTests {
     /// without tripping recovery.
     @Test func settlingAfterAMoveCommitsIt() async throws {
         let session = DGTLiveSession()
+        session.quiescence = .milliseconds(10)
         session.boardChanged(.starting)
         session.startNewGame(roster: roster())       // already-set-up → playing
 
@@ -183,11 +200,56 @@ struct DGTLiveSessionTests {
         let boardAfterE4 = GameState.starting.applying(e4).position
         session.boardChanged(boardAfterE4)            // cancels the prior task, arms a new one
 
-        try await Task.sleep(for: .milliseconds(450))
+        try await poll { session.liveGame?.plyCount == 1 }
 
-        #expect(session.liveGame?.plyCount == 1)
         #expect(session.liveGame?.sanMoves == ["e4"])
         #expect(session.needsRecovery == false)
+    }
+
+    /// An unexplainable board settles into recovery — the session-level pin
+    /// on `.unresolved` routing through `enterRecovery` — and a manual
+    /// result *during* recovery ends it (product decision, July 2026
+    /// review): the game is decided, so the guidance no longer applies and
+    /// is discarded; the finished game keeps its result and archives
+    /// normally (headless here, so the draft carries it).
+    @Test func resignDuringRecoveryEndsRecoveryAndKeepsTheDecidedGame() async throws {
+        let session = DGTLiveSession()
+        session.quiescence = .milliseconds(10)
+        session.boardChanged(.starting)
+        session.startNewGame(roster: roster())        // already-set-up → playing
+
+        // A pawn materializing on e5 completes no legal move from the start
+        // position: nothing was vacated, so reconstruction can't pair it
+        // into a move and lands on `.unresolved`.
+        var garbage = Position.starting
+        garbage[Squares.e5] = .whitePawn
+        session.boardChanged(garbage)
+        try await poll { session.needsRecovery }
+
+        session.resign(.white)
+
+        #expect(session.needsRecovery == false)
+        #expect(session.liveGame?.isFinished == true)
+        #expect(session.liveGame?.result == .blackWins)
+    }
+
+    /// The draw twin of the resign path above — both manual results share
+    /// `exitRecoveryForManualResult`.
+    @Test func agreeDrawDuringRecoveryEndsRecoveryToo() async throws {
+        let session = DGTLiveSession()
+        session.quiescence = .milliseconds(10)
+        session.boardChanged(.starting)
+        session.startNewGame(roster: roster())
+
+        var garbage = Position.starting
+        garbage[Squares.e5] = .whitePawn
+        session.boardChanged(garbage)
+        try await poll { session.needsRecovery }
+
+        session.agreeDraw()
+
+        #expect(session.needsRecovery == false)
+        #expect(session.liveGame?.result == .draw)
     }
 
     // MARK: Draft Persistence (M4)
@@ -217,10 +279,11 @@ struct DGTLiveSessionTests {
         #expect(draft?.result == .ongoing)
     }
 
-    /// The core Decision #2 path: a committed ply lands in the file. Same
-    /// timing pattern as `settlingAfterAMoveCommitsIt`.
+    /// The core Decision #2 path: a committed ply lands in the file. Polls
+    /// for the commit; the draft save is synchronous within the same settle.
     @Test func committedPlySavesTheDraft() async throws {
         let session = DGTLiveSession()
+        session.quiescence = .milliseconds(10)
         let store = temporaryStore()
         session.draftStore = store
 
@@ -229,7 +292,7 @@ struct DGTLiveSessionTests {
 
         let e4 = try GameState.starting.parseSAN("e4")
         session.boardChanged(GameState.starting.applying(e4).position)
-        try await Task.sleep(for: .milliseconds(450))
+        try await poll { session.liveGame?.plyCount == 1 }
 
         #expect(try store.load()?.sanMoves == ["e4"])
     }
@@ -388,17 +451,28 @@ struct DGTLiveSessionTests {
     /// new-game offer (the two would collide, and starting fresh would
     /// silently overwrite the offered draft). Declining the resume hands
     /// over to the ordinary offer on the spot.
+    ///
+    /// The suppression is a *negative*, so the test awaits the positive
+    /// breadcrumb the suppressed settle now leaves in the session log (F7)
+    /// — proof the settle actually ran — before asserting the flag stayed
+    /// down. (The old version slept a fixed 450 ms and asserted nothing had
+    /// happened: vacuously green if settle never ran at all.)
     @Test func pendingDraftSuppressesTheNewGameOffer() async throws {
         let store = temporaryStore()
         let game = LiveGame(roster: roster())
         try store.save(game.draftSnapshot)
 
         let session = DGTLiveSession()
+        session.quiescence = .milliseconds(10)
+        let log = DGTSessionLog()
+        session.sessionLog = log
         session.draftStore = store
         session.loadPendingDraft()
 
         session.boardChanged(.starting)
-        try await Task.sleep(for: .milliseconds(450))
+        try await poll {
+            log.entries.contains { $0.message.contains("offer suppressed") }
+        }
         #expect(session.shouldOfferNewGame == false)
 
         session.deletePendingDraft()

@@ -27,12 +27,13 @@ import SwiftData
 ///
 /// Timing note: same convention as `DGTLiveSessionTests` — synchronous
 /// tests hold the main actor so the quiescence `Task` never runs. The
-/// settle-driven test *polls* for each commit (`poll(timeout:until:)`)
-/// rather than sleeping a fixed interval: a fixed wait races the 300 ms
-/// quiescence timer under parallel-suite CPU load (the Perft suites
-/// saturate every core), and losing that race cancels the pending settle
-/// and coalesces two moves into an illegal diff — a test-only flake that
-/// looks exactly like a session bug.
+/// settle-driven test shrinks `session.quiescence` to 10 ms (F7) and
+/// *polls* for each commit (`poll(timeout:until:)`) rather than sleeping a
+/// fixed interval: a fixed wait races the quiescence timer under
+/// parallel-suite CPU load (the Perft suites saturate every core), and
+/// losing that race cancels the pending settle and coalesces two moves
+/// into an illegal diff — a test-only flake that looks exactly like a
+/// session bug.
 @MainActor
 @Suite("DGT Live Session — Archive (M5)")
 struct DGTLiveSessionArchiveTests {
@@ -78,6 +79,7 @@ struct DGTLiveSessionArchiveTests {
         context: ModelContext
     ) -> (session: DGTLiveSession, drafts: LiveGameDraftStore) {
         let session = DGTLiveSession()
+        session.quiescence = .milliseconds(10)   // F7 — see the timing note
         let drafts = temporaryStore()
         session.draftStore = drafts
         let store = PGNStore(modelContext: context)
@@ -91,7 +93,8 @@ struct DGTLiveSessionArchiveTests {
 
     /// Waits for `condition` (up to `timeout`) instead of sleeping a fixed
     /// interval. The settle path is timer-driven — `boardChanged` cancels
-    /// and restarts a 300 ms quiescence task — so a fixed sleep races the
+    /// and restarts the quiescence task (shrunk to 10 ms here, F7) — so a
+    /// fixed sleep races the
     /// scheduler: `Task.sleep` guarantees only a *minimum*, and a settle
     /// continuation can queue past any fixed window on a loaded machine,
     /// at which point the next board feed cancels it and two moves
@@ -130,6 +133,7 @@ struct DGTLiveSessionArchiveTests {
         context: ModelContext
     ) -> (session: DGTLiveSession, drafts: LiveGameDraftStore, door: FlakyArchiveDoor) {
         let session = DGTLiveSession()
+        session.quiescence = .milliseconds(10)   // F7 — see the timing note
         let drafts = temporaryStore()
         session.draftStore = drafts
         let door = FlakyArchiveDoor(store: PGNStore(modelContext: context))
@@ -205,9 +209,10 @@ struct DGTLiveSessionArchiveTests {
         // (A fixed sleep is fine for this one step: there is no positive
         // state change to poll for, and the assertion holds even if this
         // settle coalesces into the next board's under extreme load — a
-        // finished game's settle never trips recovery either way.)
+        // finished game's settle never trips recovery either way. 100 ms
+        // is a 10× margin over the suite's 10 ms quiescence.)
         session.boardChanged(states[0].position)   // any mid-clear board
-        try await Task.sleep(for: .milliseconds(450))
+        try await Task.sleep(for: .milliseconds(100))
         #expect(session.needsRecovery == false)
 
         // …and restoring the start position offers the next game.

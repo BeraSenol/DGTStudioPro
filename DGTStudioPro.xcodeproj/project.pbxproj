@@ -30,6 +30,21 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C57D3C903009763000A1B230 /* Exceptions for "DGTStudioPro" folder in "DGTStudioProTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				App/AccessibilityID.swift,
+			);
+			target = C5D920CF2F732FE9003D0A74 /* DGTStudioProTests */;
+		};
+		C57D3C913009763000A1B230 /* Exceptions for "DGTStudioPro" folder in "DGTStudioProUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				App/AccessibilityID.swift,
+				PGN/PGN.swift,
+			);
+			target = C5D920D92F732FE9003D0A74 /* DGTStudioProUITests */;
+		};
 		C58C80EE2FC6F5A40021F314 /* Exceptions for "DGTStudioProTests" folder in "DGTStudioPro" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -49,6 +64,10 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		C5D920C32F732FE8003D0A74 /* DGTStudioPro */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C57D3C903009763000A1B230 /* Exceptions for "DGTStudioPro" folder in "DGTStudioProTests" target */,
+				C57D3C913009763000A1B230 /* Exceptions for "DGTStudioPro" folder in "DGTStudioProUITests" target */,
+			);
 			path = DGTStudioPro;
 			sourceTree = "<group>";
 		};

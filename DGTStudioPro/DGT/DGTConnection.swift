@@ -123,7 +123,12 @@ internal final class DGTConnection {
 
     // MARK: Private State
 
-    @ObservationIgnored private let port = DGTSerialPort()
+    /// The transport (F9-injectable). Production wires the real serial port
+    /// via the default `init`; tests inject a scripted `DGTPortProviding`
+    /// fake so connect, event routing, stream-end, and reconnect logic run
+    /// without hardware. The contract both share: the event stream finishing
+    /// is the single "port is gone" signal (see `DGTPortProviding`).
+    @ObservationIgnored private let port: any DGTPortProviding
 
     /// Called after every physical-board change (dump or field update) with the
     /// new board. `DGTLiveSession` sets this to drive its quiescence timer and
@@ -140,6 +145,22 @@ internal final class DGTConnection {
     /// the same nil-hook pattern as `sessionLog` and `draftStore`.
     @ObservationIgnored internal var shouldAutoReconnect: (() -> Bool)?
 
+    /// Device-enumeration seam (F9): defaults to the real IOKit walk; tests
+    /// inject a scripted list so `search()`, the launch auto-connect check,
+    /// and the reconnect lap's "is it back yet?" probe run hermetically
+    /// instead of walking the test host's IORegistry. The same settable-hook
+    /// pattern as `sessionLog` and `shouldAutoReconnect`; production never
+    /// writes it.
+    @ObservationIgnored internal var enumerateDevices: () -> [DGTSerialDevice] = {
+        DGTDeviceDiscovery.availableDevices()
+    }
+
+    /// UserDefaults seam (F9): tests inject a throwaway suite so the
+    /// remembered-device write after a first dump and the launch
+    /// auto-connect read never touch the developer's real preferences from
+    /// the ⌘U host. Production never writes it.
+    @ObservationIgnored internal var defaults: UserDefaults = .standard
+
     @ObservationIgnored private var readTask: Task<Void, Never>?
     @ObservationIgnored private var errorClearTask: Task<Void, Never>?
 
@@ -148,7 +169,9 @@ internal final class DGTConnection {
 
     /// Spacing between init commands so a board with a shallow input buffer
     /// isn't overrun, and so the log clearly attributes each response.
-    @ObservationIgnored private let initCommandStagger: Duration = .milliseconds(75)
+    /// Internal-settable so fake-port tests zero it (F9); production never
+    /// writes it.
+    @ObservationIgnored internal var initCommandStagger: Duration = .milliseconds(75)
 
     /// How long a `.failed` status lingers before auto-clearing to
     /// `.disconnected`.
@@ -157,9 +180,15 @@ internal final class DGTConnection {
     /// M7.3 — spacing between auto-reconnect laps. Timed retry over IOKit
     /// arrival notifications is a deliberate v1 simplification; the
     /// notification alternative is parked in the roadmap's parking lot.
-    @ObservationIgnored private let reconnectRetryInterval: Duration = .seconds(3)
+    /// Internal-settable so tests shrink laps to milliseconds (F9);
+    /// production never writes it.
+    @ObservationIgnored internal var reconnectRetryInterval: Duration = .seconds(3)
 
-    internal init() {}
+    /// Production callers take the default (the real serial port); tests
+    /// pass a `DGTPortProviding` fake (F9).
+    internal init(port: any DGTPortProviding = DGTSerialPort()) {
+        self.port = port
+    }
 
     // MARK: Discovery
 
@@ -170,7 +199,7 @@ internal final class DGTConnection {
         cancelReconnect()
         cancelErrorClear()
         status = .searching
-        availableDevices = DGTDeviceDiscovery.availableDevices()
+        availableDevices = enumerateDevices()
         Self.logger.info("search() found \(self.availableDevices.count) device(s)")
         sessionLog?.capture(.debug, "search: \(availableDevices.count) device(s)")
     }
@@ -196,7 +225,6 @@ internal final class DGTConnection {
     /// never auto-connect criteria — that rejection lives in the policy's
     /// doc comment and its tests.
     internal func autoConnectAtLaunch() async {
-        let defaults = UserDefaults.standard
         // Absent reads as true — matches the `@AppStorage` default in
         // Settings ("Connect to board automatically", default on).
         let enabled = defaults.object(forKey: StorageKeys.autoConnectOnLaunch) as? Bool ?? true
@@ -204,7 +232,7 @@ internal final class DGTConnection {
         guard let target = DGTAutoConnectPolicy.launchTarget(
             enabled: enabled,
             rememberedPath: defaults.string(forKey: StorageKeys.rememberedDevicePath),
-            among: DGTDeviceDiscovery.availableDevices()
+            among: enumerateDevices()
         ) else {
             Self.logger.info("Auto-connect at launch: no eligible remembered device")
             return
@@ -266,13 +294,24 @@ internal final class DGTConnection {
             return "Could not open \(device.name): \(error)"
         }
 
+        // F3: a reconnect lap (or any connect flow) cancelled while `open`
+        // was in flight must not install a read task or start the handshake
+        // — a newer flow owns the port now. Close what this call just opened
+        // and stand down quietly (nil, not a failure string: nobody paints a
+        // banner for being superseded).
+        guard !Task.isCancelled else {
+            await port.close()
+            return nil
+        }
+
         readTask = Task { [weak self] in
             for await event in events {
                 self?.handle(event)
             }
-            // The loop ends either because we closed the port (the task is
-            // cancelled during teardown) or because the device vanished
-            // mid-session. Only the latter needs handling.
+            // The stream finishes when the port closes — because we tore it
+            // down (this task is already cancelled then) or because the
+            // device vanished and the port closed itself (F1). Only the
+            // latter is news.
             if !Task.isCancelled {
                 self?.handleStreamEnd()
             }
@@ -301,12 +340,23 @@ internal final class DGTConnection {
         ]
 
         for command in sequence {
+            // F3: once the surrounding task is cancelled, a superseded flow
+            // must stop driving the port immediately — the old `try?` here
+            // swallowed the sleep's `CancellationError` and kept sending the
+            // remaining commands back-to-back into a port a newer flow now
+            // owned. Cancellation ends the sequence quietly (nil: the
+            // canceller already owns the status story).
+            guard !Task.isCancelled else { return nil }
             do {
                 try await port.send(command)
             } catch {
                 return "Init command 0x\(String(command.rawValue, radix: 16)) failed: \(error)"
             }
-            try? await Task.sleep(for: initCommandStagger)
+            do {
+                try await Task.sleep(for: initCommandStagger)
+            } catch {
+                return nil  // cancelled mid-stagger — stand down quietly
+            }
         }
         Self.logger.info("Init sequence sent")
         sessionLog?.capture(.debug, "Init sequence sent")
@@ -434,7 +484,7 @@ internal final class DGTConnection {
             switch DGTAutoConnectPolicy.reconnectLap(
                 gameActive: shouldAutoReconnect?() == true,
                 targetPath: device.path,
-                among: DGTDeviceDiscovery.availableDevices()
+                among: enumerateDevices()
             ) {
             case .stop:
                 // Success, discard, or idle are the loop's only exits (plus
@@ -496,7 +546,6 @@ internal final class DGTConnection {
     /// transition — see `handle(_:)`. `path` is the stable identity
     /// (`DGTSerialDevice.id`); the name rides along for logs and UI.
     private func rememberDevice(_ device: DGTSerialDevice) {
-        let defaults = UserDefaults.standard
         defaults.set(device.path, forKey: StorageKeys.rememberedDevicePath)
         defaults.set(device.name, forKey: StorageKeys.rememberedDeviceName)
     }

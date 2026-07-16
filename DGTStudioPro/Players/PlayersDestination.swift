@@ -20,7 +20,7 @@ internal struct PlayersDestination: View {
             description: Text("Player profiles coming soon.")
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityIdentifier("players.content")
+        .accessibilityIdentifier(AccessibilityID.playersContent)
         .navigationTitle("Players")
         .inspector(isPresented: $tabState.playersInspectorPresented) {
             PlayersInspectorView()

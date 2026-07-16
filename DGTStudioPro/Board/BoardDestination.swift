@@ -120,12 +120,12 @@ internal struct BoardDestination: View {
                 // Enabled even with no game so it serves as the manual
                 // orientation toggle for the live mirror (view-only flip,
                 // separate from the decoder's coordinate transform).
-                .accessibilityIdentifier("board.flipButton")
+                .accessibilityIdentifier(AccessibilityID.boardFlipButton)
             }
         }
         .inspectorToggle(
             isPresented: $tabState.boardInspectorPresented,
-            identifier: "board.inspectorToggle"
+            identifier: AccessibilityID.boardInspectorToggle
         )
         .dgtConnectionToolbar()
         // Phase 11: publish the active game so GameNavigationCommands' arrow
@@ -164,7 +164,7 @@ internal struct BoardDestination: View {
 
             Button("Dismiss") { loadedGameID = nil }
                 .controlSize(.small)
-                .accessibilityIdentifier("board.loaderror.dismiss")
+                .accessibilityIdentifier(AccessibilityID.boardLoadErrorDismiss)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -176,7 +176,7 @@ internal struct BoardDestination: View {
         .padding(.horizontal)
         .padding(.bottom, 8)
         .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("board.loaderror")
+        .accessibilityIdentifier(AccessibilityID.boardLoadError)
     }
 
     // MARK: Board Surface
@@ -211,7 +211,7 @@ internal struct BoardDestination: View {
         )
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityIdentifier("board")
+        .accessibilityIdentifier(AccessibilityID.board)
     }
 
     // MARK: Content
@@ -286,7 +286,7 @@ internal struct BoardDestination: View {
                         .background(.regularMaterial, in: Capsule())
                         .padding(.bottom, 8)
                         .transition(.opacity)
-                        .accessibilityIdentifier("live.recovery.restoredflash")
+                        .accessibilityIdentifier(AccessibilityID.liveRecoveryRestoredFlash)
                         .task {
                             // Auto-dismiss; cancellation on disappear is
                             // the cleanup.

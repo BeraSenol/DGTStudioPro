@@ -9,11 +9,17 @@
 //  the Library is populated from `UITestSeed` (in-memory; the real
 //  library is never touched). Breadth over depth.
 //
-//  Requires the accessibilityIdentifier edits in the app target and
-//  DGTStudioProApp's `.defaultLaunchBehavior(.presented)`. `launch()`
-//  also opens a window via File ▸ New Window as a fallback, since a
-//  value-based WindowGroup may still present no window on a clean,
+//  Requires `.defaultLaunchBehavior(.presented)` on DGTStudioProApp.
+//  `launch()` also opens a window via File ▸ New Window as a fallback,
+//  since a value-based WindowGroup may still present no window on a clean,
 //  in-memory test launch.
+//
+//  Identifiers and seed-game names come from `AccessibilityID.swift`, a
+//  file compiled into BOTH this target and the app target (F8): a rename
+//  on either side is now a compile error here instead of a silently
+//  vacuous assertion. (The suite once asserted the absence of
+//  "board.error" while the app shipped "board.loaderror" — green forever,
+//  guarding nothing.)
 //
 //  macOS specific: a `.segmented` Picker of `Label(_:systemImage:)`
 //  renders icon-only; its segments are radioButtons keyed by SF Symbol
@@ -25,46 +31,41 @@
 import XCTest
 
 final class DGTStudioProUITests: XCTestCase {
-    
+
     private var app: XCUIApplication!
-    
-    // Mirrored from `UITestSeed.GameName` (separate module — keep in sync).
-    private enum SeedGame {
-        static let quickMate = "Quick Mate"
-        static let ruyLopez  = "Ruy Lopez"
-        static let drawnGame = "Drawn Game"
-        static let blackWins = "Black Wins"
-    }
-    
-    // View-mode segment handles: the SF Symbol name each mode uses.
+
+    // View-mode segment handles: the SF Symbol name each mode uses. (These
+    // aren't accessibility identifiers — macOS renders the segments as
+    // radio buttons keyed by symbol name, see the header — so they stay
+    // local rather than joining AccessibilityID.)
     private enum ModeSymbol {
         static let icons   = "square.grid.2x2"
         static let list    = "list.bullet"
         static let columns = "rectangle.split.3x1"
         static let gallery = "squares.below.rectangle"
     }
-    
+
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
     }
-    
+
     override func tearDownWithError() throws {
         app = nil
     }
-    
+
     // MARK: - Launch
-    
+
     private func launch() {
         app.launchArguments = ["-uiTestSeed", "YES"]
         app.launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10),
                       "App should reach the foreground")
-        
+
         // The window should auto-present thanks to
         // `.defaultLaunchBehavior(.presented)`.
         if app.windows.firstMatch.waitForExistence(timeout: 8) { return }
-        
+
         // Fallback: drive File ▸ New Window if no window auto-presented.
         app.activate()
         let fileMenu = app.menuBars.menuBarItems["File"]
@@ -80,23 +81,23 @@ final class DGTStudioProUITests: XCTestCase {
         XCTAssertTrue(app.windows.firstMatch.waitForExistence(timeout: 5),
                       "A window should be present at launch")
     }
-    
+
     // MARK: - Helpers
-    
+
     /// Type-agnostic lookup by accessibility identifier.
     private func element(_ identifier: String) -> XCUIElement {
         app.descendants(matching: .any)[identifier]
     }
-    
+
     @discardableResult
     private func waitFor(_ element: XCUIElement, _ timeout: TimeInterval = 5) -> Bool {
         element.waitForExistence(timeout: timeout)
     }
-    
+
     private func segment(_ symbol: String) -> XCUIElement {
         app.radioButtons[symbol]
     }
-    
+
     /// A segmented-control segment is selected when its AXValue is 1.
     /// (`.isSelected` reads AXSelected, which these segments never set.)
     private func isPicked(_ e: XCUIElement) -> Bool {
@@ -108,7 +109,7 @@ final class DGTStudioProUITests: XCTestCase {
         default:                return false
         }
     }
-    
+
     /// Polls the segment's value briefly to absorb update latency, then
     /// fails if it never reaches the selected state.
     private func assertPicked(_ e: XCUIElement, _ message: String,
@@ -121,73 +122,73 @@ final class DGTStudioProUITests: XCTestCase {
         }
         XCTFail(message, file: file, line: line)
     }
-    
+
     // MARK: - Tests
-    
+
     func test_launch_showsSidebarAndLibrary() {
         launch()
-        XCTAssertTrue(waitFor(element("sidebar")),
+        XCTAssertTrue(waitFor(element(AccessibilityID.sidebar)),
                       "Sidebar should be present at launch")
-        XCTAssertTrue(waitFor(element("library.content")),
+        XCTAssertTrue(waitFor(element(AccessibilityID.libraryContent)),
                       "Library should be the default destination")
     }
-    
+
     func test_sidebar_navigatesToEachDestination() {
         launch()
-        XCTAssertTrue(waitFor(element("library.content")))
-        
-        element("sidebar.board").click()
-        XCTAssertTrue(waitFor(element("board")),
+        XCTAssertTrue(waitFor(element(AccessibilityID.libraryContent)))
+
+        element(AccessibilityID.sidebarDestination("board")).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.board)),
                       "Board should render the live mirror (no game loaded)")
-        
-        element("sidebar.players").click()
-        XCTAssertTrue(waitFor(element("players.content")),
+
+        element(AccessibilityID.sidebarDestination("players")).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.playersContent)),
                       "Players destination should appear")
-        
-        element("sidebar.rankings").click()
-        XCTAssertTrue(waitFor(element("rankings.content")),
+
+        element(AccessibilityID.sidebarDestination("rankings")).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.rankingsContent)),
                       "Rankings destination should appear")
-        
-        element("sidebar.library").click()
-        XCTAssertTrue(waitFor(element("library.content")),
+
+        element(AccessibilityID.sidebarDestination("library")).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.libraryContent)),
                       "Library should reappear when reselected")
     }
-    
+
     /// The centerpiece: cycle the picker through all four modes, keyed by
     /// SF Symbol name, verifying each becomes the selected segment.
     func test_viewModes_switchAcrossAllFour() {
         launch()
-        
+
         let icons   = segment(ModeSymbol.icons)
         let list    = segment(ModeSymbol.list)
         let columns = segment(ModeSymbol.columns)
         let gallery = segment(ModeSymbol.gallery)
-        
+
         XCTAssertTrue(list.waitForExistence(timeout: 5),
                       "View-mode picker should be present")
-        
+
         icons.click()
         assertPicked(icons,   "Icons segment should be selected")
-        
+
         columns.click()
         assertPicked(columns, "Columns segment should be selected")
-        
+
         gallery.click()
         assertPicked(gallery, "Gallery segment should be selected")
-        
+
         list.click()
         assertPicked(list,    "List segment should be selected")
     }
-    
+
     func test_sidebar_tagFilterRendersLibrary() {
         launch()
-        element("sidebar.tag.checkmate").click()
-        XCTAssertTrue(waitFor(element("library.content")),
+        element(AccessibilityID.sidebarTag("checkmate")).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.libraryContent)),
                       "Tag-filtered Library should render its content area")
     }
-    
+
     // MARK: Board Render (regression guard)
-    
+
     /// Selecting Board with no game loaded must render the live physical-board
     /// mirror (identified `board`) and must NOT crash the app.
     ///
@@ -202,31 +203,31 @@ final class DGTStudioProUITests: XCTestCase {
     /// failure mode being guarded is process death, not just a missing view.
     func test_boardDestination_rendersLiveMirror_withoutCrashing() {
         launch()
-        XCTAssertTrue(waitFor(element("library.content")))
-        
-        element("sidebar.board").click()
-        
-        XCTAssertTrue(waitFor(element("board"), 8),
+        XCTAssertTrue(waitFor(element(AccessibilityID.libraryContent)))
+
+        element(AccessibilityID.sidebarDestination("board")).click()
+
+        XCTAssertTrue(waitFor(element(AccessibilityID.board), 8),
                       "Board destination should render the live mirror with no game loaded")
         XCTAssertEqual(app.state, .runningForeground,
                        "Rendering the Board destination must not crash the app")
     }
-    
+
     func test_openSeededGame_showsBoard() {
         launch()
-        
+
         // Switch to Icons so the seeded game renders as a tappable card.
         let icons = segment(ModeSymbol.icons)
         XCTAssertTrue(icons.waitForExistence(timeout: 5))
         if !isPicked(icons) { icons.click() }
-        
-        let card = element("gameCard.\(SeedGame.quickMate)")
+
+        let card = element(AccessibilityID.gameCard(SeedGameName.quickMate))
         XCTAssertTrue(waitFor(card), "Seeded game card should exist in Icons mode")
         card.doubleClick()
-        
-        XCTAssertTrue(waitFor(element("board"), 8),
+
+        XCTAssertTrue(waitFor(element(AccessibilityID.board), 8),
                       "Board should appear after opening a game")
-        XCTAssertFalse(element("board.error").exists,
+        XCTAssertFalse(element(AccessibilityID.boardLoadError).exists,
                        "A seeded game with legal moves should not hit the error state")
         // Same regression guard from the game-loaded entry point: opening a game
         // starts the tab on Board, so an un-injected DGTLiveSession would trap
@@ -234,23 +235,23 @@ final class DGTStudioProUITests: XCTestCase {
         XCTAssertEqual(app.state, .runningForeground,
                        "Opening a game must not crash the app")
     }
-    
+
     func test_libraryInspectorToggle_isHittable() {
         launch()
-        let toggle = element("library.inspectorToggle")
+        let toggle = element(AccessibilityID.libraryInspectorToggle)
         XCTAssertTrue(waitFor(toggle), "Library inspector toggle should be in the toolbar")
         toggle.click()
         toggle.click()
-        XCTAssertTrue(element("sidebar").exists,
+        XCTAssertTrue(element(AccessibilityID.sidebar).exists,
                       "App should remain responsive after toggling the inspector")
     }
-    
+
     func test_importButton_exists() {
         launch()
-        XCTAssertTrue(waitFor(element("library.importButton")),
+        XCTAssertTrue(waitFor(element(AccessibilityID.libraryImportButton)),
                       "Import button should be in the Library toolbar")
     }
-    
+
     func test_launchPerformance() throws {
         measure(metrics: [XCTApplicationLaunchMetric()]) {
             app.launch()
