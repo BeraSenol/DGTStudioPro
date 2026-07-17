@@ -5,19 +5,6 @@
 //  Created by Supreme Leader on 22/05/2026.
 //
 
-//  Deterministic in-memory sample data for UI tests.
-//
-//  Activated only when the app is launched with the `-uiTestSeed`
-//  argument (which `DGTStudioProUITests` passes). Under that flag the
-//  app uses an in-memory `ModelContainer` seeded with the games below,
-//  so UI tests never touch — or depend on — the user's real library.
-//
-//  The game *names* are the test's addressing handles: each seeded game
-//  becomes a `gameCard.<name>` accessibility identifier. The UI-test
-//  target is a separate module and can't import these constants, so it
-//  hardcodes matching string literals. Keep the two in sync.
-//
-
 import Foundation
 import SwiftData
 
@@ -32,12 +19,15 @@ internal enum UITestSeed {
     }
 
     /// Stable game names. These are the strings the UI test looks up as
-    /// `gameCard.<name>`. (Mirror them in the test target.)
+    /// `gameCard.<name>` — shared with the UI suite via `SeedGameName`.
     internal enum GameName {
-        internal static let quickMate = "Quick Mate"   // legal mate, openable
-        internal static let ruyLopez  = "Ruy Lopez"    // legal opening, openable
-        internal static let drawnGame = "Drawn Game"   // timed → "Timed" tag
-        internal static let blackWins = "Black Wins"
+        // Aliases into the shared `SeedGameName` (AccessibilityID.swift, F8)
+        // so the UI test target reads the same source instead of the old
+        // hand-mirrored copy. Seeding call sites below read unchanged.
+        internal static let quickMate = SeedGameName.quickMate   // legal mate, openable
+        internal static let ruyLopez  = SeedGameName.ruyLopez    // legal opening, openable
+        internal static let drawnGame = SeedGameName.drawnGame   // timed → "Timed" tag
+        internal static let blackWins = SeedGameName.blackWins
     }
 
     /// Inserts the sample games into the (in-memory) container. Uses a

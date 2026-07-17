@@ -39,17 +39,24 @@ struct DGTLiveSessionTests {
         .init(white: "White", black: "Black")
     }
 
-    /// Polls `condition` every 10 ms until it holds or `timeout` elapses,
+    /// Polls `condition` every 25 ms until it holds or `timeout` elapses,
     /// then asserts it. Timer-driven tests await *outcomes*, not clocks —
-    /// see the suite's timing note (F7).
+    /// see the suite's timing note (F7). The 5 s ceiling and 25 ms interval
+    /// deliberately match `DGTLiveSessionArchiveTests`' calibration: under
+    /// a full ⌘U the Perft suites saturate every core and a dozen
+    /// `@MainActor` suites interleave on the main actor, so settle's turn
+    /// can lag seconds past its 10 ms quiescence. A 2 s ceiling missed
+    /// under that load (July 2026 — which tests failed varied run to run,
+    /// the flake signature); on an idle machine the poll still returns in
+    /// tens of milliseconds, so the ceiling costs nothing when green.
     private func poll(
-        timeout: Duration = .seconds(2),
+        timeout: Duration = .seconds(5),
         until condition: () -> Bool
     ) async throws {
         let deadline = ContinuousClock.now + timeout
         while ContinuousClock.now < deadline {
             if condition() { return }
-            try await Task.sleep(for: .milliseconds(10))
+            try await Task.sleep(for: .milliseconds(25))
         }
         #expect(condition(), "Timed out after \(timeout) waiting for condition")
     }

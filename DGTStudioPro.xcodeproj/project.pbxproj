@@ -41,7 +41,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				App/AccessibilityID.swift,
-				PGN/PGN.swift,
 			);
 			target = C5D920D92F732FE9003D0A74 /* DGTStudioProUITests */;
 		};
