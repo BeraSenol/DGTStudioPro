@@ -69,14 +69,21 @@ internal enum AccessibilityID {
     internal static let libraryModeGallery = "library.mode.gallery"
     internal static let libraryViewModePicker = "library.viewModePicker"
     internal static let libraryImportButton = "library.importButton"
+    internal static let libraryAnalyzeButton = "library.analyzeButton"
     internal static let libraryDeleteButton = "library.deleteButton"
+    internal static let libraryGamesTable = "library.gamesTable"
     internal static let libraryInspectorToggle = "library.inspectorToggle"
     
     /// `gameCard.Quick Mate`, … — one per Library card, keyed by the game's
-    /// display name (see `LibraryGameCardView`; its call site is still a
-    /// literal — migrate on touch).
+    /// display name (see `LibraryGameCardView`).
     internal static func gameCard(_ name: String) -> String {
         "gameCard.\(name)"
+    }
+    
+    /// `gameRow.Quick Mate`, … — one per List-mode row (the White-column
+    /// cell in `LibraryListView`), keyed by the game's display name.
+    internal static func gameRow(_ name: String) -> String {
+        "gameRow.\(name)"
     }
     
     // MARK: v1 Placeholders

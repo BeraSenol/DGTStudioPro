@@ -12,7 +12,9 @@ import Testing
 /// `FENParsingTests` covers the happy path (round-trips, reference positions);
 /// this suite is its complement, pinning that every malformed shape throws the
 /// **specific** typed `FENParseError` the parser documents, rather than parsing
-/// to something silently wrong.
+/// to something silently wrong. It is the *sole* home of rejection pins — the
+/// acceptance suite carried duplicates of most of these for a while, and that
+/// overlap has been removed in its favor.
 ///
 /// `FENParseError` is `Equatable`, so each case is asserted by value via
 /// `#expect(throws:)`. The parser is intentionally legality-agnostic — it
@@ -22,9 +24,9 @@ import Testing
 /// types.
 @Suite("FEN Parsing — Rejection")
 struct FENParsingRejectionTests {
-    
+
     // MARK: Field Count
-    
+
     /// Only 4- or 6-field strings are accepted; the error reports the actual
     /// field count.
     @Test func rejectsWrongFieldCount() {
@@ -41,9 +43,9 @@ struct FENParsingRejectionTests {
             try FEN(parsing: "8/8/8/8/8/8/8/8 w - - 0 1 extra")
         }
     }
-    
+
     // MARK: Placement
-    
+
     /// The placement field must be 8 slash-separated ranks, each totalling
     /// exactly 8 files, using only valid piece letters and 1–8 empty-run digits.
     @Test func rejectsMalformedPlacement() {
@@ -63,14 +65,21 @@ struct FENParsingRejectionTests {
         #expect(throws: FENParseError.malformedPlacement("9/8/8/8/8/8/8/8")) {
             try FEN(parsing: "9/8/8/8/8/8/8/8 w - -")
         }
+        // A zero empty-run digit. 0 is not a valid run length (only 1–8) —
+        // and this rank *sums* to 8 if 0 were accepted, so the pin trips
+        // exactly when a naive digit check lets 0 through rather than being
+        // masked by a file-count error.
+        #expect(throws: FENParseError.malformedPlacement("80/8/8/8/8/8/8/8")) {
+            try FEN(parsing: "80/8/8/8/8/8/8/8 w - -")
+        }
         // An unknown piece character.
         #expect(throws: FENParseError.malformedPlacement("X7/8/8/8/8/8/8/8")) {
             try FEN(parsing: "X7/8/8/8/8/8/8/8 w - -")
         }
     }
-    
+
     // MARK: Active Color
-    
+
     @Test func rejectsMalformedActiveColor() {
         #expect(throws: FENParseError.malformedActiveColor("W")) {
             try FEN(parsing: "8/8/8/8/8/8/8/8 W - -")
@@ -79,9 +88,9 @@ struct FENParsingRejectionTests {
             try FEN(parsing: "8/8/8/8/8/8/8/8 x - -")
         }
     }
-    
+
     // MARK: Castling
-    
+
     /// Castling accepts `-` or a non-repeating subset of `KQkq`; foreign
     /// characters and duplicates are both rejected, and the error carries the
     /// whole field.
@@ -96,9 +105,9 @@ struct FENParsingRejectionTests {
             try FEN(parsing: "8/8/8/8/8/8/8/8 w KQkqK -")
         }
     }
-    
+
     // MARK: En Passant
-    
+
     /// The EP field accepts `-` or a parseable algebraic square; anything else
     /// throws. (Whether the square sits on a plausible EP rank is a
     /// position-validity concern, not a parse one — deliberately not checked.)
@@ -116,9 +125,9 @@ struct FENParsingRejectionTests {
             try FEN(parsing: "8/8/8/8/8/8/8/8 w - e44")
         }
     }
-    
+
     // MARK: Move Counters (six-field only)
-    
+
     /// In the six-field form the halfmove clock must be a non-negative integer
     /// and the fullmove number a positive one; both failures surface as
     /// `malformedInteger` carrying the offending field.
@@ -136,9 +145,9 @@ struct FENParsingRejectionTests {
             try FEN(parsing: "8/8/8/8/8/8/8/8 w - - 0 y")
         }
     }
-    
+
     // MARK: Positive Control — Four-Field EPD
-    
+
     /// The complement to the rejection cases: a well-formed four-field EPD
     /// string parses without throwing, defaulting the halfmove clock to 0 and
     /// the fullmove number to 1. The all-empty board also confirms the parser

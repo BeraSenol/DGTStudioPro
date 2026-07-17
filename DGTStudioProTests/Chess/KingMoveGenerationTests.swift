@@ -5,36 +5,27 @@
 //  Created by Supreme Leader on 06/05/2026.
 //
 
+//
+//  KingMoveGenerationTests.swift
+//  DGTStudioPro
+//
+//  Created by Supreme Leader on 06/05/2026.
+//
+
 import Testing
 @testable import DGTStudioPro
 
 @Suite("King Pseudo-Legal Move Generation")
 struct KingMoveGenerationTests {
     
-    // MARK: Helpers
-    private func kingMoves(in state: GameState, from square: Square) -> [Move] {
-        state.pseudoLegalMoves().filter { $0.from == square }
-    }
-    
-    private func makeState(
-        position: Position,
-        activeColor: PieceColor = .white
-    ) -> GameState {
-        GameState(
-            position: position,
-            activeColor: activeColor,
-            castlingRights: .none,
-            enPassantTarget: nil,
-            halfmoveClock: 0,
-            fullmoveNumber: 1
-        )
-    }
+    // Helpers (`GameState.test`, `pseudoLegalMoves(from:)`, `Position.make`)
+    // live in Support/ChessTestSupport.swift, shared across the move-gen
+    // suites.
     
     // MARK: Mobility
     @Test func centralKingHasEightMoves() {
-        var pos = Position.empty
-        pos[Squares.d4] = .whiteKing
-        let moves = kingMoves(in: makeState(position: pos), from: Squares.d4)
+        let pos = Position.make { $0[Squares.d4] = .whiteKing }
+        let moves = GameState.test(pos).pseudoLegalMoves(from: Squares.d4)
         
         let expected: Set<Square> = [
             Squares.c3, Squares.c4, Squares.c5,
@@ -46,27 +37,24 @@ struct KingMoveGenerationTests {
     }
     
     @Test func cornerKingOnA1HasThreeMoves() {
-        var pos = Position.empty
-        pos[Squares.a1] = .whiteKing
-        let moves = kingMoves(in: makeState(position: pos), from: Squares.a1)
+        let pos = Position.make { $0[Squares.a1] = .whiteKing }
+        let moves = GameState.test(pos).pseudoLegalMoves(from: Squares.a1)
         
         #expect(moves.count == 3)
         #expect(Set(moves.map(\.to)) == [Squares.a2, Squares.b1, Squares.b2])
     }
     
     @Test func cornerKingOnH8HasThreeMoves() {
-        var pos = Position.empty
-        pos[Squares.h8] = .whiteKing
-        let moves = kingMoves(in: makeState(position: pos), from: Squares.h8)
+        let pos = Position.make { $0[Squares.h8] = .whiteKing }
+        let moves = GameState.test(pos).pseudoLegalMoves(from: Squares.h8)
         
         #expect(moves.count == 3)
         #expect(Set(moves.map(\.to)) == [Squares.h7, Squares.g8, Squares.g7])
     }
     
     @Test func edgeKingOnA4HasFiveMoves() {
-        var pos = Position.empty
-        pos[Squares.a4] = .whiteKing
-        let moves = kingMoves(in: makeState(position: pos), from: Squares.a4)
+        let pos = Position.make { $0[Squares.a4] = .whiteKing }
+        let moves = GameState.test(pos).pseudoLegalMoves(from: Squares.a4)
         
         #expect(moves.count == 5)
         #expect(Set(moves.map(\.to)) == [
@@ -76,13 +64,16 @@ struct KingMoveGenerationTests {
     
     // MARK: Wraparound
     @Test func aFileKingDoesNotWrapToHFile() {
-        var pos = Position.empty
-        pos[Squares.a4] = .whiteKing
-        // Bait squares — would be reached if file check failed
-        pos[Squares.h3] = .blackPawn  // a4 - 9 = h3 (rank 3, file 7)
-        pos[Squares.h4] = .blackPawn  // a4 - 1 = h3? No: a4=24, 24-1=23=h3. Wait same.
-        pos[Squares.h5] = .blackPawn  // a4 + 7 = h4 (rank 4, file 7)
-        let moves = kingMoves(in: makeState(position: pos), from: Squares.a4)
+        let pos = Position.make {
+            $0[Squares.a4] = .whiteKing
+            // Bait pawns on the h-file. With a1 = 0 rank-major indexing,
+            // a4 − 1 = h3 and a4 + 7 = h4 are exactly the raw-offset targets a
+            // missing file check would produce; h5 is a belt-and-braces extra.
+            $0[Squares.h3] = .blackPawn
+            $0[Squares.h4] = .blackPawn
+            $0[Squares.h5] = .blackPawn
+        }
+        let moves = GameState.test(pos).pseudoLegalMoves(from: Squares.a4)
         
         #expect(moves.count == 5)
         #expect(!moves.contains { $0.to == Squares.h3 })
@@ -91,12 +82,15 @@ struct KingMoveGenerationTests {
     }
     
     @Test func hFileKingDoesNotWrapToAFile() {
-        var pos = Position.empty
-        pos[Squares.h4] = .whiteKing
-        pos[Squares.a4] = .blackPawn
-        pos[Squares.a5] = .blackPawn  // h4 + 9 = a5
-        pos[Squares.a3] = .blackPawn  // h4 - 7 = a3? h4=31, 31-7=24=a4. Hmm.
-        let moves = kingMoves(in: makeState(position: pos), from: Squares.h4)
+        let pos = Position.make {
+            $0[Squares.h4] = .whiteKing
+            // Mirror baits on the a-file: h4 − 7 = a4 and h4 + 1 = a5 are the
+            // raw-offset wrap targets; a3 is a belt-and-braces extra.
+            $0[Squares.a4] = .blackPawn
+            $0[Squares.a5] = .blackPawn
+            $0[Squares.a3] = .blackPawn
+        }
+        let moves = GameState.test(pos).pseudoLegalMoves(from: Squares.h4)
         
         #expect(moves.count == 5)
         #expect(!moves.contains { $0.to == Squares.a4 })
@@ -106,11 +100,12 @@ struct KingMoveGenerationTests {
     
     // MARK: Captures and Blocking
     @Test func kingCapturesEnemyPieces() {
-        var pos = Position.empty
-        pos[Squares.d4] = .whiteKing
-        pos[Squares.e5] = .blackPawn
-        pos[Squares.d3] = .blackKnight
-        let moves = kingMoves(in: makeState(position: pos), from: Squares.d4)
+        let pos = Position.make {
+            $0[Squares.d4] = .whiteKing
+            $0[Squares.e5] = .blackPawn
+            $0[Squares.d3] = .blackKnight
+        }
+        let moves = GameState.test(pos).pseudoLegalMoves(from: Squares.d4)
         
         #expect(moves.count == 8)
         #expect(moves.contains { $0.to == Squares.e5 && $0.capturedPieceType == .pawn })
@@ -118,11 +113,12 @@ struct KingMoveGenerationTests {
     }
     
     @Test func kingDoesNotCaptureOwnPiece() {
-        var pos = Position.empty
-        pos[Squares.d4] = .whiteKing
-        pos[Squares.e5] = .whitePawn
-        pos[Squares.d3] = .whiteKnight
-        let moves = kingMoves(in: makeState(position: pos), from: Squares.d4)
+        let pos = Position.make {
+            $0[Squares.d4] = .whiteKing
+            $0[Squares.e5] = .whitePawn
+            $0[Squares.d3] = .whiteKnight
+        }
+        let moves = GameState.test(pos).pseudoLegalMoves(from: Squares.d4)
         
         #expect(moves.count == 6)
         #expect(!moves.contains { $0.to == Squares.e5 })
@@ -132,18 +128,15 @@ struct KingMoveGenerationTests {
     @Test func kingOnStartingPositionHasNoMoves() {
         // e1 king is surrounded entirely by own pieces (d1 queen, f1 bishop,
         // d2/e2/f2 pawns). Pseudo-legal generation excludes castling for now.
-        let moves = kingMoves(in: .starting, from: Squares.e1)
+        let moves = GameState.starting.pseudoLegalMoves(from: Squares.e1)
         #expect(moves.isEmpty)
     }
     
     // MARK: Black Mirror
     @Test func blackKingMirrorsWhite() {
-        var pos = Position.empty
-        pos[Squares.d5] = .blackKing
-        let moves = kingMoves(
-            in: makeState(position: pos, activeColor: .black),
-            from: Squares.d5
-        )
+        let pos = Position.make { $0[Squares.d5] = .blackKing }
+        let moves = GameState.test(pos, activeColor: .black)
+            .pseudoLegalMoves(from: Squares.d5)
         #expect(moves.count == 8)
     }
 }

@@ -5,13 +5,6 @@
 //  Created by Supreme Leader on 03/05/2026.
 //
 
-//
-//  LibraryColumnsView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 03/05/2026.
-//
-
 import Foundation
 import SwiftData
 import SwiftUI
@@ -65,6 +58,7 @@ internal struct LibraryColumnsView: View {
     internal let games: [PGN]
     @Binding internal var selectedPGNs: Set<PGN.ID>
     internal let onOpen: (PGN) -> Void
+    let onAnalyze: (PGN) -> Void
     internal let onDelete: (PGN) -> Void
     
     // MARK: Private Properties
@@ -189,9 +183,10 @@ internal struct LibraryColumnsView: View {
                         LibraryGameCardView(
                             game: game,
                             isSelected: selectedPGNs.contains(game.id),
-                            onSelect: { selectedPGNs = [game.id] },
-                            onOpen:   { onOpen(game) },
-                            onDelete: { onDelete(game) }
+                            onSelect:  { selectedPGNs = [game.id] },
+                            onOpen:    { onOpen(game) },
+                            onAnalyze: { onAnalyze(game) },
+                            onDelete:  { onDelete(game) }
                         )
                     }
                 }
@@ -309,6 +304,7 @@ private func columnsPreviewGames() -> [PGN] {
         games: columnsPreviewGames(),
         selectedPGNs: $selection,
         onOpen: { _ in },
+        onAnalyze: { _ in },
         onDelete: { _ in }
     )
     .frame(width: 900, height: 600)
@@ -322,6 +318,7 @@ private func columnsPreviewGames() -> [PGN] {
         games: [],
         selectedPGNs: $selection,
         onOpen: { _ in },
+        onAnalyze: { _ in },
         onDelete: { _ in }
     )
     .frame(width: 900, height: 600)

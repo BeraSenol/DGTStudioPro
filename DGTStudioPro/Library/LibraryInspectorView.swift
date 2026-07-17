@@ -9,15 +9,32 @@ import SwiftData
 import SwiftUI
 
 internal struct LibraryInspectorView: View {
-
+    
     // MARK: Stored Properties
     internal let pgn: PGN?
-
+    
+    /// One-shot analyze handoff from the Library toolbar / context menus.
+    /// When it names the displayed game, the loaded section starts an
+    /// engine pass and reports back through `onPendingAnalysisConsumed`
+    /// so the owner can nil its request state — see `LoadedSection`'s
+    /// `.task(id:)` for the consumption contract. Deliberately a routed
+    /// request rather than a second driver at the call site: one driver,
+    /// one Stockfish subprocess, and progress/Stop/graph stay in the one
+    /// place that already renders them.
+    internal let pendingAnalysisID: PGN.ID?
+    internal let onPendingAnalysisConsumed: () -> Void
+    
     // MARK: Initializers
-    internal init(pgn: PGN? = nil) {
+    internal init(
+        pgn: PGN? = nil,
+        pendingAnalysisID: PGN.ID? = nil,
+        onPendingAnalysisConsumed: @escaping () -> Void = {}
+    ) {
         self.pgn = pgn
+        self.pendingAnalysisID = pendingAnalysisID
+        self.onPendingAnalysisConsumed = onPendingAnalysisConsumed
     }
-
+    
     // MARK: Body
     internal var body: some View {
         List {
@@ -25,16 +42,23 @@ internal struct LibraryInspectorView: View {
                 // .id forces SwiftUI to re-init this section (and its
                 // GameAnalysisDriver @State) when the user selects a
                 // different game. The prior section's .onDisappear fires
-                // on its way out, cancelling any in-flight analysis.
-                LoadedSection(pgn: pgn)
-                    .id(pgn.id)
+                // on its way out, cancelling any in-flight analysis. That
+                // same re-init is also what lets a fresh section consume a
+                // pending analyze request via its `.task(id:)` on
+                // appearance.
+                LoadedSection(
+                    pgn: pgn,
+                    pendingAnalysisID: pendingAnalysisID,
+                    onPendingAnalysisConsumed: onPendingAnalysisConsumed
+                )
+                .id(pgn.id)
             } else {
                 emptySection
             }
         }
         .listStyle(.sidebar)
     }
-
+    
     // MARK: Instance Methods
     private var emptySection: some View {
         Section {
@@ -47,10 +71,12 @@ internal struct LibraryInspectorView: View {
 }
 
 private struct LoadedSection: View {
-
+    
     // MARK: Stored Properties
     @Bindable var pgn: PGN
-
+    let pendingAnalysisID: PGN.ID?
+    let onPendingAnalysisConsumed: () -> Void
+    
     // MARK: Private Properties
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
@@ -59,7 +85,7 @@ private struct LoadedSection: View {
     @FocusState private var isNameFieldFocused: Bool
     @State private var isEditingName: Bool = false
     @State private var draftName: String = ""
-
+    
     // MARK: Body
     var body: some View {
         Group {
@@ -76,8 +102,25 @@ private struct LoadedSection: View {
             } header: {
                 Text("Game Details")
             }
-
+            
             evaluationSection
+        }
+        // Consumes a pending analyze request from the toolbar / context
+        // menus. `.task(id:)` covers both handoff shapes with one modifier:
+        // it runs on appearance (the request arrived alongside a selection
+        // change, so this section was just re-inited via `.id(pgn.id)`)
+        // *and* re-runs when the id changes (the game was already selected,
+        // so this section persisted and only the request is new — e.g.
+        // right-click → Analyze on the already-selected row). The id guard
+        // keeps an unconsumed request inert for every other game; the
+        // consumed callback (the destination nils its request state) is
+        // what prevents a replay the next time this game is re-selected.
+        // If a pass is already running, `driver.analyze` no-ops by design
+        // and the request is still consumed as resolved.
+        .task(id: pendingAnalysisID) {
+            guard let pendingAnalysisID, pendingAnalysisID == pgn.id else { return }
+            driver.analyze(pgn: pgn, modelContext: modelContext)
+            onPendingAnalysisConsumed()
         }
         .onDisappear {
             // Fire-and-forget — the engine's 500ms grace period lets `quit`
@@ -87,9 +130,9 @@ private struct LoadedSection: View {
             Task { await driver.shutdown() }
         }
     }
-
+    
     // MARK: Open Affordance
-
+    
     /// "Open" button in the Library inspector. Asks macOS to open a
     /// window for this game's `persistentModelID`. macOS handles dedup —
     /// re-clicking activates the existing window. With "Prefer Tabs:
@@ -102,7 +145,7 @@ private struct LoadedSection: View {
         }
         .help("Open this game in a new window")
     }
-
+    
     // MARK: Evaluation Section
     @ViewBuilder
     private var evaluationSection: some View {
@@ -116,13 +159,13 @@ private struct LoadedSection: View {
             )
             .frame(height: 100)
             .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
-
+            
             analysisControlRow
         } header: {
             Text("Evaluation")
         }
     }
-
+    
     @ViewBuilder
     private var analysisControlRow: some View {
         switch driver.status {
@@ -135,7 +178,7 @@ private struct LoadedSection: View {
                     systemImage: "wand.and.stars"
                 )
             }
-
+            
         case .analyzing(let progress):
             HStack(spacing: 8) {
                 ProgressView(value: progress)
@@ -147,7 +190,7 @@ private struct LoadedSection: View {
                 .buttonStyle(.borderless)
                 .help("Stop analysis")
             }
-
+            
         case .failed(let message):
             VStack(alignment: .leading, spacing: 6) {
                 Text(message)
@@ -160,7 +203,7 @@ private struct LoadedSection: View {
             }
         }
     }
-
+    
     // MARK: Instance Methods
     @ViewBuilder
     private var nameRow: some View {
@@ -189,13 +232,13 @@ private struct LoadedSection: View {
             }
         }
     }
-
+    
     private func beginEdit() {
         draftName = pgn.name
         isEditingName = true
         isNameFieldFocused = true
     }
-
+    
     private func commitEdit() {
         let trimmed = draftName.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {

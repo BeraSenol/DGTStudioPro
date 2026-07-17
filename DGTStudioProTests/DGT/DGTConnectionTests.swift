@@ -37,13 +37,17 @@ struct DGTConnectionTests {
 
     /// Scripted `DGTPortProviding`. `emit` yields events in call order;
     /// `vanish` finishes the stream without `close()`, simulating the
-    /// device disappearing out from under an open port.
+    /// device disappearing out from under an open port. With `setAutoDump`,
+    /// the fake answers `.sendBoard` with a full dump — the one real-board
+    /// behavior the reconnect loop's convergence leans on (each attempt
+    /// lap re-runs the init sequence, so each lap re-solicits the dump).
     private actor FakePort: DGTPortProviding {
         private(set) var openedPaths: [String] = []
         private(set) var sentCommands: [DGTCommand] = []
         private(set) var closeCount = 0
         private var continuation: AsyncStream<DGTEvent>.Continuation?
         private var failNextOpen = false
+        private var autoDumpPosition: Position?
 
         struct OpenFailure: Error {}
 
@@ -66,6 +70,14 @@ struct DGTConnectionTests {
 
         func send(_ command: DGTCommand) throws {
             sentCommands.append(command)
+            // The real board answers `sendBoard` with a dump. Tests that
+            // exercise loops (where the *connection*, not the test, decides
+            // when a port reopens) need this fidelity: a manually emitted
+            // dump races the lap cadence — a retry can tear the port down
+            // between the test observing the open and the emit landing.
+            if command == .sendBoard, let autoDumpPosition {
+                continuation?.yield(.boardDump(autoDumpPosition))
+            }
         }
 
         // Test drivers
@@ -82,6 +94,11 @@ struct DGTConnectionTests {
 
         func setFailNextOpen() {
             failNextOpen = true
+        }
+
+        /// From now on, `.sendBoard` is answered with a dump of `position`.
+        func setAutoDump(_ position: Position?) {
+            autoDumpPosition = position
         }
     }
 
@@ -245,27 +262,40 @@ struct DGTConnectionTests {
     }
 
     /// The full M7.3 round trip: unplug mid-game, the loop parks, the
-    /// device "returns" via scripted discovery, the next lap reopens the
-    /// port, and the fresh dump completes the reconnect.
+    /// device "returns" via scripted discovery, the next attempt lap
+    /// reopens the port, and the lap's own init sequence re-solicits the
+    /// dump that completes the reconnect.
+    ///
+    /// The fake answers `.sendBoard` with a dump (`setAutoDump`) because
+    /// that is the contract the loop's convergence leans on. An earlier
+    /// version emitted the dump manually after polling for the reopen —
+    /// which raced the lap cadence: a 20 ms retry lap could tear down the
+    /// just-observed port before the 25 ms poll's emit landed, so the dump
+    /// died with the old stream and `openedPaths` sailed past the exact
+    /// `== 2` check. With the fake speaking the device's half of the
+    /// protocol, every lap converges on its own, no matter how the
+    /// scheduler interleaves them.
     @Test func reconnectSucceedsWhenTheDeviceReturns() async throws {
         let port = FakePort()
         let connection = makeConnection(port: port)
         var available: [DGTSerialDevice] = []
         connection.shouldAutoReconnect = { true }
         connection.enumerateDevices = { available }
+        await port.setAutoDump(.starting)   // the board answers sendBoard with a dump
         await connection.connect(to: Self.device)
-        await port.emit(.boardDump(.starting))
         try await poll { connection.isConnected }
 
         await port.vanish()
         try await poll { connection.isReconnecting }
 
-        available = [Self.device]                       // it's back
-        try await poll { await port.openedPaths.count == 2 }
-        await port.emit(.boardDump(.starting))          // fresh dump on the new stream
+        available = [Self.device]           // it's back
         try await poll { connection.isConnected }
 
         #expect(connection.physicalBoard == .starting)
+        // Usually exactly one reopen; a second lap under heavy scheduler
+        // load is legitimate loop behavior (each lap re-solicits the dump),
+        // so assert the floor rather than the exact count.
+        #expect(await port.openedPaths.count >= 2)
     }
 
     /// A deliberate `disconnect()` must not be mistaken for an unplug:

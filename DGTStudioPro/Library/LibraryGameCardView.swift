@@ -9,14 +9,15 @@ import SwiftUI
 import SwiftData
 
 internal struct LibraryGameCardView: View {
-
+    
     // MARK: Stored Properties
     let game: PGN
     let isSelected: Bool
     let onSelect: () -> Void
     let onOpen: () -> Void
+    let onAnalyze: () -> Void
     let onDelete: () -> Void
-
+    
     // MARK: Body
     var body: some View {
         VStack(spacing: 4) {
@@ -39,6 +40,9 @@ internal struct LibraryGameCardView: View {
             Button(action: onOpen) {
                 Label("Open in Board", systemImage: "checkerboard.rectangle")
             }
+            Button(action: onAnalyze) {
+                Label("Analyze", systemImage: "wand.and.stars")
+            }
             Divider()
             Button(role: .destructive, action: onDelete) {
                 Label("Delete", systemImage: "trash")
@@ -50,7 +54,7 @@ internal struct LibraryGameCardView: View {
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("gameCard.\(game.name)")
     }
-
+    
     // MARK: Instance Methods
     private var documentIcon: some View {
         ZStack {
@@ -60,7 +64,7 @@ internal struct LibraryGameCardView: View {
                 .foregroundStyle(.white)
                 .frame(width: 96, height: 96)
                 .fontWeight(.thin)
-
+            
             Text(displayResult(game.result))
                 .font(.system(size: 18, weight: .semibold, design: .monospaced))
                 .foregroundStyle(.white)
@@ -74,7 +78,7 @@ internal struct LibraryGameCardView: View {
                 .fill(.secondary.opacity(isSelected ? 0.15 : 0))
         }
     }
-
+    
     @ViewBuilder
     private var nameLabel: some View {
         Text(game.name)
@@ -89,7 +93,7 @@ internal struct LibraryGameCardView: View {
             )
             .foregroundStyle(isSelected ? Color.white : .primary)
     }
-
+    
     private func displayResult(_ result: GameResult) -> String {
         switch result {
         case .whiteWins: return "1-0"
@@ -124,6 +128,7 @@ private func sampleGame(
             isSelected: false,
             onSelect: {},
             onOpen: {},
+            onAnalyze: {},
             onDelete: {}
         )
         LibraryGameCardView(
@@ -131,6 +136,7 @@ private func sampleGame(
             isSelected: false,
             onSelect: {},
             onOpen: {},
+            onAnalyze: {},
             onDelete: {}
         )
         LibraryGameCardView(
@@ -138,6 +144,7 @@ private func sampleGame(
             isSelected: false,
             onSelect: {},
             onOpen: {},
+            onAnalyze: {},
             onDelete: {}
         )
         LibraryGameCardView(
@@ -145,6 +152,7 @@ private func sampleGame(
             isSelected: false,
             onSelect: {},
             onOpen: {},
+            onAnalyze: {},
             onDelete: {}
         )
     }
@@ -160,6 +168,7 @@ private func sampleGame(
             isSelected: false,
             onSelect: {},
             onOpen: {},
+            onAnalyze: {},
             onDelete: {}
         )
         LibraryGameCardView(
@@ -167,6 +176,7 @@ private func sampleGame(
             isSelected: true,
             onSelect: {},
             onOpen: {},
+            onAnalyze: {},
             onDelete: {}
         )
     }
@@ -186,6 +196,7 @@ private func sampleGame(
             isSelected: false,
             onSelect: {},
             onOpen: {},
+            onAnalyze: {},
             onDelete: {}
         )
         LibraryGameCardView(
@@ -197,6 +208,7 @@ private func sampleGame(
             isSelected: true,
             onSelect: {},
             onOpen: {},
+            onAnalyze: {},
             onDelete: {}
         )
     }

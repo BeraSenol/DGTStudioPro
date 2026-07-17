@@ -11,10 +11,12 @@ import Testing
 @Suite("Position Attack Detection")
 struct PositionAttackTests {
 
+    // Position construction (`Position.make`) lives in
+    // Support/ChessTestSupport.swift, shared across the chess-core suites.
+
     // MARK: Pawn Attacks
     @Test func whitePawnAttacksUpDiagonals() {
-        var pos = Position.empty
-        pos[Squares.e4] = .whitePawn
+        let pos = Position.make { $0[Squares.e4] = .whitePawn }
 
         #expect(pos.isSquareAttacked(Squares.d5, by: .white))
         #expect(pos.isSquareAttacked(Squares.f5, by: .white))
@@ -26,8 +28,7 @@ struct PositionAttackTests {
     }
 
     @Test func blackPawnAttacksDownDiagonals() {
-        var pos = Position.empty
-        pos[Squares.e5] = .blackPawn
+        let pos = Position.make { $0[Squares.e5] = .blackPawn }
 
         #expect(pos.isSquareAttacked(Squares.d4, by: .black))
         #expect(pos.isSquareAttacked(Squares.f4, by: .black))
@@ -36,8 +37,7 @@ struct PositionAttackTests {
     }
 
     @Test func pawnAttackDoesNotWraparound() {
-        var pos = Position.empty
-        pos[Squares.a4] = .whitePawn
+        let pos = Position.make { $0[Squares.a4] = .whitePawn }
         // h5 is not attacked despite a4 - 9 = h2 arithmetic; file diff catches the wrap.
         #expect(!pos.isSquareAttacked(Squares.h5, by: .white))
         // Legitimate attack: b5
@@ -46,8 +46,7 @@ struct PositionAttackTests {
 
     // MARK: Knight Attacks
     @Test func knightAttacksAllEightSquares() {
-        var pos = Position.empty
-        pos[Squares.d4] = .whiteKnight
+        let pos = Position.make { $0[Squares.d4] = .whiteKnight }
 
         let attacked: [Square] = [
             Squares.b3, Squares.b5, Squares.c2, Squares.c6,
@@ -59,8 +58,7 @@ struct PositionAttackTests {
     }
 
     @Test func knightAttackDoesNotWraparound() {
-        var pos = Position.empty
-        pos[Squares.a1] = .whiteKnight
+        let pos = Position.make { $0[Squares.a1] = .whiteKnight }
         // Wraparound bait: file-7 squares should not be reported as attacked
         #expect(!pos.isSquareAttacked(Squares.h2, by: .white))
         #expect(!pos.isSquareAttacked(Squares.g1, by: .white))
@@ -71,8 +69,7 @@ struct PositionAttackTests {
 
     // MARK: King Attacks
     @Test func kingAttacksAllEightNeighbors() {
-        var pos = Position.empty
-        pos[Squares.d4] = .whiteKing
+        let pos = Position.make { $0[Squares.d4] = .whiteKing }
 
         let attacked: [Square] = [
             Squares.c3, Squares.c4, Squares.c5,
@@ -88,8 +85,7 @@ struct PositionAttackTests {
     }
 
     @Test func kingAttackDoesNotWraparound() {
-        var pos = Position.empty
-        pos[Squares.a4] = .whiteKing
+        let pos = Position.make { $0[Squares.a4] = .whiteKing }
         #expect(!pos.isSquareAttacked(Squares.h3, by: .white))
         #expect(!pos.isSquareAttacked(Squares.h4, by: .white))
         #expect(!pos.isSquareAttacked(Squares.h5, by: .white))
@@ -97,8 +93,7 @@ struct PositionAttackTests {
 
     // MARK: Sliding Attacks — Rook
     @Test func rookAttacksAlongRankAndFile() {
-        var pos = Position.empty
-        pos[Squares.d4] = .whiteRook
+        let pos = Position.make { $0[Squares.d4] = .whiteRook }
 
         #expect(pos.isSquareAttacked(Squares.d8, by: .white))
         #expect(pos.isSquareAttacked(Squares.d1, by: .white))
@@ -109,9 +104,10 @@ struct PositionAttackTests {
     }
 
     @Test func rookAttackBlockedByPiece() {
-        var pos = Position.empty
-        pos[Squares.d4] = .whiteRook
-        pos[Squares.d6] = .whitePawn  // blocks the rook's reach past d6
+        let pos = Position.make {
+            $0[Squares.d4] = .whiteRook
+            $0[Squares.d6] = .whitePawn  // blocks the rook's reach past d6
+        }
         // d5: in front of the blocker, attacked
         #expect(pos.isSquareAttacked(Squares.d5, by: .white))
         // d6: the blocker itself — still attacked by the rook (a piece "attacks"
@@ -124,9 +120,10 @@ struct PositionAttackTests {
     }
 
     @Test func rookAttackBlockedByEnemyNonSlider() {
-        var pos = Position.empty
-        pos[Squares.d4] = .whiteRook
-        pos[Squares.d6] = .blackKnight
+        let pos = Position.make {
+            $0[Squares.d4] = .whiteRook
+            $0[Squares.d6] = .blackKnight
+        }
         // d6 itself: attacked (capturable)
         #expect(pos.isSquareAttacked(Squares.d6, by: .white))
         // d7: knight blocks the ray, so not attacked
@@ -134,8 +131,7 @@ struct PositionAttackTests {
     }
 
     @Test func rookAttackDoesNotWraparoundAlongRank() {
-        var pos = Position.empty
-        pos[Squares.h1] = .whiteRook
+        let pos = Position.make { $0[Squares.h1] = .whiteRook }
         // h1+1 wraps to a2 if file check fails
         #expect(!pos.isSquareAttacked(Squares.a2, by: .white))
         // Legitimate: g1 along rank 1
@@ -144,8 +140,7 @@ struct PositionAttackTests {
 
     // MARK: Sliding Attacks — Bishop
     @Test func bishopAttacksAlongDiagonals() {
-        var pos = Position.empty
-        pos[Squares.d4] = .whiteBishop
+        let pos = Position.make { $0[Squares.d4] = .whiteBishop }
 
         #expect(pos.isSquareAttacked(Squares.h8, by: .white))
         #expect(pos.isSquareAttacked(Squares.a1, by: .white))
@@ -157,12 +152,13 @@ struct PositionAttackTests {
     }
 
     @Test func bishopAttackBlocked() {
-        var pos = Position.empty
-        pos[Squares.d4] = .whiteBishop
-        // Knight (not pawn!) as blocker: a pawn on f6 would itself attack g7,
-        // confounding the test. The knight on f6 jumps to d5/d7/e4/e8/g4/g8/h5/h7
-        // — none of which are the test squares — so it blocks cleanly.
-        pos[Squares.f6] = .whiteKnight
+        let pos = Position.make {
+            $0[Squares.d4] = .whiteBishop
+            // Knight (not pawn!) as blocker: a pawn on f6 would itself attack g7,
+            // confounding the test. The knight on f6 jumps to d5/d7/e4/e8/g4/g8/h5/h7
+            // — none of which are the test squares — so it blocks cleanly.
+            $0[Squares.f6] = .whiteKnight
+        }
         #expect(!pos.isSquareAttacked(Squares.g7, by: .white))
         #expect(!pos.isSquareAttacked(Squares.h8, by: .white))
         #expect(pos.isSquareAttacked(Squares.e5, by: .white))
@@ -170,8 +166,7 @@ struct PositionAttackTests {
 
     // MARK: Sliding Attacks — Queen
     @Test func queenAttacksOrthogonalAndDiagonal() {
-        var pos = Position.empty
-        pos[Squares.d4] = .whiteQueen
+        let pos = Position.make { $0[Squares.d4] = .whiteQueen }
 
         #expect(pos.isSquareAttacked(Squares.d8, by: .white))   // file
         #expect(pos.isSquareAttacked(Squares.h4, by: .white))   // rank
@@ -184,8 +179,7 @@ struct PositionAttackTests {
 
     // MARK: Color Discrimination
     @Test func attackerColorIsRespected() {
-        var pos = Position.empty
-        pos[Squares.d4] = .whiteRook
+        let pos = Position.make { $0[Squares.d4] = .whiteRook }
         // d8 is attacked by white but NOT by black (no black piece exists)
         #expect(pos.isSquareAttacked(Squares.d8, by: .white))
         #expect(!pos.isSquareAttacked(Squares.d8, by: .black))

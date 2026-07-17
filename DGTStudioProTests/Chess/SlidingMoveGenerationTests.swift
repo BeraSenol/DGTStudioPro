@@ -11,30 +11,14 @@ import Testing
 @Suite("Sliding Pseudo-Legal Move Generation")
 struct SlidingMoveGenerationTests {
 
-    // MARK: Helpers
-    private func slidingMoves(in state: GameState, from square: Square) -> [Move] {
-        state.pseudoLegalMoves().filter { $0.from == square }
-    }
-
-    private func makeState(
-        position: Position,
-        activeColor: PieceColor = .white
-    ) -> GameState {
-        GameState(
-            position: position,
-            activeColor: activeColor,
-            castlingRights: .none,
-            enPassantTarget: nil,
-            halfmoveClock: 0,
-            fullmoveNumber: 1
-        )
-    }
+    // Helpers (`GameState.test`, `pseudoLegalMoves(from:)`, `Position.make`)
+    // live in Support/ChessTestSupport.swift, shared across the move-gen
+    // suites.
 
     // MARK: Bishop
     @Test func centralBishopHasThirteenMoves() {
-        var pos = Position.empty
-        pos[Squares.d4] = .whiteBishop
-        let moves = slidingMoves(in: makeState(position: pos), from: Squares.d4)
+        let pos = Position.make { $0[Squares.d4] = .whiteBishop }
+        let moves = GameState.test(pos).pseudoLegalMoves(from: Squares.d4)
 
         let expected: Set<Square> = [
             Squares.e5, Squares.f6, Squares.g7, Squares.h8,  // up-right
@@ -47,10 +31,11 @@ struct SlidingMoveGenerationTests {
     }
 
     @Test func bishopBlockedByOwnPieceStopsBeforeIt() {
-        var pos = Position.empty
-        pos[Squares.d4] = .whiteBishop
-        pos[Squares.f6] = .whitePawn
-        let moves = slidingMoves(in: makeState(position: pos), from: Squares.d4)
+        let pos = Position.make {
+            $0[Squares.d4] = .whiteBishop
+            $0[Squares.f6] = .whitePawn
+        }
+        let moves = GameState.test(pos).pseudoLegalMoves(from: Squares.d4)
 
         // Up-right ray now stops at e5; f6/g7/h8 unreachable.
         let upRight = moves.filter {
@@ -61,10 +46,11 @@ struct SlidingMoveGenerationTests {
     }
 
     @Test func bishopCapturesEnemyAndStops() {
-        var pos = Position.empty
-        pos[Squares.d4] = .whiteBishop
-        pos[Squares.f6] = .blackKnight
-        let moves = slidingMoves(in: makeState(position: pos), from: Squares.d4)
+        let pos = Position.make {
+            $0[Squares.d4] = .whiteBishop
+            $0[Squares.f6] = .blackKnight
+        }
+        let moves = GameState.test(pos).pseudoLegalMoves(from: Squares.d4)
 
         let upRight = moves.filter {
             [Squares.e5, Squares.f6, Squares.g7, Squares.h8].contains($0.to)
@@ -75,11 +61,12 @@ struct SlidingMoveGenerationTests {
     }
 
     @Test func bishopOnA1DoesNotWraparound() {
-        var pos = Position.empty
-        pos[Squares.a1] = .whiteBishop
-        pos[Squares.h2] = .blackPawn  // wraparound bait via the up-left ray a1+7=h1
-        pos[Squares.h8] = .blackPawn  // legitimate end of up-right diagonal
-        let moves = slidingMoves(in: makeState(position: pos), from: Squares.a1)
+        let pos = Position.make {
+            $0[Squares.a1] = .whiteBishop
+            $0[Squares.h2] = .blackPawn  // wraparound bait via the up-left ray a1+7=h1
+            $0[Squares.h8] = .blackPawn  // legitimate end of up-right diagonal
+        }
+        let moves = GameState.test(pos).pseudoLegalMoves(from: Squares.a1)
 
         // Only the up-right diagonal is reachable: b2..g7..h8 (capture).
         #expect(moves.count == 7)
@@ -89,18 +76,18 @@ struct SlidingMoveGenerationTests {
 
     // MARK: Rook
     @Test func centralRookHasFourteenMoves() {
-        var pos = Position.empty
-        pos[Squares.d4] = .whiteRook
-        let moves = slidingMoves(in: makeState(position: pos), from: Squares.d4)
+        let pos = Position.make { $0[Squares.d4] = .whiteRook }
+        let moves = GameState.test(pos).pseudoLegalMoves(from: Squares.d4)
 
         #expect(moves.count == 14)
     }
 
     @Test func rookBlockedByOwnPieceStopsBeforeIt() {
-        var pos = Position.empty
-        pos[Squares.d4] = .whiteRook
-        pos[Squares.d7] = .whitePawn
-        let moves = slidingMoves(in: makeState(position: pos), from: Squares.d4)
+        let pos = Position.make {
+            $0[Squares.d4] = .whiteRook
+            $0[Squares.d7] = .whitePawn
+        }
+        let moves = GameState.test(pos).pseudoLegalMoves(from: Squares.d4)
 
         let up = moves.filter {
             [Squares.d5, Squares.d6, Squares.d7, Squares.d8].contains($0.to)
@@ -109,10 +96,11 @@ struct SlidingMoveGenerationTests {
     }
 
     @Test func rookCapturesEnemyAndStops() {
-        var pos = Position.empty
-        pos[Squares.d4] = .whiteRook
-        pos[Squares.d7] = .blackKnight
-        let moves = slidingMoves(in: makeState(position: pos), from: Squares.d4)
+        let pos = Position.make {
+            $0[Squares.d4] = .whiteRook
+            $0[Squares.d7] = .blackKnight
+        }
+        let moves = GameState.test(pos).pseudoLegalMoves(from: Squares.d4)
 
         let up = moves.filter {
             [Squares.d5, Squares.d6, Squares.d7, Squares.d8].contains($0.to)
@@ -123,10 +111,11 @@ struct SlidingMoveGenerationTests {
     }
 
     @Test func rookOnH1DoesNotWraparoundAlongRank() {
-        var pos = Position.empty
-        pos[Squares.h1] = .whiteRook
-        pos[Squares.a2] = .blackPawn  // would be reached via h1+1 wrap if file check failed
-        let moves = slidingMoves(in: makeState(position: pos), from: Squares.h1)
+        let pos = Position.make {
+            $0[Squares.h1] = .whiteRook
+            $0[Squares.a2] = .blackPawn  // would be reached via h1+1 wrap if file check failed
+        }
+        let moves = GameState.test(pos).pseudoLegalMoves(from: Squares.h1)
 
         #expect(!moves.contains { $0.to == Squares.a2 })
         // 7 along rank 1 (g1..a1) + 7 up file h (h2..h8) = 14
@@ -135,20 +124,20 @@ struct SlidingMoveGenerationTests {
 
     // MARK: Queen
     @Test func centralQueenHasTwentySevenMoves() {
-        var pos = Position.empty
-        pos[Squares.d4] = .whiteQueen
-        let moves = slidingMoves(in: makeState(position: pos), from: Squares.d4)
+        let pos = Position.make { $0[Squares.d4] = .whiteQueen }
+        let moves = GameState.test(pos).pseudoLegalMoves(from: Squares.d4)
 
         // Bishop 13 + Rook 14
         #expect(moves.count == 27)
     }
 
     @Test func queenStopsIndependentlyOnEachRay() {
-        var pos = Position.empty
-        pos[Squares.d4] = .whiteQueen
-        pos[Squares.d6] = .whitePawn   // blocks "up" ray at d6
-        pos[Squares.f6] = .blackKnight // capturable on "up-right" ray
-        let moves = slidingMoves(in: makeState(position: pos), from: Squares.d4)
+        let pos = Position.make {
+            $0[Squares.d4] = .whiteQueen
+            $0[Squares.d6] = .whitePawn   // blocks "up" ray at d6
+            $0[Squares.f6] = .blackKnight // capturable on "up-right" ray
+        }
+        let moves = GameState.test(pos).pseudoLegalMoves(from: Squares.d4)
 
         // Up: d5 only (own piece at d6 stops ray, d6 not included)
         #expect(moves.contains { $0.to == Squares.d5 })
@@ -166,32 +155,23 @@ struct SlidingMoveGenerationTests {
 
     // MARK: Black Mirror
     @Test func blackBishopMirrorsWhite() {
-        var pos = Position.empty
-        pos[Squares.d4] = .blackBishop
-        let moves = slidingMoves(
-            in: makeState(position: pos, activeColor: .black),
-            from: Squares.d4
-        )
+        let pos = Position.make { $0[Squares.d4] = .blackBishop }
+        let moves = GameState.test(pos, activeColor: .black)
+            .pseudoLegalMoves(from: Squares.d4)
         #expect(moves.count == 13)
     }
 
     @Test func blackRookMirrorsWhite() {
-        var pos = Position.empty
-        pos[Squares.d4] = .blackRook
-        let moves = slidingMoves(
-            in: makeState(position: pos, activeColor: .black),
-            from: Squares.d4
-        )
+        let pos = Position.make { $0[Squares.d4] = .blackRook }
+        let moves = GameState.test(pos, activeColor: .black)
+            .pseudoLegalMoves(from: Squares.d4)
         #expect(moves.count == 14)
     }
 
     @Test func blackQueenMirrorsWhite() {
-        var pos = Position.empty
-        pos[Squares.d4] = .blackQueen
-        let moves = slidingMoves(
-            in: makeState(position: pos, activeColor: .black),
-            from: Squares.d4
-        )
+        let pos = Position.make { $0[Squares.d4] = .blackQueen }
+        let moves = GameState.test(pos, activeColor: .black)
+            .pseudoLegalMoves(from: Squares.d4)
         #expect(moves.count == 27)
     }
 }

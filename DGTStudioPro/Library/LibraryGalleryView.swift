@@ -13,13 +13,14 @@ internal struct LibraryGalleryView: View {
     @Binding var selectedPGNs: Set<PGN.ID>
     let boardStyle: BoardStyle
     let onOpen: (PGN) -> Void
+    let onAnalyze: (PGN) -> Void
     let onDelete: (PGN) -> Void
-
+    
     private var selectedPGN: PGN? {
         guard let id = selectedPGNs.first else { return nil }
         return games.first(where: { $0.id == id })
     }
-
+    
     var body: some View {
         VStack(spacing: 0) {
             preview
@@ -27,7 +28,7 @@ internal struct LibraryGalleryView: View {
             thumbnailStrip
         }
     }
-
+    
     @ViewBuilder
     private var preview: some View {
         if let game = selectedPGN ?? games.first {
@@ -40,7 +41,7 @@ internal struct LibraryGalleryView: View {
             )
         }
     }
-
+    
     private var thumbnailStrip: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
@@ -62,14 +63,15 @@ internal struct LibraryGalleryView: View {
             }
         }
     }
-
+    
     private func thumbnail(for game: PGN) -> some View {
         LibraryGameCardView(
             game: game,
             isSelected: selectedPGNs.contains(game.id),
-            onSelect: { selectedPGNs = [game.id] },
-            onOpen:   { onOpen(game) },
-            onDelete: { onDelete(game) }
+            onSelect:  { selectedPGNs = [game.id] },
+            onOpen:    { onOpen(game) },
+            onAnalyze: { onAnalyze(game) },
+            onDelete:  { onDelete(game) }
         )
         .frame(width: 180)
     }
@@ -89,14 +91,15 @@ private func galleryPreviewGames() -> [PGN] {
 
 #Preview("With Selection") {
     @Previewable @State var selection: Set<PGN.ID> = []
-
+    
     let games = galleryPreviewGames()
-
+    
     LibraryGalleryView(
         games: games,
         selectedPGNs: $selection,
         boardStyle: .walnut,
         onOpen: { _ in },
+        onAnalyze: { _ in },
         onDelete: { _ in }
     )
     .frame(width: 720, height: 600)
@@ -111,12 +114,13 @@ private func galleryPreviewGames() -> [PGN] {
 
 #Preview("No Selection (Fallback to First)") {
     @Previewable @State var selection: Set<PGN.ID> = []
-
+    
     LibraryGalleryView(
         games: galleryPreviewGames(),
         selectedPGNs: $selection,
         boardStyle: .rosewood,
         onOpen: { _ in },
+        onAnalyze: { _ in },
         onDelete: { _ in }
     )
     .frame(width: 720, height: 600)
@@ -125,12 +129,13 @@ private func galleryPreviewGames() -> [PGN] {
 
 #Preview("Empty") {
     @Previewable @State var selection: Set<PGN.ID> = []
-
+    
     LibraryGalleryView(
         games: [],
         selectedPGNs: $selection,
         boardStyle: .walnut,
         onOpen: { _ in },
+        onAnalyze: { _ in },
         onDelete: { _ in }
     )
     .frame(width: 720, height: 600)

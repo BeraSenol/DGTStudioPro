@@ -252,6 +252,37 @@ final class DGTStudioProUITests: XCTestCase {
                       "Import button should be in the Library toolbar")
     }
 
+    /// The Analyze toolbar button is a single-game action: always present,
+    /// enabled only once exactly one game is selected. Deliberately stops
+    /// short of clicking it while enabled — that would launch a Stockfish
+    /// pass (and mutate the seeded PGN's evaluations), which belongs to a
+    /// manual checklist, not the smoke suite.
+    func test_analyzeButton_existsAndEnablesWithSingleSelection() {
+        launch()
+
+        let analyze = element(AccessibilityID.libraryAnalyzeButton)
+        XCTAssertTrue(waitFor(analyze), "Analyze button should be in the Library toolbar")
+        XCTAssertFalse(analyze.isEnabled, "Analyze should be disabled with no selection")
+
+        // Force List mode (view mode persists in UserDefaults across runs),
+        // then select a seeded row.
+        let list = segment(ModeSymbol.list)
+        XCTAssertTrue(list.waitForExistence(timeout: 5))
+        if !isPicked(list) { list.click() }
+
+        let row = element(AccessibilityID.gameRow(SeedGameName.quickMate))
+        XCTAssertTrue(waitFor(row), "Seeded game row should exist in List mode")
+        row.click()
+
+        // Poll briefly (same idiom as assertPicked) to absorb the
+        // selection → toolbar-state update latency.
+        let deadline = Date().addingTimeInterval(3)
+        while Date() < deadline, !analyze.isEnabled {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        XCTAssertTrue(analyze.isEnabled, "Analyze should enable once a single game is selected")
+    }
+
     func test_launchPerformance() throws {
         measure(metrics: [XCTApplicationLaunchMetric()]) {
             app.launch()

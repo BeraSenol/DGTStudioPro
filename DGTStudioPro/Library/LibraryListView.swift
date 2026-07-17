@@ -12,6 +12,7 @@ internal struct LibraryListView: View {
     let games: [PGN]
     @Binding var selectedPGNs: Set<PGN.ID>
     let onOpen: (PGN) -> Void
+    let onAnalyze: (PGN) -> Void
     let onDeleteIDs: (Set<PGN.ID>) -> Void
 
     var body: some View {
@@ -38,13 +39,19 @@ internal struct LibraryListView: View {
         .accessibilityIdentifier("library.gamesTable")
         .contextMenu(forSelectionType: PGN.ID.self) { ids in
             // `ids` is the set the menu acts on: the full selection when a
-            // selected row is right-clicked, otherwise just that row. Open is
-            // a single-game action; Delete operates on the whole set.
+            // selected row is right-clicked, otherwise just that row. Open
+            // and Analyze are single-game actions; Delete operates on the
+            // whole set.
             if ids.count == 1, let id = ids.first, let game = games.first(where: { $0.id == id }) {
                 Button {
                     onOpen(game)
                 } label: {
                     Label("Open in Board", systemImage: "checkerboard.rectangle")
+                }
+                Button {
+                    onAnalyze(game)
+                } label: {
+                    Label("Analyze", systemImage: "wand.and.stars")
                 }
                 Divider()
             }
@@ -90,6 +97,7 @@ private func listPreviewGames() -> [PGN] {
         games: listPreviewGames(),
         selectedPGNs: $selection,
         onOpen: { _ in },
+        onAnalyze: { _ in },
         onDeleteIDs: { _ in }
     )
     .frame(width: 720, height: 360)
@@ -103,6 +111,7 @@ private func listPreviewGames() -> [PGN] {
         games: [],
         selectedPGNs: $selection,
         onOpen: { _ in },
+        onAnalyze: { _ in },
         onDeleteIDs: { _ in }
     )
     .frame(width: 720, height: 360)

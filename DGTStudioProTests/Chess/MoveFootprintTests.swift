@@ -34,18 +34,14 @@ struct MoveFootprintTests {
 
     /// The set of squares whose contents differ between two positions —
     /// i.e. the lifts and places a board would register for the transition.
+    /// (Position construction via `Position.make` lives in
+    /// Support/ChessTestSupport.swift.)
     private func changedSquares(_ before: Position, _ after: Position) -> Set<Square> {
         var changed: Set<Square> = []
         for square in Square.all where before[square] != after[square] {
             changed.insert(square)
         }
         return changed
-    }
-
-    private func position(_ build: (inout Position) -> Void) -> Position {
-        var pos = Position.empty
-        build(&pos)
-        return pos
     }
 
     // MARK: Quiet & Capture Footprints
@@ -61,7 +57,7 @@ struct MoveFootprintTests {
     }
 
     @Test func captureTouchesExactlyFromAndTo() {
-        let before = position {
+        let before = Position.make {
             $0[Squares.a1] = .whiteRook
             $0[Squares.a7] = .blackPawn
         }
@@ -81,7 +77,7 @@ struct MoveFootprintTests {
     // MARK: En Passant Footprint (the three-square pattern)
 
     @Test func enPassantTouchesThreeSquaresIncludingTheOffsetCapture() {
-        let before = position {
+        let before = Position.make {
             $0[Squares.e5] = .whitePawn
             $0[Squares.d5] = .blackPawn   // just played d7-d5
         }
@@ -107,7 +103,7 @@ struct MoveFootprintTests {
     // MARK: Castling Footprint (two pieces, four squares)
 
     @Test func kingsideCastlingTouchesKingAndRookSquares() {
-        let before = position {
+        let before = Position.make {
             $0[Squares.e1] = .whiteKing
             $0[Squares.h1] = .whiteRook
         }
@@ -128,7 +124,7 @@ struct MoveFootprintTests {
     }
 
     @Test func queensideCastlingTouchesKingAndRookSquares() {
-        let before = position {
+        let before = Position.make {
             $0[Squares.e1] = .whiteKing
             $0[Squares.a1] = .whiteRook
         }
@@ -146,7 +142,7 @@ struct MoveFootprintTests {
     // MARK: Promotion Footprint (square count small, identity changes)
 
     @Test func pushPromotionTouchesTwoSquaresButChangesPieceType() {
-        let before = position { $0[Squares.e7] = .whitePawn }
+        let before = Position.make { $0[Squares.e7] = .whitePawn }
         let move = Move.make(
             from: Squares.e7, to: Squares.e8,
             pieceType: .pawn, pieceColor: .white,
@@ -162,7 +158,7 @@ struct MoveFootprintTests {
     }
 
     @Test func capturePromotionTouchesFromAndDiagonalTo() {
-        let before = position {
+        let before = Position.make {
             $0[Squares.e7] = .whitePawn
             $0[Squares.f8] = .blackRook
         }
@@ -179,14 +175,15 @@ struct MoveFootprintTests {
 
     // MARK: Coordinate Identity Invariant
 
-    /// Reference positions (the perft suite's set) spanning castling, pins,
-    /// en passant and dense promotion fan-out.
+    /// Reference positions spanning castling, pins, en passant and dense
+    /// promotion fan-out — read from the shared `Chess` fixtures
+    /// (Support/ChessTestSupport.swift) rather than re-stating the FENs here.
     private static let referenceFENs: [(name: String, fen: String)] = [
         ("Starting",   FEN.startingString),
-        ("Kiwipete",   "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -"),
-        ("Position 3", "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -"),
-        ("Position 4", "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq -"),
-        ("Position 5", "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ -"),
+        ("Kiwipete",   Chess.kiwipete),
+        ("Position 3", Chess.position3),
+        ("Position 4", Chess.position4),
+        ("Position 5", Chess.position5),
     ]
 
     /// The full identity key the tracker resolves against: from-square,
@@ -197,7 +194,7 @@ struct MoveFootprintTests {
 
     @Test func fromToPromotionUniquelyIdentifiesEveryLegalMove() throws {
         for entry in Self.referenceFENs {
-            let state = GameState(try FEN(parsing: entry.fen))
+            let state = try GameState.parsing(entry.fen)
             let moves = state.legalMoves()
 
             var seen: [String: Move] = [:]
@@ -219,7 +216,7 @@ struct MoveFootprintTests {
         // tracker only needs to ask "which piece?" on the back rank, never
         // elsewhere.
         for entry in Self.referenceFENs {
-            let state = GameState(try FEN(parsing: entry.fen))
+            let state = try GameState.parsing(entry.fen)
             let moves = state.legalMoves()
 
             var byFromTo: [String: [Move]] = [:]
@@ -242,7 +239,7 @@ struct MoveFootprintTests {
         // choices, otherwise "only promotions collide" proves nothing.
         // (Position 4's a7 pawn is blocked and has no root promotions for
         // White to move — the dxc8=Q/R/B/N fan-out lives in Position 5.)
-        let state = GameState(try FEN(parsing: Self.referenceFENs[4].fen))  // Position 5
+        let state = try GameState.parsing(Chess.position5)
         let moves = state.legalMoves()
 
         var byFromTo: [String: Int] = [:]

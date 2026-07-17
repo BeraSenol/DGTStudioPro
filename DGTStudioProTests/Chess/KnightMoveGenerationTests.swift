@@ -5,6 +5,13 @@
 //  Created by Supreme Leader on 06/05/2026.
 //
 
+//
+//  KnightMoveGenerationTests.swift
+//  DGTStudioPro
+//
+//  Created by Supreme Leader on 06/05/2026.
+//
+
 import Testing
 @testable import DGTStudioPro
 
@@ -143,10 +150,7 @@ struct KnightMoveGenerationTests {
         #expect(Set(moves.map(\.to)) == targets)
     }
     
-    // MARK: Sanity Total (supersedes pawn file's 16-move test)
-    @Test func startingPositionGeneratesTwentyMoves() {
-        // 8 pawns × 2 (push + double push) + 2 knights × 2 moves = 20.
-        // Superseded by Perft once sliders + king ship.
-        #expect(GameState.starting.pseudoLegalMoves().count == 20)
-    }
+    // The starting-position pseudo-legal total (20 moves) is pinned once, in
+    // `PawnMoveGenerationTests.startingPositionGeneratesTwentyPseudoLegalMoves`;
+    // the identical copy that lived here has been removed.
 }
