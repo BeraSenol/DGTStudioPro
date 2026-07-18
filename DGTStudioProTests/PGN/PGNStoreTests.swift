@@ -78,8 +78,9 @@ struct PGNStoreTests {
         do {
             _ = try store.importPGN(text: Self.samplePGN())
             Issue.record("Expected duplicate error on re-import; import succeeded")
-        } catch let PGNStore.Error.duplicate(existing) {
-            #expect(existing.persistentModelID == first.persistentModelID)
+        } catch let PGNStore.Error.duplicate(existingID, existingName) {
+                    #expect(existingID == first.persistentModelID)
+                    #expect(existingName == first.name)
         } catch {
             Issue.record("Expected .duplicate, got \(error)")
         }

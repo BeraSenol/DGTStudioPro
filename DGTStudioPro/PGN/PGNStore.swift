@@ -54,7 +54,15 @@ internal struct PGNStore {
 
     // MARK: Errors
     internal enum Error: Swift.Error {
-        case duplicate(existing: PGN)
+        /// The imported text's content hash matches a game already in the
+        /// Library. Carries the match's `PersistentIdentifier` plus its
+        /// display name, rather than the `PGN` model itself: `Swift.Error`
+        /// refines `Sendable`, and a live `@Model` never is. The name rides
+        /// along because the import-status row titles duplicates with it
+        /// (mirroring `.imported(name:)`) — carrying the `String` keeps the
+        /// view free of SwiftData ID-resolution; the ID remains the handle
+        /// for any future "reveal in Library" affordance.
+        case duplicate(existingID: PersistentIdentifier, existingName: String)
         case missingRequiredTags(Set<String>)
         case malformedPGN(reason: String)
         case fileReadFailed(URL, underlying: Swift.Error)
@@ -92,7 +100,7 @@ internal struct PGNStore {
             Self.logger.info(
                 "Rejected duplicate: '\(pgn.name, privacy: .public)' matches existing '\(existing.name, privacy: .public)' hash=\(hash, privacy: .public)"
             )
-            throw Error.duplicate(existing: existing)
+            throw Error.duplicate(existingID: existing.persistentModelID, existingName: existing.name)
         }
 
         // Persist the computed hash on the model so subsequent imports of
