@@ -152,8 +152,14 @@ internal final class DGTSessionLog {
     }
     
     /// Presents a macOS save panel and writes the timeline to the chosen file.
-    /// This is the "Export Live Session Log" affordance — call it from a
-    /// toolbar button or a Debug menu command.
+    /// The "Export Live Session Log" affordance, reachable from both real
+    /// callers: the M6.3 recovery panel ("Export Diagnostics…") and the M8.3
+    /// Diagnostics menu. Deliberately non-throwing, failure Console-logged:
+    /// buffering an export failure into the very timeline that just failed
+    /// to save would only surface on a later, luckier export — Console is
+    /// the reliable witness. The recording's export throws instead, because
+    /// its caller *does* have a working timeline to note the failure in
+    /// (flag C); see `DGTSessionRecording.exportViaSavePanel()`.
     internal func exportViaSavePanel() {
         let panel = NSSavePanel()
         panel.title = "Export Live Session Log"

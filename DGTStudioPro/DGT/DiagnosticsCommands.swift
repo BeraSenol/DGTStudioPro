@@ -22,7 +22,7 @@ import SwiftUI
 /// Stop and export are one action, deliberately: a recording is
 /// diagnostic-only, so stopping without saving has no audience — cancelling
 /// the save panel discards it, the same outcome with one fewer menu item.
-/// An export write failure is recorded into the session log itself
+/// A recording-export write failure is recorded into the session log itself
 /// (Console + buffer) rather than alerted: a `Commands` scene has no
 /// natural presentation surface, and a diagnostics failure landing in the
 /// diagnostics timeline is exactly where the person debugging would look.

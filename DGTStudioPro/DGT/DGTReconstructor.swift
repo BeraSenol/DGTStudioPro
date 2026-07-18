@@ -13,10 +13,13 @@ internal enum DGTReconstruction: Equatable {
     case noChange
     /// A single legal move fully explains the board. Commit it.
     case move(Move)
-    /// The king has moved two squares but its rook hasn't moved yet — a castle
-    /// is underway. The live model commits the king move and shows a ghost rook
-    /// on the rook's destination until the real rook lands. (FIDE castling is
-    /// "king first," and players often complete it in two distinct motions.)
+    /// A castle is underway: some — but not all — of the gesture's square
+    /// changes have landed (king placed with the rook still on its origin or
+    /// in hand, or the rook placed with the king in hand). The live model
+    /// shows a ghost of the still-airborne piece on its destination and
+    /// commits nothing until the full castle settles as `.move`. (FIDE
+    /// castling is "king first" and often two distinct motions, so a
+    /// quiescence can fire between any two of them.)
     case castlingInProgress(Move)
     /// A legal move is recognized, but the board is one simple physical
     /// correction away from completing it — most commonly an en-passant capture
@@ -48,9 +51,9 @@ internal enum DGTReconstruction: Equatable {
 /// *fully* reproduces the physical board via `applying(...)`. That verification
 /// is what rejects fumbles, stray pieces, and partial diffs.
 internal enum DGTReconstructor {
-
+    
     // MARK: Coordinate Resolver
-
+    
     /// The `(from, to, promotion?) → Move` resolver. Returns the unique legal
     /// move with these coordinates, or nil if none is legal. Relies on the
     /// uniqueness invariant in `MoveFootprintTests`.
@@ -69,27 +72,27 @@ internal enum DGTReconstructor {
             $0.from == from && $0.to == to && $0.promotionType == promotion
         }
     }
-
+    
     // MARK: Classification
-
+    
     internal static func reconstruct(
         from lastLegal: GameState,
         physical: Position
     ) -> DGTReconstruction {
         let before = lastLegal.position
         if before == physical { return .noChange }
-
+        
         let mover = lastLegal.activeColor
         let diff = DGTBoardDiff(from: before, to: physical)
-
+        
         let vacatedByMover = diff.vacated.filter { $0.value.isColor(mover) }
         let placedByMover  = diff.placed.filter  { $0.value.isColor(mover) }
-
+        
         // Compute the legal-move list once. Every step below consumes it, and
         // `legalMoves()` regenerates pseudo-legal + filters per call — the live
         // path runs this every 300 ms quiescence, so paying twice is wasted work.
         let legal = lastLegal.legalMoves()
-
+        
         // Endpoints are shared by steps 1 and 1b.
         let endpoints = moveEndpoints(
             vacatedByMover: vacatedByMover,
@@ -97,7 +100,7 @@ internal enum DGTReconstructor {
             mover: mover,
             before: before
         )
-
+        
         // 1) Resolve a complete move from the diff's endpoints.
         if let endpoints {
             let promotion = promotionType(
@@ -114,7 +117,7 @@ internal enum DGTReconstructor {
                 return .move(candidate)
             }
         }
-
+        
         // 1b) Near-miss: a legal en-passant move is recognized by its endpoints,
         //     but the captured pawn wasn't physically lifted. The EP diff looks
         //     exactly like a plain pawn push (the captured pawn's square is
@@ -135,26 +138,52 @@ internal enum DGTReconstructor {
                 return .correctable(move: ep, clear: [captured], expectedAfter: expected)
             }
         }
-
-        // 2) Castle in progress: king has moved two squares, rook not yet.
+        
+        // 2) Castle in progress. FIDE castling is king-first and usually two
+        //    distinct motions, so a quiescence can fire between any of the
+        //    gesture's four square events. Three settled interim boards are
+        //    legitimate mid-castle states, not desyncs:
+        //      a) king placed, rook still on its origin  (ghost rook awaited)
+        //      b) king placed, rook lifted — in hand     (ghost rook awaited)
+        //      c) rook placed, king lifted — in hand     (ghost king awaited;
+        //         the two-handed castle whose rook hand lands first)
+        //    b) is the field desync of 2026-07-18 (ply-20 O-O): the settle
+        //    between the rook's lift and its landing fell through to
+        //    `.unresolved` and tripped recovery mid-legal-castle. All-in-hand
+        //    states with nothing placed are already step 3's `.inProgress`.
+        //    (Rook placed first with the king *untouched* is deliberately NOT
+        //    here: that board is byte-identical to a completed legal rook
+        //    move, which step 1 rightly commits — intent is unknowable at
+        //    that instant, which is why FIDE mandates king-first.)
         for castling in legal where castling.isCastling {
-            if kingOnlyApplied(castling, mover: mover, before: before) == physical {
-                return .castlingInProgress(castling)
+            guard let rookFrom = castling.rookFrom else { continue }
+            let kingMoved = kingOnlyApplied(castling, mover: mover, before: before)
+            if physical == kingMoved {
+                return .castlingInProgress(castling)                    // a
+            }
+            var rookInHand = kingMoved
+            rookInHand[rookFrom] = .empty
+            if physical == rookInHand {
+                return .castlingInProgress(castling)                    // b
+            }
+            var kingInHand = before.applying(castling)
+            kingInHand[castling.to] = .empty
+            if physical == kingInHand {
+                return .castlingInProgress(castling)                    // c
             }
         }
-
         // 3) Only removals → a piece (or pieces, e.g. attacker + captured) is
         //    in hand. A move is underway; wait rather than flag a desync.
         if diff.placed.isEmpty {
             return .inProgress
         }
-
+        
         // 4) Settled, with placements that don't complete any legal move.
         return .unresolved
     }
-
+    
     // MARK: Endpoints
-
+    
     /// Derives the moving piece's `(from, to)` from the diff, or nil when the
     /// diff doesn't look like a single completed move.
     private static func moveEndpoints(
@@ -171,15 +200,15 @@ internal enum DGTReconstructor {
            let kingTo = placedByMover.first(where: { $0.value == king })?.key {
             return (kingFrom, kingTo)
         }
-
+        
         // Single-piece move: normal, capture, en passant, or promotion.
         if vacatedByMover.count == 1, placedByMover.count == 1 {
             return (vacatedByMover.first!.key, placedByMover.first!.key)
         }
-
+        
         return nil
     }
-
+    
     /// The promoted piece type if this looks like a promotion (a pawn left
     /// `from` and a non-pawn of the mover's color sits on `to`), else nil.
     /// Underpromotion is assumed never to occur physically, so the detected
@@ -197,7 +226,7 @@ internal enum DGTReconstructor {
         }
         return arrived
     }
-
+    
     /// `before` with only the castle's king relocated (the rook left in place),
     /// used to detect the king-moved-but-rook-not interim state.
     private static func kingOnlyApplied(

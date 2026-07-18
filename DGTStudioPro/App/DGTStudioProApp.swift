@@ -77,9 +77,12 @@ internal struct DGTStudioProApp: App {
         
         // M7.3 — a board vanishing mid-game auto-reconnects instead of
         // showing the failure banner. "Mid-game" is any game-bearing mode
-        // (`liveGame` non-nil, finished-on-screen included); the loop
-        // re-asks on every lap, so a discard or return to idle stands it
-        // down. Wired here, once, like every other hook.
+        // (`liveGame` non-nil, finished-on-screen included: the finished
+        // screen flows into next-game detection, and the start-position
+        // offer can only come from a board that's actually streaming —
+        // unplugged reads as `.empty` forever); the loop re-asks on every
+        // lap, so a discard or return to idle stands it down. Wired here,
+        // once, like every other hook.
         connection.shouldAutoReconnect = { [weak session] in
             session?.liveGame != nil
         }

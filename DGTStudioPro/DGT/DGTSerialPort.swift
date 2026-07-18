@@ -242,7 +242,7 @@ internal actor DGTSerialPort: DGTPortProviding {
     /// resulting events. Runs only on `readLoopTask`, in chunk-arrival
     /// order (F2).
     private func ingest(_ data: Data) {
-        Self.logger.debug("recv \(data.count) byte(s)")
+        Self.logger.debug("Received \(data.count) \(data.count == 1 ? "byte" : "bytes"): \(data)")
         for frame in framer.ingest(data) {
             guard let event = DGTDecoder.decode(frame) else {
                 Self.logger.debug(

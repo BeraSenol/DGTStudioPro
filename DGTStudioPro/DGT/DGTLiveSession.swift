@@ -355,11 +355,13 @@ internal final class DGTLiveSession {
             sessionLog?.capture(.debug, "settle: move in progress (pieces lifted, none placed)")
 
         case .castlingInProgress(let castling):
-            // King has moved two squares; await the rook, showing a ghost.
-            setGhost(for: castling)
+            // A castle is mid-gesture; ghost the piece still in the player's
+            // hand on its destination — the rook in king-first castling, the
+            // king when a two-handed castle's rook lands first.
+            setGhost(for: castling, physical: board)
             sessionLog?.capture(
                 .info,
-                "settle: castling in progress — ghost rook awaited at \(castling.rookTo.map(\.algebraicNotation) ?? "?")"
+                "settle: castling in progress — ghost \(castlingGhostPiece?.type == .king ? "king" : "rook") awaited at \(castlingGhostSquare?.algebraicNotation ?? "?")"
             )
 
         case .correctable(let move, let clear, _):
@@ -800,11 +802,21 @@ internal final class DGTLiveSession {
 
     // MARK: Private — Ghost
 
-    /// Sets both ghost fields together for a castle in progress — the rook's
-    /// destination and a rook of the moving side.
-    private func setGhost(for castling: Move) {
-        castlingGhostSquare = castling.rookTo
-        castlingGhostPiece = Piece(castling.pieceColor, .rook)
+    /// Sets both ghost fields together for a castle in progress: the piece
+    /// still in the player's hand, ghosted on its destination. King-first
+    /// castling awaits the rook; the two-handed variant whose rook hand lands
+    /// first awaits the king. The settled physical board is what tells them
+    /// apart — the rook already sitting on its destination means the king is
+    /// the airborne piece.
+    private func setGhost(for castling: Move, physical: Position) {
+        let rook = Piece(castling.pieceColor, .rook)
+        if let rookTo = castling.rookTo, physical[rookTo] != rook {
+            castlingGhostSquare = rookTo
+            castlingGhostPiece = rook
+        } else {
+            castlingGhostSquare = castling.to
+            castlingGhostPiece = Piece(castling.pieceColor, .king)
+        }
     }
 
     /// Clears both ghost fields together — they're always set and cleared as a

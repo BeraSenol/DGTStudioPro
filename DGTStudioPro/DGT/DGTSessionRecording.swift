@@ -30,20 +30,20 @@ import Foundation
 /// helpers. It reads the (also pure) chess and reconstruction types; it never
 /// touches `DGTLiveSession` or the serial layer.
 internal struct DGTSessionRecording: Codable, Equatable {
-
+    
     /// One captured physical-board snapshot.
     internal struct Entry: Codable, Equatable {
         /// Milliseconds since the first recorded snapshot.
         internal let offsetMillis: Int
         internal let board: Position
     }
-
+    
     /// The board's reported identity, for fixture provenance.
     internal struct Identity: Codable, Equatable {
         internal var serialNumber: String?
         internal var version: String?
         internal var trademark: String?
-
+        
         internal init(
             serialNumber: String? = nil,
             version: String? = nil,
@@ -54,11 +54,11 @@ internal struct DGTSessionRecording: Codable, Equatable {
             self.trademark = trademark
         }
     }
-
+    
     internal var identity: Identity
     internal var recordedAt: Date
     internal var entries: [Entry]
-
+    
     internal init(
         identity: Identity = .init(),
         recordedAt: Date = .now,
@@ -73,7 +73,7 @@ internal struct DGTSessionRecording: Codable, Equatable {
 // MARK: Replay Analysis (pure)
 
 extension DGTSessionRecording {
-
+    
     /// The board snapshots the live session would have *settled* on: each entry
     /// followed by a quiescence-length gap with no further change, plus the
     /// final snapshot. Reproduces the live 300 ms debounce from the recorded
@@ -86,20 +86,20 @@ extension DGTSessionRecording {
         for index in entries.indices {
             let isLast = index == entries.index(before: entries.endIndex)
             let stillLongEnough = isLast
-                || (entries[index + 1].offsetMillis - entries[index].offsetMillis) >= gap
+            || (entries[index + 1].offsetMillis - entries[index].offsetMillis) >= gap
             if stillLongEnough {
                 settled.append(entries[index].board)
             }
         }
         return settled
     }
-
+    
     /// One settled snapshot and what the reconstructor concluded for it.
     internal struct Step: Equatable {
         internal let board: Position
         internal let outcome: DGTReconstruction
     }
-
+    
     /// Walks the settled snapshots through the pure reconstructor starting from
     /// `initialState`, advancing the game on each committed `.move`, and returns
     /// the per-snapshot outcome.
@@ -133,14 +133,14 @@ extension DGTSessionRecording {
 // MARK: Codable Convenience
 
 extension DGTSessionRecording {
-
+    
     internal func jsonData() throws -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
         return try encoder.encode(self)
     }
-
+    
     internal static func decoded(from data: Data) throws -> DGTSessionRecording {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -155,25 +155,25 @@ extension DGTSessionRecording {
 /// only — it's driven from the connection, which is `@MainActor`.
 @MainActor
 internal final class DGTSessionRecorder {
-
+    
     private let clock = ContinuousClock()
     private let start: ContinuousClock.Instant
     private let recordedAt = Date.now
     private(set) internal var entries: [DGTSessionRecording.Entry] = []
-
+    
     /// Stamped onto the finished recording; set from the board's reported
     /// identity when recording stops (identity arrives during the handshake,
     /// possibly after recording began).
     internal var identity = DGTSessionRecording.Identity()
-
+    
     internal init() {
         start = clock.now
     }
-
+    
     internal func record(_ board: Position) {
         entries.append(.init(offsetMillis: (clock.now - start).inMilliseconds, board: board))
     }
-
+    
     internal func finish() -> DGTSessionRecording {
         DGTSessionRecording(identity: identity, recordedAt: recordedAt, entries: entries)
     }
@@ -197,10 +197,15 @@ import AppKit
 import UniformTypeIdentifiers
 
 extension DGTSessionRecording {
-
+    
     /// Presents an `NSSavePanel` and writes the recording as JSON. Returns the
-    /// URL written, or nil if the user cancelled. Throws on encode/write
-    /// failure. Mirrors `DGTSessionLog.exportViaSavePanel()`.
+    /// URL written, or nil if the user cancelled. Mirrors the session log's
+    /// save-panel affordance in shape but deliberately *not* in error
+    /// contract: this one throws on encode/write failure, because the caller
+    /// (the M8.3 Diagnostics menu) has somewhere better to put the failure —
+    /// the session log's timeline (flag C) — while a recording has no
+    /// timeline of its own. The log's export swallows-and-Console-logs for
+    /// the mirrored reason; see its doc comment.
     @MainActor
     @discardableResult
     internal func exportViaSavePanel() throws -> URL? {
@@ -212,7 +217,7 @@ extension DGTSessionRecording {
         try jsonData().write(to: url)
         return url
     }
-
+    
     private static func fileTimestamp() -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyyMMdd-HHmmss"
