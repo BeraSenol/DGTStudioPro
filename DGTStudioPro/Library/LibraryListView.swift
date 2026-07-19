@@ -12,14 +12,14 @@ internal struct LibraryListView: View {
     let games: [PGN]
     @Binding var selectedPGNs: Set<PGN.ID>
     let onOpen: (PGN) -> Void
-    let onAnalyze: (PGN) -> Void
+    let onAnalyzeIDs: (Set<PGN.ID>) -> Void
     let onDeleteIDs: (Set<PGN.ID>) -> Void
-
+    
     var body: some View {
         Table(games, selection: $selectedPGNs) {
             TableColumn("White") { game in
                 Text(game.whiteDisplayName)
-                    .accessibilityIdentifier("gameRow.\(game.name)")
+                    .accessibilityIdentifier(AccessibilityID.gameRow(game.name))
             }
             TableColumn("Black") { Text($0.blackDisplayName) }
             TableColumn("Result") { game in
@@ -36,26 +36,32 @@ internal struct LibraryListView: View {
             }
             .width(60)
         }
-        .accessibilityIdentifier("library.gamesTable")
+        .accessibilityIdentifier(AccessibilityID.libraryGamesTable)
         .contextMenu(forSelectionType: PGN.ID.self) { ids in
             // `ids` is the set the menu acts on: the full selection when a
             // selected row is right-clicked, otherwise just that row. Open
-            // and Analyze are single-game actions; Delete operates on the
-            // whole set.
+            // stays single-game (one window per game); Analyze and Delete
+            // operate on the whole set — Analyze enqueues in display
+            // order via `LibraryDestination.requestAnalysis(ids:)`, and a
+            // single id there routes through the single-game path (which
+            // also surfaces the inspector).
             if ids.count == 1, let id = ids.first, let game = games.first(where: { $0.id == id }) {
                 Button {
                     onOpen(game)
                 } label: {
                     Label("Open in Board", systemImage: "checkerboard.rectangle")
                 }
-                Button {
-                    onAnalyze(game)
-                } label: {
-                    Label("Analyze", systemImage: "wand.and.stars")
-                }
-                Divider()
             }
             if !ids.isEmpty {
+                Button {
+                    onAnalyzeIDs(ids)
+                } label: {
+                    Label(
+                        ids.count > 1 ? "Analyze \(ids.count) Games" : "Analyze",
+                        systemImage: "wand.and.stars"
+                    )
+                }
+                Divider()
                 Button(role: .destructive) {
                     onDeleteIDs(ids)
                 } label: {
@@ -92,12 +98,12 @@ private func listPreviewGames() -> [PGN] {
 
 #Preview("With Games") {
     @Previewable @State var selection: Set<PGN.ID> = []
-
+    
     LibraryListView(
         games: listPreviewGames(),
         selectedPGNs: $selection,
         onOpen: { _ in },
-        onAnalyze: { _ in },
+        onAnalyzeIDs: { _ in },
         onDeleteIDs: { _ in }
     )
     .frame(width: 720, height: 360)
@@ -106,12 +112,12 @@ private func listPreviewGames() -> [PGN] {
 
 #Preview("Empty") {
     @Previewable @State var selection: Set<PGN.ID> = []
-
+    
     LibraryListView(
         games: [],
         selectedPGNs: $selection,
         onOpen: { _ in },
-        onAnalyze: { _ in },
+        onAnalyzeIDs: { _ in },
         onDeleteIDs: { _ in }
     )
     .frame(width: 720, height: 360)

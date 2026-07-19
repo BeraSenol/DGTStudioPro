@@ -74,6 +74,14 @@ internal enum AccessibilityID {
     internal static let libraryGamesTable = "library.gamesTable"
     internal static let libraryInspectorToggle = "library.inspectorToggle"
     
+    /// Analysis-queue toolbar family (M-batch). `queue.status` has a
+    /// UITest witness (asserted *absent* while the queue is idle); the
+    /// popover internals are manual-checklist territory — clicking
+    /// Analyze in a UI test would spin live Stockfish passes.
+    internal static let libraryQueueStatus = "library.queue.status"
+    internal static let libraryQueuePopover = "library.queue.popover"
+    internal static let libraryQueueStopAll = "library.queue.stopAll"
+    
     /// `gameCard.Quick Mate`, … — one per Library card, keyed by the game's
     /// display name (see `LibraryGameCardView`).
     internal static func gameCard(_ name: String) -> String {

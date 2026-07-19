@@ -37,10 +37,7 @@ internal struct LibraryDestination: View {
     @State private var pendingBatchDeletion: [PGN]?
     @State private var selectedPGNs: Set<PGN.ID> = []
     @State private var importProgress: ImportProgress?
-    
-    /// One-shot handoff to the inspector's analysis driver — set by
-    /// `requestAnalysis`, nilled by the inspector's consumed callback.
-    @State private var pendingAnalysisID: PGN.ID?
+    @State private var isQueuePopoverPresented = false
     
     // MARK: Initializers
     internal init(filter: SmartTag? = nil, tabState: TabState) {
@@ -167,8 +164,7 @@ internal struct LibraryDestination: View {
         .inspector(isPresented: $tabState.libraryInspectorPresented) {
             LibraryInspectorView(
                 pgn: selectedPGN,
-                pendingAnalysisID: pendingAnalysisID,
-                onPendingAnalysisConsumed: { pendingAnalysisID = nil }
+                queue: tabState.analysisQueue
             )
             .inspectorColumnWidth(min: 260, ideal: 300, max: 400)
         }
@@ -199,9 +195,9 @@ internal struct LibraryDestination: View {
             LibraryListView(
                 games: filteredGames,
                 selectedPGNs: $selectedPGNs,
-                onOpen:      openGame,
-                onAnalyze:   requestAnalysis,
-                onDeleteIDs: { requestDelete(ids: $0) }
+                onOpen:       openGame,
+                onAnalyzeIDs: { requestAnalysis(ids: $0) },
+                onDeleteIDs:  { requestDelete(ids: $0) }
             )
             .accessibilityIdentifier(AccessibilityID.libraryModeList)
         case .columns:
@@ -235,25 +231,58 @@ internal struct LibraryDestination: View {
         openWindow(value: pgn.persistentModelID)
     }
     
-    /// Single resolution point for "analyze a game" (toolbar button and
-    /// context menus). The engine work stays where it already lives — the
-    /// inspector's per-selection `GameAnalysisDriver` — so this only
-    /// routes: select the game, surface the inspector (which shows the
-    /// progress, the Stop button, and the graph), and hand it a one-shot
-    /// request. Rejected alternative: a second driver owned here, which
-    /// would race the inspector's over the same PGN and report a status
-    /// its controls don't reflect. Selection-change semantics are
-    /// unchanged — picking a different game still cancels a running pass,
-    /// exactly as the inspector's own Analyze button always has.
+    /// Single-game entry (card context menus, the gallery, the one-row
+    /// list case). Analysis is a batch of one since M-batch — see
+    /// `AnalysisQueueController`, decision 1 — so this enqueues, then
+    /// keeps the pre-queue affordance: select the game and surface the
+    /// inspector, which shows this game's progress, its skip control,
+    /// and the graph filling in. The one-shot `pendingAnalysisID` relay
+    /// this used to set is gone with the per-inspector driver it fed.
     private func requestAnalysis(_ pgn: PGN) {
         Self.logger.info("Analyze requested: '\(pgn.name, privacy: .public)'")
         selectedPGNs = [pgn.id]
         tabState.libraryInspectorPresented = true
-        pendingAnalysisID = pgn.id
+        tabState.analysisQueue.enqueue([pgn], modelContext: modelContext)
+    }
+    
+    /// Multi-game entry (the toolbar button, the list's contextual
+    /// selection): enqueues in **display order** — a `Set` carries none,
+    /// and top-to-bottom-as-shown is the order a batch should crunch in.
+    /// Leaves selection and inspector untouched: collapsing a hand-built
+    /// multi-selection to show progress would be hostile, and the
+    /// toolbar's queue item carries batch progress instead. A single id
+    /// routes through the single-game path, so right-click → Analyze on
+    /// one row keeps opening the inspector exactly as before.
+    private func requestAnalysis(ids: Set<PGN.ID>) {
+        let ordered = filteredGames.filter { ids.contains($0.id) }
+        guard !ordered.isEmpty else { return }
+        if ordered.count == 1 {
+            requestAnalysis(ordered[0])
+            return
+        }
+        Self.logger.info("Batch analyze requested: \(ordered.count) game(s)")
+        tabState.analysisQueue.enqueue(ordered, modelContext: modelContext)
     }
     
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        ToolbarItem {
+            // Restored in M-batch. The button had been lost in an earlier
+            // toolbar edit, leaving three fossils: `presentOpenPanel()`
+            // orphaned, this identifier copy-pasted onto the view-mode
+            // picker's chain (where the outer of two chained identifiers
+            // won, mislabeling the picker), and the import-button UITest
+            // green against that mislabeled picker. Drag-and-drop had
+            // silently become the only import route.
+            Button {
+                presentOpenPanel()
+            } label: {
+                Label("Import", systemImage: "square.and.arrow.down")
+            }
+            .help("Import PGN files…")
+            .accessibilityIdentifier(AccessibilityID.libraryImportButton)
+        }
+        ToolbarSpacer()
         ToolbarItem {
             // NOTE: On macOS a `.segmented` Picker built from
             // `Label(_:systemImage:)` renders icon-only, and each segment
@@ -268,26 +297,45 @@ internal struct LibraryDestination: View {
                 }
             }
             .pickerStyle(.segmented)
-            .accessibilityIdentifier(AccessibilityID.libraryViewModePicker).accessibilityIdentifier(AccessibilityID.libraryImportButton)
+            .accessibilityIdentifier(AccessibilityID.libraryViewModePicker)
         }
         ToolbarSpacer()
         ToolbarItem {
             Button {
-                if let pgn = selectedPGN { requestAnalysis(pgn) }
+                requestAnalysis(ids: selectedPGNs)
             } label: {
                 Label("Analyze", systemImage: "wand.and.stars")
             }
-            // Single-game action — the inspector's driver runs one pass
-            // at a time (batch analysis is out of scope for v1), so a
-            // multi-selection disables the button rather than analyzing
-            // an arbitrary member of the Set.
-            .disabled(selectedPGNs.count != 1)
+            // Queue-of-N since M-batch: any non-empty selection enqueues
+            // in display order (see `requestAnalysis(ids:)`). The old
+            // single-game-only guard died with the per-inspector driver
+            // it protected.
+            .disabled(selectedPGNs.isEmpty)
             .help(
-                selectedPGNs.count == 1
-                ? "Analyze the selected game with Stockfish"
-                : "Select a single game to analyze"
+                selectedPGNs.count > 1
+                ? "Queue \(selectedPGNs.count) selected games for analysis"
+                : "Analyze the selected game with Stockfish"
             )
             .accessibilityIdentifier(AccessibilityID.libraryAnalyzeButton)
+        }
+        // Visible only while a batch runs or a drained batch left
+        // failures behind — see `queueStatusLabel` for the full rule.
+        if tabState.analysisQueue.queue.isActive || tabState.analysisQueue.queue.hasFailures {
+            ToolbarItem {
+                Button {
+                    isQueuePopoverPresented.toggle()
+                } label: {
+                    queueStatusLabel
+                }
+                .help("Analysis queue")
+                .accessibilityIdentifier(AccessibilityID.libraryQueueStatus)
+                .popover(
+                    isPresented: $isQueuePopoverPresented,
+                    arrowEdge: .bottom
+                ) {
+                    AnalysisQueueStatusView(controller: tabState.analysisQueue)
+                }
+            }
         }
         ToolbarSpacer()
         ToolbarItem {
@@ -308,6 +356,26 @@ internal struct LibraryDestination: View {
                 Label("Inspector", systemImage: "sidebar.trailing")
             }
             .accessibilityIdentifier(AccessibilityID.libraryInspectorToggle)
+        }
+    }
+    
+    /// The queue toolbar item's label: a spinner with "2/5" while the
+    /// run is live, a warning triangle with the counts once a drained
+    /// run left failures behind. The item renders only in those two
+    /// states — after a clean drain it disappears (the filled-in graphs
+    /// are the visible result), and while failures linger it stays until
+    /// the popover's Dismiss acknowledges them, so an error is never
+    /// silently swallowed by the batch ending.
+    private var queueStatusLabel: some View {
+        HStack(spacing: 6) {
+            if tabState.analysisQueue.queue.isActive {
+                ProgressView()
+                    .controlSize(.small)
+            } else {
+                Image(systemName: "exclamationmark.triangle")
+            }
+            Text("\(tabState.analysisQueue.queue.completedCount)/\(tabState.analysisQueue.queue.totalCount)")
+                .monospacedDigit()
         }
     }
     
@@ -406,6 +474,8 @@ internal struct LibraryDestination: View {
     private func performBatchDelete(_ pgns: [PGN]) {
         for pgn in pgns {
             let id = pgn.persistentModelID
+            // Before the store delete — see `performDelete` for the why.
+            tabState.analysisQueue.gameWasDeleted(id)
             openGames.markClean(id)
             // Close the open tab (if any) before teardown, so it never renders
             // against a tombstoned PGN.
@@ -441,6 +511,11 @@ internal struct LibraryDestination: View {
     private func performDelete(_ pgn: PGN) {
         let id = pgn.persistentModelID
         selectedPGNs.remove(pgn.id)
+        // Before the store delete: `gameWasDeleted` stops any running
+        // pass on this game synchronously (the analysis walk checks its
+        // cancellation flag before every PGN touch), so the engine never
+        // writes into a tombstoned model.
+        tabState.analysisQueue.gameWasDeleted(id)
         openGames.markClean(id)
         
         // Close the open tab (if any) before the model is torn down, so

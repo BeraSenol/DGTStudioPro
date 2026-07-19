@@ -94,6 +94,17 @@ internal struct ContentView: View {
                 LibraryDestination(filter: tag, tabState: tabState)
             }
         }
+        .onDisappear {
+            // Tab teardown. `ContentView` is the window/tab root: it
+            // disappears when the tab closes, never on destination
+            // switches (those recreate the *detail* views only) — which
+            // is exactly the boundary the analysis queue should die at.
+            // A batch survives Board↔Library round-trips (TabState's
+            // whole purpose) and stands down with its tab, releasing the
+            // Stockfish subprocess.
+            let analysisQueue = tabState.analysisQueue
+            Task { await analysisQueue.shutdown() }
+        }
     }
 }
 

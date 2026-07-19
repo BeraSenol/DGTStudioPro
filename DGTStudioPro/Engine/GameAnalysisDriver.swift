@@ -21,21 +21,23 @@ import SwiftData
 /// to MainActor at each emission. The engine subprocess work itself runs
 /// on the actor inside ``StockfishEngine`` without blocking MainActor.
 ///
-/// Lifecycle: one driver per inspector view. The engine starts lazily on
-/// the first ``analyze(pgn:depth:modelContext:)`` call and stays alive
-/// until ``shutdown()`` is invoked (typically from `.onDisappear`).
-/// Subsequent analyses on the same driver reuse the warmed-up engine,
-/// saving the ~100ms UCI handshake.
+/// Lifecycle: one driver per `AnalysisQueueController` — one per tab.
+/// The queue is the single analysis owner since M-batch (its decision 1);
+/// views no longer instantiate drivers. The engine starts lazily on the
+/// first ``analyze(pgn:depth:modelContext:)`` call and stays alive until
+/// ``shutdown()`` is invoked (the controller releases it when the queue
+/// drains, and at tab teardown). Successive games in a batch reuse the
+/// warmed-up engine, saving the ~100ms UCI handshake per game.
 @Observable
 @MainActor
 internal final class GameAnalysisDriver {
-
+    
     // MARK: Static Constants
     private static let logger = Logger(
         subsystem: "com.berasenol.dgtstudiopro",
         category: "analysis"
     )
-
+    
     // MARK: Status
     /// Coarse-grained view-facing state. The inspector uses this to pick
     /// between the Analyze button, the progress + Stop combo, and the
@@ -46,64 +48,81 @@ internal final class GameAnalysisDriver {
         case done
         case failed(message: String)
     }
-
+    
     // MARK: Stored Properties
     internal private(set) var status: Status = .idle
-
+    
     private var engine: StockfishEngine?
     private var task: Task<Void, Never>?
-
+    
     // MARK: Public API
-
-    /// Begins a full-game analysis pass. No-op if a previous analysis is
-    /// already running on this driver — the caller can either wait for it
-    /// to finish naturally or call ``stop()`` first.
+    
+    /// Runs one full-game analysis pass and returns the terminal status —
+    /// `.done`, `.failed`, or `.idle` after a ``stop()`` — awaitable so
+    /// the queue controller knows when to advance to the next game.
+    /// No-op returning the current status if a pass is already in flight;
+    /// the controller serializes calls, so that guard is belt and braces.
+    @discardableResult
     internal func analyze(
         pgn: PGN,
         depth: Int = 18,
         modelContext: ModelContext
-    ) {
+    ) async -> Status {
         guard task == nil else {
             Self.logger.info(
                 "analyze() called but a prior analysis is already in flight; ignoring"
             )
-            return
+            return status
         }
-
+        
         guard let binaryURL = StockfishEngine.defaultBinaryURL else {
             Self.logger.error("Stockfish binary not bundled in app Resources")
             status = .failed(
                 message: "Stockfish binary not bundled in app Resources. " +
                 "See Engine_README.md for setup."
             )
-            return
+            return status
         }
-
+        
         let engine = self.engine ?? StockfishEngine(binaryURL: binaryURL)
         self.engine = engine
-
+        
         Self.logger.info(
             "analyze begin: pgn='\(pgn.name, privacy: .public)' plies=\(pgn.moves.count) depth=\(depth)"
         )
-
+        
         // Reset (or initialize) the evaluations array to nil-per-ply.
         // Preserves the empty-or-same-length-as-moves invariant on PGN
         // and gives the graph a flat baseline to animate against as evals
         // stream in. Re-analyzing replaces prior results entirely.
         pgn.evaluations = Array(repeating: nil, count: pgn.moves.count)
         status = .analyzing(progress: 0)
-
-        task = Task { @MainActor [weak self] in
-            await self?.runAnalysis(
+        
+        // The pass still runs in its own Task — that is what ``stop()``
+        // cancels — but the caller awaits its completion. Cancelling the
+        // *awaiting* task does not cancel the pass; teardown goes through
+        // ``stop()``/``shutdown()``, exactly as it always has.
+        let pass = Task { @MainActor [weak self] in
+            // `guard let`, not optional chaining: a lone
+            // `await self?.runAnalysis(...)` is a single-expression
+            // closure of type `Void?`, and the resulting
+            // `Task<Void?, Never>` won't assign to `task` below. (The
+            // old fire-and-forget body dodged this only by having a
+            // second statement.)
+            guard let self else { return }
+            await self.runAnalysis(
                 engine: engine,
                 pgn: pgn,
                 depth: depth,
                 modelContext: modelContext
             )
-            self?.task = nil
         }
+        task = pass
+        await pass.value
+        task = nil
+        return status
     }
-
+    
     /// Cancels the running analysis Task. Structured cancellation
     /// propagates through the AsyncStream's `onTermination` handler into
     /// the engine actor, which sends UCI `stop` to the subprocess. The
@@ -113,10 +132,10 @@ internal final class GameAnalysisDriver {
         Self.logger.info("analyze stop requested")
         task?.cancel()
     }
-
+    
     /// Cancels any running analysis and shuts down the engine subprocess
-    /// with a 500ms grace period. Call from `.onDisappear` to release the
-    /// child process when the inspector view goes away. Safe to call
+    /// with a 500ms grace period. The queue controller calls this when
+    /// the queue drains (decision 4) and at tab teardown. Safe to call
     /// multiple times — re-entry after shutdown returns immediately.
     internal func shutdown() async {
         Self.logger.info("Driver shutdown")
@@ -124,9 +143,9 @@ internal final class GameAnalysisDriver {
         await engine?.shutdown()
         engine = nil
     }
-
+    
     // MARK: Analysis Loop
-
+    
     private func runAnalysis(
         engine: StockfishEngine,
         pgn: PGN,
@@ -149,13 +168,13 @@ internal final class GameAnalysisDriver {
             status = .failed(message: "Engine failed to start: \(error).")
             return
         }
-
+        
         var state = GameState.starting
         let total = pgn.moves.count
-
+        
         for (index, san) in pgn.moves.enumerated() {
             if Task.isCancelled { break }
-
+            
             // A SAN that won't parse stops the walk — partial analysis is
             // preferable to crashing on corrupt PGN. The graph just keeps
             // its nil tail.
@@ -171,7 +190,7 @@ internal final class GameAnalysisDriver {
             }
             state = state.applying(move)
             let fen = FEN(state)
-
+            
             // The engine emits progressively deeper evals; updating the
             // PGN on each emission lets the graph animate the search
             // converging. The final emission carries the deepest result.
@@ -179,13 +198,13 @@ internal final class GameAnalysisDriver {
                 if Task.isCancelled { break }
                 pgn.evaluations[index] = eval
             }
-
+            
             // If we exited the inner loop via cancellation, skip the
             // progress/save updates — the outer loop will pick up the
             // cancellation on its next iteration and we don't want a
             // brief "still analyzing" flicker on the way out.
             if Task.isCancelled { break }
-
+            
             status = .analyzing(
                 progress: Double(index + 1) / Double(max(total, 1))
             )
@@ -197,13 +216,13 @@ internal final class GameAnalysisDriver {
                 )
             }
         }
-
+        
         if Task.isCancelled {
             Self.logger.info("analyze cancelled for pgn='\(pgn.name, privacy: .public)'")
         } else {
             Self.logger.info("analyze done for pgn='\(pgn.name, privacy: .public)' [\(total) plies]")
         }
-
+        
         status = Task.isCancelled ? .idle : .done
     }
 }

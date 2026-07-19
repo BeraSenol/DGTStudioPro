@@ -18,69 +18,69 @@ import Foundation
 /// binaries as stand-ins and run on every checkout.
 @Suite("Stockfish Engine Integration")
 struct StockfishEngineTests {
-
+    
     private static var stockfishAvailable: Bool {
         StockfishEngine.defaultBinaryURL != nil
     }
-
+    
     // MARK: Lifecycle
-
+    
     @Test(.enabled(if: stockfishAvailable))
     func startsAndIdentifiesEngine() async throws {
         let url = try #require(StockfishEngine.defaultBinaryURL)
         let engine = StockfishEngine(binaryURL: url)
-
+        
         try await engine.start()
         defer { Task { await engine.shutdown() } }
-
+        
         let name = await engine.engineName
         let author = await engine.engineAuthor
-
+        
         #expect(name != nil, "Engine should have reported its name during handshake")
         #expect(name?.lowercased().contains("stockfish") == true,
                 "Engine name should mention Stockfish; got \(String(describing: name))")
         #expect(author != nil, "Engine should have reported its author during handshake")
     }
-
+    
     @Test(.enabled(if: stockfishAvailable))
     func reportsRunningStateCorrectly() async throws {
         let url = try #require(StockfishEngine.defaultBinaryURL)
         let engine = StockfishEngine(binaryURL: url)
-
+        
         let runningBeforeStart = await engine.isRunning
         #expect(runningBeforeStart == false)
-
+        
         try await engine.start()
         let runningAfterStart = await engine.isRunning
         #expect(runningAfterStart == true)
-
+        
         await engine.shutdown()
         let runningAfterShutdown = await engine.isRunning
         #expect(runningAfterShutdown == false)
     }
-
+    
     @Test(.enabled(if: stockfishAvailable))
     func doubleStartThrows() async throws {
         let url = try #require(StockfishEngine.defaultBinaryURL)
         let engine = StockfishEngine(binaryURL: url)
-
+        
         try await engine.start()
         defer { Task { await engine.shutdown() } }
-
+        
         await #expect(throws: StockfishEngine.EngineError.alreadyStarted) {
             try await engine.start()
         }
     }
-
+    
     // MARK: Analysis
-
+    
     @Test(.enabled(if: stockfishAvailable))
     func analyzesStartingPositionToReasonableEval() async throws {
         let url = try #require(StockfishEngine.defaultBinaryURL)
         let engine = StockfishEngine(binaryURL: url)
         try await engine.start()
         defer { Task { await engine.shutdown() } }
-
+        
         let stream = engine.analyze(fen: .starting, depth: 10)
         var lastEval: Evaluation?
         var yieldCount = 0
@@ -88,10 +88,10 @@ struct StockfishEngineTests {
             lastEval = evaluation
             yieldCount += 1
         }
-
+        
         #expect(yieldCount > 0, "Engine should yield at least one evaluation")
         let final = try #require(lastEval)
-
+        
         // Starting position is theoretically slightly white-favored but
         // any sub-pawn evaluation is reasonable. A mate evaluation here
         // would indicate something is very wrong.
@@ -103,27 +103,34 @@ struct StockfishEngineTests {
             Issue.record("Mate evaluation in starting position is impossible")
         }
     }
-
+    
     @Test(.enabled(if: stockfishAvailable))
     func analyzesObviouslyLostPositionAsBlackAdvantage() async throws {
-        // Position where white has just dropped its queen.
-        // FEN: white has no queen, black still has queen — eval should
-        // strongly favor black (negative in white-relative terms).
+        // Queen odds: the starting position minus White's queen, White
+        // to move. Chosen over a "just blundered the queen" middlegame
+        // because a hand-built tactic can quietly refute the premise —
+        // the original FEN here parked the black queen on c3, where the
+        // b2 AND d2 pawns both attack it, so White recaptures at once
+        // and the real deficit is one pawn (Stockfish said −170cp, and
+        // it was right; the test was wrong). It surfaced only when the
+        // binary-gated integration tests first ran on a checkout with
+        // Stockfish present. Queen odds has no move to argue with: the
+        // material verdict is the only thing the engine can report.
         let url = try #require(StockfishEngine.defaultBinaryURL)
         let engine = StockfishEngine(binaryURL: url)
         try await engine.start()
         defer { Task { await engine.shutdown() } }
-
+        
         let fen = try FEN(parsing:
-                            "rnb1kbnr/pppp1ppp/8/4p3/8/2q5/PPPP1PPP/RNB1KBNR w KQkq -"
+                            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq -"
         )
-
+        
         let stream = engine.analyze(fen: fen, depth: 10)
         var lastEval: Evaluation?
         for await evaluation in stream {
             lastEval = evaluation
         }
-
+        
         let final = try #require(lastEval)
         switch final {
         case .centipawns(let cp):
@@ -135,7 +142,7 @@ struct StockfishEngineTests {
             #expect(n < 0, "Mate should favor black, got mate(\(n))")
         }
     }
-
+    
     @Test(.enabled(if: stockfishAvailable))
     func sequentialAnalysesEachCompleteCleanly() async throws {
         // Verifies the actor handles back-to-back analyses without
@@ -144,7 +151,7 @@ struct StockfishEngineTests {
         let engine = StockfishEngine(binaryURL: url)
         try await engine.start()
         defer { Task { await engine.shutdown() } }
-
+        
         for _ in 0..<3 {
             let stream = engine.analyze(fen: .starting, depth: 6)
             var yieldCount = 0
@@ -154,9 +161,9 @@ struct StockfishEngineTests {
             #expect(yieldCount > 0, "Each analysis should yield at least once")
         }
     }
-
+    
     // MARK: Startup Hardening (F4 — no Stockfish binary required)
-
+    
     /// A binary that launches and exits before speaking UCI must fail the
     /// handshake promptly. The old `start()` awaited `uciok` on a
     /// non-throwing continuation with no termination handler: a dead binary
@@ -164,13 +171,13 @@ struct StockfishEngineTests {
     /// `/usr/bin/true` is the canonical instant-exit stand-in.
     @Test func startThrowsWhenTheEngineExitsBeforeTheHandshake() async {
         let engine = StockfishEngine(binaryURL: URL(filePath: "/usr/bin/true"))
-
+        
         await #expect(throws: StockfishEngine.EngineError.self) {
             try await engine.start()
         }
         #expect(await engine.isRunning == false)
     }
-
+    
     /// A binary that launches and stays silent must trip the handshake
     /// timeout rather than suspend forever. `/bin/cat` blocks on stdin and
     /// never writes — the pure timeout path (the process outlives the
@@ -178,7 +185,7 @@ struct StockfishEngineTests {
     /// terminates the stray process: `isRunning` false afterwards.
     @Test func startThrowsOnHandshakeTimeout() async {
         let engine = StockfishEngine(binaryURL: URL(filePath: "/bin/cat"))
-
+        
         await #expect(throws: StockfishEngine.EngineError.self) {
             try await engine.start(handshakeTimeout: .milliseconds(250))
         }

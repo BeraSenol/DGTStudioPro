@@ -9,56 +9,47 @@ import SwiftData
 import SwiftUI
 
 internal struct LibraryInspectorView: View {
-    
+
     // MARK: Stored Properties
     internal let pgn: PGN?
-    
-    /// One-shot analyze handoff from the Library toolbar / context menus.
-    /// When it names the displayed game, the loaded section starts an
-    /// engine pass and reports back through `onPendingAnalysisConsumed`
-    /// so the owner can nil its request state — see `LoadedSection`'s
-    /// `.task(id:)` for the consumption contract. Deliberately a routed
-    /// request rather than a second driver at the call site: one driver,
-    /// one Stockfish subprocess, and progress/Stop/graph stay in the one
-    /// place that already renders them.
-    internal let pendingAnalysisID: PGN.ID?
-    internal let onPendingAnalysisConsumed: () -> Void
-    
+
+    /// The tab's analysis queue. The inspector renders the queue's view
+    /// of the displayed game and routes every control through it — it
+    /// owns no driver of its own since M-batch (see
+    /// `AnalysisQueueController`, decision 1). That promotion also
+    /// retired the `pendingAnalysisID` one-shot relay this view used to
+    /// carry: toolbar and context-menu analyze only needed a routed
+    /// request because the driver lived in this view's `@State`; with
+    /// the controller reachable directly, they simply enqueue.
+    internal let queue: AnalysisQueueController
+
     // MARK: Initializers
     internal init(
         pgn: PGN? = nil,
-        pendingAnalysisID: PGN.ID? = nil,
-        onPendingAnalysisConsumed: @escaping () -> Void = {}
+        queue: AnalysisQueueController
     ) {
         self.pgn = pgn
-        self.pendingAnalysisID = pendingAnalysisID
-        self.onPendingAnalysisConsumed = onPendingAnalysisConsumed
+        self.queue = queue
     }
-    
+
     // MARK: Body
     internal var body: some View {
         List {
             if let pgn {
-                // .id forces SwiftUI to re-init this section (and its
-                // GameAnalysisDriver @State) when the user selects a
-                // different game. The prior section's .onDisappear fires
-                // on its way out, cancelling any in-flight analysis. That
-                // same re-init is also what lets a fresh section consume a
-                // pending analyze request via its `.task(id:)` on
-                // appearance.
-                LoadedSection(
-                    pgn: pgn,
-                    pendingAnalysisID: pendingAnalysisID,
-                    onPendingAnalysisConsumed: onPendingAnalysisConsumed
-                )
-                .id(pgn.id)
+                // .id forces SwiftUI to re-init this section when the
+                // user selects a different game, resetting per-game view
+                // state (the name-edit draft). It no longer tears down an
+                // analysis — the queue lives on the tab and keeps
+                // crunching while the user browses (decision 1).
+                LoadedSection(pgn: pgn, queue: queue)
+                    .id(pgn.id)
             } else {
                 emptySection
             }
         }
         .listStyle(.sidebar)
     }
-    
+
     // MARK: Instance Methods
     private var emptySection: some View {
         Section {
@@ -71,21 +62,19 @@ internal struct LibraryInspectorView: View {
 }
 
 private struct LoadedSection: View {
-    
+
     // MARK: Stored Properties
     @Bindable var pgn: PGN
-    let pendingAnalysisID: PGN.ID?
-    let onPendingAnalysisConsumed: () -> Void
-    
+    let queue: AnalysisQueueController
+
     // MARK: Private Properties
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
-    @State private var driver = GameAnalysisDriver()
     @FocusState private var isNameFieldFocused: Bool
     @State private var isEditingName: Bool = false
     @State private var draftName: String = ""
-    
+
     // MARK: Body
     var body: some View {
         Group {
@@ -102,37 +91,13 @@ private struct LoadedSection: View {
             } header: {
                 Text("Game Details")
             }
-            
+
             evaluationSection
         }
-        // Consumes a pending analyze request from the toolbar / context
-        // menus. `.task(id:)` covers both handoff shapes with one modifier:
-        // it runs on appearance (the request arrived alongside a selection
-        // change, so this section was just re-inited via `.id(pgn.id)`)
-        // *and* re-runs when the id changes (the game was already selected,
-        // so this section persisted and only the request is new — e.g.
-        // right-click → Analyze on the already-selected row). The id guard
-        // keeps an unconsumed request inert for every other game; the
-        // consumed callback (the destination nils its request state) is
-        // what prevents a replay the next time this game is re-selected.
-        // If a pass is already running, `driver.analyze` no-ops by design
-        // and the request is still consumed as resolved.
-        .task(id: pendingAnalysisID) {
-            guard let pendingAnalysisID, pendingAnalysisID == pgn.id else { return }
-            driver.analyze(pgn: pgn, modelContext: modelContext)
-            onPendingAnalysisConsumed()
-        }
-        .onDisappear {
-            // Fire-and-forget — the engine's 500ms grace period lets `quit`
-            // drain cleanly without blocking view teardown. If the view
-            // is replaced for a different PGN, the prior driver's task
-            // gets cancelled here before the new driver takes over.
-            Task { await driver.shutdown() }
-        }
     }
-    
+
     // MARK: Open Affordance
-    
+
     /// "Open" button in the Library inspector. Asks macOS to open a
     /// window for this game's `persistentModelID`. macOS handles dedup —
     /// re-clicking activates the existing window. With "Prefer Tabs:
@@ -145,7 +110,7 @@ private struct LoadedSection: View {
         }
         .help("Open this game in a new window")
     }
-    
+
     // MARK: Evaluation Section
     @ViewBuilder
     private var evaluationSection: some View {
@@ -159,51 +124,80 @@ private struct LoadedSection: View {
             )
             .frame(height: 100)
             .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
-            
+
             analysisControlRow
         } header: {
             Text("Evaluation")
         }
     }
-    
+
+    /// One row, four shapes, all driven by the queue's view of this game:
+    /// Analyze/Re-analyze enqueues (a single game is a batch of one); a
+    /// queued game shows its place in line with a way out; the running
+    /// game shows the per-ply progress and the skip control; a failure
+    /// shows its message with Retry. "Re-analyze" keys off recorded
+    /// evaluations rather than a driver's `.done` — the driver is gone
+    /// from this view, and the data reads correctly for games analyzed in
+    /// an earlier session or imported with `[%eval]` tags, which the old
+    /// status-based label never did.
     @ViewBuilder
     private var analysisControlRow: some View {
-        switch driver.status {
-        case .idle, .done:
-            Button {
-                driver.analyze(pgn: pgn, modelContext: modelContext)
-            } label: {
-                Label(
-                    driver.status == .done ? "Re-analyze" : "Analyze",
-                    systemImage: "wand.and.stars"
-                )
-            }
-            
-        case .analyzing(let progress):
+        switch queue.status(of: pgn.id) {
+        case .running:
             HStack(spacing: 8) {
-                ProgressView(value: progress)
+                ProgressView(value: queue.currentProgress)
                 Button {
-                    driver.stop()
+                    queue.skipCurrent()
                 } label: {
                     Image(systemName: "stop.fill")
                 }
                 .buttonStyle(.borderless)
-                .help("Stop analysis")
+                .help("Stop analyzing this game")
             }
-            
-        case .failed(let message):
+
+        case .waiting(let position):
+            HStack(spacing: 8) {
+                Label("Queued — #\(position) in line", systemImage: "hourglass")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button {
+                    queue.removeWaiting(pgn.id)
+                } label: {
+                    Image(systemName: "xmark.circle")
+                }
+                .buttonStyle(.borderless)
+                .help("Remove from the analysis queue")
+            }
+
+        case .finished(.failed(let message)):
             VStack(alignment: .leading, spacing: 6) {
                 Text(message)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Button("Retry") {
-                    driver.analyze(pgn: pgn, modelContext: modelContext)
+                    queue.enqueue([pgn], modelContext: modelContext)
                 }
                 .buttonStyle(.borderless)
             }
+
+        case .notQueued, .finished(.done), .finished(.cancelled):
+            Button {
+                queue.enqueue([pgn], modelContext: modelContext)
+            } label: {
+                Label(
+                    hasRecordedAnalysis ? "Re-analyze" : "Analyze",
+                    systemImage: "wand.and.stars"
+                )
+            }
         }
     }
-    
+
+    /// Whether any ply of this game carries a recorded evaluation —
+    /// what "Re-analyze" keys off (see `analysisControlRow`).
+    private var hasRecordedAnalysis: Bool {
+        pgn.evaluations.contains { $0 != nil }
+    }
+
     // MARK: Instance Methods
     @ViewBuilder
     private var nameRow: some View {
@@ -232,13 +226,13 @@ private struct LoadedSection: View {
             }
         }
     }
-    
+
     private func beginEdit() {
         draftName = pgn.name
         isEditingName = true
         isNameFieldFocused = true
     }
-    
+
     private func commitEdit() {
         let trimmed = draftName.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {
@@ -258,7 +252,8 @@ private struct LoadedSection: View {
             white: "Carlsen",
             black: "Nepomniachtchi",
             result: .ongoing
-        )
+        ),
+        queue: AnalysisQueueController()
     )
     .frame(width: 300, height: 500)
 }
@@ -273,12 +268,13 @@ private struct LoadedSection: View {
             black: "Spassky",
             name: "Game of the Century",
             result: .whiteWins
-        )
+        ),
+        queue: AnalysisQueueController()
     )
     .frame(width: 300, height: 500)
 }
 
 #Preview("Empty") {
-    LibraryInspectorView()
+    LibraryInspectorView(queue: AnalysisQueueController())
         .frame(width: 300, height: 400)
 }

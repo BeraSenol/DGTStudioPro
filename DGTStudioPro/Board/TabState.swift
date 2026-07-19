@@ -71,6 +71,17 @@ internal final class TabState {
     /// `onAppear`/`onChange(of: viewMode)`.
     internal var libraryInspectorPresented: Bool = false
     
+    /// The tab's engine-analysis queue. A batch must survive destination
+    /// switches (it keeps crunching while the user peeks at the Board)
+    /// and outlive any one inspector selection — exactly the class of
+    /// state this type exists to preserve, so the controller is owned
+    /// here rather than as destination `@State`. Per-tab like everything
+    /// else on `TabState`: two tabs hold at most one engine each. A
+    /// `let` holding a reference type keeps `TabState` itself a
+    /// method-free property bag (its M9 waiver rationale); all behavior
+    /// lives on `AnalysisQueueController`.
+    internal let analysisQueue = AnalysisQueueController()
+    
     // MARK: Players / Rankings Destinations
     
     internal var playersInspectorPresented: Bool = false
