@@ -5,13 +5,6 @@
 //  Created by Supreme Leader on 24/03/2026.
 //
 
-//
-//  ContentView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 24/03/2026.
-//
-
 import SwiftData
 import SwiftUI
 
@@ -29,18 +22,18 @@ import SwiftUI
 /// state survives the destination view being recreated when the user
 /// switches the sidebar. See `TabState` for the rationale.
 internal struct ContentView: View {
-    
+
     // MARK: Window-Bound State
-    
+
     @Binding internal var loadedGameID: PersistentIdentifier?
-    
+
     // MARK: Per-Tab State
-    
+
     @State private var selection: SidebarSelection
     @State private var tabState = TabState()
-    
+
     // MARK: Initializer
-    
+
     internal init(loadedGameID: Binding<PersistentIdentifier?>) {
         self._loadedGameID = loadedGameID
         // Start on Board for tabs opened with a specific game, on
@@ -50,9 +43,9 @@ internal struct ContentView: View {
         : .destination(.library)
         self._selection = State(initialValue: initial)
     }
-    
+
     // MARK: Body
-    
+
     internal var body: some View {
         NavigationSplitView {
             List(selection: $selection) {
@@ -63,7 +56,7 @@ internal struct ContentView: View {
                             .accessibilityIdentifier(AccessibilityID.sidebarDestination(destination.rawValue))
                     }
                 }
-                
+
                 Section("Tags") {
                     ForEach(SmartTag.allCases) { tag in
                         Label {
@@ -120,13 +113,13 @@ internal enum Destination: String, CaseIterable, Identifiable, Hashable {
     case library
     case players
     case rankings
-    
+
     internal var id: String { rawValue }
-    
+
     internal var title: String {
         rawValue.capitalized
     }
-    
+
     internal var systemImage: String {
         switch self {
         case .board:    return "checkerboard.rectangle"

@@ -8,16 +8,11 @@
 import SwiftUI
 
 /// The live-play status banner shown above the mirror board (M3.1) — the
-/// always-visible answer to "what is the app doing with my board right now?"
-///
-/// Pure presentation: `BoardDestination` derives a `Phase` from
-/// `DGTLiveSession` + `DGTConnection` and hands it over together with the one
-/// action the banner can trigger (New Game). The view holds no state and
-/// knows nothing about the session, which keeps every phase trivially
-/// previewable.
-///
-/// Accessibility: one dotted, lowercase identifier per phase
-/// (`live.hud.<phase>`) — identifiers are a tested contract.
+/// answer to "what is the app doing with my board right now?", shown
+/// whenever a board is connected or being chased (`reconnecting`). Plain
+/// disconnected has no banner at all: the message carried no action, so
+/// it lives in the live inspector's empty state and the strip above the
+/// board stays clear.
 internal struct LiveGameHUDView: View {
     
     // MARK: Phase
@@ -25,11 +20,6 @@ internal struct LiveGameHUDView: View {
     /// Everything the banner can say. Derivation (including priority between
     /// overlapping session flags) lives in `BoardDestination.hudPhase`.
     internal enum Phase: Equatable {
-        /// No board connected — point at the connection toolbar.
-        case disconnected
-        /// The board vanished mid-game and the auto-reconnect loop (M7.3)
-        /// is retrying. Replugging resumes seamlessly — or through
-        /// recovery, if pieces moved while the board was dark.
         case reconnecting
         /// Connected, no game running: invite setup or a manual New Game.
         case idle
@@ -126,8 +116,6 @@ internal struct LiveGameHUDView: View {
     
     private var title: String {
         switch phase {
-        case .disconnected:
-            "No board connected"
         case .reconnecting:
             "Board disconnected — reconnecting…"
         case .idle:
@@ -149,8 +137,6 @@ internal struct LiveGameHUDView: View {
     
     private var subtitle: String? {
         switch phase {
-        case .disconnected:
-            "Connect your DGT board to record games live."
         case .reconnecting:
             "Plug the board back in — the game picks up where it left off."
         case .idle:
@@ -174,7 +160,6 @@ internal struct LiveGameHUDView: View {
     
     private var symbolName: String {
         switch phase {
-        case .disconnected:  "cable.connector.horizontal"
         case .reconnecting:  "arrow.triangle.2.circlepath"
         case .idle:          "checkmark.circle"
         case .awaitingSetup: "checkerboard.rectangle"
@@ -188,7 +173,6 @@ internal struct LiveGameHUDView: View {
     
     private var tint: Color {
         switch phase {
-        case .disconnected:  .secondary
         case .reconnecting:  .orange
         case .idle:          .green
         case .awaitingSetup: .blue
@@ -202,7 +186,6 @@ internal struct LiveGameHUDView: View {
     
     private var accessibilityIdentifier: String {
         switch phase {
-        case .disconnected:  "live.hud.disconnected"
         case .reconnecting:  "live.hud.reconnecting"
         case .idle:          "live.hud.idle"
         case .awaitingSetup: "live.hud.awaitingsetup"
@@ -230,7 +213,6 @@ internal struct LiveGameHUDView: View {
 
 #Preview("All Phases") {
     VStack(spacing: 0) {
-        LiveGameHUDView(phase: .disconnected, onNewGame: {})
         LiveGameHUDView(phase: .reconnecting, onNewGame: {})
         LiveGameHUDView(phase: .idle, onNewGame: {})
         LiveGameHUDView(phase: .awaitingSetup, onNewGame: {})

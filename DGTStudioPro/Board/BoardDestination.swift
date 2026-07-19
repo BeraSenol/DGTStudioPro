@@ -42,51 +42,51 @@ import SwiftUI
 /// would lose scrub position, perspective, and inspector toggle on every
 /// destination round-trip.
 internal struct BoardDestination: View {
-
+    
     // MARK: Static Constants
-
+    
     private static let logger = Logger(
         subsystem: "com.berasenol.dgtstudiopro",
         category: "boardload"
     )
-
+    
     // MARK: Bound State
-
+    
     @Binding internal var loadedGameID: PersistentIdentifier?
-
+    
     // MARK: Tab State (lives on enclosing `ContentView`)
-
+    
     @Bindable internal var tabState: TabState
-
+    
     // MARK: Environment
-
+    
     @Environment(\.modelContext) private var modelContext
     @Environment(DGTConnection.self) private var connection
     @Environment(DGTLiveSession.self) private var session
     @Environment(DGTSessionLog.self) private var sessionLog
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
-
+    
     // MARK: View State
-
+    
     /// True while the HUD's manual "New Game…" button has requested the
     /// dialog. Combined with `session.shouldOfferNewGame` into the sheet's
     /// presentation binding; transient by design (a sidebar round-trip
     /// recreates this destination and simply closes the sheet).
     @State private var manualNewGameRequested = false
-
+    
     /// True after "Keep for Now" on the corrupt-draft alert, so it doesn't
     /// re-present every render for the rest of this visit. The file stays on
     /// disk as diagnostics; the offer returns at the next launch (or the
     /// next visit to Board). Transient by design, like the flag above.
     @State private var corruptOfferDeferred = false
-
+    
     /// True for a beat after recovery auto-resolves, flashing "Position
     /// restored — play continues." under the HUD (M6.2). Transient by
     /// design, like the flags above.
     @State private var showsRestoredFlash = false
-
+    
     // MARK: Body
-
+    
     internal var body: some View {
         Group {
             if let pgn = tabState.boardPGN, let game = tabState.boardGame {
@@ -134,9 +134,9 @@ internal struct BoardDestination: View {
         .onAppear { loadIfNeeded() }
         .onChange(of: loadedGameID) { _, _ in loadIfNeeded() }
     }
-
+    
     // MARK: Load Error (M8.2)
-
+    
     /// The load-error banner, in the HUD's visual language (same `.bar`
     /// background, stroke, and paddings; orange like `archiveFailed` —
     /// informative, blocking nothing). Dismiss clears `loadedGameID`,
@@ -151,7 +151,7 @@ internal struct BoardDestination: View {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.title3)
                 .foregroundStyle(.orange)
-
+            
             VStack(alignment: .leading, spacing: 2) {
                 Text("Couldn't open the game")
                     .font(.headline)
@@ -159,9 +159,9 @@ internal struct BoardDestination: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
-
+            
             Spacer(minLength: 12)
-
+            
             Button("Dismiss") { loadedGameID = nil }
                 .controlSize(.small)
                 .accessibilityIdentifier(AccessibilityID.boardLoadErrorDismiss)
@@ -178,9 +178,9 @@ internal struct BoardDestination: View {
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier(AccessibilityID.boardLoadError)
     }
-
+    
     // MARK: Board Surface
-
+    
     /// The board itself, shared by the game view and the live mirror. Both
     /// render the same `BoardView` with the same padding, sizing, and
     /// `"board"` accessibility identifier — only the inputs differ. Keeping
@@ -213,9 +213,9 @@ internal struct BoardDestination: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier(AccessibilityID.board)
     }
-
+    
     // MARK: Content
-
+    
     private func content(pgn: PGN, game: Game) -> some View {
         // PGN-replay path: no ghost. Ghosts only make sense against the
         // live physical board.
@@ -245,21 +245,27 @@ internal struct BoardDestination: View {
             .inspectorColumnWidth(min: 260, ideal: 320, max: 400)
         }
     }
-
+    
     // MARK: Live Surface
-
+    
     /// The full live-play surface (M3): the mirror board with the status
     /// HUD inset above it, the live inspector, and the new-game dialog.
+    /// With no board connected (and no reconnect underway) the HUD is
+    /// absent entirely — `hudPhase` is nil — so the strip above the board
+    /// stays clear; the inspector's empty state carries the connection
+    /// message instead.
     private var liveSurface: some View {
         mirrorBoard
             .safeAreaInset(edge: .top, spacing: 0) {
                 VStack(spacing: 8) {
-                    LiveGameHUDView(
-                        phase: hudPhase,
-                        onNewGame: { manualNewGameRequested = true },
-                        onRetryArchive: { session.retryArchive() }
-                    )
-
+                    if let phase = hudPhase {
+                        LiveGameHUDView(
+                            phase: phase,
+                            onNewGame: { manualNewGameRequested = true },
+                            onRetryArchive: { session.retryArchive() }
+                        )
+                    }
+                    
                     // M6.2 — the restore checklist, live under the banner
                     // while recovering; M6.3's Export Diagnostics… rides on
                     // it (a desync is when the log is worth saving). The
@@ -273,7 +279,7 @@ internal struct BoardDestination: View {
                         )
                         .padding(.bottom, 8)
                     }
-
+                    
                     if showsRestoredFlash {
                         Label(
                             "Position restored — play continues.",
@@ -370,17 +376,23 @@ internal struct BoardDestination: View {
                 }
             }
     }
-
+    
     /// Derives the HUD phase from session + connection state, in priority
     /// order: connection truth first — a pulled cable outranks everything,
     /// and M7.3 splits it: an active auto-reconnect loop reads as
-    /// "reconnecting…", anything else non-connected as plain disconnected —
-    /// then recovery, then the gentle correction nudge, then setup, then
-    /// the game itself, then the idle invitation.
-    private var hudPhase: LiveGameHUDView.Phase {
+    /// "reconnecting…", while plain disconnected is nil (no banner at
+    /// all) — then recovery, then the gentle correction nudge, then setup,
+    /// then the game itself, then the idle invitation.
+    ///
+    /// Why nil instead of a `disconnected` phase: the message carried no
+    /// action, and with no board there is never a live game, so the
+    /// inspector's empty state is free to say it. `reconnecting` can't
+    /// make the same move — it co-occurs with a live game, whose
+    /// inspector is showing that game — so it stays a banner.
+    private var hudPhase: LiveGameHUDView.Phase? {
         if connection.isReconnecting { return .reconnecting }
-        guard connection.isConnected else { return .disconnected }
-
+        guard connection.isConnected else { return nil }
+        
         if session.needsRecovery {
             return .recovering(lastSAN: session.liveGame?.sanMoves.last)
         }
@@ -407,7 +419,7 @@ internal struct BoardDestination: View {
         }
         return .idle
     }
-
+    
     /// Presents the new-game sheet whenever the session offers one
     /// (`shouldOfferNewGame`) or the HUD requested one manually. Dismissal
     /// through the binding (swipe, ⎋, Not Now) counts as "Not Now" — it
@@ -423,7 +435,7 @@ internal struct BoardDestination: View {
             set: { _ in }
         )
     }
-
+    
     /// Presents the corrupt-draft alert until answered or deferred for this
     /// visit ("Keep for Now" sets `corruptOfferDeferred`).
     private var isCorruptDraftOfferPresented: Binding<Bool> {
@@ -432,7 +444,7 @@ internal struct BoardDestination: View {
             set: { _ in }
         )
     }
-
+    
     /// The resume alert's body: who was playing, how far they got, when the
     /// draft was last written — and a heads-up when the draft is already
     /// decided (finished but not yet archived; resuming triggers the M5
@@ -451,7 +463,7 @@ internal struct BoardDestination: View {
         }
         return lines.joined(separator: "\n")
     }
-
+    
     /// Presents the archive confirmation while a *successful* outcome is
     /// unacknowledged. Dismissal (Done, ⎋, swipe) acknowledges it; a
     /// failure never presents this sheet — it lives on the HUD as
@@ -468,7 +480,7 @@ internal struct BoardDestination: View {
             }
         )
     }
-
+    
     /// Applies edited details to the archived Library row and refreshes its
     /// content hash — the one-hash/two-doors invariant: any in-place edit
     /// must call `PGNStore.refreshHash(of:)` or future deduplication
@@ -476,7 +488,7 @@ internal struct BoardDestination: View {
     /// default "White vs Black" name, so the title tracks the players.
     private func applyEditedInfo(_ roster: LiveGame.Roster, to pgn: PGN) {
         let hadDefaultName = pgn.name == pgn.defaultDisplayName
-
+        
         pgn.event = roster.event
         pgn.site  = roster.site
         pgn.date  = roster.date
@@ -484,7 +496,7 @@ internal struct BoardDestination: View {
         pgn.white = roster.white
         pgn.black = roster.black
         if hadDefaultName { pgn.name = pgn.defaultDisplayName }
-
+        
         do {
             try PGNStore(modelContext: modelContext).refreshHash(of: pgn)
         } catch {
@@ -493,7 +505,7 @@ internal struct BoardDestination: View {
             )
         }
     }
-
+    
     private var isNewGameSheetPresented: Binding<Bool> {
         Binding(
             get: { session.shouldOfferNewGame || manualNewGameRequested },
@@ -506,10 +518,11 @@ internal struct BoardDestination: View {
             }
         )
     }
-
+    
     /// Inspector content for the live branch: the live game's details and
     /// controls when one exists, otherwise a hint (so the inspector toggle
-    /// is never a dead switch on the mirror).
+    /// is never a dead switch on the mirror) — connection-aware, since the
+    /// disconnected message lives here now rather than above the board.
     @ViewBuilder
     private var liveInspector: some View {
         if let game = session.liveGame {
@@ -527,7 +540,7 @@ internal struct BoardDestination: View {
                 onAgreeDraw: { session.agreeDraw() },
                 onDiscard: { session.discardGame() }
             )
-        } else {
+        } else if connection.isConnected {
             ContentUnavailableView(
                 "No Live Game",
                 systemImage: "checkerboard.rectangle",
@@ -535,11 +548,23 @@ internal struct BoardDestination: View {
                     "Start a game from the board to see its details and moves here."
                 )
             )
+        } else {
+            // The former HUD `disconnected` banner, relocated: this empty
+            // state used to say "start a game from the board" — impossible
+            // advice with no board — while the banner spent the strip
+            // above the board on a message with no action.
+            ContentUnavailableView(
+                "No Board Connected",
+                systemImage: "cable.connector.horizontal",
+                description: Text(
+                    "Connect your DGT board to record games live."
+                )
+            )
         }
     }
-
+    
     // MARK: Live Mirror
-
+    
     /// The board shown whenever no game is loaded. The *position* always
     /// renders the DGT connection's live `physicalBoard` (empty when nothing
     /// is connected) with an empty `PieceTracker` — mid-move, the physical
@@ -562,7 +587,7 @@ internal struct BoardDestination: View {
             targetSquares:    recoveryGuidance?.targetSquares ?? []
         )
     }
-
+    
     /// The live restore checklist while `recovering` (M6.2), nil otherwise.
     /// Recomputed on every observable change of `connection.physicalBoard`,
     /// so highlights and the instruction list shrink as squares are fixed —
@@ -575,9 +600,9 @@ internal struct BoardDestination: View {
             target: game.currentState.position
         )
     }
-
+    
     // MARK: Loading
-
+    
     /// Resolves the bound `loadedGameID` to a concrete PGN + Game and
     /// caches the result on `tabState`. No-op when the cached PGN
     /// already matches the ID — important because this is called from
@@ -593,16 +618,16 @@ internal struct BoardDestination: View {
             tabState.boardLoadError = nil
             return
         }
-
+        
         if tabState.boardPGN?.persistentModelID == id, tabState.boardGame != nil {
             Self.logger.debug(
                 "loadIfNeeded: cache hit for '\(self.tabState.boardPGN?.name ?? "?", privacy: .public)' — no reload"
             )
             return
         }
-
+        
         Self.logger.debug("loadIfNeeded: resolving id \(String(describing: id), privacy: .public)")
-
+        
         guard let loadedPGN = modelContext.model(for: id) as? PGN else {
             tabState.boardPGN = nil
             tabState.boardGame = nil
@@ -612,7 +637,7 @@ internal struct BoardDestination: View {
             )
             return
         }
-
+        
         do {
             let newGame = try Game(pgn: loadedPGN)
             tabState.boardPGN = loadedPGN

@@ -170,10 +170,26 @@ internal final class DGTSessionRecorder {
         start = clock.now
     }
     
+    /// Hard cap on retained snapshots — the recorder's half of M10.2's
+    /// growth-bound answer (the log's half is `DGTSessionLog.maxEntries`).
+    /// A full game with handling noise is a few hundred snapshots; 10 000
+    /// bounds a *forgotten* recording (started from Diagnostics and left
+    /// running across a marathon session) at well under a megabyte while
+    /// keeping multi-game headroom. Oldest entries drop first: the
+    /// stop-and-export workflow debugs the *newest* window, and absolute
+    /// `offsetMillis` values stay valid under a dropped prefix — settle
+    /// analysis reads gaps between retained neighbours, not a baseline.
+    /// Rejected: a `dropped` count on the finished recording; it would
+    /// change the JSON schema for a diagnostic nicety.
+    private let maxEntries = 10_000
+    
     internal func record(_ board: Position) {
         entries.append(.init(offsetMillis: (clock.now - start).inMilliseconds, board: board))
+        if entries.count > maxEntries {
+            entries.removeFirst(entries.count - maxEntries)
+        }
     }
-    
+
     internal func finish() -> DGTSessionRecording {
         DGTSessionRecording(identity: identity, recordedAt: recordedAt, entries: entries)
     }
