@@ -25,4 +25,12 @@ internal enum StorageKeys {
     internal static let rememberedDevicePath = "rememberedDevicePath"
     internal static let rememberedDeviceName = "rememberedDeviceName"
     internal static let autoConnectOnLaunch  = "autoConnectOnLaunch"
+
+    // Engine configuration (M11 review): the three Stockfish options the
+    // app controls. Absent keys read as `EngineConfiguration.default`
+    // (18 / 128 MB / 1 thread), clamped on every read — see that type for
+    // the why, including why `UserDefaults.register` was rejected.
+    internal static let analysisDepth = "analysisDepth"
+    internal static let engineHashMB  = "engineHashMB"
+    internal static let engineThreads = "engineThreads"
 }

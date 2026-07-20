@@ -65,7 +65,11 @@ internal final class GameAnalysisDriver {
     @discardableResult
     internal func analyze(
         pgn: PGN,
-        depth: Int = 18,
+        // The one depth default in the codebase (M11 review — this was half
+        // of a twin `= 18`; the engine's half is now parameter-required).
+        // Evaluated at each call, so a batch queued after a Settings change
+        // analyzes at the new depth.
+        depth: Int = EngineConfiguration.current.depth,
         modelContext: ModelContext
     ) async -> Status {
         guard task == nil else {

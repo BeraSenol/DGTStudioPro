@@ -481,27 +481,27 @@ internal struct BoardDestination: View {
         )
     }
     
-    /// Applies edited details to the archived Library row and refreshes its
-    /// content hash — the one-hash/two-doors invariant: any in-place edit
-    /// must call `PGNStore.refreshHash(of:)` or future deduplication
-    /// silently rots. Also renames the row when it still carried the
+    /// Applies edited details to the archived Library row through
+    /// `PGNStore.applyEdit(to:_:)`, which owns the one-hash/two-doors
+    /// rehash structurally (M11 review) — this door no longer has to
+    /// remember two steps. Also renames the row when it still carried the
     /// default "White vs Black" name, so the title tracks the players.
     private func applyEditedInfo(_ roster: LiveGame.Roster, to pgn: PGN) {
-        let hadDefaultName = pgn.name == pgn.defaultDisplayName
-        
-        pgn.event = roster.event
-        pgn.site  = roster.site
-        pgn.date  = roster.date
-        pgn.round = roster.round
-        pgn.white = roster.white
-        pgn.black = roster.black
-        if hadDefaultName { pgn.name = pgn.defaultDisplayName }
-        
         do {
-            try PGNStore(modelContext: modelContext).refreshHash(of: pgn)
+            try PGNStore(modelContext: modelContext).applyEdit(to: pgn) { pgn in
+                let hadDefaultName = pgn.name == pgn.defaultDisplayName
+                
+                pgn.event = roster.event
+                pgn.site  = roster.site
+                pgn.date  = roster.date
+                pgn.round = roster.round
+                pgn.white = roster.white
+                pgn.black = roster.black
+                if hadDefaultName { pgn.name = pgn.defaultDisplayName }
+            }
         } catch {
             Self.logger.error(
-                "refreshHash failed after archive edit: \(error.localizedDescription, privacy: .public)"
+                "archive edit failed to persist: \(error.localizedDescription, privacy: .public)"
             )
         }
     }

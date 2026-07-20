@@ -232,6 +232,16 @@ internal actor StockfishEngine {
         // with a failure (exactly one wins — `failHandshake` nils as it
         // resumes).
         do {
+            // The user's engine options (M11 review — the Settings pane now
+            // binds to reality). `setoption` is only valid between `uciok`
+            // and `isready`, so this is the one window. Read fresh at every
+            // launch — and the engine relaunches per run (released at
+            // drain), so a Settings change applies to the next analysis
+            // with no restart-the-app story.
+            for option in EngineConfiguration.current.uciOptionLines {
+                try writeLine(option)
+            }
+
             try writeLine("uci")
             try await awaitHandshake(timeout: handshakeTimeout, awaiting: "uciok") {
                 self.uciOKContinuation = $0
@@ -399,7 +409,7 @@ internal actor StockfishEngine {
     /// cleanly aborts the prior and starts the new one.
     nonisolated internal func analyze(
         fen: FEN,
-        depth: Int = 18
+        depth: Int
     ) -> AsyncStream<Evaluation> {
         AsyncStream { [weak self] continuation in
             Task { [weak self] in

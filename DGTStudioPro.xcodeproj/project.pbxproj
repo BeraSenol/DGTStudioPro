@@ -45,20 +45,6 @@
 			);
 			target = C5D920D92F732FE9003D0A74 /* DGTStudioProUITests */;
 		};
-		C58C80EE2FC6F5A40021F314 /* Exceptions for "DGTStudioProTests" folder in "DGTStudioPro" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Support/DGTBoardSimulator.swift,
-			);
-			target = C5D920C02F732FE8003D0A74 /* DGTStudioPro */;
-		};
-		C58C80EF2FC6F5A40021F314 /* Exceptions for "DGTStudioProTests" folder in "DGTStudioProTests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Support/DGTBoardSimulator.swift,
-			);
-			target = C5D920CF2F732FE9003D0A74 /* DGTStudioProTests */;
-		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -73,10 +59,6 @@
 		};
 		C5D920D32F732FE9003D0A74 /* DGTStudioProTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				C58C80EE2FC6F5A40021F314 /* Exceptions for "DGTStudioProTests" folder in "DGTStudioPro" target */,
-				C58C80EF2FC6F5A40021F314 /* Exceptions for "DGTStudioProTests" folder in "DGTStudioProTests" target */,
-			);
 			path = DGTStudioProTests;
 			sourceTree = "<group>";
 		};
@@ -468,7 +450,7 @@
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
@@ -511,7 +493,7 @@
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
