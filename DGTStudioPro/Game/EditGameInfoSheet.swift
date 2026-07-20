@@ -83,7 +83,7 @@ internal struct EditGameInfoSheet: View {
             
             LiveGameRosterForm(
                 roster: $roster,
-                identifierPrefix: "archive.form"
+                identifierPrefix: AccessibilityID.archiveFormPrefix
             )
             
             Divider()
@@ -91,7 +91,7 @@ internal struct EditGameInfoSheet: View {
             HStack {
                 Button("Done") { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                    .accessibilityIdentifier("archive.done")
+                    .accessibilityIdentifier(AccessibilityID.archiveDone)
                 
                 Spacer()
                 
@@ -101,12 +101,12 @@ internal struct EditGameInfoSheet: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
-                .accessibilityIdentifier("archive.save")
+                .accessibilityIdentifier(AccessibilityID.archiveSave)
             }
             .padding()
         }
         .frame(minWidth: 400, idealWidth: 440, minHeight: 400)
-        .accessibilityIdentifier("archive.sheet")
+        .accessibilityIdentifier(AccessibilityID.archiveSheet)
     }
     
     // MARK: Header Copy

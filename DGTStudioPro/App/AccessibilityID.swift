@@ -18,12 +18,13 @@
 //  nothing. With both sides on constants, a rename is a compile error in the
 //  UI test target instead of a silently vacuous test.
 //
-//  Registry of record: identifiers migrate here from string literals as
-//  their files are touched. The `live.*` HUD/inspector and `archive.form.*`
-//  families are still literals at their call sites (they're exercised by the
-//  manual hardware checklists, not XCUITest — live play can't be
-//  XCUITest-driven without hardware injection); they migrate on next touch
-//  of those files.
+//  Registry of record: the F8 migrate-on-touch policy completed in M11.3 —
+//  every production identifier now lives here, including the `live.*`,
+//  `archive.*`, `dgt.*`, and `settings.*` families whose witness remains
+//  the manual hardware checklists rather than XCUITest (live play can't be
+//  XCUITest-driven without hardware injection). A raw identifier string in
+//  a view is a defect from here on; `grep accessibilityIdentifier("` over
+//  production sources is the enforcement.
 //
 
 /// The accessibility-identifier contract shared by the app and the UI test
@@ -66,9 +67,100 @@ internal enum AccessibilityID {
     internal static let boardLoadError = "board.loaderror"
     internal static let boardLoadErrorDismiss = "board.loaderror.dismiss"
     
+    /// `square.e4`, … — one per mirror square, keyed by algebraic
+    /// notation (the stable handle for keyboard-nav and highlight
+    /// assertions). Byte-identical to the file/rank-character
+    /// construction it replaced: `Square.algebraicNotation` builds from
+    /// the same `%8`/`/8` ASCII arithmetic, pinned by `SquareTests`.
+    internal static func boardSquare(_ algebraic: String) -> String {
+        "square.\(algebraic)"
+    }
+    
     // MARK: Live
     
+    /// HUD (M3.1). The container's identifier names the phase — a closed
+    /// set, so these are constants rather than a suffix-taking helper:
+    /// the suffixes are exactly the strings a helper would scatter back
+    /// to the call sites.
+    internal static let liveHUDReconnecting  = "live.hud.reconnecting"
+    internal static let liveHUDIdle          = "live.hud.idle"
+    internal static let liveHUDAwaitingSetup = "live.hud.awaitingsetup"
+    internal static let liveHUDPlaying       = "live.hud.playing"
+    internal static let liveHUDCorrection    = "live.hud.correction"
+    internal static let liveHUDRecovering    = "live.hud.recovering"
+    internal static let liveHUDFinished      = "live.hud.finished"
+    internal static let liveHUDArchiveFailed = "live.hud.archivefailed"
+    internal static let liveHUDNewGame       = "live.hud.newgame"
+    internal static let liveHUDRetryArchive  = "live.hud.retryarchive"
+    
+    internal static let liveInspector            = "live.inspector"
+    internal static let liveInspectorEditDetails = "live.inspector.editdetails"
+    internal static let liveInspectorResign      = "live.inspector.resign"
+    internal static let liveInspectorDraw        = "live.inspector.draw"
+    internal static let liveInspectorDiscard     = "live.inspector.discard"
+    
+    internal static let liveNewGameSheet  = "live.newgame.sheet"
+    internal static let liveNewGameStart  = "live.newgame.start"
+    internal static let liveNewGameNotNow = "live.newgame.notnow"
+    
+    internal static let liveEditDetailsSheet  = "live.editdetails.sheet"
+    internal static let liveEditDetailsSave   = "live.editdetails.save"
+    internal static let liveEditDetailsCancel = "live.editdetails.cancel"
+    
+    internal static let liveRecoveryPanel  = "live.recovery.panel"
+    internal static let liveRecoveryCount  = "live.recovery.count"
+    internal static let liveRecoveryExport = "live.recovery.export"
     internal static let liveRecoveryRestoredFlash = "live.recovery.restoredflash"
+    
+    /// `live.recovery.item.e4`, … — one checklist row per square, keyed
+    /// by algebraic notation.
+    internal static func liveRecoveryItem(_ algebraic: String) -> String {
+        "live.recovery.item.\(algebraic)"
+    }
+    
+    // MARK: Details Form (shared live/archive)
+    
+    /// The six roster-form fields render under their host's prefix:
+    /// `live.form.*` in the live sheets (the default), `archive.form.*`
+    /// when `EditGameInfoSheet` embeds the same form. The prefix is the
+    /// only variance, so one helper per field keeps each suffix in
+    /// exactly one place. The prefix stays a plain `String` — the
+    /// registry's raw-string philosophy (the UI-test target can't see
+    /// app types).
+    internal static let liveFormPrefix    = "live.form"
+    internal static let archiveFormPrefix = "archive.form"
+    internal static func formWhite(_ prefix: String) -> String { "\(prefix).white" }
+    internal static func formBlack(_ prefix: String) -> String { "\(prefix).black" }
+    internal static func formEvent(_ prefix: String) -> String { "\(prefix).event" }
+    internal static func formSite(_ prefix: String)  -> String { "\(prefix).site" }
+    internal static func formDate(_ prefix: String)  -> String { "\(prefix).date" }
+    internal static func formRound(_ prefix: String) -> String { "\(prefix).round" }
+    
+    // MARK: Archive Confirmation (M5)
+    
+    internal static let archiveSheet = "archive.sheet"
+    internal static let archiveSave  = "archive.save"
+    internal static let archiveDone  = "archive.done"
+    
+    // MARK: DGT Connection
+    
+    internal static let dgtConnectSheet           = "dgt.connectSheet"
+    internal static let dgtDeviceList             = "dgt.deviceList"
+    internal static let dgtConnectingPanel        = "dgt.connectingPanel"
+    internal static let dgtReconnectingPanel      = "dgt.reconnectingPanel"
+    internal static let dgtConnectedPanel         = "dgt.connectedPanel"
+    internal static let dgtFailedPanel            = "dgt.failedPanel"
+    internal static let dgtRescanButton           = "dgt.rescanButton"
+    internal static let dgtConnectButton          = "dgt.connectButton"
+    internal static let dgtCancelButton           = "dgt.cancelButton"
+    internal static let dgtStopReconnectingButton = "dgt.stopReconnectingButton"
+    internal static let dgtDisconnectButton       = "dgt.disconnectButton"
+    internal static let dgtRetryButton            = "dgt.retryButton"
+    
+    // MARK: Settings
+    
+    internal static let settingsAutoConnectToggle  = "settings.autoConnectToggle"
+    internal static let settingsEraseLibraryButton = "settings.eraseLibraryButton"
     
     // MARK: Library
     
@@ -92,13 +184,13 @@ internal enum AccessibilityID {
     internal static let libraryQueueStatus = "library.queue.status"
     internal static let libraryQueuePopover = "library.queue.popover"
     internal static let libraryQueueStopAll = "library.queue.stopAll"
-
+    
     /// The clearable filter chip (M-prs.6) — the Library's one visible
     /// indicator that it's narrowed, and for a programmatic `.player`
     /// selection (which has no sidebar row) the *only* one.
     internal static let libraryFilterChip = "library.filterChip"
     internal static let libraryFilterChipClear = "library.filterChip.clear"
-
+    
     /// `gameCard.Quick Mate`, … — one per Library card, keyed by the game's
     /// display name (see `LibraryGameCardView`).
     internal static func gameCard(_ name: String) -> String {
@@ -122,7 +214,7 @@ internal enum AccessibilityID {
     internal static let contextShowInLibrary = "context.showInLibrary"
     
     // MARK: Players
-
+    
     internal static let playersContent = "players.content"
     internal static let playersEmptyState = "players.emptyState"
     internal static let playersViewModePicker = "players.viewModePicker"

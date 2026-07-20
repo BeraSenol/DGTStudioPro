@@ -75,7 +75,7 @@ internal struct SettingsView: View {
             // player isn't left hunting for a setting that doesn't exist.
             Section {
                 Toggle("Connect to board automatically", isOn: $autoConnectOnLaunch)
-                    .accessibilityIdentifier("settings.autoConnectToggle")
+                    .accessibilityIdentifier(AccessibilityID.settingsAutoConnectToggle)
             } header: {
                 Text("DGT Board")
             } footer: {
@@ -176,7 +176,7 @@ internal struct SettingsView: View {
                     Label("Erase Library…", systemImage: "trash")
                 }
                 .disabled(allGames.isEmpty)
-                .accessibilityIdentifier("settings.eraseLibraryButton")
+                .accessibilityIdentifier(AccessibilityID.settingsEraseLibraryButton)
             } header: {
                 Text("Reset")
             } footer: {

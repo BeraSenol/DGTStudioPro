@@ -39,7 +39,7 @@ internal struct RecoveryGuidanceView: View {
                 Text("\(guidance.items.count)")
                     .font(.subheadline.monospacedDigit())
                     .foregroundStyle(.secondary)
-                    .accessibilityIdentifier("live.recovery.count")
+                    .accessibilityIdentifier(AccessibilityID.liveRecoveryCount)
             }
             
             ScrollView {
@@ -48,7 +48,7 @@ internal struct RecoveryGuidanceView: View {
                         Text(item.message)
                             .font(.callout)
                             .accessibilityIdentifier(
-                                "live.recovery.item.\(item.square.algebraicNotation)"
+                                AccessibilityID.liveRecoveryItem(item.square.algebraicNotation)
                             )
                     }
                 }
@@ -60,7 +60,7 @@ internal struct RecoveryGuidanceView: View {
                 Spacer()
                 Button("Export Diagnostics…", action: onExportDiagnostics)
                     .controlSize(.small)
-                    .accessibilityIdentifier("live.recovery.export")
+                    .accessibilityIdentifier(AccessibilityID.liveRecoveryExport)
             }
         }
         .padding(10)
@@ -71,7 +71,7 @@ internal struct RecoveryGuidanceView: View {
                 .strokeBorder(.red.opacity(0.35))
         }
         .padding(.horizontal)
-        .accessibilityIdentifier("live.recovery.panel")
+        .accessibilityIdentifier(AccessibilityID.liveRecoveryPanel)
     }
 }
 

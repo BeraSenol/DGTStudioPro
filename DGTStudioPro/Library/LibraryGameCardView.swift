@@ -52,7 +52,7 @@ internal struct LibraryGameCardView: View {
         // tests. Without `.combine`, macOS exposes only the inner static
         // texts and the identifier never lands on a tappable element.
         .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("gameCard.\(game.name)")
+        .accessibilityIdentifier(AccessibilityID.gameCard(game.name))
     }
     
     // MARK: Instance Methods

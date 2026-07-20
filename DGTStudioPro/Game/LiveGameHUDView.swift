@@ -82,14 +82,14 @@ internal struct LiveGameHUDView: View {
                 Button("New Game…", action: onNewGame)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
-                    .accessibilityIdentifier("live.hud.newgame")
+                    .accessibilityIdentifier(AccessibilityID.liveHUDNewGame)
             }
             
             if case .archiveFailed = phase {
                 Button("Retry", action: onRetryArchive)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
-                    .accessibilityIdentifier("live.hud.retryarchive")
+                    .accessibilityIdentifier(AccessibilityID.liveHUDRetryArchive)
             }
         }
         .padding(.horizontal, 14)
@@ -186,14 +186,14 @@ internal struct LiveGameHUDView: View {
     
     private var accessibilityIdentifier: String {
         switch phase {
-        case .reconnecting:  "live.hud.reconnecting"
-        case .idle:          "live.hud.idle"
-        case .awaitingSetup: "live.hud.awaitingsetup"
-        case .playing:       "live.hud.playing"
-        case .correction:    "live.hud.correction"
-        case .recovering:    "live.hud.recovering"
-        case .finished:      "live.hud.finished"
-        case .archiveFailed: "live.hud.archivefailed"
+        case .reconnecting:  AccessibilityID.liveHUDReconnecting
+        case .idle:          AccessibilityID.liveHUDIdle
+        case .awaitingSetup: AccessibilityID.liveHUDAwaitingSetup
+        case .playing:       AccessibilityID.liveHUDPlaying
+        case .correction:    AccessibilityID.liveHUDCorrection
+        case .recovering:    AccessibilityID.liveHUDRecovering
+        case .finished:      AccessibilityID.liveHUDFinished
+        case .archiveFailed: AccessibilityID.liveHUDArchiveFailed
         }
     }
     

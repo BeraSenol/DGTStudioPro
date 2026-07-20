@@ -161,7 +161,7 @@ internal struct BoardView: View {
                         // e.g. "square.e4" — stable algebraic handle for
                         // UI tests (esp. keyboard-nav verification).
                         .accessibilityIdentifier(
-                            "square.\(Square.fileCharacter(square.file))\(Square.rankCharacter(square.rank))"
+                            AccessibilityID.boardSquare(square.algebraicNotation)
                         )
                     }
                 }

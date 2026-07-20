@@ -49,10 +49,11 @@ internal struct LiveGameRosterForm: View {
     
     /// Accessibility-identifier prefix for the six fields. The live sheets
     /// use the default; M5's archive-confirmation sheet passes
-    /// `"archive.form"` so its fields test under the documented
-    /// `archive.form.*` names without duplicating the form. Declared after
-    /// `roster` (and defaulted) so existing call sites compile unchanged.
-    internal var identifierPrefix = "live.form"
+    /// `AccessibilityID.archiveFormPrefix` so its fields test under the
+    /// documented `archive.form.*` names without duplicating the form.
+    /// Declared after `roster` (and defaulted) so existing call sites
+    /// compile unchanged.
+    internal var identifierPrefix = AccessibilityID.liveFormPrefix
     
     /// `Roster.date` is optional (a PGN date can be unknown), but the v1
     /// dialog always supplies one (default today — the locked decision), so
@@ -74,14 +75,16 @@ internal struct LiveGameRosterForm: View {
                     text: $roster.white,
                     prompt: Text("White player")
                 )
-                .accessibilityIdentifier("\(identifierPrefix).white")
+                .accessibilityIdentifier(
+                    AccessibilityID.formWhite(identifierPrefix)
+                )
                 
                 TextField(
                     "Black",
                     text: $roster.black,
                     prompt: Text("Black player")
                 )
-                .accessibilityIdentifier("\(identifierPrefix).black")
+                .accessibilityIdentifier(AccessibilityID.formBlack(identifierPrefix))
             }
             
             Section("Event") {
@@ -90,21 +93,21 @@ internal struct LiveGameRosterForm: View {
                     text: $roster.event,
                     prompt: Text("Casual Game")
                 )
-                .accessibilityIdentifier("\(identifierPrefix).event")
+                .accessibilityIdentifier(AccessibilityID.formEvent(identifierPrefix))
                 
                 TextField(
                     "Site",
                     text: $roster.site,
                     prompt: Text("Home")
                 )
-                .accessibilityIdentifier("\(identifierPrefix).site")
+                .accessibilityIdentifier(AccessibilityID.formSite(identifierPrefix))
                 
                 DatePicker(
                     "Date",
                     selection: dateBinding,
                     displayedComponents: .date
                 )
-                .accessibilityIdentifier("\(identifierPrefix).date")
+                .accessibilityIdentifier(AccessibilityID.formDate(identifierPrefix))
                 
                 TextField(
                     "Round",
@@ -112,7 +115,7 @@ internal struct LiveGameRosterForm: View {
                     format: .number,
                     prompt: Text("Optional")
                 )
-                .accessibilityIdentifier("\(identifierPrefix).round")
+                .accessibilityIdentifier(AccessibilityID.formRound(identifierPrefix))
             }
         }
         .formStyle(.grouped)
@@ -181,19 +184,19 @@ internal struct NewLiveGameSheet: View {
             HStack {
                 Button("Not Now", action: onNotNow)
                     .keyboardShortcut(.cancelAction)
-                    .accessibilityIdentifier("live.newgame.notnow")
+                    .accessibilityIdentifier(AccessibilityID.liveNewGameNotNow)
                 
                 Spacer()
                 
                 Button("Start Game", action: startTapped)
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
-                    .accessibilityIdentifier("live.newgame.start")
+                    .accessibilityIdentifier(AccessibilityID.liveNewGameStart)
             }
             .padding()
         }
         .frame(minWidth: 400, idealWidth: 440, minHeight: 380)
-        .accessibilityIdentifier("live.newgame.sheet")
+        .accessibilityIdentifier(AccessibilityID.liveNewGameSheet)
         .onAppear(perform: prefillFromDefaults)
         .confirmationDialog(
             "Replace the current game?",
@@ -285,7 +288,7 @@ internal struct EditLiveGameDetailsSheet: View {
             HStack {
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                    .accessibilityIdentifier("live.editdetails.cancel")
+                    .accessibilityIdentifier(AccessibilityID.liveEditDetailsCancel)
                 
                 Spacer()
                 
@@ -295,12 +298,12 @@ internal struct EditLiveGameDetailsSheet: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
-                .accessibilityIdentifier("live.editdetails.save")
+                .accessibilityIdentifier(AccessibilityID.liveEditDetailsSave)
             }
             .padding()
         }
         .frame(minWidth: 400, idealWidth: 440, minHeight: 360)
-        .accessibilityIdentifier("live.editdetails.sheet")
+        .accessibilityIdentifier(AccessibilityID.liveEditDetailsSheet)
     }
 }
 

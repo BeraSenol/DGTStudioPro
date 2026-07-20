@@ -25,20 +25,20 @@ import SwiftUI
 /// The user confirms the device explicitly (the Connect button) before the
 /// port is opened — the "confirm before finalizing" half of the locked UX.
 internal struct DGTConnectionView: View {
-
+    
     @Environment(DGTConnection.self) private var connection
     @Environment(\.dismiss) private var dismiss
-
+    
     @State private var selectedDeviceID: DGTSerialDevice.ID?
-
+    
     internal var body: some View {
         VStack(spacing: 0) {
             header
             Divider()
-
+            
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-
+            
             Divider()
             footer
         }
@@ -51,11 +51,11 @@ internal struct DGTConnectionView: View {
             if connection.isReconnecting { return }
             if !connection.isConnected { connection.search() }
         }
-        .accessibilityIdentifier("dgt.connectSheet")
+        .accessibilityIdentifier(AccessibilityID.dgtConnectSheet)
     }
-
+    
     // MARK: Header
-
+    
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title).font(.headline)
@@ -68,7 +68,7 @@ internal struct DGTConnectionView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
     }
-
+    
     private var title: String {
         switch connection.status {
         case .disconnected, .searching: "Connect to Board"
@@ -78,7 +78,7 @@ internal struct DGTConnectionView: View {
         case .failed:                   "Connection Failed"
         }
     }
-
+    
     private var subtitle: String? {
         switch connection.status {
         case .disconnected, .searching:
@@ -87,9 +87,9 @@ internal struct DGTConnectionView: View {
             nil
         }
     }
-
+    
     // MARK: Content
-
+    
     @ViewBuilder
     private var content: some View {
         switch connection.status {
@@ -105,7 +105,7 @@ internal struct DGTConnectionView: View {
             failedPanel(message)
         }
     }
-
+    
     private var deviceList: some View {
         Group {
             if connection.availableDevices.isEmpty {
@@ -120,11 +120,11 @@ internal struct DGTConnectionView: View {
                         .tag(device.id)
                 }
                 .listStyle(.inset)
-                .accessibilityIdentifier("dgt.deviceList")
+                .accessibilityIdentifier(AccessibilityID.dgtDeviceList)
             }
         }
     }
-
+    
     private func connectingPanel(_ device: DGTSerialDevice) -> some View {
         VStack(spacing: 14) {
             ProgressView()
@@ -137,9 +137,9 @@ internal struct DGTConnectionView: View {
                 .multilineTextAlignment(.center)
         }
         .padding()
-        .accessibilityIdentifier("dgt.connectingPanel")
+        .accessibilityIdentifier(AccessibilityID.dgtConnectingPanel)
     }
-
+    
     /// M7.3 — the retry loop's face in the dialog: what happened, that the
     /// app is handling it, and how to stand it down. The loop itself lives
     /// in `DGTConnection`; this panel is pure status.
@@ -158,18 +158,18 @@ internal struct DGTConnectionView: View {
             .multilineTextAlignment(.center)
         }
         .padding()
-        .accessibilityIdentifier("dgt.reconnectingPanel")
+        .accessibilityIdentifier(AccessibilityID.dgtReconnectingPanel)
     }
-
+    
     private func connectedPanel(_ device: DGTSerialDevice) -> some View {
         VStack(spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 40))
                 .foregroundStyle(.green)
-
+            
             Text(device.name)
                 .font(.headline)
-
+            
             VStack(alignment: .leading, spacing: 4) {
                 infoRow("Serial", connection.boardInfo.serialNumber)
                 infoRow("Version", connection.boardInfo.version)
@@ -180,9 +180,9 @@ internal struct DGTConnectionView: View {
             .frame(maxWidth: 260, alignment: .leading)
         }
         .padding()
-        .accessibilityIdentifier("dgt.connectedPanel")
+        .accessibilityIdentifier(AccessibilityID.dgtConnectedPanel)
     }
-
+    
     @ViewBuilder
     private func infoRow(_ label: String, _ value: String?) -> some View {
         if let value, !value.isEmpty {
@@ -193,24 +193,24 @@ internal struct DGTConnectionView: View {
             }
         }
     }
-
+    
     private func failedPanel(_ message: String) -> some View {
         ContentUnavailableView {
             Label("Couldn't Connect", systemImage: "exclamationmark.triangle")
         } description: {
             Text(message)
         }
-        .accessibilityIdentifier("dgt.failedPanel")
+        .accessibilityIdentifier(AccessibilityID.dgtFailedPanel)
     }
-
+    
     // MARK: Footer
-
+    
     private var footer: some View {
         HStack {
             switch connection.status {
             case .disconnected, .searching:
                 Button("Rescan") { connection.search() }
-                    .accessibilityIdentifier("dgt.rescanButton")
+                    .accessibilityIdentifier(AccessibilityID.dgtRescanButton)
                 Spacer()
                 Button("Cancel") { dismiss() }
                 Button("Connect") {
@@ -219,15 +219,15 @@ internal struct DGTConnectionView: View {
                 }
                 .keyboardShortcut(.defaultAction)
                 .disabled(selectedDevice == nil)
-                .accessibilityIdentifier("dgt.connectButton")
-
+                .accessibilityIdentifier(AccessibilityID.dgtConnectButton)
+                
             case .connecting:
                 Spacer()
                 Button("Cancel") {
                     Task { await connection.disconnect() }
                 }
-                .accessibilityIdentifier("dgt.cancelButton")
-
+                .accessibilityIdentifier(AccessibilityID.dgtCancelButton)
+                
             case .reconnecting:
                 // Standing the loop down is deliberate but not destructive —
                 // nothing is lost; the game stays right there on screen.
@@ -239,33 +239,33 @@ internal struct DGTConnectionView: View {
                         connection.search()
                     }
                 }
-                .accessibilityIdentifier("dgt.stopReconnectingButton")
+                .accessibilityIdentifier(AccessibilityID.dgtStopReconnectingButton)
                 Spacer()
                 Button("Close") { dismiss() }
                     .keyboardShortcut(.defaultAction)
-
+                
             case .connected:
                 Button("Disconnect", role: .destructive) {
                     Task { await connection.disconnect() }
                 }
-                .accessibilityIdentifier("dgt.disconnectButton")
+                .accessibilityIdentifier(AccessibilityID.dgtDisconnectButton)
                 Spacer()
                 Button("Done") { dismiss() }
                     .keyboardShortcut(.defaultAction)
-
+                
             case .failed:
                 Spacer()
                 Button("Cancel") { dismiss() }
                 Button("Try Again") { connection.search() }
                     .keyboardShortcut(.defaultAction)
-                    .accessibilityIdentifier("dgt.retryButton")
+                    .accessibilityIdentifier(AccessibilityID.dgtRetryButton)
             }
         }
         .padding()
     }
-
+    
     // MARK: Helpers
-
+    
     private var selectedDevice: DGTSerialDevice? {
         connection.availableDevices.first { $0.id == selectedDeviceID }
     }
@@ -275,13 +275,13 @@ internal struct DGTConnectionView: View {
 
 private struct DeviceRow: View {
     let device: DGTSerialDevice
-
+    
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: device.isLikelyBoard ? "cable.connector" : "point.3.connected.trianglepath.dotted")
                 .foregroundStyle(device.isLikelyBoard ? Color.accentColor : .secondary)
                 .frame(width: 18)
-
+            
             VStack(alignment: .leading, spacing: 2) {
                 Text(device.name)
                     .font(.callout)
@@ -289,7 +289,7 @@ private struct DeviceRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-
+            
             if device.isLikelyBoard {
                 Spacer()
                 Text("Likely board")
