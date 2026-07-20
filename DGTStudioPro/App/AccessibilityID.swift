@@ -42,10 +42,21 @@ internal enum AccessibilityID {
         "sidebar.\(rawValue)"
     }
     
-    /// `sidebar.tag.checkmate`, … — one per `SmartTag` raw value.
-    internal static func sidebarTag(_ rawValue: String) -> String {
-        "sidebar.tag.\(rawValue)"
+    /// `sidebar.tag.Checkmate`, … — one per `SmartTag`, keyed by the
+    /// tag's *name* since M-prs.5 (the enum and its raw values are gone;
+    /// the `gameCard(_:)` display-name precedent applies).
+    internal static func sidebarTag(_ name: String) -> String {
+        "sidebar.tag.\(name)"
     }
+    
+    internal static let sidebarTagsAdd = "sidebar.tags.add"
+    
+    // MARK: Tag Editor (M-prs.5)
+    
+    internal static let tagsEditor = "tags.editor"
+    internal static let tagsEditorName = "tags.editor.name"
+    internal static let tagsEditorSave = "tags.editor.save"
+    internal static let tagsEditorCancel = "tags.editor.cancel"
     
     // MARK: Board
     
@@ -81,7 +92,13 @@ internal enum AccessibilityID {
     internal static let libraryQueueStatus = "library.queue.status"
     internal static let libraryQueuePopover = "library.queue.popover"
     internal static let libraryQueueStopAll = "library.queue.stopAll"
-    
+
+    /// The clearable filter chip (M-prs.6) — the Library's one visible
+    /// indicator that it's narrowed, and for a programmatic `.player`
+    /// selection (which has no sidebar row) the *only* one.
+    internal static let libraryFilterChip = "library.filterChip"
+    internal static let libraryFilterChipClear = "library.filterChip.clear"
+
     /// `gameCard.Quick Mate`, … — one per Library card, keyed by the game's
     /// display name (see `LibraryGameCardView`).
     internal static func gameCard(_ name: String) -> String {
@@ -94,8 +111,18 @@ internal enum AccessibilityID {
         "gameRow.\(name)"
     }
     
-    // MARK: Players
+    // MARK: Cross-Destination
     
+    /// The "Show in Library" context-menu item on Players/Rankings rows
+    /// and cards (M-prs.6). One constant for both destinations: the item
+    /// is transient and its two homes never coexist, so a family prefix
+    /// would only fork future lookups. (The UITest drives it by *title* —
+    /// the codebase's established menu-item pattern; the identifier is
+    /// here so a future test can harden without a rename.)
+    internal static let contextShowInLibrary = "context.showInLibrary"
+    
+    // MARK: Players
+
     internal static let playersContent = "players.content"
     internal static let playersEmptyState = "players.emptyState"
     internal static let playersViewModePicker = "players.viewModePicker"
@@ -114,9 +141,21 @@ internal enum AccessibilityID {
         "playerCard.\(name)"
     }
     
-    // MARK: v1 Placeholders
+    // MARK: Rankings
     
     internal static let rankingsContent = "rankings.content"
+    internal static let rankingsEmptyState = "rankings.emptyState"
+    internal static let rankingsViewModePicker = "rankings.viewModePicker"
+    internal static let rankingsTable = "rankings.table"
+    internal static let rankingsInspectorToggle = "rankings.inspectorToggle"
+    internal static let rankingsInspectorProfile = "rankings.inspector.profile"
+    
+    /// `rankingRow.1.Liren Ding`, … — rank *and* name, so asserting a
+    /// row's existence pins the ladder's computed order without geometry
+    /// queries.
+    internal static func rankingRow(_ rank: Int, _ name: String) -> String {
+        "rankingRow.\(rank).\(name)"
+    }
 }
 
 /// The seeded Library's game display names, shared for the same reason as

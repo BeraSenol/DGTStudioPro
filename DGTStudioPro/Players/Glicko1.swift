@@ -51,6 +51,15 @@ internal enum Glicko1 {
         internal static let initial = Rating(mean: initialMean, deviation: initialDeviation)
         
         internal var isProvisional: Bool { deviation > provisionalDeviationThreshold }
+        
+        /// The one display rule for a rating — "1662" or "1662
+        /// (provisional)" — centralized because it was about to exist in
+        /// four views. "Unrated" (the nil case) stays at call sites: only
+        /// they know whether nil means no player or no rated games.
+        internal var displaySummary: String {
+            let rounded = Int(mean.rounded())
+            return isProvisional ? "\(rounded) (provisional)" : "\(rounded)"
+        }
     }
     
     internal struct Outcome: Sendable {

@@ -20,9 +20,9 @@ import Foundation
 /// second implementation waiting to drift. A nil side is a `"?"`
 /// placeholder or a not-yet-backfilled row — either way, no player.
 ///
-/// Deliberately lean: fields grow in M-prs.5 when `TagRule` starts
-/// reading this projection, landing with the rules (and tests) that
-/// consume them.
+/// Grown in M-prs.5: the Library-metadata fields exist because `TagRule`
+/// reads them, and they landed with the rules and tests that consume
+/// them.
 internal struct GameRecord: Sendable, Hashable {
     
     internal struct Side: Sendable, Hashable {
@@ -40,6 +40,51 @@ internal struct GameRecord: Sendable, Hashable {
     internal let date: Date?
     internal let importedAt: Date
     internal let contentHash: String
+    
+    // The M-prs.5 growth, as promised in the type comment: the fields
+    // `TagRule` reads. Trailing with defaults so the slice-2 fixtures and
+    // call order stay source-stable; the projection passes every field
+    // explicitly, so the defaults are fixture ergonomics, not hiding
+    // places.
+    internal let event: String
+    internal let site: String
+    internal let name: String
+    internal let round: Int?
+    internal let plyCount: Int
+    internal let hasAnalysis: Bool
+    internal let isTimed: Bool
+    
+    internal init(
+        white: Side?,
+        black: Side?,
+        result: GameResult,
+        endedInMate: Bool,
+        date: Date?,
+        importedAt: Date,
+        contentHash: String,
+        event: String = "",
+        site: String = "",
+        name: String = "",
+        round: Int? = nil,
+        plyCount: Int = 0,
+        hasAnalysis: Bool = false,
+        isTimed: Bool = false
+    ) {
+        self.white = white
+        self.black = black
+        self.result = result
+        self.endedInMate = endedInMate
+        self.date = date
+        self.importedAt = importedAt
+        self.contentHash = contentHash
+        self.event = event
+        self.site = site
+        self.name = name
+        self.round = round
+        self.plyCount = plyCount
+        self.hasAnalysis = hasAnalysis
+        self.isTimed = isTimed
+    }
     
     // MARK: Chronology
     

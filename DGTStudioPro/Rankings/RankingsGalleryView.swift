@@ -1,5 +1,5 @@
 //
-//  PlayersGalleryView.swift
+//  RankingsGalleryView.swift
 //  DGTStudioPro
 //
 //  Created by Supreme Leader on 20/07/2026.
@@ -7,15 +7,15 @@
 
 import SwiftUI
 
-internal struct PlayersGalleryView: View {
+internal struct RankingsGalleryView: View {
     
-    let players: [PlayerStats]
+    let players: [RankedPlayer]
     @Binding var selectedKey: PlayerStats.ID?
     let onShowInLibrary: (PlayerStats.ID) -> Void
-
-    private var selectedPlayer: PlayerStats? {
+    
+    private var selectedPlayer: RankedPlayer? {
         guard let selectedKey else { return nil }
-        return players.first { $0.key == selectedKey }
+        return players.first { $0.id == selectedKey }
     }
     
     var body: some View {
@@ -30,20 +30,25 @@ internal struct PlayersGalleryView: View {
     private var preview: some View {
         if let player = selectedPlayer ?? players.first {
             VStack(spacing: 12) {
-                PlayerMonogram(name: player.name, diameter: 96)
-                Text(player.name)
-                    .font(.title2.weight(.semibold))
+                PlayerMonogram(name: player.stats.name, diameter: 96)
+                HStack(spacing: 8) {
+                    Text("#\(player.rank)")
+                        .font(.title2.weight(.bold).monospacedDigit())
+                        .foregroundStyle(.tint)
+                    Text(player.stats.name)
+                        .font(.title2.weight(.semibold))
+                }
                 
                 Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 6) {
                     GridRow {
-                        statCell("Games", "\(player.games)")
-                        statCell("Record", "\(player.wins)–\(player.draws)–\(player.losses)")
-                        statCell("Win Rate", player.winRate.formatted(.percent.precision(.fractionLength(0))))
+                        statCell("Wins", "\(player.stats.wins)")
+                        statCell("Record", "\(player.stats.wins)–\(player.stats.draws)–\(player.stats.losses)")
+                        statCell("Win Rate", player.stats.winRate.formatted(.percent.precision(.fractionLength(0))))
                     }
                     GridRow {
-                        statCell("Mates", "\(player.matesDelivered)")
-                        statCell("First", player.firstPlayed.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits)))
-                        statCell("Last", player.lastPlayed.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits)))
+                        statCell("Games", "\(player.stats.games)")
+                        statCell("Rating", player.rating?.displaySummary ?? "—")
+                        statCell("Mates", "\(player.stats.matesDelivered)")
                     }
                 }
                 .padding(.top, 4)
@@ -74,13 +79,14 @@ internal struct PlayersGalleryView: View {
                 HStack(spacing: 12) {
                     ForEach(players) { player in
                         PlayerCardView(
-                            stats: player,
-                            isSelected: selectedKey == player.key,
-                            onSelect: { selectedKey = player.key },
-                            onShowInLibrary: { onShowInLibrary(player.key) }
+                            stats: player.stats,
+                            isSelected: selectedKey == player.id,
+                            onSelect: { selectedKey = player.id },
+                            rank: player.rank,
+                            onShowInLibrary: { onShowInLibrary(player.id) }
                         )
                         .frame(width: 160)
-                        .id(player.key)
+                        .id(player.id)
                     }
                 }
                 .padding(.horizontal, 16)

@@ -19,7 +19,14 @@ internal struct LibraryDestination: View {
     )
     
     // MARK: Stored Properties
-    internal let filter: SmartTag?
+    internal let filter: LibraryFilter?
+    
+    /// Clears the active filter back to the full Library (M-prs.6).
+    /// Owned by `ContentView` because a filter *is* a sidebar selection —
+    /// the destination can render the chip, but only the selection's
+    /// owner can leave it. Nil when unfiltered; the chip renders its ✕
+    /// unconditionally because every filtered construction passes it.
+    internal let onClearFilter: (() -> Void)?
     
     // MARK: Tab State (lives on enclosing `ContentView`)
     @Bindable internal var tabState: TabState
@@ -40,9 +47,14 @@ internal struct LibraryDestination: View {
     @State private var isQueuePopoverPresented = false
     
     // MARK: Initializers
-    internal init(filter: SmartTag? = nil, tabState: TabState) {
+    internal init(
+        filter: LibraryFilter? = nil,
+        tabState: TabState,
+        onClearFilter: (() -> Void)? = nil
+    ) {
         self.filter = filter
         self.tabState = tabState
+        self.onClearFilter = onClearFilter
     }
     
     // MARK: Computed Properties
@@ -146,16 +158,22 @@ internal struct LibraryDestination: View {
     /// compiler reports as an "unable to type-check in reasonable time" error
     /// pinned to an arbitrary modifier.)
     private var coreContent: some View {
-        Group {
-            if filteredGames.isEmpty {
-                emptyState
-                    .accessibilityIdentifier(AccessibilityID.libraryEmptyState)
-            } else {
-                modeView
+        VStack(spacing: 0) {
+            if let filter {
+                filterChipBar(for: filter)
+                Divider()
             }
+            Group {
+                if filteredGames.isEmpty {
+                    emptyState
+                        .accessibilityIdentifier(AccessibilityID.libraryEmptyState)
+                } else {
+                    modeView
+                }
+            }
+            .accessibilityIdentifier(AccessibilityID.libraryContent)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .accessibilityIdentifier(AccessibilityID.libraryContent)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle(filter?.displayName ?? "Library")
         .dropDestination(for: URL.self) { urls, _ in
             Self.logger.info("Drop received: \(urls.count) URL(s)")
@@ -177,6 +195,39 @@ internal struct LibraryDestination: View {
                 }
             }
         }
+    }
+    
+    /// The clearable filter chip (M-prs.6): "Tag: X ✕" / "Player: Y ✕".
+    /// For a smart-tag filter it doubles the sidebar highlight; for a
+    /// programmatic player filter it *is* the whole UI — the state's one
+    /// visible face and its exit (there is no sidebar row to un-click).
+    private func filterChipBar(for filter: LibraryFilter) -> some View {
+        HStack {
+            HStack(spacing: 6) {
+                Image(systemName: filter.systemImage)
+                Text("\(filter.kindLabel): \(filter.displayName)")
+                    .lineLimit(1)
+                Button {
+                    onClearFilter?()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.borderless)
+                .help("Show the full Library")
+                .accessibilityIdentifier(AccessibilityID.libraryFilterChipClear)
+            }
+            .font(.callout)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(.secondary.opacity(0.15)))
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier(AccessibilityID.libraryFilterChip)
+            
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
     
     // MARK: Instance Methods
@@ -384,9 +435,10 @@ internal struct LibraryDestination: View {
     private var emptyState: some View {
         if let filter {
             ContentUnavailableView {
-                Label("No \(filter.displayName) Games", systemImage: "tag")
+                Label("No \(filter.displayName) Games", systemImage: filter.systemImage)
+                
             } description: {
-                Text("No games match this tag yet.")
+                Text("No games match this \(filter.kindLabel.lowercased()) yet.")
             }
         } else {
             ContentUnavailableView {

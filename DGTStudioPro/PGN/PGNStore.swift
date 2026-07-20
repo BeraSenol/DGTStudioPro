@@ -262,6 +262,22 @@ internal struct PGNStore {
         return player
     }
     
+    /// Read-only sibling of `resolvePlayer(named:)` for the M-prs.6
+    /// "Show in Library" hop: the collection destinations' currency is
+    /// the pure `PlayerStats.ID` (= `normalizedName`), the sidebar's is
+    /// the model identifier — this is the bridge, and it **never
+    /// creates** (the D9′ single door is about creation; a lookup that
+    /// quietly inserted would be a second door by accident). A miss is
+    /// only possible for a key no resolved link produced — which the
+    /// stats index can't emit — so callers treat nil as a no-op.
+    internal func player(withNormalizedKey key: String) throws -> Player? {
+        var descriptor = FetchDescriptor<Player>(
+            predicate: #Predicate { $0.normalizedName == key }
+        )
+        descriptor.fetchLimit = 1
+        return try modelContext.fetch(descriptor).first
+    }
+    
     /// Links players on rows that predate the M-prs.1 schema (or whose
     /// links a future player deletion nullified). The `backfillEmptyNames`
     /// precedent: idempotent, cheap when clean, called from the collection

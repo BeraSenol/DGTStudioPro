@@ -22,7 +22,14 @@ extension PGN {
             endedInMate: moves.last?.hasSuffix("#") == true,
             date: date,
             importedAt: importedAt,
-            contentHash: contentHash
+            contentHash: contentHash,
+            event: event,
+            site: site,
+            name: name,
+            round: round,
+            plyCount: moves.count,
+            hasAnalysis: !evaluations.isEmpty,
+            isTimed: timeControl != nil
         )
     }
 }

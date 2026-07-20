@@ -182,11 +182,13 @@ final class DGTStudioProUITests: XCTestCase {
     
     func test_sidebar_tagFilterRendersLibrary() {
         launch()
-        element(AccessibilityID.sidebarTag("checkmate")).click()
+        // Name-keyed since M-prs.5 (the enum's raw values are gone).
+        element(AccessibilityID.sidebarTag("Checkmate")).click()
         XCTAssertTrue(waitFor(element(AccessibilityID.libraryContent)),
                       "Tag-filtered Library should render its content area")
+        XCTAssertTrue(waitFor(element(AccessibilityID.libraryFilterChip)),
+                      "The filter chip should announce the active tag (M-prs.6)")
     }
-    
     // MARK: Players (M-prs.3)
     
     /// The seed's raw tags surface as resolved display identities — the
@@ -244,6 +246,121 @@ final class DGTStudioProUITests: XCTestCase {
         
         XCTAssertTrue(waitFor(element(AccessibilityID.playersInspectorProfile)),
                       "Inspector should show the selected player's profile")
+    }
+    
+    // MARK: Rankings (M-prs.4)
+    
+    /// Pins the seeded ladder end to end: two 1-win players (both 100%,
+    /// so the key tiebreak decides 1 vs 2), then the zero-win group led
+    /// alphabetically. Seeds are undated, so chronology and the ladder
+    /// derive purely from seed insertion — deterministic by construction.
+    func test_rankings_ladderOrderMatchesComparator() {
+        launch()
+        element(AccessibilityID.sidebarDestination("rankings")).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.rankingsContent)),
+                      "Rankings destination should appear")
+        
+        XCTAssertTrue(waitFor(element(AccessibilityID.rankingRow(1, "Liren Ding"))),
+                      "Key tiebreak: 'liren ding' < 'player black' at equal wins and win rate")
+        XCTAssertTrue(element(AccessibilityID.rankingRow(2, "Player Black")).exists)
+        XCTAssertTrue(element(AccessibilityID.rankingRow(3, "Alireza Firouzja")).exists,
+                      "Zero-win group starts at rank 3, key-ascending")
+    }
+    
+    /// The parity promise, third destination: same four modes, same
+    /// symbol-keyed segments.
+    func test_rankings_viewModes_switchAcrossAllFour() {
+        launch()
+        element(AccessibilityID.sidebarDestination("rankings")).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.rankingsContent)))
+        
+        let icons   = segment(ModeSymbol.icons)
+        let list    = segment(ModeSymbol.list)
+        let columns = segment(ModeSymbol.columns)
+        let gallery = segment(ModeSymbol.gallery)
+        
+        XCTAssertTrue(list.waitForExistence(timeout: 5),
+                      "Rankings view-mode picker should be present")
+        
+        icons.click()
+        assertPicked(icons,   "Icons segment should be selected")
+        
+        columns.click()
+        assertPicked(columns, "Columns segment should be selected")
+        
+        gallery.click()
+        assertPicked(gallery, "Gallery segment should be selected")
+        
+        list.click()
+        assertPicked(list,    "List segment should be selected")
+    }
+    
+    func test_rankings_selection_populatesInspectorProfile() {
+        launch()
+        element(AccessibilityID.sidebarDestination("rankings")).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.rankingRow(1, "Liren Ding"))))
+        
+        element(AccessibilityID.rankingRow(1, "Liren Ding")).click()
+        element(AccessibilityID.rankingsInspectorToggle).click()
+        
+        XCTAssertTrue(waitFor(element(AccessibilityID.rankingsInspectorProfile)),
+                      "Inspector should show the selected player's ranking")
+    }
+    
+    // MARK: Smart Tags (M-prs.5)
+    
+    /// The whole create loop: + opens the editor, a named tag saves,
+    /// appears in the sidebar, and filters the Library when clicked (its
+    /// blank default rule matches nothing — the inert-new-tag contract —
+    /// so the filtered Library renders its empty state, which still
+    /// lives inside the content area the assertion targets).
+    func test_tags_createSaveAndFilter() {
+        launch()
+        element(AccessibilityID.sidebarTagsAdd).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.tagsEditor)),
+                      "Editor sheet should appear")
+        
+        let nameField = element(AccessibilityID.tagsEditorName)
+        nameField.click()
+        app.typeKey("a", modifierFlags: .command)
+        app.typeText("Blitz")
+        element(AccessibilityID.tagsEditorSave).click()
+        
+        XCTAssertTrue(waitFor(element(AccessibilityID.sidebarTag("Blitz"))),
+                      "Saved tag should appear in the sidebar")
+        element(AccessibilityID.sidebarTag("Blitz")).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.libraryContent)),
+                      "Tag-filtered Library should render")
+    }
+    
+    // MARK: Library Filter Chip (M-prs.6)
+    
+    /// The chip round-trip: "Show in Library" on a Players row enters a
+    /// programmatic player filter — no sidebar row exists for it, so the
+    /// chip is the state's one visible face — and clearing the chip
+    /// returns the full Library. The menu item is driven by *title* (the
+    /// `launch()` helper's own menu-item pattern). The closing absence
+    /// assertion is safe against the F8 vacuous-absence trap because the
+    /// same constant is proven present two steps earlier in this test.
+    func test_playerFilterChip_roundTripsThroughShowInLibrary() {
+        launch()
+        element(AccessibilityID.sidebarDestination("players")).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.playerRow("Anish Giri"))),
+                      "Players list should show the seeded player")
+        
+        element(AccessibilityID.playerRow("Anish Giri")).rightClick()
+        let showInLibrary = app.menuItems["Show in Library"]
+        XCTAssertTrue(showInLibrary.waitForExistence(timeout: 3),
+                      "The row context menu should offer Show in Library")
+        showInLibrary.click()
+        
+        XCTAssertTrue(waitFor(element(AccessibilityID.libraryFilterChip)),
+                      "The player-filtered Library should show its chip")
+        element(AccessibilityID.libraryFilterChipClear).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.libraryContent)),
+                      "Clearing the chip should land on the Library")
+        XCTAssertFalse(element(AccessibilityID.libraryFilterChip).exists,
+                       "The chip should be gone once the filter is cleared")
     }
     
     // MARK: Board Render (regression guard)

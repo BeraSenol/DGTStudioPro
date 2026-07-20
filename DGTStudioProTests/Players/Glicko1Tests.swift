@@ -107,6 +107,11 @@ struct Glicko1Tests {
         #expect(!Glicko1.Rating(mean: 1500, deviation: 110).isProvisional, "boundary is established")
     }
     
+    @Test func displaySummaryRoundsAndMarksProvisional() {
+        #expect(Glicko1.Rating(mean: 1662.212, deviation: 290.23).displaySummary == "1662 (provisional)")
+        #expect(Glicko1.Rating(mean: 1499.6, deviation: 30).displaySummary == "1500")
+    }
+    
     // MARK: The Fold
     
     /// A beats B, then B beats A. Pins three things at once: chronology

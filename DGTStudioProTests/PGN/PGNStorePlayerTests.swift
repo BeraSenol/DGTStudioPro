@@ -234,4 +234,32 @@ struct PGNStorePlayerTests {
         #expect(white.whiteGames.isEmpty)
         #expect(try Self.playerCount(in: context) == 2)
     }
+    
+    // MARK: Read-Only Lookup (M-prs.6)
+    
+    /// The M-prs.6 bridge is read-only by contract: it finds the row the
+    /// resolver created, keyed exactly like the resolver keys it, and a
+    /// miss creates nothing — the single door (D9′) is about creation,
+    /// and the lookup must never become a second one by accident.
+    @Test func playerLookupByKeyFindsWithoutCreating() throws {
+        let context = try Self.makeContext()
+        let store = PGNStore(modelContext: context)
+        let resolved = try store.resolvePlayer(named: "Lopez, Ruy")
+        try context.save()
+        
+        let found = try store.player(
+            withNormalizedKey: Player.normalizedKey(for: "Ruy Lopez")
+        )
+        
+        #expect(found?.persistentModelID == resolved?.persistentModelID)
+        #expect(try context.fetch(FetchDescriptor<Player>()).count == 1)
+    }
+    
+    @Test func playerLookupByKeyMissesCleanly() throws {
+        let context = try Self.makeContext()
+        let store = PGNStore(modelContext: context)
+        
+        #expect(try store.player(withNormalizedKey: "nobody here") == nil)
+        #expect(try context.fetch(FetchDescriptor<Player>()).isEmpty)
+    }
 }

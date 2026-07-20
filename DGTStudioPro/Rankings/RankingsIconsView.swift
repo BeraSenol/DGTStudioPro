@@ -1,5 +1,5 @@
 //
-//  PlayersIconsView.swift
+//  RankingsIconsView.swift
 //  DGTStudioPro
 //
 //  Created by Supreme Leader on 20/07/2026.
@@ -7,17 +7,17 @@
 
 import SwiftUI
 
-internal struct PlayersIconsView: View {
+internal struct RankingsIconsView: View {
     
     // MARK: Static Constants
     private static let columnCount = 6
     private static let columnSpacing: CGFloat = 16
     
     // MARK: Stored Properties
-    let players: [PlayerStats]
+    let players: [RankedPlayer]
     @Binding var selectedKey: PlayerStats.ID?
     let onShowInLibrary: (PlayerStats.ID) -> Void
-
+    
     // MARK: Computed Properties
     private var columns: [GridItem] {
         Array(
@@ -32,10 +32,11 @@ internal struct PlayersIconsView: View {
             LazyVGrid(columns: columns, spacing: Self.columnSpacing) {
                 ForEach(players) { player in
                     PlayerCardView(
-                        stats: player,
-                        isSelected: selectedKey == player.key,
-                        onSelect: { selectedKey = player.key },
-                        onShowInLibrary: { onShowInLibrary(player.key) }
+                        stats: player.stats,
+                        isSelected: selectedKey == player.id,
+                        onSelect: { selectedKey = player.id },
+                        rank: player.rank,
+                        onShowInLibrary: { onShowInLibrary(player.id) }
                     )
                 }
             }

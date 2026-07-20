@@ -21,19 +21,42 @@ import SwiftUI
 /// `TabState` is owned here (rather than on each destination) so the
 /// state survives the destination view being recreated when the user
 /// switches the sidebar. See `TabState` for the rationale.
+///
+/// M-prs.5: the Tags section is a `@Query` over the `SmartTag` model
+/// with create/edit/delete (the editor sheet works on a value draft —
+/// Cancel must never have mutated a live model). `SidebarSelection`
+/// carries the tag's `PersistentIdentifier`, not the model: selections
+/// must stay `Hashable` and survive the model's deletion gracefully.
+///
+/// M-prs.6: `.player` is a programmatic-only selection — no sidebar row
+/// renders it, so the sidebar shows no highlight while it's active; the
+/// Library's filter chip is deliberately both the visible state and the
+/// exit. Stale ids degrade to the full Library exactly like `.tag`; the
+/// `players` query exists solely for that id → model hop.
 internal struct ContentView: View {
-
+    
     // MARK: Window-Bound State
-
+    
     @Binding internal var loadedGameID: PersistentIdentifier?
-
+    
     // MARK: Per-Tab State
-
+    
     @State private var selection: SidebarSelection
     @State private var tabState = TabState()
-
+    
+    // MARK: Tags (M-prs.5)
+    
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \SmartTag.createdAt) private var tags: [SmartTag]
+    @State private var editorDraft: TagDraft?
+    @State private var pendingTagDeletion: SmartTag?
+    
+    // MARK: Players (M-prs.6)
+    
+    @Query(sort: \Player.name) private var players: [Player]
+    
     // MARK: Initializer
-
+    
     internal init(loadedGameID: Binding<PersistentIdentifier?>) {
         self._loadedGameID = loadedGameID
         // Start on Board for tabs opened with a specific game, on
@@ -43,9 +66,9 @@ internal struct ContentView: View {
         : .destination(.library)
         self._selection = State(initialValue: initial)
     }
-
+    
     // MARK: Body
-
+    
     internal var body: some View {
         NavigationSplitView {
             List(selection: $selection) {
@@ -56,18 +79,43 @@ internal struct ContentView: View {
                             .accessibilityIdentifier(AccessibilityID.sidebarDestination(destination.rawValue))
                     }
                 }
-
-                Section("Tags") {
-                    ForEach(SmartTag.allCases) { tag in
+                
+                Section {
+                    ForEach(tags) { tag in
                         Label {
-                            Text(tag.displayName)
+                            Text(tag.name)
                         } icon: {
                             Circle()
                                 .fill(tag.color)
                                 .frame(width: 10, height: 10)
                         }
-                        .tag(SidebarSelection.tag(tag))
-                        .accessibilityIdentifier(AccessibilityID.sidebarTag(tag.rawValue))
+                        .tag(SidebarSelection.tag(tag.id))
+                        .accessibilityIdentifier(AccessibilityID.sidebarTag(tag.name))
+                        .contextMenu {
+                            Button {
+                                editorDraft = TagDraft(editing: tag)
+                            } label: {
+                                Label("Edit Tag…", systemImage: "pencil")
+                            }
+                            Button(role: .destructive) {
+                                pendingTagDeletion = tag
+                            } label: {
+                                Label("Delete Tag…", systemImage: "trash")
+                            }
+                        }
+                    }
+                } header: {
+                    HStack {
+                        Text("Tags")
+                        Spacer()
+                        Button {
+                            editorDraft = TagDraft()
+                        } label: {
+                            Image(systemName: "plus")
+                        }
+                        .buttonStyle(.borderless)
+                        .help("New smart tag…")
+                        .accessibilityIdentifier(AccessibilityID.sidebarTagsAdd)
                     }
                 }
             }
@@ -80,12 +128,50 @@ internal struct ContentView: View {
             case .destination(.library):
                 LibraryDestination(filter: nil, tabState: tabState)
             case .destination(.players):
-                PlayersDestination(tabState: tabState)
+                PlayersDestination(
+                    tabState: tabState,
+                    onShowInLibrary: { selection = .player($0) }
+                )
             case .destination(.rankings):
-                RankingsDestination(tabState: tabState)
-            case .tag(let tag):
-                LibraryDestination(filter: tag, tabState: tabState)
+                RankingsDestination(
+                    tabState: tabState,
+                    onShowInLibrary: { selection = .player($0) }
+                )
+            case .tag(let id):
+                // A deleted tag's stale selection degrades to the full
+                // Library (nil filter) instead of trapping on a lookup.
+                LibraryDestination(
+                    filter: tags.first(where: { $0.id == id }).map(LibraryFilter.smartTag),
+                    tabState: tabState,
+                    onClearFilter: { selection = .destination(.library) }
+                )
+            case .player(let id):
+                // Programmatic only (M-prs.6): no sidebar row carries
+                // this selection — the chip is its one visible face and
+                // its exit. Same stale-degrade contract as `.tag`.
+                LibraryDestination(
+                    filter: players.first(where: { $0.id == id }).map(LibraryFilter.player),
+                    tabState: tabState,
+                    onClearFilter: { selection = .destination(.library) }
+                )
             }
+        }
+        .sheet(item: $editorDraft) { draft in
+            SmartTagEditorView(draft: draft) { finished in
+                commit(finished)
+            }
+        }
+        .alert(
+            "Delete Tag?",
+            isPresented: pendingTagDeletionBinding,
+            presenting: pendingTagDeletion
+        ) { tag in
+            Button("Delete \"\(tag.name)\"", role: .destructive) {
+                delete(tag)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { tag in
+            Text("The tag is removed from the sidebar. No games are affected.")
         }
         .onDisappear {
             // Tab teardown. `ContentView` is the window/tab root: it
@@ -99,13 +185,56 @@ internal struct ContentView: View {
             Task { await analysisQueue.shutdown() }
         }
     }
+    
+    // MARK: Tag CRUD (M-prs.5)
+    
+    private var pendingTagDeletionBinding: Binding<Bool> {
+        Binding(
+            get: { pendingTagDeletion != nil },
+            set: { if !$0 { pendingTagDeletion = nil } }
+        )
+    }
+    
+    /// Insert-or-update from the editor's value draft, one save either
+    /// way. Update mutates the live model only *here*, after OK.
+    private func commit(_ draft: TagDraft) {
+        if let tag = draft.editing {
+            tag.name = draft.name
+            tag.colorName = draft.colorName
+            tag.matchAll = draft.matchAll
+            tag.rules = draft.rules
+        } else {
+            modelContext.insert(
+                SmartTag(
+                    name: draft.name,
+                    colorName: draft.colorName,
+                    matchAll: draft.matchAll,
+                    rules: draft.rules
+                )
+            )
+        }
+        try? modelContext.save()
+    }
+    
+    private func delete(_ tag: SmartTag) {
+        // Deleting the selected tag falls back to Library *before* the
+        // model dies, so the detail switch never renders a stale id.
+        if selection == .tag(tag.id) {
+            selection = .destination(.library)
+        }
+        modelContext.delete(tag)
+        try? modelContext.save()
+    }
 }
 
 // MARK: - Supporting Types
 
 internal enum SidebarSelection: Hashable {
     case destination(Destination)
-    case tag(SmartTag)
+    case tag(PersistentIdentifier)
+    /// Programmatic only (M-prs.6): set by "Show in Library", never by a
+    /// sidebar row — the Library filter chip renders and clears it.
+    case player(PersistentIdentifier)
 }
 
 internal enum Destination: String, CaseIterable, Identifiable, Hashable {
@@ -113,13 +242,13 @@ internal enum Destination: String, CaseIterable, Identifiable, Hashable {
     case library
     case players
     case rankings
-
+    
     internal var id: String { rawValue }
-
+    
     internal var title: String {
         rawValue.capitalized
     }
-
+    
     internal var systemImage: String {
         switch self {
         case .board:    return "checkerboard.rectangle"

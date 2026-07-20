@@ -9,15 +9,15 @@ import Foundation
 import SwiftData
 
 internal enum UITestSeed {
-
+    
     /// Launch argument that switches the app into seeded, in-memory mode.
     internal static let launchArgument = "-uiTestSeed"
-
+    
     /// True when the current process was launched for UI testing.
     internal static var isActive: Bool {
         ProcessInfo.processInfo.arguments.contains(launchArgument)
     }
-
+    
     /// Stable game names. These are the strings the UI test looks up as
     /// `gameCard.<name>` — shared with the UI suite via `SeedGameName`.
     internal enum GameName {
@@ -29,7 +29,7 @@ internal enum UITestSeed {
         internal static let drawnGame = SeedGameName.drawnGame   // timed → "Timed" tag
         internal static let blackWins = SeedGameName.blackWins
     }
-
+    
     /// Inserts the sample games into the (in-memory) container. Uses a
     /// freshly created `ModelContext` rather than `mainContext` so this
     /// can run from the App's container factory without main-actor
@@ -39,13 +39,18 @@ internal enum UITestSeed {
         for game in games() {
             context.insert(game)
         }
+        // The same defaults production seeds (one factory — M-prs.5), so
+        // the sidebar-tag tests exercise exactly what ships.
+        for tag in SmartTag.defaultTags() {
+            context.insert(tag)
+        }
         do {
             try context.save()
         } catch {
             assertionFailure("UI test seed failed: \(error)")
         }
     }
-
+    
     private static func games() -> [PGN] {
         [
             // Fool's-mate: a real, legal checkmate. Round 1 + ends in "#"

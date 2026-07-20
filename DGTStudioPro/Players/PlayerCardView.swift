@@ -33,16 +33,24 @@ internal struct PlayerMonogram: View {
     }
 }
 
-/// The Players analogue of `LibraryGameCardView`, used by the icons grid,
-/// the columns detail, and the gallery filmstrip. Selection-only in the
-/// POC: players have no destructive or open actions yet (D9′ — the
-/// registry is machine-managed; "Show in Library" arrives in M-prs.6).
+/// The Players analogue of `LibraryGameCardView`, used by the icons grids,
+/// the columns details, and the gallery filmstrips of *both* Players and
+/// Rankings — the latter passes `rank` (M-prs.4) and gets the badge.
+/// Players have no destructive actions (D9′ — the registry is
+/// machine-managed); the one non-selection affordance is M-prs.6's
+/// optional "Show in Library" context menu, threaded from the
+/// destinations so the card stays sidebar-unaware.
 internal struct PlayerCardView: View {
     
     // MARK: Stored Properties
     let stats: PlayerStats
     let isSelected: Bool
     let onSelect: () -> Void
+    /// Ladder position; nil outside Rankings.
+    var rank: Int? = nil
+    /// Presents the "Show in Library" context menu when set (M-prs.6).
+    /// Optional so previews and any selection-only context stay unchanged.
+    var onShowInLibrary: (() -> Void)? = nil
     
     // MARK: Body
     var body: some View {
@@ -53,6 +61,11 @@ internal struct PlayerCardView: View {
                 .background {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(.secondary.opacity(isSelected ? 0.15 : 0))
+                }
+                .overlay(alignment: .topLeading) {
+                    if let rank {
+                        rankBadge(rank)
+                    }
                 }
             
             Text(stats.name)
@@ -74,5 +87,26 @@ internal struct PlayerCardView: View {
         // a tappable element.
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier(AccessibilityID.playerCard(stats.name))
+        .contextMenu {
+            if let onShowInLibrary {
+                Button {
+                    onShowInLibrary()
+                } label: {
+                    Label("Show in Library", systemImage: "books.vertical")
+                }
+                .accessibilityIdentifier(AccessibilityID.contextShowInLibrary)
+            }
+        }
+    }
+    
+    // MARK: Instance Methods
+    private func rankBadge(_ rank: Int) -> some View {
+        Text("#\(rank)")
+            .font(.caption2.weight(.bold).monospacedDigit())
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(.tint.opacity(0.2)))
+            .foregroundStyle(.tint)
+            .padding(4)
     }
 }

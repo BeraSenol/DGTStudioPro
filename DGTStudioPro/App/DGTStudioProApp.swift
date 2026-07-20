@@ -23,11 +23,19 @@ internal struct DGTStudioProApp: App {
         do {
             let inMemory = UITestSeed.isActive
             let config = ModelConfiguration(isStoredInMemoryOnly: inMemory)
-            // Player joins the schema explicitly (M-prs.1). Relationship
-            // inference from PGN would pull it in regardless; listing it
-            // keeps the full schema readable at its one source of truth.
-            let container = try ModelContainer(for: PGN.self, Player.self, configurations: config)
-            if inMemory { UITestSeed.seed(into: container) }
+            // Player joins the schema explicitly (M-prs.1), SmartTag in
+            // M-prs.5 — SmartTag has no relationships, so inference would
+            // NOT pull it in; listing all three is load-bearing now, not
+            // just documentation.
+            let container = try ModelContainer(
+                for: PGN.self, Player.self, SmartTag.self,
+                configurations: config
+            )
+            if inMemory {
+                UITestSeed.seed(into: container)
+            } else {
+                SmartTag.seedDefaultsOnce(into: container)
+            }
             return container
         } catch {
             fatalError("Failed to create shared ModelContainer: \(error)")

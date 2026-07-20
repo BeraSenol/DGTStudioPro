@@ -23,7 +23,8 @@ internal struct PlayersColumnsView: View {
     // MARK: Stored Properties
     let players: [PlayerStats]
     @Binding var selectedKey: PlayerStats.ID?
-    
+    let onShowInLibrary: (PlayerStats.ID) -> Void
+
     // MARK: Private Properties
     @State private var selectedGroupID: String?
     
@@ -102,7 +103,8 @@ internal struct PlayersColumnsView: View {
                             PlayerCardView(
                                 stats: player,
                                 isSelected: selectedKey == player.key,
-                                onSelect: { selectedKey = player.key }
+                                onSelect: { selectedKey = player.key },
+                                onShowInLibrary: { onShowInLibrary(player.key) }
                             )
                         }
                     }
