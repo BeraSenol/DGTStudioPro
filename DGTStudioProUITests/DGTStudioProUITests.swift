@@ -187,6 +187,65 @@ final class DGTStudioProUITests: XCTestCase {
                       "Tag-filtered Library should render its content area")
     }
     
+    // MARK: Players (M-prs.3)
+    
+    /// The seed's raw tags surface as resolved display identities — the
+    /// end-to-end witness that "Lopez, Ruy" became the player "Ruy Lopez"
+    /// through resolver + index + view.
+    func test_players_listShowsResolvedSeedPlayers() {
+        launch()
+        element(AccessibilityID.sidebarDestination("players")).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.playersContent)),
+                      "Players destination should appear")
+        
+        XCTAssertTrue(waitFor(element(AccessibilityID.playerRow("Ruy Lopez"))),
+                      "Seed tag 'Lopez, Ruy' should surface as the player 'Ruy Lopez'")
+        XCTAssertTrue(element(AccessibilityID.playerRow("Anish Giri")).exists)
+        XCTAssertTrue(element(AccessibilityID.playerRow("Liren Ding")).exists)
+    }
+    
+    /// The parity promise: the same four modes cycle on Players, via the
+    /// same symbol-keyed segments (only one destination's toolbar exists
+    /// at a time, so the shared handles resolve to Players' picker here).
+    func test_players_viewModes_switchAcrossAllFour() {
+        launch()
+        element(AccessibilityID.sidebarDestination("players")).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.playersContent)))
+        
+        let icons   = segment(ModeSymbol.icons)
+        let list    = segment(ModeSymbol.list)
+        let columns = segment(ModeSymbol.columns)
+        let gallery = segment(ModeSymbol.gallery)
+        
+        XCTAssertTrue(list.waitForExistence(timeout: 5),
+                      "Players view-mode picker should be present")
+        
+        icons.click()
+        assertPicked(icons,   "Icons segment should be selected")
+        
+        columns.click()
+        assertPicked(columns, "Columns segment should be selected")
+        
+        gallery.click()
+        assertPicked(gallery, "Gallery segment should be selected")
+        
+        list.click()
+        assertPicked(list,    "List segment should be selected")
+    }
+    
+    /// Select a row, open the inspector, and the profile section loads.
+    func test_players_selection_populatesInspectorProfile() {
+        launch()
+        element(AccessibilityID.sidebarDestination("players")).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.playerRow("Anish Giri"))))
+        
+        element(AccessibilityID.playerRow("Anish Giri")).click()
+        element(AccessibilityID.playersInspectorToggle).click()
+        
+        XCTAssertTrue(waitFor(element(AccessibilityID.playersInspectorProfile)),
+                      "Inspector should show the selected player's profile")
+    }
+    
     // MARK: Board Render (regression guard)
     
     /// Selecting Board with no game loaded must render the live physical-board

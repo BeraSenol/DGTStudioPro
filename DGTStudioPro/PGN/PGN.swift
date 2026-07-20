@@ -60,6 +60,17 @@ internal final class PGN: Identifiable {
     internal var importedAt: Date
     internal var contentHash: String
     
+    /// Resolved player identities for the `white`/`black` tags (M-prs.1),
+    /// maintained exclusively by `PGNStore` — both doors, the backfill,
+    /// and `applyEdit`. Optional because `"?"` placeholders resolve to no
+    /// player, and rows predating the schema start nil until backfilled.
+    /// Deliberately absent from `init`: a link assigned anywhere but the
+    /// resolver would bypass the single creation door. Sibling of the
+    /// one-hash rule: any edit to `white`/`black` outside
+    /// `PGNStore.applyEdit` silently rots these links.
+    internal var whitePlayer: Player?
+    internal var blackPlayer: Player?
+    
     // MARK: Computed Properties
     internal var id: PersistentIdentifier { persistentModelID }
     

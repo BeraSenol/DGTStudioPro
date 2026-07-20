@@ -94,9 +94,28 @@ internal enum AccessibilityID {
         "gameRow.\(name)"
     }
     
-    // MARK: v1 Placeholders
+    // MARK: Players
     
     internal static let playersContent = "players.content"
+    internal static let playersEmptyState = "players.emptyState"
+    internal static let playersViewModePicker = "players.viewModePicker"
+    internal static let playersTable = "players.table"
+    internal static let playersInspectorToggle = "players.inspectorToggle"
+    internal static let playersInspectorProfile = "players.inspector.profile"
+    
+    /// `playerRow.Anish Giri`, … — one per list-mode row, keyed by the
+    /// player's display name (the `gameRow(_:)` precedent).
+    internal static func playerRow(_ name: String) -> String {
+        "playerRow.\(name)"
+    }
+    
+    /// `playerCard.Anish Giri`, … — one per card, keyed like the rows.
+    internal static func playerCard(_ name: String) -> String {
+        "playerCard.\(name)"
+    }
+    
+    // MARK: v1 Placeholders
+    
     internal static let rankingsContent = "rankings.content"
 }
 

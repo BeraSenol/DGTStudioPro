@@ -23,7 +23,10 @@ internal struct DGTStudioProApp: App {
         do {
             let inMemory = UITestSeed.isActive
             let config = ModelConfiguration(isStoredInMemoryOnly: inMemory)
-            let container = try ModelContainer(for: PGN.self, configurations: config)
+            // Player joins the schema explicitly (M-prs.1). Relationship
+            // inference from PGN would pull it in regardless; listing it
+            // keeps the full schema readable at its one source of truth.
+            let container = try ModelContainer(for: PGN.self, Player.self, configurations: config)
             if inMemory { UITestSeed.seed(into: container) }
             return container
         } catch {

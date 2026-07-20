@@ -109,6 +109,7 @@ internal struct PGNStore {
         // every future lookup misses, and deduplication silently no-ops.
         pgn.contentHash = hash
         modelContext.insert(pgn)
+        try resolvePlayers(for: pgn)   // M-prs.1 — link before the save below covers both
         try modelContext.save()
         
         Self.logger.info(
@@ -160,11 +161,14 @@ internal struct PGNStore {
             Self.logger.info(
                 "Archive deduplicated: matches existing '\(existing.name, privacy: .public)' hash=\(hash, privacy: .public)"
             )
+            // Deliberately untouched: healing links on pre-existing rows is
+            // the backfill's single job. Doors only link rows they insert.
             return ArchiveResult(pgn: existing, deduplicated: true)
         }
         
         pgn.contentHash = hash
         modelContext.insert(pgn)
+        try resolvePlayers(for: pgn)   // M-prs.1 — same placement as the import door
         try modelContext.save()
         
         Self.logger.info(
@@ -192,10 +196,16 @@ internal struct PGNStore {
     /// remembered — a second door would be one forgotten line from silent
     /// dedupe rot, which is exactly the failure the invariant warns about.
     /// Rejected: keeping the two-step write-then-rehash convention per
-    /// call site.
+    /// call site. M-prs.1 adds the player re-resolve here for the same
+    /// structural reason: an edited white/black tag with stale links is
+    /// the relationship version of a stale hash. Re-resolving
+    /// unconditionally is idempotent and cheaper than diffing which
+    /// fields the closure touched. Orphaned `Player` rows (nothing links
+    /// them after an edit) linger by decision — no GC in the POC.
     internal func applyEdit(to pgn: PGN, _ edit: (PGN) -> Void) throws {
         edit(pgn)
-        try refreshHash(of: pgn)
+        try resolvePlayers(for: pgn)
+        try refreshHash(of: pgn)   // saves — one transaction covers both
     }
     
     internal func delete(_ pgn: PGN) throws {
@@ -214,6 +224,73 @@ internal struct PGNStore {
             modelContext.delete(pgn)
         }
         try modelContext.save()
+    }
+    
+    // MARK: Player Resolution (M-prs.1)
+    
+    /// Links both sides of `pgn` to their `Player` identities. Save-free
+    /// by contract: the two doors and `applyEdit` each already end in a
+    /// save, and `backfillPlayerLinks()` batches its own — a save here
+    /// would double every door's transaction count.
+    internal func resolvePlayers(for pgn: PGN) throws {
+        pgn.whitePlayer = try resolvePlayer(named: pgn.white)
+        pgn.blackPlayer = try resolvePlayer(named: pgn.black)
+    }
+    
+    /// The single creation door for `Player`. Raw tags pass through
+    /// `PGN.displayPlayerName(_:)` first (so "Lopez, Ruy" and "Ruy Lopez"
+    /// are one identity), then match case-insensitively on the stored
+    /// `normalizedName` key. PGN's `"?"` placeholder and empty tags
+    /// resolve to `nil` — a placeholder is the *absence* of a player,
+    /// never a player named "?".
+    internal func resolvePlayer(named rawTag: String) throws -> Player? {
+        let display = PGN.displayPlayerName(rawTag)
+        guard !display.isEmpty, display != "?" else { return nil }
+        
+        let key = Player.normalizedKey(for: display)
+        var descriptor = FetchDescriptor<Player>(
+            predicate: #Predicate { $0.normalizedName == key }
+        )
+        descriptor.fetchLimit = 1
+        if let existing = try modelContext.fetch(descriptor).first {
+            return existing
+        }
+        
+        let player = Player(name: display)
+        modelContext.insert(player)
+        Self.logger.info("Created player '\(display, privacy: .public)'")
+        return player
+    }
+    
+    /// Links players on rows that predate the M-prs.1 schema (or whose
+    /// links a future player deletion nullified). The `backfillEmptyNames`
+    /// precedent: idempotent, cheap when clean, called from the collection
+    /// destinations' `onAppear`. Fetch-all-and-scan rather than a
+    /// predicate, deliberately: a nil `whitePlayer` on a `"?"` row is
+    /// *correct*, not missing, so "needs linking" isn't a predicate over
+    /// the link alone — and libraries are personal-scale. Returns the
+    /// number of games it changed so the idempotence contract is testable.
+    @discardableResult
+    internal func backfillPlayerLinks() throws -> Int {
+        let games = try modelContext.fetch(FetchDescriptor<PGN>())
+        var relinked = 0
+        for game in games {
+            var changed = false
+            if game.whitePlayer == nil, let player = try resolvePlayer(named: game.white) {
+                game.whitePlayer = player
+                changed = true
+            }
+            if game.blackPlayer == nil, let player = try resolvePlayer(named: game.black) {
+                game.blackPlayer = player
+                changed = true
+            }
+            if changed { relinked += 1 }
+        }
+        if relinked > 0 {
+            try modelContext.save()
+            Self.logger.info("Backfilled player links on \(relinked) game(s)")
+        }
+        return relinked
     }
     
     // MARK: Private Helpers

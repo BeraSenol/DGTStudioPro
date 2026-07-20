@@ -131,6 +131,7 @@ internal struct LibraryDestination: View {
             }
             .onAppear {
                 backfillEmptyNames()
+                backfillPlayerLinks()
                 if viewMode == .gallery { tabState.libraryInspectorPresented = true }
             }
             .onChange(of: viewMode) { _, mode in
@@ -543,6 +544,17 @@ internal struct LibraryDestination: View {
             Self.logger.info("Backfilled names for \(toFix.count) game(s)")
         } catch {
             Self.logger.error("Name backfill save failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+    
+    /// M-prs.1 sibling of `backfillEmptyNames()`: the logic is store-owned
+    /// (Players and Rankings will share it from their own `onAppear`s);
+    /// this is only the Library's call site and its error sink.
+    private func backfillPlayerLinks() {
+        do {
+            try PGNStore(modelContext: modelContext).backfillPlayerLinks()
+        } catch {
+            Self.logger.error("Player-link backfill failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 }
