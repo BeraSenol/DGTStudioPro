@@ -17,12 +17,12 @@ import SwiftUI
 /// not, a small spinner mid-handshake — so the toolbar doubles as a live
 /// connection indicator.
 internal struct DGTConnectionToolbarModifier: ViewModifier {
-
+    
     @Environment(DGTConnection.self) private var connection
     @State private var showSheet = false
-
-    var identifier: String = "board.connectButton"
-
+    
+    var identifier: String = AccessibilityID.boardConnectButton
+    
     func body(content: Content) -> some View {
         content
             .toolbar {
@@ -40,7 +40,7 @@ internal struct DGTConnectionToolbarModifier: ViewModifier {
                 DGTConnectionView()
             }
     }
-
+    
     @ViewBuilder
     private var label: some View {
         switch connection.status {
@@ -55,7 +55,7 @@ internal struct DGTConnectionToolbarModifier: ViewModifier {
                 .tint(tint)
         }
     }
-
+    
     private var symbol: String {
         switch connection.status {
         case .connected: "antenna.radiowaves.left.and.right"
@@ -63,7 +63,7 @@ internal struct DGTConnectionToolbarModifier: ViewModifier {
         default:         "antenna.radiowaves.left.and.right.slash"
         }
     }
-
+    
     private var tint: Color? {
         switch connection.status {
         case .connected: .green
@@ -71,7 +71,7 @@ internal struct DGTConnectionToolbarModifier: ViewModifier {
         default:         nil
         }
     }
-
+    
     private var helpText: String {
         switch connection.status {
         case .disconnected, .searching: "Connect a DGT e-Board"
@@ -87,7 +87,7 @@ extension View {
     /// Adds the DGT board connect control + dialog to this view's toolbar.
     /// Requires a `DGTConnection` in the environment.
     internal func dgtConnectionToolbar(
-        identifier: String = "board.connectButton"
+        identifier: String = AccessibilityID.boardConnectButton
     ) -> some View {
         modifier(DGTConnectionToolbarModifier(identifier: identifier))
     }

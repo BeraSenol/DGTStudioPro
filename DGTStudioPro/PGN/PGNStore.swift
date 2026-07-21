@@ -208,6 +208,50 @@ internal struct PGNStore {
         try refreshHash(of: pgn)   // saves — one transaction covers both
     }
     
+    // MARK: Movetext Edit (M-lib.3, D18′)
+    
+    /// Applies an edited movetext to an archived game, validating by full
+    /// replay (`MovetextEdit`). Returns `.failure` with the first offending
+    /// ply when the proposal is illegal or its result is inconsistent —
+    /// nothing mutates in that case — or `.success` with the stored canonical
+    /// moves once committed. `throws` is reserved for the SwiftData save: a
+    /// *rejection* is a value, so the editor distinguishes "your move 14 is
+    /// illegal" from "the write failed".
+    ///
+    /// Re-validating here (the editor already validates for live feedback) is
+    /// deliberate — it makes "persisted movetext never bypasses the replayer"
+    /// structural rather than a caller's good manners, the `applyEdit`
+    /// philosophy applied to movetext.
+    ///
+    /// On acceptance, one transaction (D18′): the canonical moves replace the
+    /// old, the parallel `evaluations` array is invalidated (its per-ply
+    /// indexing no longer describes these plies), and `refreshHash` recomputes
+    /// and saves. Seats are untouched by a movetext edit, so the player
+    /// re-resolution the transaction calls for on a *seat* edit is a no-op and
+    /// omitted (metadata edits route through `applyEdit`, which re-resolves).
+    /// A proposal that canonicalizes to the current game is a no-op —
+    /// evaluations, still valid by position, are preserved. When M-lib.4
+    /// lands, the ECO / SpecialCheckmate fields clear here too, riding this
+    /// same invalidation.
+    internal func applyMovetextEdit(
+        to pgn: PGN,
+        proposed: [String]
+    ) throws -> Result<[String], MovetextEdit.Rejection> {
+        switch MovetextEdit.validate(proposed, claimedResult: pgn.result) {
+        case .failure(let rejection):
+            return .failure(rejection)
+        case .success(let accepted):
+            guard accepted.moves != pgn.moves else { return .success(pgn.moves) }
+            pgn.moves = accepted.moves
+            pgn.evaluations = []
+            try refreshHash(of: pgn)   // recompute hash + save — one transaction
+            Self.logger.info(
+                "Applied movetext edit to '\(pgn.name, privacy: .public)' plies=\(accepted.moves.count)"
+            )
+            return .success(accepted.moves)
+        }
+    }
+    
     internal func delete(_ pgn: PGN) throws {
         Self.logger.info("Deleting: '\(pgn.name, privacy: .public)'")
         modelContext.delete(pgn)

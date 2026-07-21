@@ -10,13 +10,13 @@ import SwiftData
 import SwiftUI
 
 internal struct SettingsView: View {
-
+    
     // MARK: Static Constants
     private static let logger = Logger(
         subsystem: "com.berasenol.dgtstudiopro",
         category: "settings"  // M11.4: was "pgnstore", a copy-paste that misled Console filtering
     )
-
+    
     // MARK: Private Properties
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
     /// M7.2 — the launch auto-connect preference. The `true` here and the
@@ -27,14 +27,14 @@ internal struct SettingsView: View {
     /// change the other, or this toggle and launch behavior disagree about
     /// what "never touched" means. `StorageKeys` documents the contract.
     @AppStorage(StorageKeys.autoConnectOnLaunch) private var autoConnectOnLaunch = true
-
+    
     /// M-ux.1 (D13′) — the illegal-move sound preference. Same twin-default
     /// contract as `autoConnectOnLaunch` above: the `true` here and the
     /// `?? true` fallback in the App's `onDesync` closure encode "absent
     /// reads as enabled" in two places, unavoidably. `StorageKeys`
     /// documents the pairing.
     @AppStorage(StorageKeys.illegalMoveSoundEnabled) private var illegalMoveSoundEnabled = true
-
+    
     // M11 review — the Engine section used to display constants that lived
     // nowhere (and had drifted: "20" against a real default of 18, "128 MB"
     // never sent). These bind to the same keys `EngineConfiguration.current`
@@ -47,14 +47,14 @@ internal struct SettingsView: View {
     = EngineConfiguration.default.hashMB
     @AppStorage(StorageKeys.engineThreads) private var engineThreads
     = EngineConfiguration.default.threads
-
+    
     @Environment(\.modelContext) private var modelContext
     @Query private var allGames: [PGN]
-
+    
     @State private var showEraseConfirmation = false
     @State private var showEraseError = false
     @State private var eraseErrorMessage = ""
-
+    
     // MARK: Body
     internal var body: some View {
         TabView {
@@ -70,7 +70,7 @@ internal struct SettingsView: View {
         }
         .frame(width: 500)
     }
-
+    
     // MARK: General
     private var generalTab: some View {
         Form {
@@ -92,7 +92,7 @@ internal struct SettingsView: View {
                     + "always on."
                 )
             }
-
+            
             Section {
                 Toggle("Play alert on illegal move", isOn: $illegalMoveSoundEnabled)
                     .accessibilityIdentifier(AccessibilityID.settingsIllegalMoveSoundToggle)
@@ -104,7 +104,7 @@ internal struct SettingsView: View {
                     + "board can't be explained by any legal move."
                 )
             }
-
+            
             Section {
                 Stepper(value: $analysisDepth, in: EngineConfiguration.depthRange) {
                     LabeledContent("Threads", value: "\(engineThreads)")
@@ -121,22 +121,37 @@ internal struct SettingsView: View {
         }
         .formStyle(.grouped)
     }
-
+    
     // MARK: Board
+    
+    /// D15′(c): the Board tab joins the grouped-form language of the other
+    /// two tabs — it was the window's only non-`Form` tab, a bare `VStack`
+    /// with ad-hoc padding. The swatch buttons stay as the control: a
+    /// visual style is picked visually (a `Picker` of names would hide
+    /// exactly the information being chosen).
     private var boardTab: some View {
-        VStack {
-            HStack(spacing: 20) {
-                ForEach(BoardStyle.allCases, id: \.self, content: boardStyleButton)
+        Form {
+            Section {
+                HStack(spacing: 20) {
+                    ForEach(BoardStyle.allCases, id: \.self, content: boardStyleButton)
+                }
+                .frame(maxWidth: .infinity)
+            } header: {
+                Text("Board Style")
+            } footer: {
+                Text(
+                    "Applies everywhere a board is drawn — the live mirror "
+                    + "and game replays."
+                )
             }
-            .padding()
-            Spacer()
         }
+        .formStyle(.grouped)
     }
-
+    
     private func boardStyleButton(_ style: BoardStyle) -> some View {
         let isSelected = boardStyle == style
         let shape = RoundedRectangle(cornerRadius: 6, style: .continuous)
-
+        
         return Button {
             boardStyle = style
         } label: {
@@ -150,7 +165,7 @@ internal struct SettingsView: View {
                             lineWidth: isSelected ? 2 : 1
                         )
                     }
-
+                
                 Text(style.displayName)
                     .font(.caption)
                     .fontWeight(isSelected ? .semibold : .regular)
@@ -159,7 +174,7 @@ internal struct SettingsView: View {
         }
         .buttonStyle(.plain)
     }
-
+    
     private func boardThumbnail(for style: BoardStyle) -> some View {
         VStack(spacing: 0) {
             ForEach(0..<2, id: \.self) { row in
@@ -172,14 +187,14 @@ internal struct SettingsView: View {
             }
         }
     }
-
+    
     // MARK: Data
     private var dataTab: some View {
         Form {
             Section("Library") {
                 LabeledContent("Stored Games", value: "\(allGames.count)")
             }
-
+            
             Section {
                 Button(role: .destructive) {
                     showEraseConfirmation = true
@@ -215,9 +230,9 @@ internal struct SettingsView: View {
             Text(eraseErrorMessage)
         }
     }
-
+    
     // MARK: Actions
-
+    
     /// Batch-deletes every `PGN` in a single transaction. Open Board tabs aren't
     /// closed here (that would require window enumeration from this separate
     /// scene); instead each one's `loadIfNeeded` fails its lookup on the next

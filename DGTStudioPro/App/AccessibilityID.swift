@@ -74,6 +74,12 @@ internal enum AccessibilityID {
     internal static let board = "board"
     internal static let boardFlipButton = "board.flipButton"
     internal static let boardInspectorToggle = "board.inspectorToggle"
+    /// The toolbar's connect control (`DGTConnectionToolbar`). Migrated
+    /// late (M-ux.3): the value lived as a *parameter default*, which the
+    /// header's `accessibilityIdentifier("` enforcement grep cannot see —
+    /// defaults and helper arguments need the same discipline as direct
+    /// call sites.
+    internal static let boardConnectButton = "board.connectButton"
     
     /// `square.e4`, … — one per mirror square, keyed by algebraic
     /// notation (the stable handle for keyboard-nav and highlight
@@ -83,6 +89,20 @@ internal enum AccessibilityID {
     internal static func boardSquare(_ algebraic: String) -> String {
         "square.\(algebraic)"
     }
+    
+    // MARK: Movetext Editor (M-lib.3, D18′)
+    
+    /// The board's "Edit Moves…" toolbar affordance (enabled only for a loaded
+    /// archived game) and the editor sheet it presents. Unlike the live
+    /// families, this sheet *is* reachable in a boardless UI run — a loaded PGN
+    /// needs no hardware — so a future XCUITest can harden it; for now the
+    /// validator and store suites are the contract.
+    internal static let boardEditMovesButton  = "board.editMoves"
+    internal static let movetextEditorSheet   = "movetext.editor"
+    internal static let movetextEditorField   = "movetext.editor.field"
+    internal static let movetextEditorStatus  = "movetext.editor.status"
+    internal static let movetextEditorSave    = "movetext.editor.save"
+    internal static let movetextEditorCancel  = "movetext.editor.cancel"
     
     // MARK: Live
     
@@ -143,6 +163,12 @@ internal enum AccessibilityID {
     internal static func formSite(_ prefix: String)  -> String { "\(prefix).site" }
     internal static func formDate(_ prefix: String)  -> String { "\(prefix).date" }
     internal static func formRound(_ prefix: String) -> String { "\(prefix).round" }
+    /// The seat pickers' menu buttons (M-lib.1, D16′) — present only when
+    /// the host supplies known players (the New Game sheet does; the edit
+    /// sheets currently don't). Their functional witness is the manual
+    /// checklist: the sheet is unreachable in a boardless UI run.
+    internal static func formWhitePicker(_ prefix: String) -> String { "\(prefix).white.picker" }
+    internal static func formBlackPicker(_ prefix: String) -> String { "\(prefix).black.picker" }
     
     // MARK: Archive Confirmation (M5)
     

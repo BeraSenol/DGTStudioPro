@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 // MARK: - Placeholder Normalization
 
@@ -55,6 +56,14 @@ internal struct LiveGameRosterForm: View {
     /// compile unchanged.
     internal var identifierPrefix = AccessibilityID.liveFormPrefix
     
+    /// Known-player display names for the seat pickers (M-lib.1, D16′).
+    /// Empty — the default — renders plain text fields, so the edit and
+    /// archive sheets compile and behave unchanged; the New Game sheet
+    /// passes the `Player` registry. Free text always works: the menu
+    /// only fills the field, and picking creates nothing —
+    /// `resolvePlayer` stays the single creation door, at archive time.
+    internal var knownPlayers: [String] = []
+    
     /// `Roster.date` is optional (a PGN date can be unknown), but the v1
     /// dialog always supplies one (default today — the locked decision), so
     /// the picker binds through a non-optional facade.
@@ -65,26 +74,60 @@ internal struct LiveGameRosterForm: View {
         )
     }
     
+    /// The seat picker: a borderless menu of known players trailing the
+    /// text field — the combo-box shape, in SwiftUI terms (no AppKit
+    /// needed: a `Menu` filling a `TextField`'s binding is the whole
+    /// behavior). Hidden when the host supplies no players.
+    @ViewBuilder
+    private func playerMenu(for field: Binding<String>, identifier: String) -> some View {
+        if !knownPlayers.isEmpty {
+            Menu {
+                ForEach(knownPlayers, id: \.self) { name in
+                    Button(name) { field.wrappedValue = name }
+                }
+            } label: {
+                Image(systemName: "chevron.up.chevron.down")
+            }
+            .menuStyle(.button)
+            .buttonStyle(.borderless)
+            .fixedSize()
+            .help("Choose a known player")
+            .accessibilityIdentifier(identifier)
+        }
+    }
+    
     // MARK: Body
     
     internal var body: some View {
         Form {
             Section("Players") {
-                TextField(
-                    "White",
-                    text: $roster.white,
-                    prompt: Text("White player")
-                )
-                .accessibilityIdentifier(
-                    AccessibilityID.formWhite(identifierPrefix)
-                )
+                HStack {
+                    TextField(
+                        "White",
+                        text: $roster.white,
+                        prompt: Text("White player")
+                    )
+                    .accessibilityIdentifier(
+                        AccessibilityID.formWhite(identifierPrefix)
+                    )
+                    playerMenu(
+                        for: $roster.white,
+                        identifier: AccessibilityID.formWhitePicker(identifierPrefix)
+                    )
+                }
                 
-                TextField(
-                    "Black",
-                    text: $roster.black,
-                    prompt: Text("Black player")
-                )
-                .accessibilityIdentifier(AccessibilityID.formBlack(identifierPrefix))
+                HStack {
+                    TextField(
+                        "Black",
+                        text: $roster.black,
+                        prompt: Text("Black player")
+                    )
+                    .accessibilityIdentifier(AccessibilityID.formBlack(identifierPrefix))
+                    playerMenu(
+                        for: $roster.black,
+                        identifier: AccessibilityID.formBlackPicker(identifierPrefix)
+                    )
+                }
             }
             
             Section("Event") {
@@ -156,6 +199,24 @@ internal struct NewLiveGameSheet: View {
     @AppStorage(StorageKeys.defaultSite) private var defaultSite = ""
     @AppStorage(StorageKeys.defaultWhitePlayer) private var defaultWhite = ""
     
+    // MARK: Round Prefill (M-lib.1, D16′)
+    
+    /// The picker's source and the resolution set. Matching only — the
+    /// dialog never creates a `Player` (D9′'s one door stands).
+    @Query(sort: \Player.name) private var players: [Player]
+    
+    /// Every Library game, projected per evaluation to `GameRecord` for
+    /// the pairing fold. Relies on the player-link backfill having run
+    /// (any Library/Players/Rankings visit); an unhealed row projects nil
+    /// seats and simply doesn't inform the prefill — degrades to no
+    /// suggestion, never to a wrong one.
+    @Query private var games: [PGN]
+    
+    /// The last value the prefill wrote, so it only ever overwrites its
+    /// own suggestion — a user-typed round is never touched or cleared
+    /// (sub-decision recorded with D16′).
+    @State private var prefilledRound: Int?
+    
     // MARK: View State
     
     @State private var roster = LiveGame.Roster(
@@ -177,7 +238,7 @@ internal struct NewLiveGameSheet: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding([.horizontal, .top])
             
-            LiveGameRosterForm(roster: $roster)
+            LiveGameRosterForm(roster: $roster, knownPlayers: players.map(\.name))
             
             Divider()
             
@@ -197,7 +258,15 @@ internal struct NewLiveGameSheet: View {
         }
         .frame(minWidth: 400, idealWidth: 440, minHeight: 380)
         .accessibilityIdentifier(AccessibilityID.liveNewGameSheet)
-        .onAppear(perform: prefillFromDefaults)
+        .onAppear {
+            prefillFromDefaults()
+            // The persisted White default may itself resolve — a
+            // returning pair should see its round the moment the sheet
+            // opens with Black filled in.
+            updateRoundPrefill()
+        }
+        .onChange(of: roster.white) { _, _ in updateRoundPrefill() }
+        .onChange(of: roster.black) { _, _ in updateRoundPrefill() }
         .confirmationDialog(
             "Replace the current game?",
             isPresented: $isConfirmingReplace
@@ -215,6 +284,43 @@ internal struct NewLiveGameSheet: View {
         roster.event = defaultEvent
         roster.site  = defaultSite
         roster.white = defaultWhite
+    }
+    
+    /// D16′: once both seats resolve to known players, suggest the
+    /// pairing's next round. Runs on every seat edit; the guard confines
+    /// it to a Round field that is empty or still carrying our own
+    /// suggestion. When the pair stops resolving (or has no numbered
+    /// history), the suggestion is withdrawn — a typed value survives
+    /// both directions.
+    private func updateRoundPrefill() {
+        guard roster.round == nil || roster.round == prefilledRound else { return }
+        
+        guard
+            let whiteKey = resolvedKey(for: roster.white),
+            let blackKey = resolvedKey(for: roster.black),
+            let next = PairingRound.nextRound(
+                between: whiteKey, and: blackKey,
+                in: games.map(\.gameRecord)
+            )
+        else {
+            if roster.round == prefilledRound { roster.round = nil }
+            prefilledRound = nil
+            return
+        }
+        
+        roster.round = next
+        prefilledRound = next
+    }
+    
+    /// A seat resolves iff its trimmed text matches a known player under
+    /// the D9′ identity fold (case and whitespace folded, diacritics
+    /// preserved). Placeholders and empties resolve to no player, as
+    /// everywhere.
+    private func resolvedKey(for field: String) -> String? {
+        let display = field.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !display.isEmpty, display != "?" else { return nil }
+        let key = Player.normalizedKey(for: display)
+        return players.contains { $0.normalizedName == key } ? key : nil
     }
     
     private func startTapped() {
@@ -315,6 +421,7 @@ internal struct EditLiveGameDetailsSheet: View {
         onNotNow: {},
         replacesUnfinishedGame: false
     )
+    .modelContainer(for: [PGN.self, Player.self], inMemory: true)
 }
 
 #Preview("Edit Details") {

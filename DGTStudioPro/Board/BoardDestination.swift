@@ -79,6 +79,11 @@ internal struct BoardDestination: View {
     /// design, like the flags above.
     @State private var showsRestoredFlash = false
     
+    /// True while the movetext editor sheet is open (M-lib.3). Transient by
+    /// design, like the flags above — losing "sheet open" across a sidebar
+    /// round-trip is fine.
+    @State private var editingMovetext = false
+    
     // MARK: Body
     
     internal var body: some View {
@@ -109,6 +114,18 @@ internal struct BoardDestination: View {
                 // separate from the decoder's coordinate transform).
                 .accessibilityIdentifier(AccessibilityID.boardFlipButton)
             }
+            
+            ToolbarItem {
+                Button {
+                    editingMovetext = true
+                } label: {
+                    Label("Edit Moves…", systemImage: "square.and.pencil")
+                }
+                // Only a loaded archived game has movetext to edit; disabled on
+                // the live mirror (no `boardPGN`).
+                .disabled(tabState.boardPGN == nil)
+                .accessibilityIdentifier(AccessibilityID.boardEditMovesButton)
+            }
         }
         .inspectorToggle(
             isPresented: $tabState.boardInspectorPresented,
@@ -134,6 +151,19 @@ internal struct BoardDestination: View {
                 replacesUnfinishedGame: session.liveGame?.isFinished == false
                 || session.resumableDraft != nil
             )
+        }
+        // M-lib.3 (D18′) — the movetext editor, at body level and guarded by a
+        // loaded PGN (the toolbar affordance is disabled without one). It's
+        // mutually exclusive with the live new-game/archive sheets by branch
+        // (those present only when `boardPGN == nil`), so it joins that chain
+        // without contending. Commit runs the store write and rebuilds the
+        // cached Game, whose scrub state describes the pre-edit moves.
+        .sheet(isPresented: $editingMovetext) {
+            if let pgn = tabState.boardPGN {
+                MovetextEditorSheet(pgn: pgn) { proposed in
+                    applyEditedMovetext(proposed, to: pgn)
+                }
+            }
         }
         // Phase 11: publish the active game so GameNavigationCommands' arrow
         // keys can scrub it.
@@ -351,6 +381,31 @@ internal struct BoardDestination: View {
         } catch {
             Self.logger.error(
                 "archive edit failed to persist: \(error.localizedDescription, privacy: .public)"
+            )
+        }
+    }
+    
+    /// Commits an edited movetext through `PGNStore.applyMovetextEdit`
+    /// (validation + canonical store + hash refresh + eval invalidation, one
+    /// transaction) and rebuilds the on-board `Game`: the moves changed
+    /// underfoot, so the cached game and its scrub position now describe the
+    /// old movetext, and `loadIfNeeded`'s cache guard would otherwise skip the
+    /// reload. A rejection at commit would mean the sheet enabled Save on an
+    /// invalid game — it can't (same pure validation both sides) — so only a
+    /// persistence failure is logged.
+    private func applyEditedMovetext(_ proposed: [String], to pgn: PGN) {
+        do {
+            let outcome = try PGNStore(modelContext: modelContext)
+                .applyMovetextEdit(to: pgn, proposed: proposed)
+            if case .success = outcome {
+                tabState.boardGame = nil
+                loadIfNeeded()
+            } else {
+                Self.logger.error("movetext edit unexpectedly rejected at commit")
+            }
+        } catch {
+            Self.logger.error(
+                "movetext edit failed to persist: \(error.localizedDescription, privacy: .public)"
             )
         }
     }

@@ -31,6 +31,31 @@ internal struct DGTConnectionView: View {
     
     @State private var selectedDeviceID: DGTSerialDevice.ID?
     
+    /// D15′(b): the dialog's spacing, named and HIG-derived instead of ad
+    /// hoc. Values follow macOS layout conventions (HIG Layout; the AppKit
+    /// standard-dialog metrics the HIG encodes): 20 pt content margins at
+    /// sheet edges, 12 pt between sibling controls and grouped elements,
+    /// 4 pt between a text line and its subordinate caption (the system
+    /// alert's title/informative rhythm). The panels previously mixed 14,
+    /// 12, and the 16 pt `.padding()` default — visually near these values,
+    /// which is exactly why they drifted unnoticed. Two nonconforming
+    /// numbers survive by design: the fixed 420 × 380 sheet frame and the
+    /// 260 pt info table are *sizing*, not spacing (the table is wide
+    /// enough for a long serial, narrow enough to read as a table).
+    /// `DeviceRow`'s internals are deliberately out of scope: a list row's
+    /// rhythm belongs to its list style, not the dialog chrome.
+    private enum Metrics {
+        /// Sheet edge margin (the standard 20 pt dialog content margin).
+        static let margin: CGFloat = 20
+        /// Sibling controls and grouped elements (panel stacks, footer
+        /// buttons — 12 pt is the Aqua push-button spacing).
+        static let groupSpacing: CGFloat = 12
+        /// A text line and its caption.
+        static let captionSpacing: CGFloat = 4
+        /// The connected panel's info table width — sizing, see above.
+        static let infoTableWidth: CGFloat = 260
+    }
+    
     internal var body: some View {
         VStack(spacing: 0) {
             header
@@ -57,7 +82,7 @@ internal struct DGTConnectionView: View {
     // MARK: Header
     
     private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Metrics.captionSpacing) {
             Text(title).font(.headline)
             if let subtitle {
                 Text(subtitle)
@@ -66,7 +91,7 @@ internal struct DGTConnectionView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
+        .padding(Metrics.margin)
     }
     
     private var title: String {
@@ -126,7 +151,7 @@ internal struct DGTConnectionView: View {
     }
     
     private func connectingPanel(_ device: DGTSerialDevice) -> some View {
-        VStack(spacing: 14) {
+        VStack(spacing: Metrics.groupSpacing) {
             ProgressView()
                 .controlSize(.large)
             Text("Connecting to \(device.name)…")
@@ -136,7 +161,7 @@ internal struct DGTConnectionView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
-        .padding()
+        .padding(Metrics.margin)
         .accessibilityIdentifier(AccessibilityID.dgtConnectingPanel)
     }
     
@@ -162,7 +187,7 @@ internal struct DGTConnectionView: View {
     }
     
     private func connectedPanel(_ device: DGTSerialDevice) -> some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Metrics.groupSpacing) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 40))
                 .foregroundStyle(.green)
@@ -170,16 +195,16 @@ internal struct DGTConnectionView: View {
             Text(device.name)
                 .font(.headline)
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Metrics.captionSpacing) {
                 infoRow("Serial", connection.boardInfo.serialNumber)
                 infoRow("Version", connection.boardInfo.version)
                 infoRow("Hardware", connection.boardInfo.hardwareVersion)
                 infoRow("Trademark", connection.boardInfo.trademark)
             }
             .font(.caption)
-            .frame(maxWidth: 260, alignment: .leading)
+            .frame(maxWidth: Metrics.infoTableWidth, alignment: .leading)
         }
-        .padding()
+        .padding(Metrics.margin)
         .accessibilityIdentifier(AccessibilityID.dgtConnectedPanel)
     }
     
@@ -206,60 +231,59 @@ internal struct DGTConnectionView: View {
     // MARK: Footer
     
     private var footer: some View {
-        HStack {
-            switch connection.status {
-            case .disconnected, .searching:
-                Button("Rescan") { connection.search() }
-                    .accessibilityIdentifier(AccessibilityID.dgtRescanButton)
-                Spacer()
-                Button("Cancel") { dismiss() }
-                Button("Connect") {
-                    guard let device = selectedDevice else { return }
-                    Task { await connection.connect(to: device) }
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(selectedDevice == nil)
-                .accessibilityIdentifier(AccessibilityID.dgtConnectButton)
-                
-            case .connecting:
-                Spacer()
-                Button("Cancel") {
-                    Task { await connection.disconnect() }
-                }
-                .accessibilityIdentifier(AccessibilityID.dgtCancelButton)
-                
-            case .reconnecting:
-                // Standing the loop down is deliberate but not destructive —
-                // nothing is lost; the game stays right there on screen.
-                // Ends in `.disconnected`, then `search()` swaps this panel
-                // for the device list in place.
-                Button("Stop Trying") {
-                    Task {
-                        await connection.stopReconnecting()
-                        connection.search()
-                    }
-                }
-                .accessibilityIdentifier(AccessibilityID.dgtStopReconnectingButton)
-                Spacer()
-                Button("Close") { dismiss() }
-                    .keyboardShortcut(.defaultAction)
-                
-            case .connected:
-                Button("Disconnect", role: .destructive) {
-                    Task { await connection.disconnect() }
-                }
-                .accessibilityIdentifier(AccessibilityID.dgtDisconnectButton)
-                Spacer()
-                Button("Done") { dismiss() }
-                    .keyboardShortcut(.defaultAction)
-                
-            case .failed:
-                Spacer()
-                Button("Cancel") { dismiss() }
-                Button("Try Again") { connection.search() }
-                    .keyboardShortcut(.defaultAction)
-                    .accessibilityIdentifier(AccessibilityID.dgtRetryButton)
+        HStack(spacing: Metrics.groupSpacing) {            switch connection.status {
+        case .disconnected, .searching:
+            Button("Rescan") { connection.search() }
+                .accessibilityIdentifier(AccessibilityID.dgtRescanButton)
+            Spacer()
+            Button("Cancel") { dismiss() }
+            Button("Connect") {
+                guard let device = selectedDevice else { return }
+                Task { await connection.connect(to: device) }
             }
+            .keyboardShortcut(.defaultAction)
+            .disabled(selectedDevice == nil)
+            .accessibilityIdentifier(AccessibilityID.dgtConnectButton)
+            
+        case .connecting:
+            Spacer()
+            Button("Cancel") {
+                Task { await connection.disconnect() }
+            }
+            .accessibilityIdentifier(AccessibilityID.dgtCancelButton)
+            
+        case .reconnecting:
+            // Standing the loop down is deliberate but not destructive —
+            // nothing is lost; the game stays right there on screen.
+            // Ends in `.disconnected`, then `search()` swaps this panel
+            // for the device list in place.
+            Button("Stop Trying") {
+                Task {
+                    await connection.stopReconnecting()
+                    connection.search()
+                }
+            }
+            .accessibilityIdentifier(AccessibilityID.dgtStopReconnectingButton)
+            Spacer()
+            Button("Close") { dismiss() }
+                .keyboardShortcut(.defaultAction)
+            
+        case .connected:
+            Button("Disconnect", role: .destructive) {
+                Task { await connection.disconnect() }
+            }
+            .accessibilityIdentifier(AccessibilityID.dgtDisconnectButton)
+            Spacer()
+            Button("Done") { dismiss() }
+                .keyboardShortcut(.defaultAction)
+            
+        case .failed:
+            Spacer()
+            Button("Cancel") { dismiss() }
+            Button("Try Again") { connection.search() }
+                .keyboardShortcut(.defaultAction)
+                .accessibilityIdentifier(AccessibilityID.dgtRetryButton)
+        }
         }
         .padding()
     }
