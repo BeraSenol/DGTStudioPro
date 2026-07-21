@@ -292,6 +292,37 @@ struct DGTLiveSessionTests {
         #expect(session.liveGame?.result == .draw)
     }
     
+    // MARK: Illegal-Move Cue (M-ux.1)
+    
+    /// D13′ pinned at the session level: `onDesync` fires from
+    /// `enterRecovery` — once per desync entry — and the manual-result
+    /// recovery *exit* does not re-fire it. The audio behind the hook is
+    /// waived transport; this spy is the whole witness the decision needs
+    /// (the `onGameFinished`-on-finish shape).
+    @Test func desyncFiresTheOnDesyncHookOnceAndTheExitDoesNot() async throws {
+        let session = DGTLiveSession()
+        session.quiescence = .milliseconds(10)
+        var fired = 0
+        session.onDesync = { fired += 1 }
+        
+        session.boardChanged(.starting)
+        session.startNewGame(roster: roster())        // already-set-up → playing
+        
+        // A pawn materializing on e5 completes no legal move from the
+        // start position — the same unexplainable board the recovery
+        // tests above use.
+        var garbage = Position.starting
+        garbage[Squares.e5] = .whitePawn
+        session.boardChanged(garbage)
+        try await poll { session.needsRecovery }
+        
+        #expect(fired == 1)
+        
+        session.resign(.white)                        // recovery exit, not a desync
+        #expect(session.needsRecovery == false)
+        #expect(fired == 1)
+    }
+    
     // MARK: Draft Persistence (M4)
     
     /// A store rooted in a unique temp directory, so tests never touch the

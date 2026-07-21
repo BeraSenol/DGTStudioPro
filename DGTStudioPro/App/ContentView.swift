@@ -119,6 +119,23 @@ internal struct ContentView: View {
                     }
                 }
             }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                // M-ux.3 (D15′): the sidebar is the master of session
+                // info; the stage above the board stays clear. New Game
+                // navigates to Board first because the sheet's presenter
+                // stayed `BoardDestination` — a modal is destination
+                // furniture, and presenting from every tab's ContentView
+                // would raise one sheet per open window (session state is
+                // app-global).
+                SessionSidebarPanel(
+                    tabState: tabState,
+                    onNewGame: {
+                        selection = .destination(.board)
+                        tabState.manualNewGameRequested = true
+                    },
+                    onDismissLoadError: { loadedGameID = nil }
+                )
+            }
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
             .accessibilityIdentifier(AccessibilityID.sidebar)
         } detail: {
@@ -264,4 +281,8 @@ internal enum Destination: String, CaseIterable, Identifiable, Hashable {
 #Preview {
     ContentView(loadedGameID: .constant(nil))
         .modelContainer(for: PGN.self, inMemory: true)
+        .environment(OpenGamesRegistry())
+        .environment(DGTConnection())
+        .environment(DGTLiveSession())
+        .environment(DGTSessionLog())
 }

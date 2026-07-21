@@ -5,6 +5,7 @@
 //  Created by Supreme Leader on 24/03/2026.
 //
 
+import AppKit
 import SwiftData
 import SwiftUI
 
@@ -68,6 +69,11 @@ internal struct DGTStudioProApp: App {
     @State private var dgtSession: DGTLiveSession
     @State private var sessionLog: DGTSessionLog
     
+    /// M-ux.2 (D14′) — the idle-sleep inhibition token holder. App-owned
+    /// like the DGT observables (its tracking loop must outlive every
+    /// view); never injected into the environment — nothing renders it.
+    @State private var sleepInhibitor: SleepInhibitor
+    
     // The struct is `@MainActor` (above), so this init runs on the main actor
     // and may touch the `@MainActor` members of the DGT objects it wires. The
     // module's default actor isolation is `nonisolated`, so without that
@@ -98,6 +104,21 @@ internal struct DGTStudioProApp: App {
             session?.liveGame != nil
         }
         
+        // M-ux.1 (D13′) — the illegal-move cue. The session fires this from
+        // `enterRecovery`, so it sounds exactly once per desync entry.
+        // AppKit because SwiftUI has no sound API; `NSSound.beep()` is the
+        // system alert — respects the user's alert sound and volume, no
+        // bundled asset, deliberately. Seeded UI runs stay silent: a
+        // deterministic test driving a desync must not beep the machine.
+        // The `?? true` here is the `@AppStorage` twin in `SettingsView` —
+        // the `autoConnectOnLaunch` contract, documented in `StorageKeys`.
+        session.onDesync = {
+            guard !UITestSeed.isActive else { return }
+            let enabled = UserDefaults.standard
+                .object(forKey: StorageKeys.illegalMoveSoundEnabled) as? Bool ?? true
+            if enabled { NSSound.beep() }
+        }
+        
         // Draft persistence (M4): the session owns when to save/delete; the
         // store owns the file. Loading here — once, after wiring — is what
         // turns a relaunch into the Resume / Delete offer on the Board HUD.
@@ -115,6 +136,12 @@ internal struct DGTStudioProApp: App {
         }
         
         session.loadPendingDraft()
+        
+        // M-ux.2 (D14′) — start the inhibition observer. Wired here, once,
+        // like every other hook: the content closure runs per tab, and two
+        // tabs must not race one token.
+        let inhibitor = SleepInhibitor()
+        inhibitor.observe(session: session, connection: connection)
         
         // M7.2 — reconnect to the remembered board at launch (the Settings
         // toggle and the remembered-device check both live inside the
@@ -142,6 +169,7 @@ internal struct DGTStudioProApp: App {
         _dgtConnection = State(initialValue: connection)
         _dgtSession = State(initialValue: session)
         _sessionLog = State(initialValue: log)
+        _sleepInhibitor = State(initialValue: inhibitor)
     }
     
     var body: some Scene {

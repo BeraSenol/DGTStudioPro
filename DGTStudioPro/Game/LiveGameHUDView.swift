@@ -7,12 +7,15 @@
 
 import SwiftUI
 
-/// The live-play status banner shown above the mirror board (M3.1) — the
-/// answer to "what is the app doing with my board right now?", shown
-/// whenever a board is connected or being chased (`reconnecting`). Plain
-/// disconnected has no banner at all: the message carried no action, so
-/// it lives in the live inspector's empty state and the strip above the
-/// board stays clear.
+/// The live-play status card (M3.1; re-homed into the sidebar's
+/// `SessionSidebarPanel` by D15′) — the answer to "what is the app doing
+/// with my board right now?", shown whenever a board is connected or
+/// being chased (`reconnecting`). Plain disconnected has no card at all:
+/// the message carried no action, so it lives in the live inspector's
+/// empty state. Laid out as a narrow vertical card for the sidebar; the
+/// container owns outer spacing. The `live.hud.*` identifiers are
+/// unchanged — their witness stays the hardware checklist, so the
+/// re-home is not a contract break.
 internal struct LiveGameHUDView: View {
     
     // MARK: Phase
@@ -61,27 +64,28 @@ internal struct LiveGameHUDView: View {
     // MARK: Body
     
     internal var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: symbolName)
-                .font(.title3)
-                .foregroundStyle(tint)
-            
-            VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: symbolName)
+                    .foregroundStyle(tint)
                 Text(title)
-                    .font(.headline)
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
+                    .font(.subheadline.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
             }
             
-            Spacer(minLength: 12)
+            if let subtitle {
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             
             if showsNewGameButton {
                 Button("New Game…", action: onNewGame)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
+                    .frame(maxWidth: .infinity)
                     .accessibilityIdentifier(AccessibilityID.liveHUDNewGame)
             }
             
@@ -89,18 +93,17 @@ internal struct LiveGameHUDView: View {
                 Button("Retry", action: onRetryArchive)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
+                    .frame(maxWidth: .infinity)
                     .accessibilityIdentifier(AccessibilityID.liveHUDRetryArchive)
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(.bar, in: RoundedRectangle(cornerRadius: 10))
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.bar, in: RoundedRectangle(cornerRadius: 8))
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: 8)
                 .strokeBorder(tint.opacity(0.35), lineWidth: 1)
         )
-        .padding(.horizontal)
-        .padding(.top, 8)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier(accessibilityIdentifier)
     }

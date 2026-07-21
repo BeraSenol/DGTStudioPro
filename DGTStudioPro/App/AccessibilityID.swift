@@ -52,6 +52,16 @@ internal enum AccessibilityID {
     
     internal static let sidebarTagsAdd = "sidebar.tags.add"
     
+    /// Session panel (M-ux.3, D15′) — the sidebar's pinned session
+    /// surface. `sidebar.loaderror` / `.dismiss` are the former
+    /// `board.loaderror` family: the M8.2 *behavior* is unchanged, only
+    /// its surface moved, and the identifiers travelled with it — a
+    /// deliberate breaking rename, executed here (the registry) with the
+    /// UITest re-targeted in the same change.
+    internal static let sessionPanel            = "sidebar.session"
+    internal static let sidebarLoadError        = "sidebar.loaderror"
+    internal static let sidebarLoadErrorDismiss = "sidebar.loaderror.dismiss"
+    
     // MARK: Tag Editor (M-prs.5)
     
     internal static let tagsEditor = "tags.editor"
@@ -64,8 +74,6 @@ internal enum AccessibilityID {
     internal static let board = "board"
     internal static let boardFlipButton = "board.flipButton"
     internal static let boardInspectorToggle = "board.inspectorToggle"
-    internal static let boardLoadError = "board.loaderror"
-    internal static let boardLoadErrorDismiss = "board.loaderror.dismiss"
     
     /// `square.e4`, … — one per mirror square, keyed by algebraic
     /// notation (the stable handle for keyboard-nav and highlight
@@ -161,6 +169,7 @@ internal enum AccessibilityID {
     
     internal static let settingsAutoConnectToggle  = "settings.autoConnectToggle"
     internal static let settingsEraseLibraryButton = "settings.eraseLibraryButton"
+    internal static let settingsIllegalMoveSoundToggle = "settings.illegalMoveSoundToggle"
     
     // MARK: Library
     

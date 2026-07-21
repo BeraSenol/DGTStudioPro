@@ -29,7 +29,13 @@ internal enum StorageKeys {
     internal static let rememberedDevicePath = "rememberedDevicePath"
     internal static let rememberedDeviceName = "rememberedDeviceName"
     internal static let autoConnectOnLaunch  = "autoConnectOnLaunch"
-    
+
+    // Live play (M-ux.1, D13′): the illegal-move alert sound. An absent key
+    // reads as true everywhere — the `autoConnectOnLaunch` semantics; the
+    // two read sites (SettingsView's `@AppStorage` initial and the App's
+    // `onDesync` closure) must agree on that default.
+    internal static let illegalMoveSoundEnabled = "illegalMoveSoundEnabled"
+
     // Engine configuration (M11 review): the three Stockfish options the
     // app controls. Absent keys read as `EngineConfiguration.default`
     // (18 / 128 MB / 1 thread), clamped on every read — see that type for

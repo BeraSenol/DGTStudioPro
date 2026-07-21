@@ -15,11 +15,12 @@ import SwiftUI
 /// until a board is connected), which is the M1 raw-mirror surface. There
 /// is no landing/error card; the board is always on screen.
 ///
-/// The live branch is the M3 live-play surface: a status HUD above the
-/// board (`LiveGameHUDView`, driven by session + connection state), the
-/// live game's last-move/check highlights overlaid on the mirrored
-/// physical position, the new-game dialog (auto-offered on start-position
-/// detection, or manual via the HUD), and the live inspector
+/// The live branch is the M3 live-play surface: the live game's
+/// last-move/check highlights overlaid on the mirrored physical position,
+/// the new-game dialog (auto-offered on start-position detection, or
+/// requested from the sidebar's session panel — all status messaging
+/// re-homed there by D15′; the stage above the board stays clear), and
+/// the live inspector
 /// (`LiveGameInspectorView`). From M4 it also presents the crash-safety
 /// resume offer: when the session finds a draft at launch
 /// (`session.pendingDraft`), an alert forks between Resume and Delete —
@@ -63,16 +64,9 @@ internal struct BoardDestination: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(DGTConnection.self) private var connection
     @Environment(DGTLiveSession.self) private var session
-    @Environment(DGTSessionLog.self) private var sessionLog
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
     
     // MARK: View State
-    
-    /// True while the HUD's manual "New Game…" button has requested the
-    /// dialog. Combined with `session.shouldOfferNewGame` into the sheet's
-    /// presentation binding; transient by design (a sidebar round-trip
-    /// recreates this destination and simply closes the sheet).
-    @State private var manualNewGameRequested = false
     
     /// True after "Keep for Now" on the corrupt-draft alert, so it doesn't
     /// re-present every render for the rest of this visit. The file stays on
@@ -99,16 +93,9 @@ internal struct BoardDestination: View {
                 liveSurface
             }
         }
-        // M8.2 — a failed load falls back to the live mirror by design
-        // (there is no landing/error card; the board is always on screen),
-        // which used to make the failure silent: the tab looked like an
-        // ordinary live tab. The banner makes it loud without blocking
-        // anything.
-        .overlay(alignment: .bottom) {
-            if let message = tabState.boardLoadError {
-                boardLoadErrorBanner(message)
-            }
-        }
+        // M8.2's load-error surface lives in the sidebar session panel
+        // since D15′ (behavior unchanged, surface moved — `ContentView`
+        // renders `tabState.boardLoadError` there).
         .navigationTitle(tabState.boardPGN?.name ?? "Board")
         .toolbar {
             ToolbarItem {
@@ -128,55 +115,31 @@ internal struct BoardDestination: View {
             identifier: AccessibilityID.boardInspectorToggle
         )
         .dgtConnectionToolbar()
+        // The new-game dialog, at body level since D15′: the sidebar's
+        // New Game button reaches Board with a game loaded too, so the
+        // sheet can no longer live on the live branch alone. The *auto*
+        // offer stays gated to the live branch inside the binding — a tab
+        // reviewing a PGN isn't interrupted, exactly as before.
+        .sheet(isPresented: isNewGameSheetPresented) {
+            NewLiveGameSheet(
+                onStart: { roster in
+                    session.startNewGame(roster: roster)
+                    tabState.manualNewGameRequested = false
+                },
+                onNotNow: { isNewGameSheetPresented.wrappedValue = false },
+                // A resumable draft counts as an unfinished game too:
+                // starting fresh overwrites its file, so it gets the same
+                // destructive confirmation (a *corrupt* file is not a
+                // game — overwriting it needs no ceremony).
+                replacesUnfinishedGame: session.liveGame?.isFinished == false
+                || session.resumableDraft != nil
+            )
+        }
         // Phase 11: publish the active game so GameNavigationCommands' arrow
         // keys can scrub it.
         .focusedSceneValue(\.activeGame, tabState.boardGame)
         .onAppear { loadIfNeeded() }
         .onChange(of: loadedGameID) { _, _ in loadIfNeeded() }
-    }
-    
-    // MARK: Load Error (M8.2)
-    
-    /// The load-error banner, in the HUD's visual language (same `.bar`
-    /// background, stroke, and paddings; orange like `archiveFailed` —
-    /// informative, blocking nothing). Dismiss clears `loadedGameID`,
-    /// converting the tab into an honest live tab: `loadIfNeeded()`'s nil
-    /// branch then clears the error and the caches. Merely clearing the
-    /// error string would leave the dead ID bound and the banner would
-    /// return on the next Board visit — unbinding is the real resolution,
-    /// and matches Erase Library's "open tabs revert to the live board"
-    /// intent.
-    private func boardLoadErrorBanner(_ message: String) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.title3)
-                .foregroundStyle(.orange)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Couldn't open the game")
-                    .font(.headline)
-                Text(message)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
-            
-            Spacer(minLength: 12)
-            
-            Button("Dismiss") { loadedGameID = nil }
-                .controlSize(.small)
-                .accessibilityIdentifier(AccessibilityID.boardLoadErrorDismiss)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(.bar, in: RoundedRectangle(cornerRadius: 10))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(Color.orange.opacity(0.35), lineWidth: 1)
-        )
-        .padding(.horizontal)
-        .padding(.bottom, 8)
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier(AccessibilityID.boardLoadError)
     }
     
     // MARK: Board Surface
@@ -248,88 +211,17 @@ internal struct BoardDestination: View {
     
     // MARK: Live Surface
     
-    /// The full live-play surface (M3): the mirror board with the status
-    /// HUD inset above it, the live inspector, and the new-game dialog.
-    /// With no board connected (and no reconnect underway) the HUD is
-    /// absent entirely — `hudPhase` is nil — so the strip above the board
-    /// stays clear; the inspector's empty state carries the connection
-    /// message instead.
+    /// The live-play surface (M3, slimmed by D15′): the mirror board and
+    /// the live inspector, plus the resume/corrupt-draft forks and the
+    /// archive confirmation. All status messaging — the status card, the
+    /// recovery checklist, the restored flash — lives in the sidebar's
+    /// `SessionSidebarPanel`; the stage above the board is clear by
+    /// invariant. The recovery *overlays* below are the board's and stay.
     private var liveSurface: some View {
         mirrorBoard
-            .safeAreaInset(edge: .top, spacing: 0) {
-                VStack(spacing: 8) {
-                    if let phase = hudPhase {
-                        LiveGameHUDView(
-                            phase: phase,
-                            onNewGame: { manualNewGameRequested = true },
-                            onRetryArchive: { session.retryArchive() }
-                        )
-                    }
-                    
-                    // M6.2 — the restore checklist, live under the banner
-                    // while recovering; M6.3's Export Diagnostics… rides on
-                    // it (a desync is when the log is worth saving). The
-                    // empty-guidance guard covers the brief window where
-                    // the board is already fixed but the session's next
-                    // settle hasn't exited recovery yet.
-                    if let guidance = recoveryGuidance, !guidance.isEmpty {
-                        RecoveryGuidanceView(
-                            guidance: guidance,
-                            onExportDiagnostics: { sessionLog.exportViaSavePanel() }
-                        )
-                        .padding(.bottom, 8)
-                    }
-                    
-                    if showsRestoredFlash {
-                        Label(
-                            "Position restored — play continues.",
-                            systemImage: "checkmark.circle.fill"
-                        )
-                        .font(.callout.weight(.medium))
-                        .foregroundStyle(.green)
-                        .padding(.vertical, 4)
-                        .padding(.horizontal, 10)
-                        .background(.regularMaterial, in: Capsule())
-                        .padding(.bottom, 8)
-                        .transition(.opacity)
-                        .accessibilityIdentifier(AccessibilityID.liveRecoveryRestoredFlash)
-                        .task {
-                            // Auto-dismiss; cancellation on disappear is
-                            // the cleanup.
-                            try? await Task.sleep(for: .seconds(2.5))
-                            withAnimation { showsRestoredFlash = false }
-                        }
-                    }
-                }
-                .animation(.default, value: session.needsRecovery)
-                .onChange(of: session.needsRecovery) { wasRecovering, isRecovering in
-                    // Flash only on a genuine auto-exit back into play —
-                    // discard / new-game also clear the flag, but they
-                    // change the whole surface, where a flash is noise.
-                    if wasRecovering, !isRecovering,
-                       let game = session.liveGame, !game.isFinished {
-                        withAnimation { showsRestoredFlash = true }
-                    }
-                }
-            }
             .inspector(isPresented: $tabState.boardInspectorPresented) {
                 liveInspector
                     .inspectorColumnWidth(min: 260, ideal: 320, max: 400)
-            }
-            .sheet(isPresented: isNewGameSheetPresented) {
-                NewLiveGameSheet(
-                    onStart: { roster in
-                        session.startNewGame(roster: roster)
-                        manualNewGameRequested = false
-                    },
-                    onNotNow: { isNewGameSheetPresented.wrappedValue = false },
-                    // A resumable draft counts as an unfinished game too:
-                    // starting fresh overwrites its file, so it gets the same
-                    // destructive confirmation (a *corrupt* file is not a
-                    // game — overwriting it needs no ceremony).
-                    replacesUnfinishedGame: session.liveGame?.isFinished == false
-                    || session.resumableDraft != nil
-                )
             }
         // M4.3 — the resume offer. A modal fork, not a HUD banner,
         // because Decision #3 makes this a genuine either/or the player
@@ -375,49 +267,6 @@ internal struct BoardDestination: View {
                     )
                 }
             }
-    }
-    
-    /// Derives the HUD phase from session + connection state, in priority
-    /// order: connection truth first — a pulled cable outranks everything,
-    /// and M7.3 splits it: an active auto-reconnect loop reads as
-    /// "reconnecting…", while plain disconnected is nil (no banner at
-    /// all) — then recovery, then the gentle correction nudge, then setup,
-    /// then the game itself, then the idle invitation.
-    ///
-    /// Why nil instead of a `disconnected` phase: the message carried no
-    /// action, and with no board there is never a live game, so the
-    /// inspector's empty state is free to say it. `reconnecting` can't
-    /// make the same move — it co-occurs with a live game, whose
-    /// inspector is showing that game — so it stays a banner.
-    private var hudPhase: LiveGameHUDView.Phase? {
-        if connection.isReconnecting { return .reconnecting }
-        guard connection.isConnected else { return nil }
-        
-        if session.needsRecovery {
-            return .recovering(lastSAN: session.liveGame?.sanMoves.last)
-        }
-        if let hint = session.correctionHint {
-            return .correction(message: hint.message)
-        }
-        if session.awaitingPhysicalSetup {
-            return .awaitingSetup
-        }
-        if let game = session.liveGame {
-            if game.isFinished {
-                // A failed archive outranks the plain finished banner: the
-                // player must Retry or discard before anything else (M5).
-                if case .failed(let message) = session.archiveOutcome {
-                    return .archiveFailed(result: game.result, message: message)
-                }
-                return .finished(result: game.result)
-            }
-            return .playing(
-                sideToMove: game.currentState.activeColor,
-                lastSAN: game.sanMoves.last,
-                ply: game.plyCount
-            )
-        }
-        return .idle
     }
     
     /// Presents the new-game sheet whenever the session offers one
@@ -508,10 +357,18 @@ internal struct BoardDestination: View {
     
     private var isNewGameSheetPresented: Binding<Bool> {
         Binding(
-            get: { session.shouldOfferNewGame || manualNewGameRequested },
+            get: {
+                // The auto-offer presents only on the live branch — a tab
+                // reviewing a PGN isn't interrupted (pre-D15′ behavior,
+                // now explicit instead of structural). The manual request,
+                // reachable from the sidebar on any branch, presents
+                // everywhere.
+                tabState.manualNewGameRequested
+                || (session.shouldOfferNewGame && tabState.boardPGN == nil)
+            },
             set: { presented in
                 guard !presented else { return }
-                manualNewGameRequested = false
+                tabState.manualNewGameRequested = false
                 if session.shouldOfferNewGame {
                     session.dismissNewGameOffer()
                 }
@@ -674,13 +531,4 @@ internal struct BoardDestination: View {
             )
         }
     }
-}
-
-// MARK: - Previews
-
-#Preview {
-    BoardDestination(loadedGameID: .constant(nil), tabState: TabState())
-        .modelContainer(for: PGN.self, inMemory: true)
-        .environment(DGTConnection())
-        .environment(DGTLiveSession())
 }

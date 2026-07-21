@@ -7,8 +7,10 @@
 
 import SwiftUI
 
-/// The square-by-square restore checklist shown under the HUD while the
-/// session is `recovering` (M6.2). Pure presentation: the destination hands
+/// The square-by-square restore checklist shown under the status card in
+/// the sidebar's `SessionSidebarPanel` while the session is `recovering`
+/// (M6.2; re-homed by D15′ — the panel owns outer spacing now). Pure
+/// presentation: the panel hands
 /// in a freshly computed `RecoveryGuidance` on every physical board change,
 /// so rows disappear live as the player fixes squares. Discard Game remains
 /// available in the inspector as the escape hatch — this panel is guidance,
@@ -20,16 +22,16 @@ import SwiftUI
 /// moment the session log is worth saving, so the affordance lives here
 /// rather than in a buried menu.
 internal struct RecoveryGuidanceView: View {
-    
+
     // MARK: Stored Properties
-    
+
     internal let guidance: RecoveryGuidance
-    
+
     /// Wired by the destination to `sessionLog.exportViaSavePanel()`.
     internal let onExportDiagnostics: () -> Void
-    
+
     // MARK: Body
-    
+
     internal var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
@@ -41,7 +43,7 @@ internal struct RecoveryGuidanceView: View {
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier(AccessibilityID.liveRecoveryCount)
             }
-            
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 3) {
                     ForEach(guidance.items) { item in
@@ -55,7 +57,7 @@ internal struct RecoveryGuidanceView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxHeight: 140)
-            
+
             HStack {
                 Spacer()
                 Button("Export Diagnostics…", action: onExportDiagnostics)
@@ -70,7 +72,6 @@ internal struct RecoveryGuidanceView: View {
             RoundedRectangle(cornerRadius: 8)
                 .strokeBorder(.red.opacity(0.35))
         }
-        .padding(.horizontal)
         .accessibilityIdentifier(AccessibilityID.liveRecoveryPanel)
     }
 }
@@ -83,7 +84,7 @@ internal struct RecoveryGuidanceView: View {
     physical[Squares.h3] = .whiteKnight    // knight went to the wrong square
     physical[Squares.e7] = .empty          // pawn lifted off the board
     physical[Squares.e4] = .blackPawn      // …and dropped somewhere odd
-    
+
     return RecoveryGuidanceView(
         guidance: RecoveryGuidance(physical: physical, target: .starting),
         onExportDiagnostics: {}

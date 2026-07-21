@@ -64,6 +64,18 @@ internal final class TabState {
     /// affordance on the Board destination).
     internal var boardInspectorPresented: Bool = true
     
+    /// True while a new-game sheet has been requested manually — from the
+    /// sidebar session panel's New Game button (D15′) — as opposed to the
+    /// session's auto-offer. Lives here rather than as destination
+    /// `@State` because the requester (the sidebar, via `ContentView`)
+    /// and the presenter (`BoardDestination`, where the sheet is
+    /// destination furniture) are different views sharing one tab.
+    /// Deliberate consequence: an unanswered request now survives a
+    /// destination round-trip and re-presents on return to Board — the
+    /// old close-and-forget was an artifact of `@State` placement, not a
+    /// design.
+    internal var manualNewGameRequested: Bool = false
+    
     // MARK: Library Destination
     
     /// Whether the Library destination's inspector is open. Default

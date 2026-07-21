@@ -403,8 +403,10 @@ final class DGTStudioProUITests: XCTestCase {
         
         XCTAssertTrue(waitFor(element(AccessibilityID.board), 8),
                       "Board should appear after opening a game")
-        XCTAssertFalse(element(AccessibilityID.boardLoadError).exists,
+        XCTAssertFalse(element(AccessibilityID.sidebarLoadError).exists,
                        "A seeded game with legal moves should not hit the error state")
+        XCTAssertFalse(element(AccessibilityID.sessionPanel).exists,
+                       "With no board and no error, the sidebar session panel is absent (D15′)")
         // Same regression guard from the game-loaded entry point: opening a game
         // starts the tab on Board, so an un-injected DGTLiveSession would trap
         // here too.
