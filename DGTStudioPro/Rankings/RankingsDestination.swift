@@ -19,7 +19,7 @@ internal struct RankedPlayer: Identifiable, Hashable {
     internal let rank: Int
     internal let stats: PlayerStats
     internal let rating: Glicko1.Rating?
-    
+
     internal var id: PlayerStats.ID { stats.id }
 }
 
@@ -28,29 +28,29 @@ internal struct RankedPlayer: Identifiable, Hashable {
 /// per-body data (two pure folds per render; the `LibraryColumnsView`
 /// cheap-and-uncacheable rationale applies twice over).
 internal struct RankingsDestination: View {
-    
+
     // MARK: Static Constants
     private static let logger = Logger(
         subsystem: "com.berasenol.dgtstudiopro",
         category: "rankings"
     )
-    
+
     // MARK: Tab State (lives on enclosing `ContentView`)
     @Bindable internal var tabState: TabState
-    
+
     /// The M-prs.6 hop: hands the resolved player's identifier up to
     /// `ContentView`, which owns the sidebar selection. The app always
     /// wires it; the initializer's default keeps previews valid.
     internal let onShowInLibrary: (PersistentIdentifier) -> Void
-    
+
     // MARK: Private Properties
     @AppStorage(StorageKeys.rankingsViewMode) private var viewMode: CollectionViewMode = .list
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \PGN.importedAt, order: .reverse) private var games: [PGN]
     @State private var selectedKey: PlayerStats.ID?
-    
+
     // MARK: Initializers
-    
+
     /// Explicit for the same reason `LibraryDestination`'s is: the
     /// memberwise initializer's shape and visibility shift with the
     /// wrapped/private property details, and the call-site contract
@@ -63,44 +63,49 @@ internal struct RankingsDestination: View {
         self.tabState = tabState
         self.onShowInLibrary = onShowInLibrary
     }
-    
-    // MARK: Computed Properties
-    
-    private var records: [GameRecord] { games.map(\.gameRecord) }
-    
-    private var ranked: [RankedPlayer] {
-        let latest = Glicko1.histories(from: records)
-        return PlayerStats.index(of: records)
+
+    // MARK: Derived Data
+
+    /// Builds the ranked ladder from an already-computed projection and
+    /// rating-history map. Pure and `static` so it can't reach for instance
+    /// state and silently re-derive: `body` folds `records`/`histories`
+    /// **once** and threads them here and into the inspector. This replaces
+    /// the previous per-computed-property recomputation — `ranked` alone
+    /// re-projected `records` twice and was read three times a render, plus a
+    /// fourth `histories` fold for the inspector — a 4–7× fold multiplier on
+    /// large, analysed libraries, removed with no behaviour change (the
+    /// comparator and folds remain the tested contract).
+    private static func ranked(
+        from records: [GameRecord],
+        histories: [String: [Glicko1.Sample]]
+    ) -> [RankedPlayer] {
+        PlayerStats.index(of: records)
             .sorted(by: PlayerStats.rankingOrder)
             .enumerated()
             .map { offset, stats in
                 RankedPlayer(
                     rank: offset + 1,
                     stats: stats,
-                    rating: latest[stats.key]?.last?.rating
+                    rating: histories[stats.key]?.last?.rating
                 )
             }
     }
-    
-    private var selectedRanked: RankedPlayer? {
-        guard let selectedKey else { return nil }
-        return ranked.first { $0.id == selectedKey }
-    }
-    
-    private var selectedHistory: [Glicko1.Sample] {
-        guard let selectedKey else { return [] }
-        return Glicko1.histories(from: records)[selectedKey] ?? []
-    }
-    
+
     // MARK: Body
     internal var body: some View {
-        coreContent
+        // Fold once per render, then thread down — see `ranked(from:histories:)`.
+        let records = games.map(\.gameRecord)
+        let histories = Glicko1.histories(from: records)
+        let ranked = Self.ranked(from: records, histories: histories)
+        let selected = selectedKey.flatMap { key in ranked.first { $0.id == key } }
+        let history = selectedKey.flatMap { histories[$0] } ?? []
+        return coreContent(ranked: ranked)
             .navigationTitle("Rankings")
             .toolbar { toolbarContent }
             .inspector(isPresented: $tabState.rankingsInspectorPresented) {
                 RankingsInspectorView(
-                    ranked: selectedRanked,
-                    history: selectedHistory
+                    ranked: selected,
+                    history: history
                 )
                 .inspectorColumnWidth(min: 260, ideal: 320, max: 400)
             }
@@ -118,9 +123,9 @@ internal struct RankingsDestination: View {
                 if mode == .gallery { tabState.rankingsInspectorPresented = true }
             }
     }
-    
+
     // MARK: Instance Methods
-    
+
     /// Resolves the pure stats key to its `Player` row and hops the
     /// sidebar into the programmatic player filter. Store-owned lookup,
     /// never creates (D13′); a miss — impossible for a key the index
@@ -137,9 +142,9 @@ internal struct RankingsDestination: View {
             Self.logger.error("Show in Library lookup failed: \(error.localizedDescription, privacy: .public)")
         }
     }
-    
+
     @ViewBuilder
-    private var coreContent: some View {
+    private func coreContent(ranked: [RankedPlayer]) -> some View {
         Group {
             if ranked.isEmpty {
                 emptyState
@@ -163,7 +168,7 @@ internal struct RankingsDestination: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier(AccessibilityID.rankingsContent)
     }
-    
+
     private var emptyState: some View {
         ContentUnavailableView(
             "No Rankings",
@@ -172,7 +177,7 @@ internal struct RankingsDestination: View {
         )
         .accessibilityIdentifier(AccessibilityID.rankingsEmptyState)
     }
-    
+
     private var toolbarContent: some ToolbarContent {
         ToolbarItem {
             // Same segmented-picker caveat as Library/Players: segments
@@ -186,7 +191,7 @@ internal struct RankingsDestination: View {
             .accessibilityIdentifier(AccessibilityID.rankingsViewModePicker)
         }
     }
-    
+
     private func backfillPlayerLinks() {
         do {
             try PGNStore(modelContext: modelContext).backfillPlayerLinks()

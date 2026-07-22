@@ -59,20 +59,14 @@ internal struct PlayersDestination: View {
         self.onShowInLibrary = onShowInLibrary
     }
     
-    // MARK: Computed Properties
+    // MARK: Derived Data
     
-    private var records: [GameRecord] { games.map(\.gameRecord) }
-    private var index: [PlayerStats] { PlayerStats.index(of: records) }
-    
-    private var selectedStats: PlayerStats? {
-        guard let selectedKey else { return nil }
-        return index.first { $0.key == selectedKey }
-    }
-    
-    private var selectedRating: Glicko1.Rating? {
-        guard let selectedKey else { return nil }
-        return Glicko1.histories(from: records)[selectedKey]?.last?.rating
-    }
+    // `records` / `index` / `histories` are now folded once in `body` and
+    // threaded down, replacing the prior per-computed-property
+    // recomputation: `index` was re-derived three times a render — each
+    // re-projecting the whole library — plus a fourth `histories` fold for
+    // the inspector's rating. `selectedGames` stays a computed property: it
+    // reads the selected player's games only, not the shared folds.
     
     /// The selected player's games, newest first by the one effective-date
     /// rule. Matching goes through the resolved link — never raw tags.
@@ -83,12 +77,19 @@ internal struct PlayersDestination: View {
                 $0.whitePlayer?.normalizedName == selectedKey
                 || $0.blackPlayer?.normalizedName == selectedKey
             }
-            .sorted { $0.gameRecord.effectiveDate > $1.gameRecord.effectiveDate }
+            .sorted { ($0.date ?? $0.importedAt) > ($1.date ?? $1.importedAt) }
     }
     
     // MARK: Body
     internal var body: some View {
-        coreContent
+        // Fold once per render, then thread down (see the Derived Data note).
+        let records = games.map(\.gameRecord)
+        let index = PlayerStats.index(of: records)
+        let selectedStats = selectedKey.flatMap { key in index.first { $0.key == key } }
+        let selectedRating = selectedKey
+            .flatMap { Glicko1.histories(from: records)[$0]?.last?.rating }
+        
+        return coreContent(index: index)
             .navigationTitle("Players")
             .toolbar { toolbarContent }
             .inspector(isPresented: $tabState.playersInspectorPresented) {
@@ -135,7 +136,7 @@ internal struct PlayersDestination: View {
     }
     
     @ViewBuilder
-    private var coreContent: some View {
+    private func coreContent(index: [PlayerStats]) -> some View {
         Group {
             if index.isEmpty {
                 emptyState

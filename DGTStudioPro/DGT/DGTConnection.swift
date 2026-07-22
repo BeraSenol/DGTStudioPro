@@ -174,6 +174,12 @@ internal final class DGTConnection {
     /// M7.3 — the retry loop, alive only while `status` is `.reconnecting`.
     @ObservationIgnored private var reconnectTask: Task<Void, Never>?
     
+    /// M7.3 / checklist B4 — the last reconnect-attempt failure message
+    /// logged this episode, so a board that stays *present but unopenable*
+    /// (another process holding the port) logs once per distinct failure
+    /// rather than ~1 200×/h. Reset when a fresh reconnect episode begins.
+    @ObservationIgnored private var lastReconnectFailureLogged: String?
+    
     /// Spacing between init commands so a board with a shallow input buffer
     /// isn't overrun, and so the log clearly attributes each response.
     /// Internal-settable so fake-port tests zero it (F9); production never
@@ -473,6 +479,7 @@ internal final class DGTConnection {
         physicalBoard = .empty
         status = .reconnecting(device)
         
+        lastReconnectFailureLogged = nil
         reconnectTask?.cancel()
         reconnectTask = Task { [weak self] in
             await self?.runReconnectLoop(to: device)
@@ -512,10 +519,16 @@ internal final class DGTConnection {
                 guard !Task.isCancelled else { return }
                 boardInfo = BoardInfo()
                 if let failure = await openPortAndRunInit(to: device) {
-                    // A failed lap logs and loops; the next attempt's
-                    // teardown cleans up whatever this one left behind.
-                    Self.logger.error("Reconnect attempt failed: \(failure, privacy: .public)")
-                    sessionLog?.capture(.error, "Reconnect attempt failed: \(failure)")
+                    // Dedupe the present-but-unopenable case (checklist B4):
+                    // log the first occurrence and each *distinct* failure, not
+                    // one line per 3 s lap. The next attempt's `teardownPort`
+                    // still cleans up whatever this lap left behind.
+                    let message = "\(failure)"
+                    if message != lastReconnectFailureLogged {
+                        Self.logger.error("Reconnect attempt failed: \(message, privacy: .public)")
+                        sessionLog?.capture(.error, "Reconnect attempt failed: \(message)")
+                        lastReconnectFailureLogged = message
+                    }
                 }
             }
             

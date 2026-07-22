@@ -676,17 +676,12 @@ internal final class DGTLiveSession {
             // done, and leaving it would re-offer an archived game at the
             // next launch.
             draftStore?.delete()
-            sessionLog?.record(
-                .info,
-                result.deduplicated
-                ? "Archive deduplicated: '\(result.pgn.name)' already in the Library"
-                : "Archived to Library: '\(result.pgn.name)' [\(game.result.rawValue)]"
-            )
-            // PGNStore already Console-logs the archive/dedup via its own
-            // os.Logger; capture (buffer-only) keeps the session-log export
-            // complete without a duplicate Console line. The failure arm below
-            // stays record — PGNStore threw before logging, so this is the
-            // sole Console record of the failure.
+            // Buffer-only: PGNStore already Console-logs the archive/dedup via
+            // its own os.Logger, so `capture` (not `record`) keeps the export
+            // timeline complete without a second Console line — and without the
+            // duplicate buffer entry a paired `record` + `capture` leaves. The
+            // failure arm below uses `record`: PGNStore threw before logging,
+            // so the session is the sole Console witness there.
             sessionLog?.capture(
                 .info,
                 result.deduplicated
