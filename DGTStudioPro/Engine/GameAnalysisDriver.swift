@@ -142,7 +142,7 @@ internal final class GameAnalysisDriver {
     /// the queue drains (decision 4) and at tab teardown. Safe to call
     /// multiple times — re-entry after shutdown returns immediately.
     internal func shutdown() async {
-        Self.logger.info("Driver shutdown")
+        Self.logger.info("Analysis driver shutdown")
         task?.cancel()
         await engine?.shutdown()
         engine = nil

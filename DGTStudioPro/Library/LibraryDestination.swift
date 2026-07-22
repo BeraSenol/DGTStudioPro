@@ -584,16 +584,17 @@ internal struct LibraryDestination: View {
     }
     
     private func backfillEmptyNames() {
-        let toFix = games.filter { game in
-            game.name.isEmpty || game.name == game.legacyDefaultName
-        }
+        let toFix = games.filter(\.hasStaleDefaultName)
         guard !toFix.isEmpty else { return }
         for game in toFix {
             game.name = game.defaultDisplayName
         }
         do {
             try modelContext.save()
-            Self.logger.info("Backfilled names for \(toFix.count) game(s)")
+            let healed = toFix.map(\.name).joined(separator: ", ")
+            Self.logger.info(
+                "Backfilled \(toFix.count) legacy game name(s): \(healed, privacy: .public)"
+            )
         } catch {
             Self.logger.error("Name backfill save failed: \(error.localizedDescription, privacy: .public)")
         }

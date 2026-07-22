@@ -179,10 +179,12 @@ internal final class LiveGame {
         sanMoves.append(san)
         states.append(state.applying(move))
         trackers.append(tracker)
-
-        updateResult()
-
+        
+        // The move line precedes result detection so the log reads in event
+        // order (Recorded Qd2# → Checkmate — 0-1); updateResult()'s own line
+        // would otherwise print before the move that caused it.
         Self.logger.info("Recorded \(san, privacy: .public) [ply \(self.moves.count)]")
+        updateResult()
         return true
     }
 

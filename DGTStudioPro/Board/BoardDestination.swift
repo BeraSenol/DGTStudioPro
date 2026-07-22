@@ -137,6 +137,17 @@ internal struct BoardDestination: View {
         // sheet can no longer live on the live branch alone. The *auto*
         // offer stays gated to the live branch inside the binding — a tab
         // reviewing a PGN isn't interrupted, exactly as before.
+        // Presentation-race disposition (M11.4): this sheet, the movetext
+        // editor and archive sheets below, the sidebar's SmartTag editor at
+        // the ContentView root, and the connect dialog from the toolbar all
+        // share the window's single modal slot. When one wants to present
+        // while another is up (a game finishes → this offer, while the connect
+        // dialog or tag editor is open), SwiftUI queues it and presents on the
+        // open sheet's dismissal. That dismiss-then-present order is the
+        // intended UX — finish the connection/edit, then answer the offer — so
+        // it's documented as deliberate rather than restructured into one
+        // enum-driven sheet (which would couple three independent concerns
+        // through a single presentation state).
         .sheet(isPresented: isNewGameSheetPresented) {
             NewLiveGameSheet(
                 onStart: { roster in

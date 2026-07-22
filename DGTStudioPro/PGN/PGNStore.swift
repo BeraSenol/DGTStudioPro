@@ -172,7 +172,7 @@ internal struct PGNStore {
         try modelContext.save()
         
         Self.logger.info(
-            "Archived: '\(pgn.name, privacy: .public)' \(pgn.white, privacy: .public) vs \(pgn.black, privacy: .public) [\(pgn.result.rawValue, privacy: .public)] plies=\(pgn.moves.count)"
+            "Archived: '\(pgn.name, privacy: .public)' [\(pgn.result.rawValue, privacy: .public)] plies=\(pgn.moves.count)"
         )
         return ArchiveResult(pgn: pgn, deduplicated: false)
     }

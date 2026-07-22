@@ -104,6 +104,31 @@ internal final class PGN: Identifiable {
         "\(white) vs \(black)"
     }
     
+    /// Whether `name` is a **stale stored default** that should be rewritten
+    /// to `defaultDisplayName`. True only when the rewrite would change the
+    /// value: an empty name, or a legacy raw-tag default whose display
+    /// transform differs. Deliberately false when `name` already equals
+    /// `defaultDisplayName` even if it also equals the legacy form — for
+    /// comma-free players the raw and display forms coincide, so the old
+    /// `name == legacyDefaultName` test false-positived on every freshly
+    /// archived game (the archive door stores `defaultDisplayName`), logging
+    /// a spurious backfill and dirtying the context with a no-op save (the
+    /// 20 July field finding). Custom names match neither branch and survive.
+    internal static func nameIsStaleDefault(
+        storedName: String, white: String, black: String
+    ) -> Bool {
+        let legacyDefault = "\(white) vs \(black)"
+        let displayDefault =
+        "\(displayPlayerName(white)) vs \(displayPlayerName(black))"
+        return (storedName.isEmpty || storedName == legacyDefault)
+        && storedName != displayDefault
+    }
+    
+    /// Instance form for the Library backfill's `filter(\.hasStaleDefaultName)`.
+    internal var hasStaleDefaultName: Bool {
+        Self.nameIsStaleDefault(storedName: name, white: white, black: black)
+    }
+    
     // MARK: Instance Methods
     /// Returns the evaluation recorded for the position reached after the
     /// move at `ply` is played, or `nil` if no analysis is present for

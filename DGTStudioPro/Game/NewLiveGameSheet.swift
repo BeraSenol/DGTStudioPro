@@ -1,5 +1,5 @@
 //
-//  LiveGameDetailsSheet.swift
+//  NewLiveGameSheet.swift
 //  DGTStudioPro
 //
 //  Created by Supreme Leader on 02/07/2026.
