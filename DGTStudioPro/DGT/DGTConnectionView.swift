@@ -324,3 +324,43 @@ private struct DeviceRow: View {
         .padding(.vertical, 2)
     }
 }
+
+// MARK: Previews
+
+/// `DeviceRow` is the previewable half: `DGTConnection.status` is
+/// `private(set)`, so the dialog itself can't be driven past its empty
+/// state from a preview. The row carries the visual logic worth seeing —
+/// `isLikelyBoard` picks the icon and tint (sort-only for this dialog,
+/// never auto-connect criteria).
+#Preview("Device Rows") {
+    VStack(alignment: .leading, spacing: 0) {
+        DeviceRow(device: DGTSerialDevice(path: "/dev/cu.usbmodem01", name: "DGT Board"))
+        Divider()
+        DeviceRow(device: DGTSerialDevice(path: "/dev/cu.usbserial-A1B2", name: "FTDI USB Serial"))
+        Divider()
+        DeviceRow(device: DGTSerialDevice(path: "/dev/cu.Bluetooth-Incoming-Port",
+                                          name: "Bluetooth-Incoming-Port"))
+        Divider()
+        DeviceRow(device: DGTSerialDevice(path: "/dev/cu.debug-console", name: "debug-console"))
+    }
+    .padding()
+    .frame(width: 380)
+}
+
+/// Long name and long path — the truncation case for a 380 pt sheet.
+#Preview("Overflowing Row") {
+    DeviceRow(
+        device: DGTSerialDevice(
+            path: "/dev/cu.usbmodem-DGT-Revelation-II-0000000000001",
+            name: "DGT Revelation II Electronic Chessboard (rev 4.02)"
+        )
+    )
+    .padding()
+    .frame(width: 380)
+}
+
+#Preview("Empty Dialog") {
+    DGTConnectionView()
+        .environment(DGTConnection())
+        .frame(width: 420, height: 380)
+}

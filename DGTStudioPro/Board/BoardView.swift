@@ -34,6 +34,16 @@ internal struct BoardView: View {
     internal var attentionSquares: Set<Square> = []
     internal var targetSquares: Set<Square> = []
     
+    // MARK: Preferences
+    
+    /// D21′ — the frame's coordinate labels. Read here rather than threaded
+    /// from the call sites (as `style` is) because it has exactly one
+    /// consumer: one `@AppStorage` site instead of one per board keeps the
+    /// "absent reads as true" default from being repeated three times. Style
+    /// stays injected because the previews and the Settings swatches need to
+    /// override it; nothing needs to override this.
+    @AppStorage(StorageKeys.showBoardCoordinates) private var showsCoordinates = true
+    
     // MARK: Body
     internal var body: some View {
         GeometryReader { geometry in
@@ -113,9 +123,7 @@ internal struct BoardView: View {
             
             ForEach(Square.files, id: \.self) { visualColumn in
                 let file = perspective == .white ? visualColumn : 7 - visualColumn
-                Text(String(Square.fileCharacter(file)))
-                    .font(.system(size: layout.squareSize * 0.25, weight: .ultraLight, design: .serif))
-                    .foregroundStyle(style.light)
+                coordinateLabel(Square.fileCharacter(file), squareSize: layout.squareSize)
                     .frame(width: layout.innerSquareSize, height: layout.squareSize)
                     .offset(y: layout.squareSize * -0.3)
                     .rotationEffect(isTop ? .degrees(180) : .zero)
@@ -131,15 +139,30 @@ internal struct BoardView: View {
             
             ForEach(Square.ranks, id: \.self) { visualRow in
                 let rank = perspective == .white ? 7 - visualRow : visualRow
-                Text(String(Square.rankCharacter(rank)))
-                    .font(.system(size: layout.squareSize * 0.25, weight: .ultraLight, design: .serif))
-                    .foregroundStyle(style.light)
+                coordinateLabel(Square.rankCharacter(rank), squareSize: layout.squareSize)
                     .frame(width: layout.squareSize, height: layout.innerSquareSize)
                     .offset(x: layout.squareSize * 0.3)
                     .rotationEffect(isLeft ? .zero : .degrees(180))
             }
             
             Spacer().frame(height: layout.borderInset)
+        }
+    }
+    
+    /// One frame glyph — or nothing drawn, when coordinates are off (D21′).
+    /// The caller applies the frame, and the off branch is `Color.clear`
+    /// rather than an absent view so the strip's contribution to layout is
+    /// unambiguous: the board keeps its 10×10 grid, its wooden border, and
+    /// its size at every setting. Also the one place the two strips' shared
+    /// type treatment now lives.
+    @ViewBuilder
+    private func coordinateLabel(_ character: Character, squareSize: CGFloat) -> some View {
+        if showsCoordinates {
+            Text(String(character))
+                .font(.system(size: squareSize * 0.25, weight: .ultraLight, design: .serif))
+                .foregroundStyle(style.light)
+        } else {
+            Color.clear
         }
     }
     
@@ -266,6 +289,7 @@ private struct Layout {
         checkSquare: nil,
         selectedSquare: nil
     )
+    .frame(width: 800, height: 800)
 }
 
 #Preview("Rosewood") {
@@ -278,7 +302,7 @@ private struct Layout {
         checkSquare: nil,
         selectedSquare: nil
     )
-    .frame(width: 3800, height: 3800)
+    .frame(width: 800, height: 800)
 }
 
 #Preview("Walnut") {
@@ -291,7 +315,7 @@ private struct Layout {
         checkSquare: nil,
         selectedSquare: nil
     )
-    .frame(width: 3800, height: 3800)
+    .frame(width: 800, height: 800)
 }
 
 #Preview("Wenge") {
@@ -304,7 +328,7 @@ private struct Layout {
         checkSquare: nil,
         selectedSquare: nil
     )
-    .frame(width: 3800, height: 3800)
+    .frame(width: 800, height: 800)
 }
 
 // White kingside castle in progress: king has moved e1 → g1, the real
@@ -328,7 +352,7 @@ private struct Layout {
         ghostSquare: Squares.f1,
         ghostPiece: .whiteRook
     )
-    .frame(width: 600, height: 600)
+    .frame(width: 800, height: 800)
 }
 
 // Black queenside castle in progress: king e8 → c8, rook still on a8,

@@ -47,6 +47,10 @@ internal struct SettingsView: View {
     = EngineConfiguration.default.hashMB
     @AppStorage(StorageKeys.engineThreads) private var engineThreads
     = EngineConfiguration.default.threads
+    /// D21′ — the board's coordinate labels. Twin default with `BoardView`'s
+    /// own read (absent reads as **true**), the same unavoidable pairing as
+    /// the two toggles above; `StorageKeys` documents it.
+    @AppStorage(StorageKeys.showBoardCoordinates) private var showsBoardCoordinates = true
     
     @Environment(\.modelContext) private var modelContext
     @Query private var allGames: [PGN]
@@ -105,10 +109,30 @@ internal struct SettingsView: View {
                 )
             }
             
+            // M11.4 (23 July): the section shipped a single Stepper bound to
+            // `analysisDepth` but labelled "Threads" and displaying
+            // `engineThreads` — the control said one thing, edited another,
+            // and hash/threads had no control at all. The keys were bound;
+            // the UI wasn't. Bounds and choices come from
+            // `EngineConfiguration`, so the numbers still live exactly once
+            // and a value can't leave the range the clamp would repair.
             Section {
                 Stepper(value: $analysisDepth, in: EngineConfiguration.depthRange) {
+                    LabeledContent("Search Depth", value: "\(analysisDepth)")
+                }
+                .accessibilityIdentifier(AccessibilityID.settingsEngineDepthStepper)
+                
+                Picker("Hash", selection: $engineHashMB) {
+                    ForEach(EngineConfiguration.hashChoicesMB, id: \.self) { size in
+                        Text("\(size) MB").tag(size)
+                    }
+                }
+                .accessibilityIdentifier(AccessibilityID.settingsEngineHashPicker)
+                
+                Stepper(value: $engineThreads, in: EngineConfiguration.threadsRange) {
                     LabeledContent("Threads", value: "\(engineThreads)")
                 }
+                .accessibilityIdentifier(AccessibilityID.settingsEngineThreadsStepper)
             } header: {
                 Text("Engine")
             } footer: {
@@ -142,6 +166,18 @@ internal struct SettingsView: View {
                 Text(
                     "Applies everywhere a board is drawn — the live mirror "
                     + "and game replays."
+                )
+            }
+            
+            Section {
+                Toggle("Show coordinates", isOn: $showsBoardCoordinates)
+                    .accessibilityIdentifier(AccessibilityID.settingsBoardCoordinatesToggle)
+            } header: {
+                Text("Coordinates")
+            } footer: {
+                Text(
+                    "Draws file letters and rank numbers on the board's "
+                    + "frame. Off keeps the frame — only the labels go."
                 )
             }
         }

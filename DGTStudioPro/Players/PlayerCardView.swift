@@ -110,3 +110,40 @@ internal struct PlayerCardView: View {
             .padding(4)
     }
 }
+
+// MARK: Previews
+
+#Preview("Selection States") {
+    HStack(spacing: 20) {
+        PlayerCardView(stats: PreviewFixtures.topStats(), isSelected: false, onSelect: {})
+        PlayerCardView(stats: PreviewFixtures.topStats(), isSelected: true, onSelect: {})
+    }
+    .padding()
+}
+
+#Preview("Rank Badges") {
+    HStack(spacing: 20) {
+        ForEach(PreviewFixtures.rankedPlayers().prefix(4), id: \.id) { ranked in
+            PlayerCardView(
+                stats: ranked.stats,
+                isSelected: false,
+                onSelect: {},
+                rank: ranked.rank,
+                onShowInLibrary: {}
+            )
+        }
+    }
+    .padding()
+}
+
+/// Monogram edge cases — the initials derivation is the interesting part:
+/// single names, diacritics, comma-form display names, and a very long name
+/// that must not blow the card's width.
+#Preview("Name Edge Cases") {
+    let names = ["Bera", "Magnus Carlsen", "Ding Liren",
+                 "Nepomniachtchi, Ian", "Šarić, Ivan", "X"]
+    return HStack(spacing: 16) {
+        ForEach(names, id: \.self) { PlayerMonogram(name: $0) }
+    }
+    .padding()
+}

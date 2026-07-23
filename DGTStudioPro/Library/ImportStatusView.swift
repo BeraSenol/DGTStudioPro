@@ -15,7 +15,7 @@ internal struct ImportResult: Identifiable {
     internal let id = UUID()
     internal let fileName: String
     internal let outcome: Outcome
-
+    
     internal enum Outcome {
         case imported(name: String)
         case failed(PGNStore.Error)
@@ -28,27 +28,27 @@ internal struct ImportProgress {
     internal var total: Int
     internal var results: [ImportResult] = []
     internal var isFinished: Bool = false
-
+    
     internal var completed: Int { results.count }
-
+    
     internal var fraction: Double {
         total > 0 ? Double(completed) / Double(total) : 0
     }
-
+    
     internal var importedCount: Int {
         results.filter {
             if case .imported = $0.outcome { return true }
             return false
         }.count
     }
-
+    
     internal var duplicateCount: Int {
         results.filter {
             if case .failed(.duplicate) = $0.outcome { return true }
             return false
         }.count
     }
-
+    
     internal var failedCount: Int {
         results.filter {
             switch $0.outcome {
@@ -63,41 +63,41 @@ internal struct ImportProgress {
 // MARK: Sheet
 
 internal struct ImportStatusView: View {
-
+    
     internal let progress: ImportProgress
     internal let onDismiss: () -> Void
-
+    
     internal var body: some View {
         VStack(spacing: 0) {
             header
-
+            
             Divider()
-
+            
             List(progress.results) { result in
                 ImportResultRow(result: result)
             }
             .listStyle(.inset)
             .frame(minHeight: 200)
-
+            
             Divider()
-
+            
             footer
         }
         .frame(width: 460, height: 420)
     }
-
+    
     // MARK: Header
-
+    
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(progress.isFinished ? "Import Complete" : "Importing…")
                 .font(.headline)
-
+            
             ProgressView(
                 value: Double(progress.completed),
                 total: Double(max(progress.total, 1))
             )
-
+            
             Text("\(progress.completed) of \(progress.total)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -105,9 +105,9 @@ internal struct ImportStatusView: View {
         }
         .padding()
     }
-
+    
     // MARK: Footer
-
+    
     private var footer: some View {
         HStack {
             if progress.isFinished {
@@ -120,7 +120,7 @@ internal struct ImportStatusView: View {
         }
         .padding()
     }
-
+    
     @ViewBuilder
     private var summaryText: some View {
         let parts: [String] = {
@@ -139,16 +139,16 @@ internal struct ImportStatusView: View {
 // MARK: Row
 
 private struct ImportResultRow: View {
-
+    
     let result: ImportResult
-
+    
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: icon)
                 .foregroundStyle(tint)
                 .font(.body)
                 .frame(width: 18)
-
+            
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.callout)
@@ -159,7 +159,7 @@ private struct ImportResultRow: View {
         }
         .padding(.vertical, 2)
     }
-
+    
     private var icon: String {
         switch result.outcome {
         case .imported:            return "checkmark.circle.fill"
@@ -167,7 +167,7 @@ private struct ImportResultRow: View {
         case .failed:              return "exclamationmark.triangle.fill"
         }
     }
-
+    
     private var tint: Color {
         switch result.outcome {
         case .imported:            return .green
@@ -175,7 +175,7 @@ private struct ImportResultRow: View {
         case .failed:              return .red
         }
     }
-
+    
     private var title: String {
         switch result.outcome {
         case .imported(let name):               return name
@@ -183,7 +183,7 @@ private struct ImportResultRow: View {
         case .failed:                           return result.fileName
         }
     }
-
+    
     private var detail: String {
         switch result.outcome {
         case .imported:
@@ -200,4 +200,48 @@ private struct ImportResultRow: View {
             return "Game is ongoing."
         }
     }
+}
+
+// MARK: Previews
+
+#Preview("In Progress") {
+    ImportStatusView(
+        progress: ImportProgress(
+            total: 8,
+            results: [
+                ImportResult(fileName: "tata-2024.pgn", outcome: .imported(name: "Giri vs Caruana")),
+                ImportResult(fileName: "norway.pgn", outcome: .imported(name: "Firouzja vs Ding"))
+            ],
+            isFinished: false
+        ),
+        onDismiss: {}
+    )
+    .frame(width: 480, height: 360)
+}
+
+#Preview("Finished — Mixed") {
+    ImportStatusView(
+        progress: ImportProgress(
+            total: 4,
+            results: [
+                ImportResult(fileName: "ok.pgn", outcome: .imported(name: "Bera vs Lorenzo")),
+                ImportResult(fileName: "no-tags.pgn",
+                             outcome: .failed(.missingRequiredTags(["White", "Result"]))),
+                ImportResult(fileName: "broken.pgn",
+                             outcome: .failed(.malformedPGN(reason: "Unterminated tag pair"))),
+                ImportResult(fileName: "live.pgn", outcome: .failed(.ongoingGame))
+            ],
+            isFinished: true
+        ),
+        onDismiss: {}
+    )
+    .frame(width: 480, height: 360)
+}
+
+#Preview("Empty Batch") {
+    ImportStatusView(
+        progress: ImportProgress(total: 0, results: [], isFinished: true),
+        onDismiss: {}
+    )
+    .frame(width: 480, height: 240)
 }

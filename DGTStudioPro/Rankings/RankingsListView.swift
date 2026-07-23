@@ -61,3 +61,39 @@ internal struct RankingsListView: View {
         .accessibilityIdentifier(AccessibilityID.rankingsTable)
     }
 }
+
+// MARK: Previews
+
+#Preview("Ladder") {
+    @Previewable @State var selection: PlayerStats.ID?
+    
+    RankingsListView(
+        players: PreviewFixtures.rankedPlayers(),
+        selectedKey: $selection,
+        onShowInLibrary: { _ in }
+    )
+    .frame(width: 760, height: 320)
+}
+
+/// The provisional/unrated column states: the newcomer's single game leaves
+/// RD above the D11′ threshold, and an unrated row renders the nil branch.
+#Preview("Provisional & Unrated") {
+    @Previewable @State var selection: PlayerStats.ID?
+    
+    let ranked = PreviewFixtures.rankedPlayers()
+    let unrated = ranked.map { RankedPlayer(rank: $0.rank, stats: $0.stats, rating: nil) }
+    
+    RankingsListView(
+        players: ranked + unrated.suffix(1),
+        selectedKey: $selection,
+        onShowInLibrary: { _ in }
+    )
+    .frame(width: 760, height: 320)
+}
+
+#Preview("Empty") {
+    @Previewable @State var selection: PlayerStats.ID?
+    
+    RankingsListView(players: [], selectedKey: $selection, onShowInLibrary: { _ in })
+        .frame(width: 760, height: 320)
+}

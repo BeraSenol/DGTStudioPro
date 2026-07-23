@@ -12,11 +12,11 @@ import SwiftUI
 /// its uncertainty made explicit, and the trend line — the whole reason
 /// `Glicko1.histories` returns samples instead of just finals.
 internal struct RankingsInspectorView: View {
-
+    
     // MARK: Stored Properties
     internal let ranked: RankedPlayer?
     internal let history: [Glicko1.Sample]
-
+    
     // MARK: Body
     internal var body: some View {
         List {
@@ -30,7 +30,7 @@ internal struct RankingsInspectorView: View {
         }
         .listStyle(.sidebar)
     }
-
+    
     // MARK: Instance Methods
     private var emptySection: some View {
         Section {
@@ -45,10 +45,10 @@ internal struct RankingsInspectorView: View {
 // MARK: Rank
 
 private struct RankSection: View {
-
+    
     let ranked: RankedPlayer
     let ratedGames: Int
-
+    
     var body: some View {
         Section {
             HStack(spacing: 12) {
@@ -62,7 +62,7 @@ private struct RankSection: View {
                 }
             }
             .padding(.vertical, 4)
-
+            
             LabeledContent("Wins", value: "\(ranked.stats.wins)")
             LabeledContent("Record", value: "\(ranked.stats.wins)–\(ranked.stats.draws)–\(ranked.stats.losses)")
             LabeledContent("Rating", value: ranked.rating?.displaySummary ?? "Unrated")
@@ -82,9 +82,9 @@ private struct RankSection: View {
 // MARK: Trend
 
 private struct TrendSection: View {
-
+    
     let history: [Glicko1.Sample]
-
+    
     var body: some View {
         Section {
             if history.isEmpty {
@@ -107,7 +107,7 @@ private struct TrendSection: View {
                 }
                 .frame(height: 160)
                 .padding(.vertical, 4)
-
+                
                 if history.last?.rating.isProvisional == true {
                     Text("Provisional — the rating settles as more games are played.")
                         .font(.caption)
@@ -121,7 +121,46 @@ private struct TrendSection: View {
 }
 
 // MARK: Previews
-#Preview {
+
+#Preview("Empty") {
     RankingsInspectorView(ranked: nil, history: [])
-        .frame(width: 300, height: 400)
+        .frame(width: 300, height: 440)
+}
+
+#Preview("Ranked — With Trend") {
+    let ranked = PreviewFixtures.rankedPlayers()[0]
+    let history = Glicko1.histories(from: PreviewFixtures.records())[ranked.stats.key] ?? []
+    
+    return RankingsInspectorView(ranked: ranked, history: history)
+        .frame(width: 300, height: 440)
+}
+
+/// One sample: the Charts trend line has no segment to draw. Worth its own
+/// preview because a single-point domain is where chart axes misbehave.
+#Preview("Single Sample") {
+    let ranked = PreviewFixtures.rankedPlayers().last!
+    
+    return RankingsInspectorView(
+        ranked: ranked,
+        history: [Glicko1.Sample(date: .now, rating: .initial)]
+    )
+    .frame(width: 300, height: 440)
+}
+
+/// A long history with a visible swing — the trend line's real shape, and
+/// the y-domain's stress case.
+#Preview("Long History") {
+    let ranked = PreviewFixtures.rankedPlayers()[0]
+    let samples = (0..<24).map { step in
+        Glicko1.Sample(
+            date: Date(timeIntervalSince1970: 1_720_000_000 + Double(step) * 86_400),
+            rating: Glicko1.Rating(
+                mean: 1500 + Double(step) * 9 - (step.isMultiple(of: 3) ? 55 : 0),
+                deviation: max(45, 350 - Double(step) * 12)
+            )
+        )
+    }
+    
+    return RankingsInspectorView(ranked: ranked, history: samples)
+        .frame(width: 300, height: 440)
 }

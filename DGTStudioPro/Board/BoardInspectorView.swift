@@ -8,7 +8,7 @@
 import SwiftUI
 
 internal struct BoardInspectorView: View {
-
+    
     // MARK: Stored Properties
     internal let pgn: PGN?
     internal let evaluations: [Double]
@@ -16,7 +16,7 @@ internal struct BoardInspectorView: View {
     internal let currentMoveIndex: Int?
     internal let style: BoardStyle
     internal let onMoveTapped: ((Int) -> Void)?
-
+    
     // MARK: Body
     internal var body: some View {
         List {
@@ -26,20 +26,25 @@ internal struct BoardInspectorView: View {
         }
         .listStyle(.sidebar)
     }
-
+    
     // MARK: Instance Methods
     private var metadataSection: some View {
-        Section {
-            LabeledContent("White", value: pgn?.white ?? "—")
-            LabeledContent("Black", value: pgn?.black ?? "—")
-            LabeledContent("Round", value: pgn?.displayRound ?? "—")
-            LabeledContent("Result", value: pgn?.result.rawValue ?? "—")
-        } header: {
-            Text(pgn?.name ?? "Game")
-                .textCase(nil)
-        }
+        SevenTagRosterSection(
+            roster: pgn.map { RosterSummary($0) },
+            headline: headline
+        )
     }
-
+    
+    /// D20′ — "Reviewing 1. Magnus Carlsen vs Ian Nepomniachtchi". Falls
+    /// back to a bare noun with no game loaded (the preview's empty state):
+    /// a headline naming "? vs ?" would over-claim there.
+    private var headline: String {
+        guard let pgn else { return "Game" }
+        return GameHeadline.text(
+            .reviewing, round: pgn.round, white: pgn.white, black: pgn.black
+        )
+    }
+    
     private var evaluationSection: some View {
         Section {
             EvaluationGraphView(
@@ -47,12 +52,12 @@ internal struct BoardInspectorView: View {
                 currentMoveIndex: currentMoveIndex,
                 style: style
             )
-            .frame(height: 140)
+            .frame(height: 160)
         } header: {
             Text("Evaluation")
         }
     }
-
+    
     private var movesSection: some View {
         Section {
             MoveHistoryView(

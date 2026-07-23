@@ -152,7 +152,50 @@ private struct RecentGamesSection: View {
 }
 
 // MARK: Previews
-#Preview {
+
+#Preview("Empty") {
     PlayersInspectorView(stats: nil, rating: nil, recentGames: [])
         .frame(width: 300, height: 400)
+}
+
+#Preview("Populated") {
+    PlayersInspectorView(
+        stats: PreviewFixtures.topStats(),
+        rating: Glicko1.Rating(mean: 1662.4, deviation: 68.2),
+        recentGames: [
+            PGN(event: "Club Championship", site: "Antwerp", round: 4,
+                white: "Lorenzo", black: "Bera", result: .whiteWins),
+            PGN(event: "Club Championship", site: "Antwerp", round: 2,
+                white: "Bera", black: "Lorenzo", result: .blackWins),
+            PGN(event: "Club Championship", site: "Antwerp", round: 1,
+                white: "Bera", black: "Reinaud", result: .whiteWins)
+        ]
+    )
+    .frame(width: 300, height: 400)
+    .modelContainer(for: PGN.self, inMemory: true)
+}
+
+/// The two rating display branches meeting the same layout: an established
+/// rating renders bare, a provisional one carries its qualifier and is the
+/// longer string — the one that can wrap in a 260 pt inspector.
+#Preview("Provisional Rating") {
+    PlayersInspectorView(
+        stats: PreviewFixtures.playerStats().last!,
+        rating: Glicko1.Rating(mean: 1487.0, deviation: 218.6),
+        recentGames: []
+    )
+    .frame(width: 260, height: 400)
+    .modelContainer(for: PGN.self, inMemory: true)
+}
+
+/// Unrated: a resolved player whose games never produced a rated pairing.
+/// The nil branch is the call site's own "Unrated" copy, per `Rating`'s doc.
+#Preview("Unrated") {
+    PlayersInspectorView(
+        stats: PreviewFixtures.topStats(),
+        rating: nil,
+        recentGames: []
+    )
+    .frame(width: 300, height: 400)
+    .modelContainer(for: PGN.self, inMemory: true)
 }

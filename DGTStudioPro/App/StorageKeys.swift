@@ -8,6 +8,12 @@
 internal enum StorageKeys {
     internal static let boardStyle = "boardStyle"
     
+    // Board coordinates (M-ux.3, D21′): the file letters and rank numbers
+    // printed on the board frame. Absent reads as true — the
+    // `autoConnectOnLaunch` semantics; the two read sites (SettingsView's
+    // `@AppStorage` initial and `BoardView`'s own) must agree on that default.
+    internal static let showBoardCoordinates = "showBoardCoordinates"
+
     // First-run seed guard for the default smart tags (M-prs.5): the flag
     // — not tag count — decides, so deleting all defaults sticks.
     internal static let didSeedDefaultSmartTags = "didSeedDefaultSmartTags"

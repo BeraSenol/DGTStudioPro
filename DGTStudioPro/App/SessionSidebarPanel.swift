@@ -233,3 +233,35 @@ internal struct SessionSidebarPanel: View {
         )
     }
 }
+
+// MARK: Previews
+
+/// Only the load-error arm is reachable: `DGTConnection.status` is
+/// `private(set)`, so a preview can't reach `.connected` and `hudPhase`
+/// stays nil. The phase card previews live on `LiveGameHUDView` ("All
+/// Phases") and the checklist on `RecoveryGuidanceView` — this preview
+/// covers what's genuinely this view's own: the M8.2 card, re-homed by D15′.
+#Preview("Load Error") {
+    let tabState = TabState()
+    tabState.boardLoadError = "The game could not be found in the library."
+    
+    return SessionSidebarPanel(
+        tabState: tabState,
+        onNewGame: {},
+        onDismissLoadError: {}
+    )
+    .frame(width: 260)
+    .environment(DGTConnection())
+    .environment(DGTLiveSession())
+    .environment(DGTSessionLog())
+}
+
+/// The empty guard: disconnected and error-free renders *nothing* — no
+/// blank inset at the bottom of every tab. The canvas should be empty.
+#Preview("Empty Guard") {
+    SessionSidebarPanel(tabState: TabState(), onNewGame: {}, onDismissLoadError: {})
+        .frame(width: 260, height: 80)
+        .environment(DGTConnection())
+        .environment(DGTLiveSession())
+        .environment(DGTSessionLog())
+}

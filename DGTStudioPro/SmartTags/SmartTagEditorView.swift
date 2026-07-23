@@ -246,3 +246,42 @@ private struct TagRuleRow: View {
         }
     }
 }
+
+// MARK: Previews
+
+#Preview("New Tag") {
+    SmartTagEditorView(draft: TagDraft(), onSave: { _ in })
+        .frame(width: 520, height: 420)
+}
+
+#Preview("Populated — Match All") {
+    var draft = TagDraft()
+    draft.name = "Bera's Wins"
+    draft.colorName = .green
+    draft.matchAll = true
+    draft.rules = [
+        TagRule(field: .player, comparison: .contains, text: "Bera"),
+        TagRule(field: .result, comparison: .equals, gameResult: .whiteWins)
+    ]
+    return SmartTagEditorView(draft: draft, onSave: { _ in })
+        .frame(width: 520, height: 420)
+}
+
+/// Every rule *kind* at once (string / result / number / date / boolean) —
+/// the row-editor switch renders a different control per kind, so this is
+/// the layout's real stress case.
+#Preview("All Rule Kinds") {
+    var draft = TagDraft()
+    draft.name = "Kitchen Sink"
+    draft.colorName = .purple
+    draft.matchAll = false
+    draft.rules = [
+        TagRule(field: .event, comparison: .beginsWith, text: "Club"),
+        TagRule(field: .result, comparison: .equals, gameResult: .draw),
+        TagRule(field: .moves, comparison: .greaterThan, number: 40),
+        TagRule(field: .date, comparison: .after, date: .now),
+        TagRule(field: .checkmate, comparison: .isTrue)
+    ]
+    return SmartTagEditorView(draft: draft, onSave: { _ in })
+        .frame(width: 520, height: 520)
+}

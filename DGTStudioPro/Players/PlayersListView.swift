@@ -12,7 +12,7 @@ internal struct PlayersListView: View {
     let players: [PlayerStats]
     @Binding var selectedKey: PlayerStats.ID?
     let onShowInLibrary: (PlayerStats.ID) -> Void
-
+    
     var body: some View {
         Table(players, selection: $selectedKey) {
             TableColumn("Player") { player in
@@ -49,4 +49,35 @@ internal struct PlayersListView: View {
         }
         .accessibilityIdentifier(AccessibilityID.playersTable)
     }
+}
+
+// MARK: Previews
+
+#Preview("With Players") {
+    @Previewable @State var selection: PlayerStats.ID?
+    
+    PlayersListView(
+        players: PreviewFixtures.playerStats(),
+        selectedKey: $selection,
+        onShowInLibrary: { _ in }
+    )
+    .frame(width: 720, height: 320)
+}
+
+#Preview("Selected Row") {
+    @Previewable @State var selection: PlayerStats.ID? = PreviewFixtures.topStats().id
+    
+    PlayersListView(
+        players: PreviewFixtures.playerStats(),
+        selectedKey: $selection,
+        onShowInLibrary: { _ in }
+    )
+    .frame(width: 720, height: 320)
+}
+
+#Preview("Empty") {
+    @Previewable @State var selection: PlayerStats.ID?
+    
+    PlayersListView(players: [], selectedKey: $selection, onShowInLibrary: { _ in })
+        .frame(width: 720, height: 320)
 }

@@ -17,7 +17,7 @@ internal struct PlayersIconsView: View {
     let players: [PlayerStats]
     @Binding var selectedKey: PlayerStats.ID?
     let onShowInLibrary: (PlayerStats.ID) -> Void
-
+    
     // MARK: Computed Properties
     private var columns: [GridItem] {
         Array(
@@ -42,4 +42,24 @@ internal struct PlayersIconsView: View {
             .padding(16)
         }
     }
+}
+
+// MARK: Previews
+
+#Preview("With Players") {
+    @Previewable @State var selection: PlayerStats.ID?
+    
+    PlayersIconsView(          // → PlayersGalleryView / PlayersColumnsView
+        players: PreviewFixtures.playerStats(),
+        selectedKey: $selection,
+        onShowInLibrary: { _ in }
+    )
+    .frame(width: 720, height: 420)
+}
+
+#Preview("Empty") {
+    @Previewable @State var selection: PlayerStats.ID?
+    
+    PlayersIconsView(players: [], selectedKey: $selection, onShowInLibrary: { _ in })
+        .frame(width: 720, height: 420)
 }

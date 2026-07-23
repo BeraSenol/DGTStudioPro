@@ -196,6 +196,10 @@ internal enum AccessibilityID {
     internal static let settingsAutoConnectToggle  = "settings.autoConnectToggle"
     internal static let settingsEraseLibraryButton = "settings.eraseLibraryButton"
     internal static let settingsIllegalMoveSoundToggle = "settings.illegalMoveSoundToggle"
+    internal static let settingsBoardCoordinatesToggle = "settings.boardCoordinatesToggle"
+    internal static let settingsEngineDepthStepper     = "settings.engineDepthStepper"
+    internal static let settingsEngineHashPicker       = "settings.engineHashPicker"
+    internal static let settingsEngineThreadsStepper   = "settings.engineThreadsStepper"
     
     // MARK: Library
     

@@ -285,4 +285,5 @@ internal enum Destination: String, CaseIterable, Identifiable, Hashable {
         .environment(DGTConnection())
         .environment(DGTLiveSession())
         .environment(DGTSessionLog())
+        .frame(width: 800, height: 600)
 }

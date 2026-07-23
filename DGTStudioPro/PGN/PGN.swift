@@ -75,13 +75,11 @@ internal final class PGN: Identifiable {
     internal var id: PersistentIdentifier { persistentModelID }
     
     internal var displayDate: String {
-        guard let date else { return PGNPlaceholder.date.rawValue }
-        return date.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits))
+        RosterSummary.displayDate(date)
     }
     
     internal var displayRound: String {
-        guard let round else { return PGNPlaceholder.general.rawValue }
-        return String(round)
+        RosterSummary.displayRound(round)
     }
     
     internal var whiteDisplayName: String {

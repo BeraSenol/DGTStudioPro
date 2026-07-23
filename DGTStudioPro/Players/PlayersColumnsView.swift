@@ -24,7 +24,7 @@ internal struct PlayersColumnsView: View {
     let players: [PlayerStats]
     @Binding var selectedKey: PlayerStats.ID?
     let onShowInLibrary: (PlayerStats.ID) -> Void
-
+    
     // MARK: Private Properties
     @State private var selectedGroupID: String?
     
@@ -120,4 +120,24 @@ internal struct PlayersColumnsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+}
+
+// MARK: Previews
+
+#Preview("With Players") {
+    @Previewable @State var selection: PlayerStats.ID?
+    
+    PlayersIconsView(          // → PlayersGalleryView / PlayersColumnsView
+        players: PreviewFixtures.playerStats(),
+        selectedKey: $selection,
+        onShowInLibrary: { _ in }
+    )
+    .frame(width: 720, height: 420)
+}
+
+#Preview("Empty") {
+    @Previewable @State var selection: PlayerStats.ID?
+    
+    PlayersIconsView(players: [], selectedKey: $selection, onShowInLibrary: { _ in })
+        .frame(width: 720, height: 420)
 }

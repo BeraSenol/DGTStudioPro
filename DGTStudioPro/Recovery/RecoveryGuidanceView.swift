@@ -22,16 +22,16 @@ import SwiftUI
 /// moment the session log is worth saving, so the affordance lives here
 /// rather than in a buried menu.
 internal struct RecoveryGuidanceView: View {
-
+    
     // MARK: Stored Properties
-
+    
     internal let guidance: RecoveryGuidance
-
+    
     /// Wired by the destination to `sessionLog.exportViaSavePanel()`.
     internal let onExportDiagnostics: () -> Void
-
+    
     // MARK: Body
-
+    
     internal var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
@@ -43,7 +43,7 @@ internal struct RecoveryGuidanceView: View {
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier(AccessibilityID.liveRecoveryCount)
             }
-
+            
             ScrollView {
                 VStack(alignment: .leading, spacing: 3) {
                     ForEach(guidance.items) { item in
@@ -57,7 +57,7 @@ internal struct RecoveryGuidanceView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxHeight: 140)
-
+            
             HStack {
                 Spacer()
                 Button("Export Diagnostics…", action: onExportDiagnostics)
@@ -76,19 +76,57 @@ internal struct RecoveryGuidanceView: View {
     }
 }
 
-// MARK: Previews
-
-#Preview("Misplaced Pieces") {
+/// The common case in anger: one piece lifted, one square to fix. The
+/// 20 July field session desynced twice, both single-piece diffs.
+#Preview("Single Fix") {
     var physical = Position.starting
-    physical[Squares.g1] = .empty
-    physical[Squares.h3] = .whiteKnight    // knight went to the wrong square
-    physical[Squares.e7] = .empty          // pawn lifted off the board
-    physical[Squares.e4] = .blackPawn      // …and dropped somewhere odd
-
+    physical[Squares.e2] = .empty
+    
     return RecoveryGuidanceView(
         guidance: RecoveryGuidance(physical: physical, target: .starting),
         onExportDiagnostics: {}
     )
     .padding()
     .frame(width: 420)
+}
+
+/// Wrong piece on the right square — the `replace` action, which is
+/// attention-only in the highlight split (no target square).
+#Preview("Wrong Piece") {
+    var physical = Position.starting
+    physical[Squares.d1] = .whiteKnight    // queen replaced by a knight
+    
+    return RecoveryGuidanceView(
+        guidance: RecoveryGuidance(physical: physical, target: .starting),
+        onExportDiagnostics: {}
+    )
+    .padding()
+    .frame(width: 420)
+}
+
+/// A full scramble — the scrolling/垂直 growth case for a sidebar-pinned
+/// panel, where the checklist must not push the panel past its inset.
+#Preview("Scrambled Board") {
+    var physical = Position.empty
+    physical[Squares.e4] = .whiteKing
+    physical[Squares.a8] = .blackKing
+    physical[Squares.h1] = .whiteRook
+    
+    return RecoveryGuidanceView(
+        guidance: RecoveryGuidance(physical: physical, target: .starting),
+        onExportDiagnostics: {}
+    )
+    .padding()
+    .frame(width: 420, height: 520)
+}
+
+/// Already fixed: an empty guidance renders nothing. The panel guards on
+/// `!guidance.isEmpty`, so this pins that the view itself degrades cleanly.
+#Preview("Resolved") {
+    RecoveryGuidanceView(
+        guidance: RecoveryGuidance(physical: .starting, target: .starting),
+        onExportDiagnostics: {}
+    )
+    .padding()
+    .frame(width: 420, height: 120)
 }
