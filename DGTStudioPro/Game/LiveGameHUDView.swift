@@ -212,7 +212,7 @@ internal struct LiveGameHUDView: View {
     }
 }
 
-// MARK: - Previews
+// MARK: Previews
 
 #Preview("All Phases") {
     VStack(spacing: 0) {

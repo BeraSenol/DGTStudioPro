@@ -194,7 +194,7 @@ internal struct PlayersDestination: View {
     }
 }
 
-// MARK: - Previews
+// MARK: Previews
 
 #Preview {
     PlayersDestination(tabState: TabState())

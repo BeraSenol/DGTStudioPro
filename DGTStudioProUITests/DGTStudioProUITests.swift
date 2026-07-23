@@ -54,7 +54,7 @@ final class DGTStudioProUITests: XCTestCase {
         app = nil
     }
     
-    // MARK: - Launch
+    // MARK: Launch
     
     private func launch() {
         app.launchArguments = ["-uiTestSeed", "YES"]
@@ -82,7 +82,7 @@ final class DGTStudioProUITests: XCTestCase {
                       "A window should be present at launch")
     }
     
-    // MARK: - Helpers
+    // MARK: Helpers
     
     /// Type-agnostic lookup by accessibility identifier.
     private func element(_ identifier: String) -> XCUIElement {
@@ -123,7 +123,7 @@ final class DGTStudioProUITests: XCTestCase {
         XCTFail(message, file: file, line: line)
     }
     
-    // MARK: - Tests
+    // MARK: Tests
     
     func test_launch_showsSidebarAndLibrary() {
         launch()
@@ -477,7 +477,7 @@ final class DGTStudioProUITests: XCTestCase {
         XCTAssertTrue(analyze.isEnabled, "Analyze should stay enabled for a multi-selection")
     }
     
-    // MARK: - Command Menus (M9)
+    // MARK: Command Menus (M9)
     
     /// Pins both halves of the M8.1 wiring in one flip: the `Commands`
     /// scene installed on the `WindowGroup` (the items exist), and

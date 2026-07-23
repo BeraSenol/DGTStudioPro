@@ -35,7 +35,7 @@ extension GameState {
     }
 }
 
-// MARK: - FEN Forwarding
+// MARK: FEN Forwarding
 
 extension FEN {
     internal func replay(_ sanMoves: [String]) throws -> GameState {
@@ -43,7 +43,7 @@ extension FEN {
     }
 }
 
-// MARK: - Errors
+// MARK: Errors
 
 internal enum ReplayError: Error, Equatable {
     /// The SAN string at the given move index failed to parse. The

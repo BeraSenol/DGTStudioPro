@@ -293,7 +293,7 @@ extension GameState {
     }
 }
 
-// MARK: - FEN Forwarding
+// MARK: FEN Forwarding
 
 extension FEN {
     internal func parseSAN(_ san: String) throws -> Move {
@@ -305,7 +305,7 @@ extension FEN {
     }
 }
 
-// MARK: - SAN Tokens
+// MARK: SAN Tokens
 
 /// Parsed components of a SAN move, prior to legal-move matching.
 /// File-private: an implementation detail of `parseSAN`.
@@ -318,7 +318,7 @@ private struct SANTokens {
     let promotion: PieceType?
 }
 
-// MARK: - Errors
+// MARK: Errors
 
 internal enum SANParseError: Error, Equatable {
     /// SAN string was empty or whitespace-only.

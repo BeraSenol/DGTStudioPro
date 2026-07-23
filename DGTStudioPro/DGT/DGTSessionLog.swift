@@ -203,7 +203,7 @@ internal final class DGTSessionLog {
     }()
 }
 
-// MARK: - Debug Formatters
+// MARK: Debug Formatters
 
 /// Side-effect-free renderers that turn the pure DGT/chess value types into
 /// human-readable debug text. They *read* `Position` / `DGTBoardDiff` but never

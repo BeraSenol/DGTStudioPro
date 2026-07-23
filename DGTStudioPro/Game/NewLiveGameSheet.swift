@@ -8,7 +8,7 @@
 import SwiftUI
 import SwiftData
 
-// MARK: - Placeholder Normalization
+// MARK: Placeholder Normalization
 
 /// PGN uses `"?"` as the unknown-tag placeholder. The forms show *empty*
 /// fields (with prompts) instead — friendlier to type into — and convert
@@ -36,7 +36,7 @@ internal func normalized(_ roster: LiveGame.Roster) -> LiveGame.Roster {
     return result
 }
 
-// MARK: - Roster Form
+// MARK: Roster Form
 
 /// The seven-tag roster form, minus Result (the game tracks it — Decision
 /// #4). Shared verbatim by the new-game sheet (M3.4) and the edit-details
@@ -165,7 +165,7 @@ internal struct LiveGameRosterForm: View {
     }
 }
 
-// MARK: - New Game Sheet
+// MARK: New Game Sheet
 
 /// The full-roster new-game dialog (M3.4). Presented when the session
 /// detects the start position (`shouldOfferNewGame`) or via the HUD's
@@ -342,7 +342,7 @@ internal struct NewLiveGameSheet: View {
     }
 }
 
-// MARK: - Edit Details Sheet
+// MARK: Edit Details Sheet
 
 /// Edits a running (or, from M5, an archived-pending) game's roster —
 /// Decision #4's "editable afterwards". Edits are staged on a local copy
@@ -413,7 +413,7 @@ internal struct EditLiveGameDetailsSheet: View {
     }
 }
 
-// MARK: - Previews
+// MARK: Previews
 
 #Preview("New Game") {
     NewLiveGameSheet(

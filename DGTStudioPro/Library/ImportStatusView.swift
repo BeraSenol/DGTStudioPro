@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-// MARK: - Result Model
+// MARK: Result Model
 
 /// Outcome of importing a single PGN file in a batch. Drives one row in
 /// the import status sheet.
@@ -60,7 +60,7 @@ internal struct ImportProgress {
     }
 }
 
-// MARK: - Sheet
+// MARK: Sheet
 
 internal struct ImportStatusView: View {
 
@@ -136,7 +136,7 @@ internal struct ImportStatusView: View {
     }
 }
 
-// MARK: - Row
+// MARK: Row
 
 private struct ImportResultRow: View {
 

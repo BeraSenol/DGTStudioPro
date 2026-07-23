@@ -183,7 +183,7 @@ extension FEN {
     }
 }
 
-// MARK: - Errors
+// MARK: Errors
 
 internal enum FENParseError: Error, Equatable {
     /// The FEN string did not contain 4 or 6 whitespace-separated fields.

@@ -161,7 +161,7 @@ internal struct LiveGameInspectorView: View {
     }
 }
 
-// MARK: - Previews
+// MARK: Previews
 
 #Preview("In Progress") {
     LiveGameInspectorView(

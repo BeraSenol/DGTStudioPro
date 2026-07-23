@@ -174,7 +174,7 @@ internal struct SmartTagEditorView: View {
     }
 }
 
-// MARK: - Rule Row
+// MARK: Rule Row
 
 private struct TagRuleRow: View {
     

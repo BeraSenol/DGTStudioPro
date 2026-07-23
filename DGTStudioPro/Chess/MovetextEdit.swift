@@ -119,7 +119,7 @@ internal enum MovetextEdit {
     }
 }
 
-// MARK: - Movetext Tokenization
+// MARK: Movetext Tokenization
 
 extension MovetextEdit {
     

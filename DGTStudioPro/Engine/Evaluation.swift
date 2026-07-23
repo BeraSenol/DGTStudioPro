@@ -63,7 +63,7 @@ internal enum Evaluation: Equatable, Sendable, Codable {
     }
 }
 
-// MARK: - PGN `[%eval ...]` Tag Format
+// MARK: PGN `[%eval ...]` Tag Format
 
 extension Evaluation {
     

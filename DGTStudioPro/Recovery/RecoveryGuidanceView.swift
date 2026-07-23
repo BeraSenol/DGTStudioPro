@@ -76,7 +76,7 @@ internal struct RecoveryGuidanceView: View {
     }
 }
 
-// MARK: - Previews
+// MARK: Previews
 
 #Preview("Misplaced Pieces") {
     var physical = Position.starting

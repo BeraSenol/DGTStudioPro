@@ -295,7 +295,7 @@ internal struct DGTConnectionView: View {
     }
 }
 
-// MARK: - Device Row
+// MARK: Device Row
 
 private struct DeviceRow: View {
     let device: DGTSerialDevice

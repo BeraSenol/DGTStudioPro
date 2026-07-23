@@ -88,7 +88,7 @@ internal struct FEN: Equatable, Sendable {
     }
 }
 
-// MARK: - Move Generation
+// MARK: Move Generation
 
 extension FEN {
     /// Legal moves from this position — a convenience that round-trips

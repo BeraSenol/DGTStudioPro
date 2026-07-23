@@ -42,7 +42,7 @@ internal struct RankingsInspectorView: View {
     }
 }
 
-// MARK: - Rank
+// MARK: Rank
 
 private struct RankSection: View {
 
@@ -79,7 +79,7 @@ private struct RankSection: View {
     }
 }
 
-// MARK: - Trend
+// MARK: Trend
 
 private struct TrendSection: View {
 

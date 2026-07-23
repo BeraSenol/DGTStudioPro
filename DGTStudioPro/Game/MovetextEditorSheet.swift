@@ -157,7 +157,7 @@ internal struct MovetextEditorSheet: View {
     }
 }
 
-// MARK: - Previews
+// MARK: Previews
 
 #Preview("Legal") {
     MovetextEditorSheet(

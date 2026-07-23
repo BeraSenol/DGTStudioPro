@@ -124,7 +124,7 @@ internal struct EditGameInfoSheet: View {
     }
 }
 
-// MARK: - Previews
+// MARK: Previews
 
 #Preview("Saved") {
     EditGameInfoSheet(

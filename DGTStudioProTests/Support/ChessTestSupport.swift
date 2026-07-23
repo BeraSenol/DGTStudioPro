@@ -8,7 +8,7 @@
 import Testing
 @testable import DGTStudioPro
 
-// MARK: - GameState Construction & Per-Square Move Filters
+// MARK: GameState Construction & Per-Square Move Filters
 
 extension GameState {
 
@@ -60,7 +60,7 @@ extension GameState {
     }
 }
 
-// MARK: - Position Building
+// MARK: Position Building
 
 extension Position {
 
@@ -94,7 +94,7 @@ extension Position {
     }
 }
 
-// MARK: - Perft & Canonical Reference Positions
+// MARK: Perft & Canonical Reference Positions
 
 /// Shared chess-core fixtures: the canonical perft reference positions and the
 /// recursive perft counter, used by `PerftTests`, `MoveFootprintTests`, and any

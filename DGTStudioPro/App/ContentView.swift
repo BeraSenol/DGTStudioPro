@@ -244,7 +244,7 @@ internal struct ContentView: View {
     }
 }
 
-// MARK: - Supporting Types
+// MARK: Supporting Types
 
 internal enum SidebarSelection: Hashable {
     case destination(Destination)
@@ -276,7 +276,7 @@ internal enum Destination: String, CaseIterable, Identifiable, Hashable {
     }
 }
 
-// MARK: - Previews
+// MARK: Previews
 
 #Preview {
     ContentView(loadedGameID: .constant(nil))

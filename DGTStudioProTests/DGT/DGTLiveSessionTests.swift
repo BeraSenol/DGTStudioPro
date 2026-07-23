@@ -1,5 +1,5 @@
 //
-//  DGTLiveSessionsTests.swift
+//  DGTLiveSessionTests.swift
 //  DGTStudioPro
 //
 //  Created by Supreme Leader on 09/06/2026.

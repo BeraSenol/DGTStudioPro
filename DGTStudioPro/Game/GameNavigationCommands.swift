@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-// MARK: - Focused Value
+// MARK: Focused Value
 
 /// Carries the frontmost tab's working ``Game`` up to the scene's command
 /// menu. Published by ``BoardDestination`` via `.focusedSceneValue` (which
@@ -25,7 +25,7 @@ extension FocusedValues {
     }
 }
 
-// MARK: - Commands
+// MARK: Commands
 
 /// Move-navigation menu (First / Previous / Next / Last) with the standard
 /// ←/→/Home/End shortcuts. Reads the active tab's ``Game`` through

@@ -45,7 +45,7 @@ internal struct PlayersInspectorView: View {
     }
 }
 
-// MARK: - Profile
+// MARK: Profile
 
 private struct ProfileSection: View {
     
@@ -84,7 +84,7 @@ private struct ProfileSection: View {
     }
 }
 
-// MARK: - Recent Games
+// MARK: Recent Games
 
 private struct RecentGamesSection: View {
     

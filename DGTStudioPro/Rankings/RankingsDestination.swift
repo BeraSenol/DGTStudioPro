@@ -201,7 +201,7 @@ internal struct RankingsDestination: View {
     }
 }
 
-// MARK: - Previews
+// MARK: Previews
 
 #Preview {
     RankingsDestination(tabState: TabState())

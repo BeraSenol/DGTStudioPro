@@ -152,7 +152,7 @@ internal enum UCIProtocol {
     }
 }
 
-// MARK: - Response Types
+// MARK: Response Types
 
 internal enum UCIResponse: Equatable, Sendable {
     case info(UCIInfo)
