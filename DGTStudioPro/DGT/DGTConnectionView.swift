@@ -144,7 +144,7 @@ internal struct DGTConnectionView: View {
                     DeviceRow(device: device)
                         .tag(device.id)
                 }
-                .listStyle(.inset)
+                .listStyle(.sidebar)
                 .accessibilityIdentifier(AccessibilityID.dgtDeviceList)
             }
         }
@@ -301,10 +301,11 @@ private struct DeviceRow: View {
     let device: DGTSerialDevice
     
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Image(systemName: device.isLikelyBoard ? "cable.connector" : "point.3.connected.trianglepath.dotted")
                 .foregroundStyle(device.isLikelyBoard ? Color.accentColor : .secondary)
-                .frame(width: 18)
+                .frame(width: 22)
+                .font(.title2)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(device.name)
@@ -321,7 +322,7 @@ private struct DeviceRow: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 8)
     }
 }
 
@@ -357,10 +358,4 @@ private struct DeviceRow: View {
     )
     .padding()
     .frame(width: 380)
-}
-
-#Preview("Empty Dialog") {
-    DGTConnectionView()
-        .environment(DGTConnection())
-        .frame(width: 420, height: 380)
 }

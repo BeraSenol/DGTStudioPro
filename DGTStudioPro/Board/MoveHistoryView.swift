@@ -8,26 +8,41 @@
 import SwiftUI
 
 internal struct MoveHistoryView: View {
-
+    
     // MARK: Stored Properties
     internal let moves: [String]
     internal let currentMoveIndex: Int?
     internal let onMoveTapped: ((Int) -> Void)?
-
+    /// Whether this view brings its own `ScrollView`.
+    ///
+    /// `true` (the default, preserving every existing call site) is the
+    /// self-contained pane — a bordered material panel of fixed height.
+    /// `false` emits the rows bare, for a host that embeds them in its own
+    /// `List`: a `List` proposes its rows unbounded height, so a nested
+    /// scroll view can only ever be a fixed-size box inside an infinite
+    /// one. Embedded, the moves run to the bottom of the sidebar and the
+    /// host's list does the scrolling.
+    internal var scrollsIndependently: Bool = true
+    
     // MARK: Computed Properties
     private var pairCount: Int {
         (moves.count + 1) / 2
     }
-
+    
     // MARK: Body
     internal var body: some View {
-        if moves.isEmpty {
-            emptyState
-        } else {
-            moveList
+        Group {
+            if moves.isEmpty {
+                emptyState
+            } else if scrollsIndependently {
+                pane
+            } else {
+                moveRows
+            }
         }
+        .padding(.horizontal, -8)
     }
-
+    
     // MARK: Instance Methods
     private var emptyState: some View {
         Text("No moves played yet")
@@ -36,42 +51,41 @@ internal struct MoveHistoryView: View {
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(.vertical, 16)
     }
-
-    private var moveList: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.vertical) {
-                LazyVStack(spacing: 0) {
-                    ForEach(0 ..< pairCount, id: \.self) { pairIndex in
-                        movePairRow(pairIndex: pairIndex)
-                    }
-                }
-                .padding(.vertical, 4)
-            }
-            .background(.thinMaterial)
-            .contentMargins(0, for: .scrollContent)
-            .onAppear {
-                scrollToCurrent(proxy: proxy, animated: false)
-            }
-            .onChange(of: currentMoveIndex) { _, _ in
-                scrollToCurrent(proxy: proxy, animated: true)
+    
+    /// The self-contained pane. Same scroll-sync as the embedded form —
+    /// applied to whichever view owns the scrolling.
+    private var pane: some View {
+        ScrollView(.vertical) {
+            moveRows
+        }
+        .background(.thinMaterial)
+        .contentMargins(0, for: .scrollContent)
+        .scrollsToCurrentMove(currentMoveIndex)
+    }
+    
+    private var moveRows: some View {
+        LazyVStack(spacing: 0) {
+            ForEach(0 ..< pairCount, id: \.self) { pairIndex in
+                movePairRow(pairIndex: pairIndex)
             }
         }
+        .padding(.vertical, 4)
     }
-
+    
     private func movePairRow(pairIndex: Int) -> some View {
         let moveNumber = pairIndex + 1
         let whiteIndex = pairIndex * 2
         let blackIndex = whiteIndex + 1
-
+        
         return HStack(spacing: 0) {
             Text("\(moveNumber).")
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundStyle(.tertiary)
                 .frame(width: 30, alignment: .trailing)
                 .padding(.trailing, 12)
-
+            
             moveCell(at: whiteIndex, isWhite: true)
-
+            
             if blackIndex < moves.count {
                 moveCell(at: blackIndex, isWhite: false)
             } else {
@@ -80,11 +94,11 @@ internal struct MoveHistoryView: View {
             }
         }
     }
-
+    
     private func moveCell(at index: Int, isWhite: Bool) -> some View {
         let san = moves[index]
         let isSelected = index == currentMoveIndex
-
+        
         return Button {
             onMoveTapped?(index)
         } label: {
@@ -110,16 +124,58 @@ internal struct MoveHistoryView: View {
         .buttonStyle(.plain)
         .id(index)
     }
-
+    
     private func scrollToCurrent(proxy: ScrollViewProxy, animated: Bool) {
         guard let index = currentMoveIndex else { return }
-
+        
         if animated {
             withAnimation(.easeInOut(duration: 0.2)) {
                 proxy.scrollTo(index, anchor: .center)
             }
         } else {
             proxy.scrollTo(index, anchor: .center)
+        }
+    }
+}
+
+// MARK: Scroll Sync
+
+extension View {
+    
+    /// Keeps the scroll container this is applied to pinned to the current
+    /// ply. Lives here rather than inside `MoveHistoryView` because the
+    /// `ScrollViewReader` has to wrap the container that actually scrolls —
+    /// which, for an embedded move list, is the host's `List`. One
+    /// implementation, both shapes: the pane applies it to its own
+    /// `ScrollView`, the inspectors apply it to their `List`.
+    internal func scrollsToCurrentMove(_ index: Int?) -> some View {
+        modifier(CurrentMoveScrollSync(currentMoveIndex: index))
+    }
+}
+
+private struct CurrentMoveScrollSync: ViewModifier {
+    
+    let currentMoveIndex: Int?
+    
+    func body(content: Content) -> some View {
+        ScrollViewReader { proxy in
+            content
+                .onAppear { scroll(proxy, animated: false) }
+                .onChange(of: currentMoveIndex) { _, _ in scroll(proxy, animated: true) }
+        }
+    }
+    
+    /// Targets the `.id(index)` on each move cell. Animated on a scrub or a
+    /// new ply, instant on first appearance — a game opened mid-scrub
+    /// shouldn't animate from move 1.
+    private func scroll(_ proxy: ScrollViewProxy, animated: Bool) {
+        guard let currentMoveIndex else { return }
+        if animated {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                proxy.scrollTo(currentMoveIndex, anchor: .center)
+            }
+        } else {
+            proxy.scrollTo(currentMoveIndex, anchor: .center)
         }
     }
 }
@@ -136,7 +192,7 @@ internal struct MoveHistoryView: View {
         currentMoveIndex: 14,
         onMoveTapped: { _ in }
     )
-    .frame(width: 260, height: 240)
+    .frame(width: 260)
     .background(Color(.windowBackgroundColor))
 }
 
@@ -189,7 +245,7 @@ internal struct MoveHistoryView: View {
         } header: {
             Text("Game")
         }
-
+        
         Section {
             EvaluationGraphView(
                 evaluations: [
@@ -207,7 +263,7 @@ internal struct MoveHistoryView: View {
         } header: {
             Text("Evaluation")
         }
-
+        
         Section {
             MoveHistoryView(
                 moves: [

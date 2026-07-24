@@ -39,7 +39,7 @@ internal struct PlayersIconsView: View {
                     )
                 }
             }
-            .padding(16)
+//            .padding(16)
         }
     }
 }
@@ -54,12 +54,12 @@ internal struct PlayersIconsView: View {
         selectedKey: $selection,
         onShowInLibrary: { _ in }
     )
-    .frame(width: 720, height: 420)
+//    .frame(width: 720, height: 420)
 }
 
 #Preview("Empty") {
     @Previewable @State var selection: PlayerStats.ID?
     
     PlayersIconsView(players: [], selectedKey: $selection, onShowInLibrary: { _ in })
-        .frame(width: 720, height: 420)
+//        .frame(width: 720, height: 420)
 }

@@ -185,7 +185,7 @@ internal struct LibraryDestination: View {
                 pgn: selectedPGN,
                 queue: tabState.analysisQueue
             )
-            .inspectorColumnWidth(min: 260, ideal: 300, max: 400)
+            .inspectorColumnWidth(min: 350, ideal: 400, max: 500)
         }
         .toolbar { toolbarContent }
         .sheet(isPresented: importSheetBinding) {
@@ -240,6 +240,7 @@ internal struct LibraryDestination: View {
                 selectedPGNs: $selectedPGNs,
                 onOpen:    openGame,
                 onAnalyze: requestAnalysis,
+                onExport:  requestExport,
                 onDelete:  { pendingDeletion = $0 }
             )
             .accessibilityIdentifier(AccessibilityID.libraryModeIcons)
@@ -249,6 +250,7 @@ internal struct LibraryDestination: View {
                 selectedPGNs: $selectedPGNs,
                 onOpen:       openGame,
                 onAnalyzeIDs: { requestAnalysis(ids: $0) },
+                onExportIDs:  { requestExport(ids: $0) },
                 onDeleteIDs:  { requestDelete(ids: $0) }
             )
             .accessibilityIdentifier(AccessibilityID.libraryModeList)
@@ -258,6 +260,7 @@ internal struct LibraryDestination: View {
                 selectedPGNs: $selectedPGNs,
                 onOpen:    openGame,
                 onAnalyze: requestAnalysis,
+                onExport:  requestExport,
                 onDelete:  { pendingDeletion = $0 }
             )
             .accessibilityIdentifier(AccessibilityID.libraryModeColumns)
@@ -268,6 +271,7 @@ internal struct LibraryDestination: View {
                 boardStyle: boardStyle,
                 onOpen:    openGame,
                 onAnalyze: requestAnalysis,
+                onExport:  requestExport,
                 onDelete:  { pendingDeletion = $0 }
             )
             .accessibilityIdentifier(AccessibilityID.libraryModeGallery)
@@ -316,8 +320,25 @@ internal struct LibraryDestination: View {
         tabState.analysisQueue.enqueue(ordered, modelContext: modelContext)
     }
     
+    /// Split into named groups because `ToolbarContentBuilder` — like every
+    /// result builder — accepts at most ten statements per block, and D24′'s
+    /// Export item was the eleventh. Grouping rather than golfing keeps room
+    /// for the next item; the same move `coreContent` made when the third
+    /// alert blew the type-check budget.
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        transferToolbarItems
+        ToolbarSpacer()
+        viewModeToolbarItem
+        ToolbarSpacer()
+        analysisToolbarItems
+        ToolbarSpacer()
+        trailingToolbarItems
+    }
+    
+    /// The Library's two file doors, in and out.
+    @ToolbarContentBuilder
+    private var transferToolbarItems: some ToolbarContent {
         ToolbarItem {
             // Restored in M-batch. The button had been lost in an earlier
             // toolbar edit, leaving three fossils: `presentOpenPanel()`
@@ -336,6 +357,24 @@ internal struct LibraryDestination: View {
         }
         ToolbarSpacer()
         ToolbarItem {
+            Button {
+                requestExport(ids: selectedPGNs)
+            } label: {
+                Label("Export", systemImage: "square.and.arrow.up")
+            }
+            .disabled(selectedPGNs.isEmpty)
+            .help(
+                selectedPGNs.count > 1
+                ? "Export \(selectedPGNs.count) selected games as PGN files"
+                : "Export the selected game as a PGN file"
+            )
+            .accessibilityIdentifier(AccessibilityID.libraryExport)
+        }
+    }
+    
+    @ToolbarContentBuilder
+    private var viewModeToolbarItem: some ToolbarContent {
+        ToolbarItem {
             // NOTE: On macOS a `.segmented` Picker built from
             // `Label(_:systemImage:)` renders icon-only, and each segment
             // is exposed to UI tests as a radioButton keyed by its SF
@@ -351,7 +390,10 @@ internal struct LibraryDestination: View {
             .pickerStyle(.segmented)
             .accessibilityIdentifier(AccessibilityID.libraryViewModePicker)
         }
-        ToolbarSpacer()
+    }
+    
+    @ToolbarContentBuilder
+    private var analysisToolbarItems: some ToolbarContent {
         ToolbarItem {
             Button {
                 requestAnalysis(ids: selectedPGNs)
@@ -389,7 +431,10 @@ internal struct LibraryDestination: View {
                 }
             }
         }
-        ToolbarSpacer()
+    }
+    
+    @ToolbarContentBuilder
+    private var trailingToolbarItems: some ToolbarContent {
         ToolbarItem {
             Button(role: .destructive) {
                 requestDeleteSelection()
@@ -609,6 +654,26 @@ internal struct LibraryDestination: View {
         } catch {
             Self.logger.error("Player-link backfill failed: \(error.localizedDescription, privacy: .public)")
         }
+    }
+    
+    // MARK: Export (D24′)
+    
+    /// Single-game entry (a card's context menu). One game means a save
+    /// panel: the user names the file.
+    private func requestExport(_ pgn: PGN) {
+        Self.logger.info("Export requested: '\(pgn.name, privacy: .public)'")
+        PGNExporter.export([pgn])
+    }
+    
+    /// Multi-game entry (the list's contextual selection). Resolves the set
+    /// against `filteredGames` for the same reason `requestAnalysis(ids:)`
+    /// does — a `Set` carries no order, and here the order is *visible*: it
+    /// numbers the filenames. Leaves selection and inspector untouched.
+    private func requestExport(ids: Set<PGN.ID>) {
+        let ordered = filteredGames.filter { ids.contains($0.id) }
+        guard !ordered.isEmpty else { return }
+        Self.logger.info("Export requested: \(ordered.count) game(s)")
+        PGNExporter.export(ordered)
     }
 }
 

@@ -51,7 +51,7 @@ internal struct PlayersColumnsView: View {
     var body: some View {
         HSplitView {
             groupList
-                .frame(minWidth: 160, idealWidth: 200, maxWidth: 280, maxHeight: .infinity)
+                .frame(minWidth: 200, idealWidth: 250, maxWidth: 300, maxHeight: .infinity)
             
             detail
                 .frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
@@ -132,12 +132,12 @@ internal struct PlayersColumnsView: View {
         selectedKey: $selection,
         onShowInLibrary: { _ in }
     )
-    .frame(width: 720, height: 420)
+//    .frame(width: 720, height: 420)
 }
 
 #Preview("Empty") {
     @Previewable @State var selection: PlayerStats.ID?
     
     PlayersIconsView(players: [], selectedKey: $selection, onShowInLibrary: { _ in })
-        .frame(width: 720, height: 420)
+//        .frame(width: 720, height: 420)
 }

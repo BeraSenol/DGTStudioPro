@@ -13,8 +13,9 @@ internal struct LibraryListView: View {
     @Binding var selectedPGNs: Set<PGN.ID>
     let onOpen: (PGN) -> Void
     let onAnalyzeIDs: (Set<PGN.ID>) -> Void
+    let onExportIDs: (Set<PGN.ID>) -> Void
     let onDeleteIDs: (Set<PGN.ID>) -> Void
-    
+
     var body: some View {
         Table(games, selection: $selectedPGNs) {
             TableColumn("White") { game in
@@ -61,6 +62,15 @@ internal struct LibraryListView: View {
                         systemImage: "wand.and.stars"
                     )
                 }
+                Button {
+                    onExportIDs(ids)
+                } label: {
+                    Label(
+                        ids.count > 1 ? "Export \(ids.count) PGN Files…" : "Export PGN…",
+                        systemImage: "square.and.arrow.up"
+                    )
+                }
+                .accessibilityIdentifier(AccessibilityID.libraryExport)
                 Divider()
                 Button(role: .destructive) {
                     onDeleteIDs(ids)
@@ -98,12 +108,13 @@ private func listPreviewGames() -> [PGN] {
 
 #Preview("With Games") {
     @Previewable @State var selection: Set<PGN.ID> = []
-    
+
     LibraryListView(
         games: listPreviewGames(),
         selectedPGNs: $selection,
         onOpen: { _ in },
         onAnalyzeIDs: { _ in },
+        onExportIDs: { _ in },
         onDeleteIDs: { _ in }
     )
     .frame(width: 720, height: 360)
@@ -112,12 +123,13 @@ private func listPreviewGames() -> [PGN] {
 
 #Preview("Empty") {
     @Previewable @State var selection: Set<PGN.ID> = []
-    
+
     LibraryListView(
         games: [],
         selectedPGNs: $selection,
         onOpen: { _ in },
         onAnalyzeIDs: { _ in },
+        onExportIDs: { _ in },
         onDeleteIDs: { _ in }
     )
     .frame(width: 720, height: 360)

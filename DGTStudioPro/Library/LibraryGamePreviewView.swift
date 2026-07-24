@@ -11,13 +11,19 @@ import SwiftUI
 internal struct LibraryGamePreviewView: View {
 
     // MARK: Stored Properties
-    internal let game: PGN
+
+    /// Optional so the gallery's no-selection state is *this* view with no
+    /// game rather than a parallel placeholder struct: the frame, padding,
+    /// and header metrics that let the two states swap without the board
+    /// jumping are then written once and can't drift. Existing call sites
+    /// compile unchanged — a non-optional `PGN` promotes implicitly.
+    internal let game: PGN?
     internal let boardStyle: BoardStyle
 
     // MARK: Body
     internal var body: some View {
         VStack(spacing: 16) {
-            playerHeader
+            header
             board
         }
         .padding(24)
@@ -25,7 +31,30 @@ internal struct LibraryGamePreviewView: View {
     }
 
     // MARK: Instance Methods
-    private var playerHeader: some View {
+
+    /// Two lines in both states, and the no-game arm reuses the roster
+    /// header's exact typography rather than picking its own — the header's
+    /// height is what keeps the board from shifting on selection, so it's
+    /// metrics first and copy second.
+    @ViewBuilder
+    private var header: some View {
+        if let game {
+            playerHeader(for: game)
+        } else {
+            VStack(spacing: 6) {
+                Text("No Game Selected")
+                    .font(.system(size: 22, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+
+                Text("Select a game below")
+                    .font(.system(size: 14, weight: .regular, design: .monospaced))
+                    .tracking(1)
+            }
+            .foregroundStyle(.tertiary)
+        }
+    }
+
+    private func playerHeader(for game: PGN) -> some View {
         VStack(spacing: 6) {
             HStack(spacing: 16) {
                 Text(game.whiteDisplayName)
@@ -43,18 +72,24 @@ internal struct LibraryGamePreviewView: View {
             Text(game.result.rawValue)
                 .font(.system(size: 14, weight: .regular, design: .monospaced))
                 .foregroundStyle(.secondary)
+                .tracking(1)
         }
     }
 
+    /// One `BoardView` for both states — the no-game arm nil-coalesces to
+    /// an empty board rather than branching, so the board's construction
+    /// can't diverge either. `Position.empty` and not `.starting`: an empty
+    /// board reads as "nothing here," a starting position reads as "a game
+    /// about to begin," which would be a lie in a Library preview.
     private var board: some View {
-        let preview = LibraryGamePreviewState.compute(from: game.moves)
+        let preview = game.map { LibraryGamePreviewState.compute(from: $0.moves) }
         return BoardView(
-            position: preview.position,
-            pieceTracker: preview.pieceTracker,
+            position: preview?.position ?? .empty,
+            pieceTracker: preview?.pieceTracker ?? .empty,
             style: boardStyle,
             perspective: .white,
-            lastMove: preview.lastMove,
-            checkSquare: preview.checkSquare,
+            lastMove: preview?.lastMove,
+            checkSquare: preview?.checkSquare,
             selectedSquare: nil
         )
     }
@@ -105,4 +140,9 @@ internal struct LibraryGamePreviewView: View {
     )
     .frame(width: 500, height: 600)
     .modelContainer(for: PGN.self, inMemory: true)
+}
+
+#Preview("No Selection") {
+    LibraryGamePreviewView(game: nil, boardStyle: .walnut)
+        .frame(width: 500, height: 600)
 }

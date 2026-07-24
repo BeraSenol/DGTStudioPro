@@ -42,7 +42,16 @@ internal final class PGN: Identifiable {
     internal var black: String
     internal var result: GameResult
     internal var timeControl: String?
-    
+
+    /// The `Board` tag the DGT exports carry — "DGT 3000448278", the serial
+    /// the board reports during the init handshake. Optional, and
+    /// deliberately **outside the content hash** (like `timeControl`): it
+    /// identifies the equipment, not the game, so the same game imported
+    /// from two boards must still dedupe — and folding it in would rot every
+    /// stored hash in place. Nil until a live game learns it (the archive
+    /// door doesn't thread it yet) or an import supplies it.
+    internal var board: String?
+
     internal var moves: [String]
     
     /// Engine evaluations parallel to ``moves``, indexed by ply. The element
@@ -83,11 +92,11 @@ internal final class PGN: Identifiable {
     }
     
     internal var whiteDisplayName: String {
-        Self.displayPlayerName(white)
+        PlayerName.displayForm(of: white)
     }
     
     internal var blackDisplayName: String {
-        Self.displayPlayerName(black)
+        PlayerName.displayForm(of: black)
     }
     
     /// Default `name` for a game with these players, in display form.
@@ -117,7 +126,7 @@ internal final class PGN: Identifiable {
     ) -> Bool {
         let legacyDefault = "\(white) vs \(black)"
         let displayDefault =
-        "\(displayPlayerName(white)) vs \(displayPlayerName(black))"
+        "\(PlayerName.displayForm(of: white)) vs \(PlayerName.displayForm(of: black))"
         return (storedName.isEmpty || storedName == legacyDefault)
         && storedName != displayDefault
     }
@@ -151,6 +160,7 @@ internal final class PGN: Identifiable {
         name: String? = nil,
         result: GameResult = .ongoing,
         timeControl: String? = nil,
+        board: String? = nil,
         contentHash: String = ""
     ) {
         self.event = event
@@ -161,9 +171,10 @@ internal final class PGN: Identifiable {
         self.black = black
         self.result = result
         self.timeControl = timeControl
+        self.board = board
         self.moves = moves
         self.evaluations = evaluations
-        self.name = name ?? "\(Self.displayPlayerName(white)) vs \(Self.displayPlayerName(black))"
+        self.name = name ?? "\(PlayerName.displayForm(of: white)) vs \(PlayerName.displayForm(of: black))"
         self.importedAt = .now
         self.contentHash = contentHash
     }

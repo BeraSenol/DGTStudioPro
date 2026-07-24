@@ -107,7 +107,7 @@ internal struct RankingsDestination: View {
                     ranked: selected,
                     history: history
                 )
-                .inspectorColumnWidth(min: 260, ideal: 320, max: 400)
+                .inspectorColumnWidth(min: 350, ideal: 400, max: 500)
             }
             .inspectorToggle(
                 isPresented: $tabState.rankingsInspectorPresented,

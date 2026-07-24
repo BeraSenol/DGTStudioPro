@@ -19,6 +19,7 @@ internal struct LibraryIconsView: View {
     @Binding var selectedPGNs: Set<PGN.ID>
     let onOpen: (PGN) -> Void
     let onAnalyze: (PGN) -> Void
+    let onExport: (PGN) -> Void
     let onDelete: (PGN) -> Void
 
     // MARK: Computed Properties
@@ -40,11 +41,12 @@ internal struct LibraryIconsView: View {
                         onSelect:  { selectedPGNs = [game.id] },
                         onOpen:    { onOpen(game) },
                         onAnalyze: { onAnalyze(game) },
+                        onExport:  { onExport(game) },
                         onDelete:  { onDelete(game) }
                     )
                 }
             }
-            .padding(16)
+            .padding(.horizontal, 16)
         }
     }
 }
@@ -71,9 +73,9 @@ private func iconsPreviewGames() -> [PGN] {
         selectedPGNs: $selection,
         onOpen: { _ in },
         onAnalyze: { _ in },
+        onExport: { _ in },
         onDelete: { _ in }
     )
-    .frame(width: 720, height: 480)
     .modelContainer(for: PGN.self, inMemory: true)
 }
 
@@ -85,6 +87,7 @@ private func iconsPreviewGames() -> [PGN] {
         selectedPGNs: $selection,
         onOpen: { _ in },
         onAnalyze: { _ in },
+        onExport: { _ in },
         onDelete: { _ in }
     )
     .frame(width: 720, height: 480)

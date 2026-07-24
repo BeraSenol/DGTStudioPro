@@ -54,10 +54,9 @@ internal struct PlayerCardView: View {
     
     // MARK: Body
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 4) {
             PlayerMonogram(name: stats.name, diameter: 64)
-                .padding(.vertical, 8)
-                .padding(.horizontal, 16)
+                .padding()
                 .background {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(.secondary.opacity(isSelected ? 0.15 : 0))
@@ -72,9 +71,14 @@ internal struct PlayerCardView: View {
                 .font(.callout)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .frame(width: 94)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(isSelected ? Color.accentColor : .clear)
+                )
             
-            Text("\(stats.wins)–\(stats.draws)–\(stats.losses) · \(stats.games) games")
+            Text("\(stats.games) games")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

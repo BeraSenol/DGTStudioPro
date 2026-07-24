@@ -8,12 +8,12 @@
 import SwiftUI
 
 internal struct EvaluationGraphView: View {
-
+    
     // MARK: Stored Properties
     internal let evaluations: [Double]
     internal let currentMoveIndex: Int?
     internal let style: BoardStyle
-
+    
     // MARK: Body
     internal var body: some View {
         Canvas { context, size in
@@ -23,22 +23,22 @@ internal struct EvaluationGraphView: View {
                 width: size.width,
                 height: size.height
             )
-
+            
             let midY = drawArea.midY
             
             var midline = Path()
-
+            
             midline.move(to: CGPoint(x: drawArea.minX, y: midY))
             midline.addLine(to: CGPoint(x: drawArea.maxX, y: midY))
-
+            
             context.stroke(
                 midline,
                 with: .color(style.light.opacity(0.10)),
                 lineWidth: 0.5
             )
-
+            
             guard evaluations.count >= 2 else { return }
-
+            
             let points = evaluationPoints(in: drawArea)
             let curve = curvePath(through: points)
             let area = closedAreaPath(
@@ -47,22 +47,22 @@ internal struct EvaluationGraphView: View {
                 end: points[points.count - 1],
                 baseY: midY
             )
-
+            
             context.drawLayer { ctx in
                 let clip = CGRect(x: 0, y: 0, width: size.width, height: midY)
                 ctx.clip(to: Path(clip))
                 ctx.fill(area, with: .color(style.light.opacity(0.50)))
             }
-
+            
             context.drawLayer { ctx in
                 let clip = CGRect(x: 0, y: midY, width: size.width, height: size.height - midY)
                 ctx.clip(to: Path(clip))
                 ctx.fill(area, with: .color(style.dark.opacity(0.65)))
             }
-
-
+            
+            
             let curveStroke = StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round)
-
+            
             context.drawLayer { ctx in
                 let clip = CGRect(x: 0, y: 0, width: size.width, height: midY)
                 ctx.clip(to: Path(clip))
@@ -73,52 +73,53 @@ internal struct EvaluationGraphView: View {
                 ctx.clip(to: Path(clip))
                 ctx.stroke(curve, with: .color(style.dark.opacity(0.90)), style: curveStroke)
             }
-
+            
             if let index = currentMoveIndex,
                index >= 0, index < points.count {
                 let p = points[index]
                 let dotColor = p.y <= midY ? style.light : style.dark
-
+                
                 let dot = Path(ellipseIn: CGRect(
                     x: p.x - 3.5, y: p.y - 3.5, width: 7, height: 7
                 ))
                 context.fill(dot, with: .color(dotColor.opacity(0.95)))
             }
         }
-        .background(.thinMaterial)
+        .background(.ultraThickMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .padding(.horizontal, -8)
     }
-
+    
     // MARK: Instance Methods
     private func evaluationPoints(in rect: CGRect) -> [CGPoint] {
         let count = evaluations.count
         let step = rect.width / CGFloat(count - 1)
-
+        
         return evaluations.enumerated().map { index, probability in
             let x = rect.minX + CGFloat(index) * step
             let y = rect.maxY - CGFloat(probability) * rect.height
             return CGPoint(x: x, y: y)
         }
     }
-
+    
     private func curvePath(through points: [CGPoint]) -> Path {
         guard points.count >= 2 else { return Path() }
-
+        
         return Path { path in
             path.move(to: points[0])
-
+            
             if points.count == 2 {
                 path.addLine(to: points[1])
                 return
             }
-
+            
             for i in 0 ..< (points.count - 1) {
                 let (cp1, cp2) = catmullRomControlPoints(at: i, in: points)
                 path.addCurve(to: points[i + 1], control1: cp1, control2: cp2)
             }
         }
     }
-
+    
     private func closedAreaPath(curve: Path, start: CGPoint, end: CGPoint, baseY: CGFloat) -> Path {
         var area = Path()
         area.move(to: CGPoint(x: start.x, y: baseY))
@@ -128,7 +129,7 @@ internal struct EvaluationGraphView: View {
         area.closeSubpath()
         return area
     }
-
+    
     private func catmullRomControlPoints(
         at index: Int,
         in points: [CGPoint]
@@ -138,7 +139,7 @@ internal struct EvaluationGraphView: View {
         let p2 = points[index + 1]
         let p3 = index + 2 < points.count ? points[index + 2] : points[index + 1]
         let tension: CGFloat = 5.0
-
+        
         let cp1 = CGPoint(
             x: p1.x + (p2.x - p0.x) / tension,
             y: p1.y + (p2.y - p0.y) / tension
@@ -147,7 +148,7 @@ internal struct EvaluationGraphView: View {
             x: p2.x - (p3.x - p1.x) / tension,
             y: p2.y - (p3.y - p1.y) / tension
         )
-
+        
         return (cp1, cp2)
     }
 }
@@ -210,7 +211,7 @@ internal struct EvaluationGraphView: View {
         } header: {
             Text("Game")
         }
-
+        
         Section {
             EvaluationGraphView(
                 evaluations: [
@@ -230,5 +231,5 @@ internal struct EvaluationGraphView: View {
         }
     }
     .listStyle(.sidebar)
-    .frame(width: 580, height: 500)
+    .frame(width: 580, height: 400)
 }

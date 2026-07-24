@@ -64,26 +64,29 @@ internal struct LiveGameHUDView: View {
     // MARK: Body
     
     internal var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: symbolName)
-                    .foregroundStyle(tint)
+        VStack(alignment: .leading, spacing: 3) {
+            HStack {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.headline.weight(.semibold))
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
+                Image(systemName: symbolName)
+                    .foregroundStyle(tint)
+                    .font(.headline)
             }
             
             if let subtitle {
                 Text(subtitle)
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             
             if showsNewGameButton {
-                Button("New Game…", action: onNewGame)
-                    .buttonStyle(.borderedProminent)
+                Button("New Game", action: onNewGame)
+                    .padding(.top)
+                    .buttonStyle(.bordered)
+                    .foregroundStyle(tint)
                     .controlSize(.small)
                     .frame(maxWidth: .infinity)
                     .accessibilityIdentifier(AccessibilityID.liveHUDNewGame)
@@ -91,13 +94,15 @@ internal struct LiveGameHUDView: View {
             
             if case .archiveFailed = phase {
                 Button("Retry", action: onRetryArchive)
-                    .buttonStyle(.borderedProminent)
+                    .padding(.top)
+                    .buttonStyle(.bordered)
+                    .foregroundStyle(tint)
                     .controlSize(.small)
                     .frame(maxWidth: .infinity)
                     .accessibilityIdentifier(AccessibilityID.liveHUDRetryArchive)
             }
         }
-        .padding(10)
+        .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.bar, in: RoundedRectangle(cornerRadius: 8))
         .overlay(
@@ -179,11 +184,11 @@ internal struct LiveGameHUDView: View {
         case .reconnecting:  .orange
         case .idle:          .green
         case .awaitingSetup: .blue
-        case .playing:       .red
+        case .playing:       .green
         case .correction:    .orange
         case .recovering:    .red
-        case .finished:      .green
-        case .archiveFailed: .orange
+        case .finished:      .blue
+        case .archiveFailed: .red
         }
     }
     
@@ -215,7 +220,7 @@ internal struct LiveGameHUDView: View {
 // MARK: Previews
 
 #Preview("All Phases") {
-    VStack(spacing: 0) {
+    VStack(spacing: 6) {
         LiveGameHUDView(phase: .reconnecting, onNewGame: {})
         LiveGameHUDView(phase: .idle, onNewGame: {})
         LiveGameHUDView(phase: .awaitingSetup, onNewGame: {})
@@ -240,5 +245,5 @@ internal struct LiveGameHUDView: View {
         )
     }
     .padding(.bottom)
-    .frame(width: 520)
+    .frame(width: 400)
 }

@@ -18,11 +18,13 @@ import Foundation
 ///
 /// Values are stored in **tag form**, not display form: `white`/`black` keep
 /// the "Last, First" the PGN carries and `date`/`round` stay typed, because
-/// the same values also feed `GameHeadline`, which applies its own display
-/// transform — and that transform is only idempotent for comma-free output
-/// ("Carlsen, Magnus, Jr" survives one pass, not two). `subscript(_:)` is
-/// therefore the single place the display rules live, which also makes the
-/// placeholder contract testable without a model or a container.
+/// the same values feed `GameHeadline` and the content hash: storage stays
+/// raw and `PlayerName.displayForm(of:)` applies at the render boundary.
+/// `subscript(_:)` is therefore the single place the display rules live,
+/// which also makes the placeholder contract testable without a model or a
+/// container. (D23′ made the transform idempotent, so a second application
+/// is no longer a correctness trap — rendering once, here, is still the
+/// shape, but it is no longer load-bearing.)
 internal struct RosterSummary: Equatable, Sendable {
     
     // MARK: Placeholders
@@ -55,8 +57,8 @@ internal struct RosterSummary: Equatable, Sendable {
         case .site:   return site
         case .date:   return Self.displayDate(date)
         case .round:  return Self.displayRound(round)
-        case .white:  return PGN.displayPlayerName(white)
-        case .black:  return PGN.displayPlayerName(black)
+        case .white:  return PlayerName.displayForm(of: white)
+        case .black:  return PlayerName.displayForm(of: black)
         case .result: return result.rawValue
         }
     }

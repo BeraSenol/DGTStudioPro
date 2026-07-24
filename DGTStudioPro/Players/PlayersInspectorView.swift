@@ -14,12 +14,12 @@ import SwiftUI
 /// per-player home; the trend chart is the Rankings inspector's job
 /// (M-prs.4).
 internal struct PlayersInspectorView: View {
-    
+
     // MARK: Stored Properties
     internal let stats: PlayerStats?
     internal let rating: Glicko1.Rating?
     internal let recentGames: [PGN]
-    
+
     // MARK: Body
     internal var body: some View {
         List {
@@ -33,7 +33,7 @@ internal struct PlayersInspectorView: View {
         }
         .listStyle(.sidebar)
     }
-    
+
     // MARK: Instance Methods
     private var emptySection: some View {
         Section {
@@ -48,10 +48,10 @@ internal struct PlayersInspectorView: View {
 // MARK: Profile
 
 private struct ProfileSection: View {
-    
+
     let stats: PlayerStats
     let rating: Glicko1.Rating?
-    
+
     var body: some View {
         Section {
             HStack(spacing: 12) {
@@ -60,11 +60,8 @@ private struct ProfileSection: View {
                     .font(.headline)
             }
             .padding(.vertical, 4)
-            
+
             LabeledContent("Games", value: "\(stats.games)")
-            LabeledContent("Record", value: "\(stats.wins)–\(stats.draws)–\(stats.losses)")
-            LabeledContent("As White", value: "\(stats.whiteWins)–\(stats.whiteDraws)–\(stats.whiteLosses)")
-            LabeledContent("As Black", value: "\(stats.blackWins)–\(stats.blackDraws)–\(stats.blackLosses)")
             LabeledContent("Win Rate", value: stats.winRate.formatted(.percent.precision(.fractionLength(0))))
             LabeledContent("Mates Delivered", value: "\(stats.matesDelivered)")
             LabeledContent("First Played", value: stats.firstPlayed.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits)))
@@ -75,7 +72,7 @@ private struct ProfileSection: View {
         }
         .accessibilityIdentifier(AccessibilityID.playersInspectorProfile)
     }
-    
+
     /// "Unrated" until the player has a rated game (decided, both sides
     /// resolved — the `Glicko1.histories` rule); the number itself
     /// formats through the one shared rule.
@@ -87,12 +84,12 @@ private struct ProfileSection: View {
 // MARK: Recent Games
 
 private struct RecentGamesSection: View {
-    
+
     let playerKey: String
     let games: [PGN]
-    
+
     @Environment(\.openWindow) private var openWindow
-    
+
     var body: some View {
         Section {
             if games.isEmpty {
@@ -112,7 +109,7 @@ private struct RecentGamesSection: View {
             Text("Recent Games")
         }
     }
-    
+
     /// Row tap opens the game — the inspector's open affordance, same
     /// `openWindow(value:)` route as the Library inspector (macOS dedups
     /// and tabs the windows).
@@ -137,7 +134,7 @@ private struct RecentGamesSection: View {
         }
         .buttonStyle(.plain)
     }
-    
+
     /// The result from *this player's* seat: W/L/D, or the PGN's own `*`
     /// for ongoing. Seat is decided by the resolved link, never raw tags.
     private func perspectiveGlyph(for game: PGN) -> String {
@@ -156,23 +153,6 @@ private struct RecentGamesSection: View {
 #Preview("Empty") {
     PlayersInspectorView(stats: nil, rating: nil, recentGames: [])
         .frame(width: 300, height: 400)
-}
-
-#Preview("Populated") {
-    PlayersInspectorView(
-        stats: PreviewFixtures.topStats(),
-        rating: Glicko1.Rating(mean: 1662.4, deviation: 68.2),
-        recentGames: [
-            PGN(event: "Club Championship", site: "Antwerp", round: 4,
-                white: "Lorenzo", black: "Bera", result: .whiteWins),
-            PGN(event: "Club Championship", site: "Antwerp", round: 2,
-                white: "Bera", black: "Lorenzo", result: .blackWins),
-            PGN(event: "Club Championship", site: "Antwerp", round: 1,
-                white: "Bera", black: "Reinaud", result: .whiteWins)
-        ]
-    )
-    .frame(width: 300, height: 400)
-    .modelContainer(for: PGN.self, inMemory: true)
 }
 
 /// The two rating display branches meeting the same layout: an established

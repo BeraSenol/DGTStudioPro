@@ -59,7 +59,7 @@ internal struct RankingsColumnsView: View {
     var body: some View {
         HSplitView {
             bandList
-                .frame(minWidth: 160, idealWidth: 200, maxWidth: 280, maxHeight: .infinity)
+                .frame(minWidth: 200, idealWidth: 250, maxWidth: 300, maxHeight: .infinity)
             
             detail
                 .frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)

@@ -230,6 +230,12 @@ internal enum AccessibilityID {
     internal static let libraryFilterChip = "library.filterChip"
     internal static let libraryFilterChipClear = "library.filterChip.clear"
     
+    /// The Library's Export item — on the list's selection context menu and
+    /// on every card's. One constant: the two homes never coexist (the
+    /// view-mode picker guarantees it), so a family prefix would only fork
+    /// future lookups — the `context.showInLibrary` precedent.
+    internal static let libraryExport = "library.export"
+    
     /// `gameCard.Quick Mate`, … — one per Library card, keyed by the game's
     /// display name (see `LibraryGameCardView`).
     internal static func gameCard(_ name: String) -> String {

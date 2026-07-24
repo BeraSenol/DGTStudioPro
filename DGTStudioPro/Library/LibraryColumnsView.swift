@@ -59,6 +59,7 @@ internal struct LibraryColumnsView: View {
     @Binding internal var selectedPGNs: Set<PGN.ID>
     internal let onOpen: (PGN) -> Void
     let onAnalyze: (PGN) -> Void
+    let onExport: (PGN) -> Void
     internal let onDelete: (PGN) -> Void
     
     // MARK: Private Properties
@@ -92,7 +93,7 @@ internal struct LibraryColumnsView: View {
     internal var body: some View {
         HSplitView {
             sidebar
-                .frame(minWidth: 220, idealWidth: 260, maxWidth: 360, maxHeight: .infinity)
+                .frame(minWidth: 200, idealWidth: 250, maxWidth: 300, maxHeight: .infinity)
             
             detail
                 .frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
@@ -186,6 +187,7 @@ internal struct LibraryColumnsView: View {
                             onSelect:  { selectedPGNs = [game.id] },
                             onOpen:    { onOpen(game) },
                             onAnalyze: { onAnalyze(game) },
+                            onExport:  { onExport(game) },
                             onDelete:  { onDelete(game) }
                         )
                     }
@@ -305,6 +307,7 @@ private func columnsPreviewGames() -> [PGN] {
         selectedPGNs: $selection,
         onOpen: { _ in },
         onAnalyze: { _ in },
+        onExport: { _ in },
         onDelete: { _ in }
     )
     .frame(width: 900, height: 600)
@@ -319,6 +322,7 @@ private func columnsPreviewGames() -> [PGN] {
         selectedPGNs: $selection,
         onOpen: { _ in },
         onAnalyze: { _ in },
+        onExport: { _ in },
         onDelete: { _ in }
     )
     .frame(width: 900, height: 600)

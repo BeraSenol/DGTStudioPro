@@ -282,13 +282,13 @@ internal struct PGNStore {
     }
     
     /// The single creation door for `Player`. Raw tags pass through
-    /// `PGN.displayPlayerName(_:)` first (so "Lopez, Ruy" and "Ruy Lopez"
+    /// `PlayerName.displayForm(of:)` first (so "Lopez, Ruy" and "Ruy Lopez"
     /// are one identity), then match case-insensitively on the stored
     /// `normalizedName` key. PGN's `"?"` placeholder and empty tags
     /// resolve to `nil` — a placeholder is the *absence* of a player,
     /// never a player named "?".
     internal func resolvePlayer(named rawTag: String) throws -> Player? {
-        let display = PGN.displayPlayerName(rawTag)
+        let display = PlayerName.displayForm(of: rawTag)
         guard !display.isEmpty, display != "?" else { return nil }
         
         let key = Player.normalizedKey(for: display)

@@ -10,21 +10,21 @@ import os
 
 // MARK: PGN Parser
 internal enum PGNParser {
-
+    
     // MARK: Static Constants
     private static let logger = Logger(
         subsystem: "com.berasenol.dgtstudiopro",
         category: "pgnparse"
     )
-
+    
     internal static let requiredTags: Set<String> = Set(
         SevenTagRoster.allCases.map(\.rawValue)
     )
-
+    
     private static let resultTokens: Set<String> = Set(
         GameResult.allCases.map(\.rawValue)
     )
-
+    
     /// Parses `[Date "yyyy.MM.dd"]` tags — pinned to **UTC** so that
     /// parse → `PGNStore.hashDateFormatter` (also UTC) is a perfect
     /// round-trip. A PGN date is a calendar day with no timezone of its
@@ -44,18 +44,18 @@ internal enum PGNParser {
         formatter.timeZone = TimeZone(identifier: "UTC")
         return formatter
     }()
-
+    
     // MARK: Errors
     internal enum Error: Swift.Error, Equatable {
         case missingRequiredTags(Set<String>)
         case unbalancedBraces
         case unbalancedParentheses
     }
-
+    
     // MARK: Entry Point
     internal static func parse(_ text: String) throws -> PGN {
         let (tagSection, movetextSection) = splitSections(normalizeLineEndings(text))
-
+        
         let tags = parseTags(from: tagSection)
         let missing = missingTags(in: tags)
         if !missing.isEmpty {
@@ -69,9 +69,9 @@ internal enum PGNParser {
             )
             throw Error.missingRequiredTags(missing)
         }
-
+        
         let (moves, evaluations) = try parseMovesAndEvaluations(from: movetextSection)
-
+        
         let hasEvals = evaluations.contains(where: { $0 != nil })
         logger.info(
             """
@@ -81,7 +81,7 @@ internal enum PGNParser {
             plies=\(moves.count) tags=\(tags.count) hasEvals=\(hasEvals)
             """
         )
-
+        
         return PGN(
             event: tags[.event] ?? "",
             site:  tags[.site]  ?? "",
@@ -92,74 +92,84 @@ internal enum PGNParser {
             moves: moves,
             evaluations: hasEvals ? evaluations : [],
             result: parseResult(tags[.result]),
-            timeControl: parseTimeControl(tags["TimeControl"])
+            timeControl: parseTimeControl(tags["TimeControl"]),
+            board: tags["Board"]
         )
     }
-
+    
     // MARK: Tag Parsing
     internal static func missingTags(in tags: [String: String]) -> Set<String> {
         requiredTags.subtracting(tags.keys)
     }
-
+    
     internal static func parseTags(from text: String) -> [String: String] {
         var tags: [String: String] = [:]
-
+        
         for line in text.components(separatedBy: .newlines) {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
-
+            
             if let tag = parseTag(trimmed) {
                 tags[tag.key] = tag.value
             }
         }
-
+        
         return tags
     }
-
+    
     internal static func parseTag(_ line: String) -> (key: String, value: String)? {
         guard line.hasPrefix("["), line.hasSuffix("]") else { return nil }
-
+        
         let inner = line.dropFirst().dropLast()
-
+        
         guard let spaceIndex = inner.firstIndex(of: " ") else { return nil }
-
+        
         let key = String(inner[inner.startIndex ..< spaceIndex])
         var value = String(inner[inner.index(after: spaceIndex)...])
             .trimmingCharacters(in: .whitespaces)
-
+        
         if value.hasPrefix("\"") && value.hasSuffix("\"") {
             value = String(value.dropFirst().dropLast())
         }
-
+        
         return (key, value)
     }
-
+    
     internal static func parseDate(_ date: String?) -> Date? {
         guard let date, !date.contains("?") else { return nil }
         return dateFormatter.date(from: date)
     }
-
+    
+    /// The writer's half of `parseDate` — same formatter, so parse and
+    /// serialize can't drift on the UTC-calendar-day convention
+    /// `PGNParserDateTests` pins. Lives here rather than on `PGNSerializer`
+    /// precisely so there is one formatter, not a twin.
+    internal static func pgnDateString(_ date: Date?) -> String {
+        guard let date else { return RosterSummary.unknownDate }
+        return dateFormatter.string(from: date)
+    }
+    
     internal static func parseRound(_ round: String?) -> Int? {
         guard let round else { return nil }
         return Int(round)
     }
-
+    
     internal static func parseResult(_ string: String?) -> GameResult {
         guard let string, let result = GameResult(rawValue: string) else {
             return .ongoing
         }
         return result
     }
-
+    
     internal static func parseTimeControl(_ value: String?) -> String? {
         guard let value, !value.isEmpty, value != "-" else { return nil }
         return value
     }
-
+    
     // MARK: Movetext Parsing
     internal static func parseMoves(from movetext: String) throws -> [String] {
         let cleaned = try strip(movetext)
         let tokens = cleaned.split(whereSeparator: { $0.isWhitespace })
-
+        
         var result: [String] = []
         for token in tokens {
             let str = String(token)
@@ -171,7 +181,7 @@ internal enum PGNParser {
         }
         return result
     }
-
+    
     /// Single-pass scanner that produces both the move list and a parallel
     /// array of evaluations sourced from `{[%eval ...]}` comments.
     ///
@@ -187,7 +197,7 @@ internal enum PGNParser {
     ) throws -> (moves: [String], evaluations: [Evaluation?]) {
         let chars = Array(movetext)
         var i = 0
-
+        
         var moves: [String] = []
         var evaluations: [Evaluation?] = []
         var currentToken = ""
@@ -195,7 +205,7 @@ internal enum PGNParser {
         var braceDepth = 0
         var parenDepth = 0
         var inLineComment = false
-
+        
         // Emit the in-progress token (if it's a real move) and reserve
         // its slot in `evaluations`. Result tokens (1-0, 0-1, etc.) and
         // empties are dropped without consuming an eval slot.
@@ -208,16 +218,16 @@ internal enum PGNParser {
             moves.append(san)
             evaluations.append(nil)
         }
-
+        
         while i < chars.count {
             let c = chars[i]
-
+            
             if inLineComment {
                 if c == "\n" { inLineComment = false }
                 i += 1
                 continue
             }
-
+            
             if braceDepth > 0 {
                 if c == "}" {
                     braceDepth -= 1
@@ -234,35 +244,35 @@ internal enum PGNParser {
                 i += 1
                 continue
             }
-
+            
             if parenDepth > 0 {
                 if c == "(" { parenDepth += 1 }
                 else if c == ")" { parenDepth -= 1 }
                 i += 1
                 continue
             }
-
+            
             switch c {
             case "{":
                 flushToken()
                 braceDepth = 1
                 i += 1
-
+                
             case "(":
                 flushToken()
                 parenDepth = 1
                 i += 1
-
+                
             case ";":
                 flushToken()
                 inLineComment = true
                 i += 1
-
+                
             case "$":
                 flushToken()
                 i += 1
                 while i < chars.count, chars[i].isASCII, chars[i].isNumber { i += 1 }
-
+                
             default:
                 if c.isWhitespace {
                     flushToken()
@@ -278,9 +288,9 @@ internal enum PGNParser {
                 }
             }
         }
-
+        
         flushToken()
-
+        
         if braceDepth != 0 {
             Self.logger.error(
                 """
@@ -305,10 +315,10 @@ internal enum PGNParser {
             )
             throw Error.unbalancedParentheses
         }
-
+        
         return (moves, evaluations)
     }
-
+    
     /// Scans a brace comment's contents for `[%eval ...]` annotations and
     /// returns the parsed evaluation. Lichess can pack multiple PGN
     /// annotations into a single comment (e.g. `[%eval 0.23] [%clk 0:00:30]`);
@@ -318,7 +328,7 @@ internal enum PGNParser {
         var result: Evaluation?
         var search = Substring(braceContent)
         let prefix = "[%eval "
-
+        
         while let startRange = search.range(of: prefix) {
             guard let endRange = search.range(
                 of: "]",
@@ -334,7 +344,7 @@ internal enum PGNParser {
         }
         return result
     }
-
+    
     // MARK: Private Helpers
     /// Normalizes CRLF and lone-CR line endings to LF before parsing. PGN
     /// files exported on Windows (and by some DGT eBoard tooling) use CRLF;
@@ -348,74 +358,74 @@ internal enum PGNParser {
             .replacingOccurrences(of: "\r\n", with: "\n")
             .replacingOccurrences(of: "\r", with: "\n")
     }
-
+    
     private static func splitSections(_ text: String) -> (tags: String, movetext: String) {
         let lines = text.components(separatedBy: .newlines)
         var splitIndex = lines.count
-
+        
         for (i, line) in lines.enumerated() {
             if line.trimmingCharacters(in: .whitespaces).isEmpty {
                 splitIndex = i
                 break
             }
         }
-
+        
         let tagLines = lines[..<splitIndex].joined(separator: "\n")
         let movetextLines = lines[splitIndex...].joined(separator: "\n")
         return (tagLines, movetextLines)
     }
-
+    
     private static func strip(_ input: String) throws -> String {
         var output = ""
         var braceDepth = 0
         var parenDepth = 0
         var inLineComment = false
-
+        
         let chars = Array(input)
         var i = 0
-
+        
         while i < chars.count {
             let c = chars[i]
-
+            
             if inLineComment {
                 if c == "\n" { inLineComment = false }
                 i += 1
                 continue
             }
-
+            
             if braceDepth > 0 {
                 if c == "}" { braceDepth -= 1 }
                 i += 1
                 continue
             }
-
+            
             if parenDepth > 0 {
                 if c == "(" { parenDepth += 1 }
                 else if c == ")" { parenDepth -= 1 }
                 i += 1
                 continue
             }
-
+            
             switch c {
             case "{":
                 braceDepth = 1
                 output.append(" ")
                 i += 1
-
+                
             case "(":
                 parenDepth = 1
                 output.append(" ")
                 i += 1
-
+                
             case ";":
                 inLineComment = true
                 i += 1
-
+                
             case "$":
                 i += 1
                 while i < chars.count, chars[i].isASCII, chars[i].isNumber { i += 1 }
                 output.append(" ")
-
+                
             default:
                 if c.isASCII, c.isNumber, let after = consumeMoveNumber(chars, from: i) {
                     output.append(" ")
@@ -426,7 +436,7 @@ internal enum PGNParser {
                 }
             }
         }
-
+        
         if braceDepth != 0 {
             Self.logger.error(
                 """
@@ -449,10 +459,10 @@ internal enum PGNParser {
             )
             throw Error.unbalancedParentheses
         }
-
+        
         return output
     }
-
+    
     // Consumes \d+\.+ at `start`, returns index after; nil if not a move number.
     private static func consumeMoveNumber(_ chars: [Character], from start: Int) -> Int? {
         var i = start
@@ -461,7 +471,7 @@ internal enum PGNParser {
         while i < chars.count, chars[i] == "." { i += 1 }
         return i
     }
-
+    
     // Strip trailing !/? annotations; preserve + (check) and # (mate).
     private static func stripAnnotations(_ san: String) -> String {
         var end = san.endIndex

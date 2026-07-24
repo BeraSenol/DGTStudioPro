@@ -14,6 +14,7 @@ internal struct LibraryGalleryView: View {
     let boardStyle: BoardStyle
     let onOpen: (PGN) -> Void
     let onAnalyze: (PGN) -> Void
+    let onExport: (PGN) -> Void
     let onDelete: (PGN) -> Void
     
     private var selectedPGN: PGN? {
@@ -29,31 +30,26 @@ internal struct LibraryGalleryView: View {
         }
     }
     
-    @ViewBuilder
+    /// Selection-driven with no fallback to `games.first`: an unselected
+    /// gallery shows an empty board rather than silently previewing a game
+    /// the user didn't pick. (Retires the old `ContentUnavailableView` arm,
+    /// which was unreachable — `LibraryDestination` gates on
+    /// `filteredGames.isEmpty` before the mode views are ever built.)
     private var preview: some View {
-        if let game = selectedPGN ?? games.first {
-            LibraryGamePreviewView(game: game, boardStyle: boardStyle)
-        } else {
-            ContentUnavailableView(
-                "No Selection",
-                systemImage: "square.dashed",
-                description: Text("Select a game to preview.")
-            )
-        }
+        LibraryGamePreviewView(game: selectedPGN, boardStyle: boardStyle)
     }
     
     private var thumbnailStrip: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
+                HStack {
                     ForEach(games) { game in
                         thumbnail(for: game).id(game.id)
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding()
             }
-            .frame(height: 160)
+            .frame(height: 180)
             .background(.thinMaterial)
             .onChange(of: selectedPGNs) { _, newSelection in
                 guard let id = newSelection.first else { return }
@@ -71,9 +67,9 @@ internal struct LibraryGalleryView: View {
             onSelect:  { selectedPGNs = [game.id] },
             onOpen:    { onOpen(game) },
             onAnalyze: { onAnalyze(game) },
+            onExport:  { onExport(game) },
             onDelete:  { onDelete(game) }
         )
-        .frame(width: 180)
     }
 }
 
@@ -100,6 +96,7 @@ private func galleryPreviewGames() -> [PGN] {
         boardStyle: .walnut,
         onOpen: { _ in },
         onAnalyze: { _ in },
+        onExport: { _ in },
         onDelete: { _ in }
     )
     .frame(width: 720, height: 600)
@@ -112,7 +109,7 @@ private func galleryPreviewGames() -> [PGN] {
     .modelContainer(for: PGN.self, inMemory: true)
 }
 
-#Preview("No Selection (Fallback to First)") {
+#Preview("No Selection") {
     @Previewable @State var selection: Set<PGN.ID> = []
     
     LibraryGalleryView(
@@ -121,21 +118,7 @@ private func galleryPreviewGames() -> [PGN] {
         boardStyle: .rosewood,
         onOpen: { _ in },
         onAnalyze: { _ in },
-        onDelete: { _ in }
-    )
-    .frame(width: 720, height: 600)
-    .modelContainer(for: PGN.self, inMemory: true)
-}
-
-#Preview("Empty") {
-    @Previewable @State var selection: Set<PGN.ID> = []
-    
-    LibraryGalleryView(
-        games: [],
-        selectedPGNs: $selection,
-        boardStyle: .walnut,
-        onOpen: { _ in },
-        onAnalyze: { _ in },
+        onExport: { _ in },
         onDelete: { _ in }
     )
     .frame(width: 720, height: 600)

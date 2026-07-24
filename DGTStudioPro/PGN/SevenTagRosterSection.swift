@@ -61,7 +61,8 @@ internal struct SevenTagRosterSection<Actions: View>: View {
 
 extension SevenTagRosterSection where Actions == EmptyView {
     
-    /// A read-only roster — the review inspector today.
+    /// Rendered by all three inspectors that show a game's metadata: the Board's
+    /// review inspector, the live inspector, and the Library inspector.
     internal init(roster: RosterSummary?, headline: String) {
         self.init(roster: roster, headline: headline, actions: { EmptyView() })
     }

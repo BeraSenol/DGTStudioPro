@@ -16,6 +16,7 @@ internal struct LibraryGameCardView: View {
     let onSelect: () -> Void
     let onOpen: () -> Void
     let onAnalyze: () -> Void
+    let onExport: () -> Void
     let onDelete: () -> Void
     
     // MARK: Body
@@ -28,7 +29,7 @@ internal struct LibraryGameCardView: View {
                 .foregroundStyle(.tint)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding(.vertical, 8)
+        .padding()
         .contentShape(Rectangle())
         // Double-tap first so SwiftUI's gesture-disambiguation pipeline
         // routes a second click to `onOpen`; the single-tap fallback
@@ -43,6 +44,10 @@ internal struct LibraryGameCardView: View {
             Button(action: onAnalyze) {
                 Label("Analyze", systemImage: "wand.and.stars")
             }
+            Button(action: onExport) {
+                Label("Export PGN…", systemImage: "square.and.arrow.up")
+            }
+            .accessibilityIdentifier(AccessibilityID.libraryExport)
             Divider()
             Button(role: .destructive, action: onDelete) {
                 Label("Delete", systemImage: "trash")
@@ -63,7 +68,7 @@ internal struct LibraryGameCardView: View {
                 .aspectRatio(contentMode: .fit)
                 .foregroundStyle(.white)
                 .frame(width: 96, height: 96)
-                .fontWeight(.thin)
+                .fontWeight(.ultraLight)
             
             Text(displayResult(game.result))
                 .font(.system(size: 18, weight: .semibold, design: .monospaced))
@@ -71,8 +76,7 @@ internal struct LibraryGameCardView: View {
                 .tracking(game.result == .draw ? 4 : 2)
                 .offset(y: 4)
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
+        .padding()
         .background {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(.secondary.opacity(isSelected ? 0.15 : 0))
@@ -87,8 +91,9 @@ internal struct LibraryGameCardView: View {
             .multilineTextAlignment(.center)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
+            .frame(width: 126)
             .background(
-                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(isSelected ? Color.accentColor : .clear)
             )
             .foregroundStyle(isSelected ? Color.white : .primary)
@@ -98,7 +103,7 @@ internal struct LibraryGameCardView: View {
         switch result {
         case .whiteWins: return "1-0"
         case .blackWins: return "0-1"
-        case .draw:      return "½-½"
+        case .draw:      return "1/2"
         case .ongoing:   return "*"
         }
     }
@@ -129,6 +134,7 @@ private func sampleGame(
             onSelect: {},
             onOpen: {},
             onAnalyze: {},
+            onExport: {},
             onDelete: {}
         )
         LibraryGameCardView(
@@ -137,6 +143,7 @@ private func sampleGame(
             onSelect: {},
             onOpen: {},
             onAnalyze: {},
+            onExport: {},
             onDelete: {}
         )
         LibraryGameCardView(
@@ -145,6 +152,7 @@ private func sampleGame(
             onSelect: {},
             onOpen: {},
             onAnalyze: {},
+            onExport: {},
             onDelete: {}
         )
         LibraryGameCardView(
@@ -153,6 +161,7 @@ private func sampleGame(
             onSelect: {},
             onOpen: {},
             onAnalyze: {},
+            onExport: {},
             onDelete: {}
         )
     }
@@ -169,6 +178,7 @@ private func sampleGame(
             onSelect: {},
             onOpen: {},
             onAnalyze: {},
+            onExport: {},
             onDelete: {}
         )
         LibraryGameCardView(
@@ -177,6 +187,7 @@ private func sampleGame(
             onSelect: {},
             onOpen: {},
             onAnalyze: {},
+            onExport: {},
             onDelete: {}
         )
     }
@@ -197,6 +208,7 @@ private func sampleGame(
             onSelect: {},
             onOpen: {},
             onAnalyze: {},
+            onExport: {},
             onDelete: {}
         )
         LibraryGameCardView(
@@ -209,6 +221,7 @@ private func sampleGame(
             onSelect: {},
             onOpen: {},
             onAnalyze: {},
+            onExport: {},
             onDelete: {}
         )
     }

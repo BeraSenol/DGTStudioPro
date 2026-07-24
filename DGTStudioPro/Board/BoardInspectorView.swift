@@ -17,7 +17,6 @@ internal struct BoardInspectorView: View {
     internal let style: BoardStyle
     internal let onMoveTapped: ((Int) -> Void)?
     
-    // MARK: Body
     internal var body: some View {
         List {
             metadataSection
@@ -25,6 +24,9 @@ internal struct BoardInspectorView: View {
             movesSection
         }
         .listStyle(.sidebar)
+        // The list is the only scroller now, so it's the thing that has to
+        // follow the current ply.
+        .scrollsToCurrentMove(currentMoveIndex)
     }
     
     // MARK: Instance Methods
@@ -63,9 +65,11 @@ internal struct BoardInspectorView: View {
             MoveHistoryView(
                 moves: moves,
                 currentMoveIndex: currentMoveIndex,
-                onMoveTapped: onMoveTapped
+                onMoveTapped: onMoveTapped,
+                scrollsIndependently: false
             )
-            .frame(height: 240)
+            .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
+            .listRowSeparator(.hidden)
         } header: {
             Text("Moves")
         }

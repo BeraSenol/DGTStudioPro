@@ -49,11 +49,11 @@ internal enum GameHeadline {
         return "\(activity.rawValue) \(round). \(pairing)"
     }
     
-    /// `PGN.displayPlayerName` with an empty result folded to the
+    /// `PlayerName.displayForm(of:)` with an empty result folded to the
     /// placeholder: a blank seat must not collapse the sentence into
     /// "Recording  vs Bob".
     private static func displayName(_ raw: String) -> String {
-        let display = PGN.displayPlayerName(raw)
+        let display = PlayerName.displayForm(of: raw)
         return display.isEmpty ? unknownPlayer : display
     }
 }
