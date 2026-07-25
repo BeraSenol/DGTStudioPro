@@ -39,7 +39,6 @@ internal struct PlayersIconsView: View {
                     )
                 }
             }
-//            .padding(16)
         }
     }
 }

@@ -55,11 +55,11 @@ internal struct LibraryGroup: Identifiable, Hashable {
 internal struct LibraryColumnsView: View {
     
     // MARK: Stored Properties
-    internal let games: [PGN]
     @Binding internal var selectedPGNs: Set<PGN.ID>
+    internal let games: [PGN]
     internal let onOpen: (PGN) -> Void
-    let onAnalyze: (PGN) -> Void
-    let onExport: (PGN) -> Void
+    internal let onAnalyze: (PGN) -> Void
+    internal let onExport: (PGN) -> Void
     internal let onDelete: (PGN) -> Void
     
     // MARK: Private Properties
@@ -303,8 +303,8 @@ private func columnsPreviewGames() -> [PGN] {
     @Previewable @State var selection: Set<PGN.ID> = []
     
     LibraryColumnsView(
-        games: columnsPreviewGames(),
         selectedPGNs: $selection,
+        games: columnsPreviewGames(),
         onOpen: { _ in },
         onAnalyze: { _ in },
         onExport: { _ in },
@@ -318,8 +318,8 @@ private func columnsPreviewGames() -> [PGN] {
     @Previewable @State var selection: Set<PGN.ID> = []
     
     LibraryColumnsView(
-        games: [],
         selectedPGNs: $selection,
+        games: [],
         onOpen: { _ in },
         onAnalyze: { _ in },
         onExport: { _ in },

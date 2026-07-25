@@ -36,12 +36,13 @@ internal struct PlayersInspectorView: View {
 
     // MARK: Instance Methods
     private var emptySection: some View {
-        Section {
-            Text("No player selected")
-                .foregroundStyle(.secondary)
-        } header: {
-            Text("Player Profile")
-        }
+        ContentUnavailableView(
+            "No Player Selected",
+            systemImage: "person.fill",
+            description: Text(
+                "Select an player from to view it's details"
+            )
+        )
     }
 }
 
@@ -117,8 +118,8 @@ private struct RecentGamesSection: View {
         Button {
             openWindow(value: game.persistentModelID)
         } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(game.name)
                         .lineLimit(1)
                     Text(game.displayDate)
@@ -126,25 +127,14 @@ private struct RecentGamesSection: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Text(perspectiveGlyph(for: game))
+                Text(game.result.rawValue)
                     .font(.callout.weight(.semibold).monospaced())
                     .foregroundStyle(.secondary)
+                    .tracking(1)
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-
-    /// The result from *this player's* seat: W/L/D, or the PGN's own `*`
-    /// for ongoing. Seat is decided by the resolved link, never raw tags.
-    private func perspectiveGlyph(for game: PGN) -> String {
-        let isWhite = game.whitePlayer?.normalizedName == playerKey
-        switch game.result {
-        case .whiteWins: return isWhite ? "W" : "L"
-        case .blackWins: return isWhite ? "L" : "W"
-        case .draw:      return "D"
-        case .ongoing:   return GameResult.ongoing.rawValue
-        }
     }
 }
 

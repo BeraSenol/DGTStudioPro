@@ -53,6 +53,7 @@ internal struct SettingsView: View {
     @AppStorage(StorageKeys.showBoardCoordinates) private var showsBoardCoordinates = true
     
     @Environment(\.modelContext) private var modelContext
+    @Environment(SleepInhibitor.self) private var sleepInhibitor
     @Query private var allGames: [PGN]
     
     @State private var showEraseConfirmation = false
@@ -77,7 +78,14 @@ internal struct SettingsView: View {
     
     // MARK: General
     private var generalTab: some View {
-        Form {
+        // D25′ — the sleep gate is an observable property on the inhibitor,
+        // not an `@AppStorage` mirror of it: the running tracking loop must
+        // see the flip so that switching off mid-game releases the
+        // assertion on that edge. Consequence for this file: no twin
+        // default to document, unlike the three `@AppStorage` toggles above.
+        @Bindable var inhibitor = sleepInhibitor
+        
+        return Form {
             // M7.3 deliberately has no toggle here: standing down mid-game
             // reconnection is a per-incident choice, not a preference — a
             // switch flipped weeks ago shouldn't decide whether a live game
@@ -140,6 +148,19 @@ internal struct SettingsView: View {
                     "Applies to the next analysis. Depth trades time for "
                     + "precision; hash and threads take effect when the "
                     + "engine next launches."
+                )
+            }
+            
+            Section {
+                Toggle("Keep the Mac awake during play", isOn: $inhibitor.isEnabled)
+                    .accessibilityIdentifier(AccessibilityID.settingsPreventSleepToggle)
+            } header: {
+                Text("Energy")
+            } footer: {
+                Text(
+                    "While a game or a board recording is in progress, keeps "
+                    + "the Mac from sleeping and dropping the board "
+                    + "connection. The display is still allowed to dim."
                 )
             }
         }

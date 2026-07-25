@@ -26,7 +26,8 @@ internal struct PlayerMonogram: View {
             Circle()
                 .fill(.tint.opacity(0.15))
             Text(initials)
-                .font(.system(size: diameter * 0.38, weight: .semibold, design: .rounded))
+                .font(.system(size: diameter * 0.4, weight: .semibold, design: .rounded))
+                .fontWeight(.medium)
                 .foregroundStyle(.tint)
         }
         .frame(width: diameter, height: diameter)

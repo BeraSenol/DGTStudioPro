@@ -91,19 +91,19 @@ internal struct PlayersDestination: View {
         
         return coreContent(index: index)
             .navigationTitle("Players")
-            .toolbar { toolbarContent }
             .inspector(isPresented: $tabState.playersInspectorPresented) {
                 PlayersInspectorView(
                     stats: selectedStats,
                     rating: selectedRating,
                     recentGames: selectedGames
                 )
-                .inspectorColumnWidth(min: 350, ideal: 400, max: 500)
+                .inspectorColumnWidth(min: 325, ideal: 320, max: 430)
             }
             .inspectorToggle(
                 isPresented: $tabState.playersInspectorPresented,
                 identifier: AccessibilityID.playersInspectorToggle
             )
+            .toolbar { toolbarContent }
             .onAppear {
                 // Players must work even if Library was never visited this
                 // launch — the backfill is store-owned; this is just the

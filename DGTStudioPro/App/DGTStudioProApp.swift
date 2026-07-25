@@ -71,9 +71,11 @@ internal struct DGTStudioProApp: App {
     
     /// M-ux.2 (D14′) — the idle-sleep inhibition token holder. App-owned
     /// like the DGT observables (its tracking loop must outlive every
-    /// view); never injected into the environment — nothing renders it.
+    /// view). Injected into the **Settings scene only** (D25′: it owns the
+    /// user gate, which Settings binds to); deliberately not injected into
+    /// the `WindowGroup` — no destination renders or reads it.
     @State private var sleepInhibitor: SleepInhibitor
-    
+
     // The struct is `@MainActor` (above), so this init runs on the main actor
     // and may touch the `@MainActor` members of the DGT objects it wires. The
     // module's default actor isolation is `nonisolated`, so without that
@@ -216,6 +218,7 @@ internal struct DGTStudioProApp: App {
         
         Settings {
             SettingsView()
+                .environment(sleepInhibitor)
         }
         .modelContainer(sharedContainer)
     }

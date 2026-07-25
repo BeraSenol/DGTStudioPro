@@ -43,49 +43,49 @@ import SwiftUI
 /// would lose scrub position, perspective, and inspector toggle on every
 /// destination round-trip.
 internal struct BoardDestination: View {
-
+    
     // MARK: Static Constants
-
+    
     private static let logger = Logger(
         subsystem: "com.berasenol.dgtstudiopro",
         category: "boardload"
     )
-
+    
     // MARK: Bound State
-
+    
     @Binding internal var loadedGameID: PersistentIdentifier?
-
+    
     // MARK: Tab State (lives on enclosing `ContentView`)
-
+    
     @Bindable internal var tabState: TabState
-
+    
     // MARK: Environment
-
+    
     @Environment(\.modelContext) private var modelContext
     @Environment(DGTConnection.self) private var connection
     @Environment(DGTLiveSession.self) private var session
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
-
+    
     // MARK: View State
-
+    
     /// True after "Keep for Now" on the corrupt-draft alert, so it doesn't
     /// re-present every render for the rest of this visit. The file stays on
     /// disk as diagnostics; the offer returns at the next launch (or the
     /// next visit to Board). Transient by design, like the flag above.
     @State private var corruptOfferDeferred = false
-
+    
     /// True for a beat after recovery auto-resolves, flashing "Position
     /// restored — play continues." under the HUD (M6.2). Transient by
     /// design, like the flags above.
     @State private var showsRestoredFlash = false
-
+    
     /// True while the movetext editor sheet is open (M-lib.3). Transient by
     /// design, like the flags above — losing "sheet open" across a sidebar
     /// round-trip is fine.
     @State private var editingMovetext = false
-
+    
     // MARK: Body
-
+    
     internal var body: some View {
         Group {
             if let pgn = tabState.boardPGN, let game = tabState.boardGame {
@@ -114,7 +114,7 @@ internal struct BoardDestination: View {
                 // separate from the decoder's coordinate transform).
                 .accessibilityIdentifier(AccessibilityID.boardFlipButton)
             }
-
+            
             ToolbarItem {
                 Button {
                     editingMovetext = true
@@ -182,9 +182,9 @@ internal struct BoardDestination: View {
         .onAppear { loadIfNeeded() }
         .onChange(of: loadedGameID) { _, _ in loadIfNeeded() }
     }
-
+    
     // MARK: Board Surface
-
+    
     /// The board itself, shared by the game view and the live mirror. Both
     /// render the same `BoardView` with the same padding, sizing, and
     /// `"board"` accessibility identifier — only the inputs differ. Keeping
@@ -217,9 +217,9 @@ internal struct BoardDestination: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier(AccessibilityID.board)
     }
-
+    
     // MARK: Content
-
+    
     private func content(pgn: PGN, game: Game) -> some View {
         // PGN-replay path: no ghost. Ghosts only make sense against the
         // live physical board.
@@ -233,25 +233,22 @@ internal struct BoardDestination: View {
         )
         .inspector(isPresented: $tabState.boardInspectorPresented) {
             BoardInspectorView(
-                pgn:              pgn,
-                evaluations:      pgn.evaluations.map {
+                pgn: pgn,
+                evaluations: pgn.evaluations.map {
                     $0?.whiteWinProbability ?? 0.5
                 },
-                moves:            pgn.moves,
-                currentMoveIndex: game.currentPly > 0
-                ? game.currentPly - 1
-                : nil,
-                style:            boardStyle,
-                onMoveTapped:     { index in
-                    game.jump(to: index + 1)
+                moves: pgn.moves,
+                currentMoveIndex: game.currentPly > 0 ? game.currentPly - 1 : nil,
+                style: boardStyle,
+                onMoveTapped: { index in game.jump(to: index + 1)
                 }
             )
-            .inspectorColumnWidth(min: 350, ideal: 400, max: 500)
+            .inspectorColumnWidth(min: 325, ideal: 320, max: 430)
         }
     }
-
+    
     // MARK: Live Surface
-
+    
     /// The live-play surface (M3, slimmed by D15′): the mirror board and
     /// the live inspector, plus the resume/corrupt-draft forks and the
     /// archive confirmation. All status messaging — the status card, the
@@ -262,7 +259,7 @@ internal struct BoardDestination: View {
         mirrorBoard
             .inspector(isPresented: $tabState.boardInspectorPresented) {
                 liveInspector
-                    .inspectorColumnWidth(min: 350, ideal: 400, max: 500)
+                    .inspectorColumnWidth(min: 325, ideal: 320, max: 430)
             }
         // M4.3 — the resume offer. A modal fork, not a HUD banner,
         // because Decision #3 makes this a genuine either/or the player
@@ -309,7 +306,7 @@ internal struct BoardDestination: View {
                 }
             }
     }
-
+    
     /// Presents the new-game sheet whenever the session offers one
     /// (`shouldOfferNewGame`) or the HUD requested one manually. Dismissal
     /// through the binding (swipe, ⎋, Not Now) counts as "Not Now" — it
@@ -325,7 +322,7 @@ internal struct BoardDestination: View {
             set: { _ in }
         )
     }
-
+    
     /// Presents the corrupt-draft alert until answered or deferred for this
     /// visit ("Keep for Now" sets `corruptOfferDeferred`).
     private var isCorruptDraftOfferPresented: Binding<Bool> {
@@ -334,7 +331,7 @@ internal struct BoardDestination: View {
             set: { _ in }
         )
     }
-
+    
     /// The resume alert's body: who was playing, how far they got, when the
     /// draft was last written — and a heads-up when the draft is already
     /// decided (finished but not yet archived; resuming triggers the M5
@@ -356,7 +353,7 @@ internal struct BoardDestination: View {
         }
         return lines.joined(separator: "\n")
     }
-
+    
     /// Presents the archive confirmation while a *successful* outcome is
     /// unacknowledged. Dismissal (Done, ⎋, swipe) acknowledges it; a
     /// failure never presents this sheet — it lives on the HUD as
@@ -373,7 +370,7 @@ internal struct BoardDestination: View {
             }
         )
     }
-
+    
     /// Applies edited details to the archived Library row through
     /// `PGNStore.applyEdit(to:_:)`, which owns the one-hash/two-doors
     /// rehash structurally (M11 review) — this door no longer has to
@@ -383,7 +380,7 @@ internal struct BoardDestination: View {
         do {
             try PGNStore(modelContext: modelContext).applyEdit(to: pgn) { pgn in
                 let hadDefaultName = pgn.name == pgn.defaultDisplayName
-
+                
                 pgn.event = roster.event
                 pgn.site  = roster.site
                 pgn.date  = roster.date
@@ -398,7 +395,7 @@ internal struct BoardDestination: View {
             )
         }
     }
-
+    
     /// Commits an edited movetext through `PGNStore.applyMovetextEdit`
     /// (validation + canonical store + hash refresh + eval invalidation, one
     /// transaction) and rebuilds the on-board `Game`: the moves changed
@@ -423,7 +420,7 @@ internal struct BoardDestination: View {
             )
         }
     }
-
+    
     private var isNewGameSheetPresented: Binding<Bool> {
         Binding(
             get: {
@@ -444,7 +441,7 @@ internal struct BoardDestination: View {
             }
         )
     }
-
+    
     /// Inspector content for the live branch: the live game's details and
     /// controls when one exists, otherwise a hint (so the inspector toggle
     /// is never a dead switch on the mirror) — connection-aware, since the
@@ -488,9 +485,9 @@ internal struct BoardDestination: View {
             )
         }
     }
-
+    
     // MARK: Live Mirror
-
+    
     /// The board shown whenever no game is loaded. The *position* always
     /// renders the DGT connection's live `physicalBoard` (empty when nothing
     /// is connected) with an empty `PieceTracker` — mid-move, the physical
@@ -513,7 +510,7 @@ internal struct BoardDestination: View {
             targetSquares:    recoveryGuidance?.targetSquares ?? []
         )
     }
-
+    
     /// The live restore checklist while `recovering` (M6.2), nil otherwise.
     /// Recomputed on every observable change of `connection.physicalBoard`,
     /// so highlights and the instruction list shrink as squares are fixed —
@@ -526,9 +523,9 @@ internal struct BoardDestination: View {
             target: game.currentState.position
         )
     }
-
+    
     // MARK: Loading
-
+    
     /// Resolves the bound `loadedGameID` to a concrete PGN + Game and
     /// caches the result on `tabState`. No-op when the cached PGN
     /// already matches the ID — important because this is called from
@@ -544,16 +541,16 @@ internal struct BoardDestination: View {
             tabState.boardLoadError = nil
             return
         }
-
+        
         if tabState.boardPGN?.persistentModelID == id, tabState.boardGame != nil {
             Self.logger.debug(
                 "loadIfNeeded: cache hit for '\(self.tabState.boardPGN?.name ?? "?", privacy: .public)' — no reload"
             )
             return
         }
-
+        
         Self.logger.debug("loadIfNeeded: resolving id \(String(describing: id), privacy: .public)")
-
+        
         guard let loadedPGN = modelContext.model(for: id) as? PGN else {
             tabState.boardPGN = nil
             tabState.boardGame = nil
@@ -563,7 +560,7 @@ internal struct BoardDestination: View {
             )
             return
         }
-
+        
         do {
             let newGame = try Game(pgn: loadedPGN)
             tabState.boardPGN = loadedPGN

@@ -52,12 +52,13 @@ internal struct LibraryInspectorView: View {
     
     // MARK: Instance Methods
     private var emptySection: some View {
-        Section {
-            Text("No game selected")
-                .foregroundStyle(.secondary)
-        } header: {
-            Text("Game Details")
-        }
+        ContentUnavailableView(
+            "No Game Selected",
+            systemImage: "document.fill",
+            description: Text(
+                "Select a game from the library to view its details and analysis"
+            )
+        )
     }
 }
 

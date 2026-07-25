@@ -64,15 +64,15 @@ internal enum AccessibilityID {
     
     // MARK: Tag Editor (M-prs.5)
     
-    internal static let tagsEditor = "tags.editor"
-    internal static let tagsEditorName = "tags.editor.name"
-    internal static let tagsEditorSave = "tags.editor.save"
+    internal static let tagsEditor       = "tags.editor"
+    internal static let tagsEditorName   = "tags.editor.name"
+    internal static let tagsEditorSave   = "tags.editor.save"
     internal static let tagsEditorCancel = "tags.editor.cancel"
     
     // MARK: Board
     
-    internal static let board = "board"
-    internal static let boardFlipButton = "board.flipButton"
+    internal static let board                = "board"
+    internal static let boardFlipButton      = "board.flipButton"
     internal static let boardInspectorToggle = "board.inspectorToggle"
     /// The toolbar's connect control (`DGTConnectionToolbar`). Migrated
     /// late (M-ux.3): the value lived as a *parameter default*, which the
@@ -97,12 +97,12 @@ internal enum AccessibilityID {
     /// families, this sheet *is* reachable in a boardless UI run — a loaded PGN
     /// needs no hardware — so a future XCUITest can harden it; for now the
     /// validator and store suites are the contract.
-    internal static let boardEditMovesButton  = "board.editMoves"
-    internal static let movetextEditorSheet   = "movetext.editor"
-    internal static let movetextEditorField   = "movetext.editor.field"
-    internal static let movetextEditorStatus  = "movetext.editor.status"
-    internal static let movetextEditorSave    = "movetext.editor.save"
-    internal static let movetextEditorCancel  = "movetext.editor.cancel"
+    internal static let boardEditMovesButton = "board.editMoves"
+    internal static let movetextEditorSheet  = "movetext.editor"
+    internal static let movetextEditorField  = "movetext.editor.field"
+    internal static let movetextEditorStatus = "movetext.editor.status"
+    internal static let movetextEditorSave   = "movetext.editor.save"
+    internal static let movetextEditorCancel = "movetext.editor.cancel"
     
     // MARK: Live
     
@@ -135,9 +135,9 @@ internal enum AccessibilityID {
     internal static let liveEditDetailsSave   = "live.editdetails.save"
     internal static let liveEditDetailsCancel = "live.editdetails.cancel"
     
-    internal static let liveRecoveryPanel  = "live.recovery.panel"
-    internal static let liveRecoveryCount  = "live.recovery.count"
-    internal static let liveRecoveryExport = "live.recovery.export"
+    internal static let liveRecoveryPanel         = "live.recovery.panel"
+    internal static let liveRecoveryCount         = "live.recovery.count"
+    internal static let liveRecoveryExport        = "live.recovery.export"
     internal static let liveRecoveryRestoredFlash = "live.recovery.restoredflash"
     
     /// `live.recovery.item.e4`, … — one checklist row per square, keyed
@@ -193,9 +193,10 @@ internal enum AccessibilityID {
     
     // MARK: Settings
     
-    internal static let settingsAutoConnectToggle  = "settings.autoConnectToggle"
-    internal static let settingsEraseLibraryButton = "settings.eraseLibraryButton"
+    internal static let settingsAutoConnectToggle      = "settings.autoConnectToggle"
+    internal static let settingsEraseLibraryButton     = "settings.eraseLibraryButton"
     internal static let settingsIllegalMoveSoundToggle = "settings.illegalMoveSoundToggle"
+    internal static let settingsPreventSleepToggle     = "settings.preventSleepToggle"
     internal static let settingsBoardCoordinatesToggle = "settings.boardCoordinatesToggle"
     internal static let settingsEngineDepthStepper     = "settings.engineDepthStepper"
     internal static let settingsEngineHashPicker       = "settings.engineHashPicker"
@@ -203,31 +204,31 @@ internal enum AccessibilityID {
     
     // MARK: Library
     
-    internal static let libraryContent = "library.content"
-    internal static let libraryEmptyState = "library.emptyState"
-    internal static let libraryModeIcons = "library.mode.icons"
-    internal static let libraryModeList = "library.mode.list"
-    internal static let libraryModeColumns = "library.mode.columns"
-    internal static let libraryModeGallery = "library.mode.gallery"
-    internal static let libraryViewModePicker = "library.viewModePicker"
-    internal static let libraryImportButton = "library.importButton"
-    internal static let libraryAnalyzeButton = "library.analyzeButton"
-    internal static let libraryDeleteButton = "library.deleteButton"
-    internal static let libraryGamesTable = "library.gamesTable"
+    internal static let libraryContent         = "library.content"
+    internal static let libraryEmptyState      = "library.emptyState"
+    internal static let libraryModeIcons       = "library.mode.icons"
+    internal static let libraryModeList        = "library.mode.list"
+    internal static let libraryModeColumns     = "library.mode.columns"
+    internal static let libraryModeGallery     = "library.mode.gallery"
+    internal static let libraryViewModePicker  = "library.viewModePicker"
+    internal static let libraryImportButton    = "library.importButton"
+    internal static let libraryAnalyzeButton   = "library.analyzeButton"
+    internal static let libraryDeleteButton    = "library.deleteButton"
+    internal static let libraryGamesTable      = "library.gamesTable"
     internal static let libraryInspectorToggle = "library.inspectorToggle"
     
     /// Analysis-queue toolbar family (M-batch). `queue.status` has a
     /// UITest witness (asserted *absent* while the queue is idle); the
     /// popover internals are manual-checklist territory — clicking
     /// Analyze in a UI test would spin live Stockfish passes.
-    internal static let libraryQueueStatus = "library.queue.status"
+    internal static let libraryQueueStatus  = "library.queue.status"
     internal static let libraryQueuePopover = "library.queue.popover"
     internal static let libraryQueueStopAll = "library.queue.stopAll"
     
     /// The clearable filter chip (M-prs.6) — the Library's one visible
     /// indicator that it's narrowed, and for a programmatic `.player`
     /// selection (which has no sidebar row) the *only* one.
-    internal static let libraryFilterChip = "library.filterChip"
+    internal static let libraryFilterChip      = "library.filterChip"
     internal static let libraryFilterChipClear = "library.filterChip.clear"
     
     /// The Library's Export item — on the list's selection context menu and
@@ -260,11 +261,11 @@ internal enum AccessibilityID {
     
     // MARK: Players
     
-    internal static let playersContent = "players.content"
-    internal static let playersEmptyState = "players.emptyState"
-    internal static let playersViewModePicker = "players.viewModePicker"
-    internal static let playersTable = "players.table"
-    internal static let playersInspectorToggle = "players.inspectorToggle"
+    internal static let playersContent          = "players.content"
+    internal static let playersEmptyState       = "players.emptyState"
+    internal static let playersViewModePicker   = "players.viewModePicker"
+    internal static let playersTable            = "players.table"
+    internal static let playersInspectorToggle  = "players.inspectorToggle"
     internal static let playersInspectorProfile = "players.inspector.profile"
     
     /// `playerRow.Anish Giri`, … — one per list-mode row, keyed by the
@@ -280,11 +281,11 @@ internal enum AccessibilityID {
     
     // MARK: Rankings
     
-    internal static let rankingsContent = "rankings.content"
-    internal static let rankingsEmptyState = "rankings.emptyState"
-    internal static let rankingsViewModePicker = "rankings.viewModePicker"
-    internal static let rankingsTable = "rankings.table"
-    internal static let rankingsInspectorToggle = "rankings.inspectorToggle"
+    internal static let rankingsContent          = "rankings.content"
+    internal static let rankingsEmptyState       = "rankings.emptyState"
+    internal static let rankingsViewModePicker   = "rankings.viewModePicker"
+    internal static let rankingsTable            = "rankings.table"
+    internal static let rankingsInspectorToggle  = "rankings.inspectorToggle"
     internal static let rankingsInspectorProfile = "rankings.inspector.profile"
     
     /// `rankingRow.1.Liren Ding`, … — rank *and* name, so asserting a

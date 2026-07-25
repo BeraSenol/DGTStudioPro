@@ -81,8 +81,8 @@ internal final class TabState {
     /// Whether the Library destination's inspector is open. Default
     /// `false`; `LibraryDestination` auto-opens it for Gallery view via
     /// `onAppear`/`onChange(of: viewMode)`.
-    internal var libraryInspectorPresented: Bool = false
-    
+    internal var libraryInspectorPresented: Bool = true
+
     /// The tab's engine-analysis queue. A batch must survive destination
     /// switches (it keeps crunching while the user peeks at the Board)
     /// and outlive any one inspector selection — exactly the class of
@@ -96,6 +96,6 @@ internal final class TabState {
     
     // MARK: Players / Rankings Destinations
     
-    internal var playersInspectorPresented: Bool = false
-    internal var rankingsInspectorPresented: Bool = false
+    internal var playersInspectorPresented: Bool = true
+    internal var rankingsInspectorPresented: Bool = true
 }

@@ -11,26 +11,26 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 internal struct LibraryDestination: View {
-    
+
     // MARK: Static Constants
     private static let logger = Logger(
         subsystem: "com.berasenol.dgtstudiopro",
         category: "library"
     )
-    
+
     // MARK: Stored Properties
     internal let filter: LibraryFilter?
-    
+
     /// Clears the active filter back to the full Library (M-prs.6).
     /// Owned by `ContentView` because a filter *is* a sidebar selection —
     /// the destination can render the chip, but only the selection's
     /// owner can leave it. Nil when unfiltered; the chip renders its ✕
     /// unconditionally because every filtered construction passes it.
     internal let onClearFilter: (() -> Void)?
-    
+
     // MARK: Tab State (lives on enclosing `ContentView`)
     @Bindable internal var tabState: TabState
-    
+
     // MARK: Private Properties
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
     @AppStorage(StorageKeys.libraryViewMode) private var viewMode: CollectionViewMode = .list
@@ -45,7 +45,7 @@ internal struct LibraryDestination: View {
     @State private var selectedPGNs: Set<PGN.ID> = []
     @State private var importProgress: ImportProgress?
     @State private var isQueuePopoverPresented = false
-    
+
     // MARK: Initializers
     internal init(
         filter: LibraryFilter? = nil,
@@ -56,45 +56,46 @@ internal struct LibraryDestination: View {
         self.tabState = tabState
         self.onClearFilter = onClearFilter
     }
-    
+
     // MARK: Computed Properties
     private var filteredGames: [PGN] {
         guard let filter else { return games }
         return games.filter { filter.matches($0) }
     }
-    
+
     private var selectedPGN: PGN? {
         guard let id = selectedPGNs.first else { return nil }
         return filteredGames.first(where: { $0.id == id })
     }
-    
+
     private var importSheetBinding: Binding<Bool> {
         Binding(
             get: { importProgress != nil },
             set: { if !$0 { importProgress = nil } }
         )
     }
-    
-    private var pendingDeletionBinding: Binding<Bool> {        Binding(
-        get: { pendingDeletion != nil },
-        set: { if !$0 { pendingDeletion = nil } }
-    )
+
+    private var pendingDeletionBinding: Binding<Bool> {
+        Binding(
+            get: { pendingDeletion != nil },
+            set: { if !$0 { pendingDeletion = nil } }
+        )
     }
-    
+
     private var pendingDirtyDeletionBinding: Binding<Bool> {
         Binding(
             get: { pendingDirtyDeletion != nil },
             set: { if !$0 { pendingDirtyDeletion = nil } }
         )
     }
-    
+
     private var pendingBatchDeletionBinding: Binding<Bool> {
         Binding(
             get: { pendingBatchDeletion != nil },
             set: { if !$0 { pendingBatchDeletion = nil } }
         )
     }
-    
+
     // MARK: Body
     internal var body: some View {
         coreContent
@@ -150,7 +151,7 @@ internal struct LibraryDestination: View {
                 if mode == .gallery { tabState.libraryInspectorPresented = true }
             }
     }
-    
+
     /// The library content plus its inspector, toolbar, drop target, and
     /// import sheet — split out from the deletion alerts so neither modifier
     /// chain trips SwiftUI's per-expression type-check budget. (Adding the
@@ -185,7 +186,7 @@ internal struct LibraryDestination: View {
                 pgn: selectedPGN,
                 queue: tabState.analysisQueue
             )
-            .inspectorColumnWidth(min: 350, ideal: 400, max: 500)
+            .inspectorColumnWidth(min: 325, ideal: 320, max: 430)
         }
         .toolbar { toolbarContent }
         .sheet(isPresented: importSheetBinding) {
@@ -196,7 +197,7 @@ internal struct LibraryDestination: View {
             }
         }
     }
-    
+
     /// The clearable filter chip (M-prs.6): "Tag: X ✕" / "Player: Y ✕".
     /// For a smart-tag filter it doubles the sidebar highlight; for a
     /// programmatic player filter it *is* the whole UI — the state's one
@@ -223,13 +224,13 @@ internal struct LibraryDestination: View {
             .background(Capsule().fill(.secondary.opacity(0.15)))
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier(AccessibilityID.libraryFilterChip)
-            
+
             Spacer()
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
     }
-    
+
     // MARK: Instance Methods
     @ViewBuilder
     private var modeView: some View {
@@ -256,8 +257,8 @@ internal struct LibraryDestination: View {
             .accessibilityIdentifier(AccessibilityID.libraryModeList)
         case .columns:
             LibraryColumnsView(
-                games: filteredGames,
                 selectedPGNs: $selectedPGNs,
+                games: filteredGames,
                 onOpen:    openGame,
                 onAnalyze: requestAnalysis,
                 onExport:  requestExport,
@@ -277,7 +278,7 @@ internal struct LibraryDestination: View {
             .accessibilityIdentifier(AccessibilityID.libraryModeGallery)
         }
     }
-    
+
     /// Single resolution point for "open a game in its own window."
     /// Threaded into every Library view as the `onOpen` callback so the
     /// views stay window-system-unaware. macOS handles dedup, tabbing
@@ -286,7 +287,7 @@ internal struct LibraryDestination: View {
         Self.logger.info("Open requested: '\(pgn.name, privacy: .public)'")
         openWindow(value: pgn.persistentModelID)
     }
-    
+
     /// Single-game entry (card context menus, the gallery, the one-row
     /// list case). Analysis is a batch of one since M-batch — see
     /// `AnalysisQueueController`, decision 1 — so this enqueues, then
@@ -300,7 +301,7 @@ internal struct LibraryDestination: View {
         tabState.libraryInspectorPresented = true
         tabState.analysisQueue.enqueue([pgn], modelContext: modelContext)
     }
-    
+
     /// Multi-game entry (the toolbar button, the list's contextual
     /// selection): enqueues in **display order** — a `Set` carries none,
     /// and top-to-bottom-as-shown is the order a batch should crunch in.
@@ -319,7 +320,7 @@ internal struct LibraryDestination: View {
         Self.logger.info("Batch analyze requested: \(ordered.count) game(s)")
         tabState.analysisQueue.enqueue(ordered, modelContext: modelContext)
     }
-    
+
     /// Split into named groups because `ToolbarContentBuilder` — like every
     /// result builder — accepts at most ten statements per block, and D24′'s
     /// Export item was the eleventh. Grouping rather than golfing keeps room
@@ -335,7 +336,7 @@ internal struct LibraryDestination: View {
         ToolbarSpacer()
         trailingToolbarItems
     }
-    
+
     /// The Library's two file doors, in and out.
     @ToolbarContentBuilder
     private var transferToolbarItems: some ToolbarContent {
@@ -371,7 +372,7 @@ internal struct LibraryDestination: View {
             .accessibilityIdentifier(AccessibilityID.libraryExport)
         }
     }
-    
+
     @ToolbarContentBuilder
     private var viewModeToolbarItem: some ToolbarContent {
         ToolbarItem {
@@ -391,7 +392,7 @@ internal struct LibraryDestination: View {
             .accessibilityIdentifier(AccessibilityID.libraryViewModePicker)
         }
     }
-    
+
     @ToolbarContentBuilder
     private var analysisToolbarItems: some ToolbarContent {
         ToolbarItem {
@@ -432,7 +433,7 @@ internal struct LibraryDestination: View {
             }
         }
     }
-    
+
     @ToolbarContentBuilder
     private var trailingToolbarItems: some ToolbarContent {
         ToolbarItem {
@@ -455,7 +456,7 @@ internal struct LibraryDestination: View {
             .accessibilityIdentifier(AccessibilityID.libraryInspectorToggle)
         }
     }
-    
+
     /// The queue toolbar item's label: a spinner with "2/5" while the
     /// run is live, a warning triangle with the counts once a drained
     /// run left failures behind. The item renders only in those two
@@ -475,16 +476,16 @@ internal struct LibraryDestination: View {
                 .monospacedDigit()
         }
     }
-    
+
     @ViewBuilder
     private var emptyState: some View {
         if let filter {
             ContentUnavailableView {
                 Label("No \(filter.displayName) Games", systemImage: filter.systemImage)
-                
             } description: {
                 Text("No games match this \(filter.kindLabel.lowercased()) yet.")
             }
+            
         } else {
             ContentUnavailableView {
                 Label("No Games", systemImage: "books.vertical")
@@ -493,23 +494,23 @@ internal struct LibraryDestination: View {
             }
         }
     }
-    
+
     private func presentOpenPanel() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [UTType(filenameExtension: "pgn") ?? .plainText]
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
-        
+
         if panel.runModal() == .OK {
             importURLs(panel.urls)
         }
     }
-    
+
     private func importURLs(_ urls: [URL]) {
         guard !urls.isEmpty else { return }
         Task { await runImport(urls) }
     }
-    
+
     /// Imports a batch, recording a per-file result and never aborting on
     /// a failure — a bad file in the middle no longer drops the files
     /// after it. Runs on the main actor (PGNStore touches the
@@ -520,7 +521,7 @@ internal struct LibraryDestination: View {
         Self.logger.info("Import batch starting: \(urls.count) URL(s)")
         let store = PGNStore(modelContext: modelContext)
         importProgress = ImportProgress(total: urls.count)
-        
+
         for url in urls {
             let outcome: ImportResult.Outcome
             do {
@@ -533,24 +534,24 @@ internal struct LibraryDestination: View {
                 Self.logger.error("Import failed for \(url.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
                 outcome = .failed(.fileReadFailed(url, underlying: error))
             }
-            
+
             importProgress?.results.append(
                 ImportResult(fileName: url.lastPathComponent, outcome: outcome)
             )
             // Let SwiftUI render the updated progress before the next file.
             await Task.yield()
         }
-        
+
         importProgress?.isFinished = true
         let imported = importProgress?.importedCount ?? 0
         Self.logger.info("Import batch complete: \(imported)/\(urls.count) imported")
     }
-    
+
     /// Routes a delete request for the current selection (toolbar button, ⌫).
     private func requestDeleteSelection() {
         requestDelete(ids: selectedPGNs)
     }
-    
+
     /// Routes a delete request for a specific set of game IDs (the context
     /// menu's contextual selection). One game reuses the single-game flow (with
     /// its dirty-changes confirmation); two or more go through a batch
@@ -564,7 +565,7 @@ internal struct LibraryDestination: View {
             pendingBatchDeletion = games
         }
     }
-    
+
     /// Deletes every game in `pgns` in a single transaction, closing any open
     /// tabs first. Unsaved changes are discarded without a per-game prompt —
     /// acceptable while the dirty path is dormant (no editor yet); the
@@ -580,7 +581,7 @@ internal struct LibraryDestination: View {
             dismissWindow(value: id)
         }
         selectedPGNs.removeAll()
-        
+
         let store = PGNStore(modelContext: modelContext)
         do {
             try store.delete(pgns)
@@ -590,7 +591,7 @@ internal struct LibraryDestination: View {
             )
         }
     }
-    
+
     /// Entry point from the "Delete Game?" confirmation. Routes to a
     /// second discard confirmation if the game is open with unsaved
     /// changes; otherwise deletes and closes immediately.
@@ -601,7 +602,7 @@ internal struct LibraryDestination: View {
             performDelete(pgn)
         }
     }
-    
+
     /// Performs the deletion and closes any tab showing this game.
     /// `dismissWindow(value:)` targets the window/tab presenting the
     /// given value regardless of which tab invokes it, and is a harmless
@@ -615,11 +616,11 @@ internal struct LibraryDestination: View {
         // writes into a tombstoned model.
         tabState.analysisQueue.gameWasDeleted(id)
         openGames.markClean(id)
-        
+
         // Close the open tab (if any) before the model is torn down, so
         // the tab never renders against a tombstoned PGN.
         dismissWindow(value: id)
-        
+
         let store = PGNStore(modelContext: modelContext)
         do {
             try store.delete(pgn)
@@ -627,7 +628,7 @@ internal struct LibraryDestination: View {
             Self.logger.error("Failed to delete PGN: \(error.localizedDescription, privacy: .public)")
         }
     }
-    
+
     private func backfillEmptyNames() {
         let toFix = games.filter(\.hasStaleDefaultName)
         guard !toFix.isEmpty else { return }
@@ -644,7 +645,7 @@ internal struct LibraryDestination: View {
             Self.logger.error("Name backfill save failed: \(error.localizedDescription, privacy: .public)")
         }
     }
-    
+
     /// M-prs.1 sibling of `backfillEmptyNames()`: the logic is store-owned
     /// (Players and Rankings will share it from their own `onAppear`s);
     /// this is only the Library's call site and its error sink.
@@ -655,16 +656,16 @@ internal struct LibraryDestination: View {
             Self.logger.error("Player-link backfill failed: \(error.localizedDescription, privacy: .public)")
         }
     }
-    
+
     // MARK: Export (D24′)
-    
+
     /// Single-game entry (a card's context menu). One game means a save
     /// panel: the user names the file.
     private func requestExport(_ pgn: PGN) {
         Self.logger.info("Export requested: '\(pgn.name, privacy: .public)'")
         PGNExporter.export([pgn])
     }
-    
+
     /// Multi-game entry (the list's contextual selection). Resolves the set
     /// against `filteredGames` for the same reason `requestAnalysis(ids:)`
     /// does — a `Set` carries no order, and here the order is *visible*: it
@@ -683,7 +684,7 @@ internal struct LibraryDestination: View {
         for: PGN.self,
         configurations: ModelConfiguration(isStoredInMemoryOnly: true)
     )
-    
+
     let samples: [PGN] = [
         PGN(event: "World Championship", site: "Dubai", round: 11,
             white: "Carlsen, Magnus", black: "Nepomniachtchi, Ian", result: .whiteWins),
@@ -693,7 +694,7 @@ internal struct LibraryDestination: View {
             white: "Firouzja, Alireza", black: "Ding, Liren", result: .blackWins)
     ]
     for sample in samples { container.mainContext.insert(sample) }
-    
+
     return NavigationSplitView {
         List { Label("Library", systemImage: "books.vertical") }
             .navigationSplitViewColumnWidth(min: 80, ideal: 100, max: 120)

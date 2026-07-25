@@ -39,7 +39,7 @@ internal struct RankingsGalleryView: View {
                         .font(.title2.weight(.semibold))
                 }
                 
-                Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 6) {
+                Grid(alignment: .leading, horizontalSpacing: 0, verticalSpacing: 0) {
                     GridRow {
                         statCell("Wins", "\(player.stats.wins)")
                         statCell("Record", "\(player.stats.wins)–\(player.stats.draws)–\(player.stats.losses)")

@@ -81,6 +81,7 @@ internal struct SmartTagEditorView: View {
             TextField("Tag Name", text: $draft.name)
                 .textFieldStyle(.roundedBorder)
                 .font(.headline)
+                .padding(.trailing)
                 .accessibilityIdentifier(AccessibilityID.tagsEditorName)
             
             colorPicker
@@ -190,6 +191,7 @@ private struct TagRuleRow: View {
                 }
             }
             .labelsHidden()
+            .fixedSize()
             .frame(width: 140)
             
             Picker("Comparison", selection: $rule.comparison) {
@@ -198,6 +200,7 @@ private struct TagRuleRow: View {
                 }
             }
             .labelsHidden()
+            .fixedSize()
             .frame(width: 140)
             
             valueControl
@@ -205,9 +208,11 @@ private struct TagRuleRow: View {
             
             Button(action: onRemove) {
                 Image(systemName: "minus")
+                    .padding(.vertical, 6)
             }
             Button(action: onAdd) {
                 Image(systemName: "plus")
+                    .padding(.vertical, 2)
             }
         }
         .onChange(of: rule.field) { _, newField in
@@ -251,7 +256,7 @@ private struct TagRuleRow: View {
 
 #Preview("New Tag") {
     SmartTagEditorView(draft: TagDraft(), onSave: { _ in })
-        .frame(width: 520, height: 420)
+//        .frame(width: 520, height: 420)
 }
 
 #Preview("Populated — Match All") {
@@ -264,7 +269,7 @@ private struct TagRuleRow: View {
         TagRule(field: .result, comparison: .equals, gameResult: .whiteWins)
     ]
     return SmartTagEditorView(draft: draft, onSave: { _ in })
-        .frame(width: 520, height: 420)
+//        .frame(width: 520, height: 420)
 }
 
 /// Every rule *kind* at once (string / result / number / date / boolean) —
@@ -283,5 +288,5 @@ private struct TagRuleRow: View {
         TagRule(field: .checkmate, comparison: .isTrue)
     ]
     return SmartTagEditorView(draft: draft, onSave: { _ in })
-        .frame(width: 520, height: 520)
+//        .frame(width: 520, height: 520)
 }
