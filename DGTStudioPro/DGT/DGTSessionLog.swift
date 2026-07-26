@@ -174,7 +174,9 @@ internal final class DGTSessionLog {
         }
     }
     
-    /// Clears the timeline (e.g. when starting a fresh game you want isolated).
+    /// Clears the timeline. No production caller — the buffer is ring-bounded
+    /// at `maxEntries` and nothing resets it per game; this exists so the
+    /// suite can assert the bound and the append path independently.
     internal func clear() {
         entries.removeAll()
     }

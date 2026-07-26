@@ -26,7 +26,7 @@ internal enum PGNParser {
     )
     
     /// Parses `[Date "yyyy.MM.dd"]` tags — pinned to **UTC** so that
-    /// parse → `PGNStore.hashDateFormatter` (also UTC) is a perfect
+    /// parse → `PGNStore.hashDateString(from:)` (also UTC) is a perfect
     /// round-trip. A PGN date is a calendar day with no timezone of its
     /// own; the app's one convention is "PGN dates are UTC days."
     ///
@@ -166,21 +166,6 @@ internal enum PGNParser {
     }
     
     // MARK: Movetext Parsing
-    internal static func parseMoves(from movetext: String) throws -> [String] {
-        let cleaned = try strip(movetext)
-        let tokens = cleaned.split(whereSeparator: { $0.isWhitespace })
-        
-        var result: [String] = []
-        for token in tokens {
-            let str = String(token)
-            if resultTokens.contains(str) { continue }
-            let san = stripAnnotations(str)
-            if !san.isEmpty {
-                result.append(san)
-            }
-        }
-        return result
-    }
     
     /// Single-pass scanner that produces both the move list and a parallel
     /// array of evaluations sourced from `{[%eval ...]}` comments.
@@ -373,94 +358,6 @@ internal enum PGNParser {
         let tagLines = lines[..<splitIndex].joined(separator: "\n")
         let movetextLines = lines[splitIndex...].joined(separator: "\n")
         return (tagLines, movetextLines)
-    }
-    
-    private static func strip(_ input: String) throws -> String {
-        var output = ""
-        var braceDepth = 0
-        var parenDepth = 0
-        var inLineComment = false
-        
-        let chars = Array(input)
-        var i = 0
-        
-        while i < chars.count {
-            let c = chars[i]
-            
-            if inLineComment {
-                if c == "\n" { inLineComment = false }
-                i += 1
-                continue
-            }
-            
-            if braceDepth > 0 {
-                if c == "}" { braceDepth -= 1 }
-                i += 1
-                continue
-            }
-            
-            if parenDepth > 0 {
-                if c == "(" { parenDepth += 1 }
-                else if c == ")" { parenDepth -= 1 }
-                i += 1
-                continue
-            }
-            
-            switch c {
-            case "{":
-                braceDepth = 1
-                output.append(" ")
-                i += 1
-                
-            case "(":
-                parenDepth = 1
-                output.append(" ")
-                i += 1
-                
-            case ";":
-                inLineComment = true
-                i += 1
-                
-            case "$":
-                i += 1
-                while i < chars.count, chars[i].isASCII, chars[i].isNumber { i += 1 }
-                output.append(" ")
-                
-            default:
-                if c.isASCII, c.isNumber, let after = consumeMoveNumber(chars, from: i) {
-                    output.append(" ")
-                    i = after
-                } else {
-                    output.append(c)
-                    i += 1
-                }
-            }
-        }
-        
-        if braceDepth != 0 {
-            Self.logger.error(
-                """
-                Strip failed: unbalanced braces \
-                finalBraceDepth=\(braceDepth) \
-                inputLength=\(input.count) \
-                head='\(input.prefix(200), privacy: .public)'
-                """
-            )
-            throw Error.unbalancedBraces
-        }
-        if parenDepth != 0 {
-            Self.logger.error(
-                """
-                Strip failed: unbalanced parentheses \
-                finalParenDepth=\(parenDepth) \
-                inputLength=\(input.count) \
-                head='\(input.prefix(200), privacy: .public)'
-                """
-            )
-            throw Error.unbalancedParentheses
-        }
-        
-        return output
     }
     
     // Consumes \d+\.+ at `start`, returns index after; nil if not a move number.

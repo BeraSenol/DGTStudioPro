@@ -14,12 +14,12 @@ import SwiftUI
 /// per-player home; the trend chart is the Rankings inspector's job
 /// (M-prs.4).
 internal struct PlayersInspectorView: View {
-
+    
     // MARK: Stored Properties
     internal let stats: PlayerStats?
     internal let rating: Glicko1.Rating?
     internal let recentGames: [PGN]
-
+    
     // MARK: Body
     internal var body: some View {
         List {
@@ -33,14 +33,14 @@ internal struct PlayersInspectorView: View {
         }
         .listStyle(.sidebar)
     }
-
+    
     // MARK: Instance Methods
     private var emptySection: some View {
         ContentUnavailableView(
             "No Player Selected",
             systemImage: "person.fill",
             description: Text(
-                "Select an player from to view it's details"
+                "Select a player to view their profile and recent games."
             )
         )
     }
@@ -49,10 +49,10 @@ internal struct PlayersInspectorView: View {
 // MARK: Profile
 
 private struct ProfileSection: View {
-
+    
     let stats: PlayerStats
     let rating: Glicko1.Rating?
-
+    
     var body: some View {
         Section {
             HStack(spacing: 12) {
@@ -61,7 +61,7 @@ private struct ProfileSection: View {
                     .font(.headline)
             }
             .padding(.vertical, 4)
-
+            
             LabeledContent("Games", value: "\(stats.games)")
             LabeledContent("Win Rate", value: stats.winRate.formatted(.percent.precision(.fractionLength(0))))
             LabeledContent("Mates Delivered", value: "\(stats.matesDelivered)")
@@ -73,7 +73,7 @@ private struct ProfileSection: View {
         }
         .accessibilityIdentifier(AccessibilityID.playersInspectorProfile)
     }
-
+    
     /// "Unrated" until the player has a rated game (decided, both sides
     /// resolved — the `Glicko1.histories` rule); the number itself
     /// formats through the one shared rule.
@@ -85,12 +85,12 @@ private struct ProfileSection: View {
 // MARK: Recent Games
 
 private struct RecentGamesSection: View {
-
+    
     let playerKey: String
     let games: [PGN]
-
+    
     @Environment(\.openWindow) private var openWindow
-
+    
     var body: some View {
         Section {
             if games.isEmpty {
@@ -110,7 +110,7 @@ private struct RecentGamesSection: View {
             Text("Recent Games")
         }
     }
-
+    
     /// Row tap opens the game — the inspector's open affordance, same
     /// `openWindow(value:)` route as the Library inspector (macOS dedups
     /// and tabs the windows).

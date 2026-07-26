@@ -230,9 +230,9 @@ internal struct PGNStore {
     /// re-resolution the transaction calls for on a *seat* edit is a no-op and
     /// omitted (metadata edits route through `applyEdit`, which re-resolves).
     /// A proposal that canonicalizes to the current game is a no-op —
-    /// evaluations, still valid by position, are preserved. When M-lib.4
-    /// lands, the ECO / SpecialCheckmate fields clear here too, riding this
-    /// same invalidation.
+    /// evaluations, still valid by position, are preserved. The ECO /
+    /// SpecialCheckmate classification fields clear here too, riding this same
+    /// invalidation, once they exist on the model.
     internal func applyMovetextEdit(
         to pgn: PGN,
         proposed: [String]

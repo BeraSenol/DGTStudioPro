@@ -13,9 +13,10 @@ extension GameState {
     /// six fields updated: position, side to move, castling rights, EP
     /// target, halfmove clock, fullmove number.
     ///
-    /// Used by:
-    ///   - SAN serialization (7f) to compute the post-move check / mate suffix
-    ///   - Game replay (7g) to step through SAN move lists
+    /// The single state-transition primitive: SAN serialization, live play,
+    /// board reconstruction, movetext validation, and preview walks all reach
+    /// the next state through here. Deliberately not enumerated further — a
+    /// caller list on a primitive this central is a comment that rots.
     ///
     /// The caller is expected to pass a legal move; behavior on illegal input
     /// is the same as `Position.applying` — the position transitions, but

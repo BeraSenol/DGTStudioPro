@@ -80,11 +80,16 @@ internal struct RankingsListView: View {
 #Preview("Provisional & Unrated") {
     @Previewable @State var selection: PlayerStats.ID?
     
+    // Replacing the tail rather than appending an unrated copy: `RankedPlayer.id`
+    // is `stats.id`, so a concatenation would put the same identifier in the
+    // collection twice and SwiftUI would warn about undefined `ForEach` results.
     let ranked = PreviewFixtures.rankedPlayers()
-    let unrated = ranked.map { RankedPlayer(rank: $0.rank, stats: $0.stats, rating: nil) }
+    let unrated = ranked.dropLast() + ranked.suffix(1).map {
+        RankedPlayer(rank: $0.rank, stats: $0.stats, rating: nil)
+    }
     
     RankingsListView(
-        players: ranked + unrated.suffix(1),
+        players: Array(unrated),
         selectedKey: $selection,
         onShowInLibrary: { _ in }
     )

@@ -9,9 +9,9 @@
 /// lost a piece and the squares that now hold one. Pure value type.
 ///
 /// This is the substrate the reconstruction engine reads to identify a move,
-/// and the same shape the recovery system (D6) will read to compute its
-/// correct / place-piece / remove-piece highlights. It says nothing about
-/// legality — it is a literal before/after delta.
+/// and the same shape `RecoveryGuidance` reads to compute its remove / place /
+/// replace checklist and the board's attention/target highlights. It says
+/// nothing about legality — it is a literal before/after delta.
 internal struct DGTBoardDiff: Equatable {
     
     /// Squares that went from occupied to empty. Value = the piece that was
@@ -25,10 +25,6 @@ internal struct DGTBoardDiff: Equatable {
     internal let placed: [Square: Piece]
     
     internal var isEmpty: Bool { vacated.isEmpty && placed.isEmpty }
-    
-    internal var changedSquares: Set<Square> {
-        Set(vacated.keys).union(placed.keys)
-    }
     
     internal init(from before: Position, to after: Position) {
         var vacated: [Square: Piece] = [:]

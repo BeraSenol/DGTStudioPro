@@ -44,3 +44,38 @@ internal struct RankingsIconsView: View {
         }
     }
 }
+
+// MARK: Previews
+
+#Preview("Ladder") {
+    @Previewable @State var selection: PlayerStats.ID?
+    
+    RankingsIconsView(
+        players: PreviewFixtures.rankedPlayers(),
+        selectedKey: $selection,
+        onShowInLibrary: { _ in }
+    )
+    .frame(width: 860, height: 300)
+}
+
+/// Six fixed columns at a 120pt minimum, so wrapping only shows itself with
+/// more players than one row holds — the width here is deliberately enough
+/// for a full row, since a too-narrow canvas hides the grid's real behaviour
+/// behind horizontal squeeze instead.
+#Preview("Wraps To Two Rows") {
+    @Previewable @State var selection: PlayerStats.ID? = PreviewFixtures.topStats().id
+    
+    RankingsIconsView(
+        players: PreviewFixtures.deepRankedPlayers(),
+        selectedKey: $selection,
+        onShowInLibrary: { _ in }
+    )
+    .frame(width: 860, height: 420)
+}
+
+#Preview("Empty") {
+    @Previewable @State var selection: PlayerStats.ID?
+    
+    RankingsIconsView(players: [], selectedKey: $selection, onShowInLibrary: { _ in })
+        .frame(width: 860, height: 300)
+}

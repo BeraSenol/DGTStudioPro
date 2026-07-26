@@ -16,7 +16,12 @@ internal struct BoardView: View {
     internal let perspective: PieceColor
     internal let lastMove: LastMove?
     internal let checkSquare: Square?
-    internal let selectedSquare: Square?
+    /// Reserved: nothing in the app selects a square today — the physical
+    /// board is the input — so every call site takes this default. Defaulted
+    /// rather than removed because `SquareHighlight.selected` and
+    /// `SquareView`'s tint are already built; a click-to-move or
+    /// position-setup surface would need only to pass a value.
+    internal var selectedSquare: Square? = nil
     /// Square at which to render a 50%-opacity ghost piece (the mid-castle
     /// "rook hasn't moved yet" cue from `DGTLiveSession`). Both `ghostSquare`
     /// and `ghostPiece` must be non-nil for the ghost to render. Defaulted so

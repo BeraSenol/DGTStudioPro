@@ -21,7 +21,8 @@ internal struct LiveGameHUDView: View {
     // MARK: Phase
     
     /// Everything the banner can say. Derivation (including priority between
-    /// overlapping session flags) lives in `BoardDestination.hudPhase`.
+    /// overlapping session flags) lives in `SessionSidebarPanel.hudPhase` —
+    /// moved there with the card itself by D15′.
     internal enum Phase: Equatable {
         case reconnecting
         /// Connected, no game running: invite setup or a manual New Game.
@@ -37,7 +38,8 @@ internal struct LiveGameHUDView: View {
         /// nudge — visually distinct from recovery.
         case correction(message: String)
         /// The board can't be explained by any legal move — restore the last
-        /// legal position. Minimal v1 banner; per-square guidance is M6.
+        /// legal position. The per-square checklist renders below this card
+        /// (`RecoveryGuidanceView`); this is only the headline.
         case recovering(lastSAN: String?)
         /// Terminal result reached and safely in the Library.
         case finished(result: GameResult)

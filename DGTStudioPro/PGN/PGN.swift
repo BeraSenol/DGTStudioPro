@@ -42,7 +42,7 @@ internal final class PGN: Identifiable {
     internal var black: String
     internal var result: GameResult
     internal var timeControl: String?
-
+    
     /// The `Board` tag the DGT exports carry — "DGT 3000448278", the serial
     /// the board reports during the init handshake. Optional, and
     /// deliberately **outside the content hash** (like `timeControl`): it
@@ -51,7 +51,7 @@ internal final class PGN: Identifiable {
     /// stored hash in place. Nil until a live game learns it (the archive
     /// door doesn't thread it yet) or an import supplies it.
     internal var board: String?
-
+    
     internal var moves: [String]
     
     /// Engine evaluations parallel to ``moves``, indexed by ply. The element
@@ -103,12 +103,6 @@ internal final class PGN: Identifiable {
     /// Used both for new imports and the backfill comparison.
     internal var defaultDisplayName: String {
         "\(whiteDisplayName) vs \(blackDisplayName)"
-    }
-    
-    /// Legacy `name` form for games imported before display-name support.
-    /// Used by the backfill to recognize a stored default and rewrite it.
-    internal var legacyDefaultName: String {
-        "\(white) vs \(black)"
     }
     
     /// Whether `name` is a **stale stored default** that should be rewritten
@@ -177,23 +171,5 @@ internal final class PGN: Identifiable {
         self.name = name ?? "\(PlayerName.displayForm(of: white)) vs \(PlayerName.displayForm(of: black))"
         self.importedAt = .now
         self.contentHash = contentHash
-    }
-    
-    // MARK: Static Methods
-    /// Transforms a PGN-style "Last, First" player tag into "First Last" form
-    /// for display. Inputs without a comma pass through unchanged. Multi-part
-    /// first names are preserved ("Heylen, Christophe Maria" → "Christophe
-    /// Maria Heylen"). Trailing whitespace and stray commas are trimmed.
-    internal static func displayPlayerName(_ raw: String) -> String {
-        let trimmed = raw.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return trimmed }
-        guard let commaIndex = trimmed.firstIndex(of: ",") else { return trimmed }
-        
-        let last = trimmed[..<commaIndex].trimmingCharacters(in: .whitespaces)
-        let rest = trimmed[trimmed.index(after: commaIndex)...].trimmingCharacters(in: .whitespaces)
-        
-        if rest.isEmpty { return last }
-        if last.isEmpty { return rest }
-        return "\(rest) \(last)"
     }
 }

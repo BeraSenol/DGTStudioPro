@@ -36,7 +36,7 @@ internal final class Player: Identifiable {
     // MARK: Stored Properties
     
     /// First-seen display form ("Ruy Lopez"), produced by
-    /// `PGN.displayPlayerName(_:)` from whichever raw tag created the row.
+    /// `PlayerName.displayForm(of:)` from whichever raw tag created the row.
     internal var name: String
     
     /// The identity key — see the type comment. Written only alongside
@@ -63,7 +63,7 @@ internal final class Player: Identifiable {
     // MARK: Initializers
     
     /// `name` must already be in display form — the resolver converts raw
-    /// tags via `PGN.displayPlayerName(_:)` before reaching here.
+    /// tags via `PlayerName.displayForm(of:)` before reaching here.
     internal init(name: String) {
         self.name = name
         self.normalizedName = Self.normalizedKey(for: name)

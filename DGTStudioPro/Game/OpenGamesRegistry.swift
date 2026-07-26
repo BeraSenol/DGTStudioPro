@@ -21,11 +21,13 @@ import SwiftData
 /// convenience kind would create per-tab copies, which would defeat the
 /// "shared across tabs" requirement.)
 ///
-/// Today the app is a read-only viewer, so nothing marks a game dirty;
-/// `isDirty` is always `false` and the delete path always takes the
-/// immediate-close branch. The editor work that lands later will call
-/// `markDirty`/`markClean` as annotations/edits are made, at which point
-/// the discard-confirmation branch becomes live with no further wiring.
+/// Nothing calls `markDirty` yet: the edit surfaces that exist (metadata via
+/// `applyEdit`, movetext via `applyMovetextEdit`) commit through the store on
+/// OK, so a tab is never left holding uncommitted state. `isDirty` is
+/// therefore always `false` and the delete path always takes the
+/// immediate-close branch. An editor that defers its write — inline
+/// annotations, a live movetext buffer — calls `markDirty`/`markClean` and the
+/// discard-confirmation branch goes live with no further wiring.
 @Observable
 @MainActor
 internal final class OpenGamesRegistry {

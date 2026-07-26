@@ -15,9 +15,14 @@
 ///
 /// Result-consistency rules (D18′'s deferred "exact consistency rules pinned
 /// by the suite", recorded here):
-/// - **Checkmate forces the mating side's win.** The parser strips `+`/`#`,
-///   so a `#` is not self-validating — the terminal state is the authority.
-///   A final checkmate with any result but the mated side's loss is rejected.
+/// - **Checkmate forces the mating side's win.** The board position is a
+///   stronger authority than an annotation a human may simply have omitted,
+///   so the terminal state decides and a `#` is never taken on trust. A final
+///   checkmate with any result but the mated side's loss is rejected.
+///   (Not, as an earlier revision of this comment claimed, because the parser
+///   discards `#`: `PGNParser.stripAnnotations` removes only `!` and `?`, and
+///   `GameRecord.endedInMate` depends on `#` surviving import. The suffix is
+///   discarded by `GameState.parseSAN`'s own cleaning step, one layer down.)
 /// - **A trailing `#` must actually mate** — writing `Qd2#` on a non-mate is
 ///   a lie the parser would silently swallow; caught here against reality.
 /// - **Stalemate forces a draw** — the only other position-forced result.
@@ -92,8 +97,11 @@ internal enum MovetextEdit {
             state = state.applying(move)
         }
         
-        // A trailing `#` (which the parser stripped) must match reality —
-        // checked on the raw input, since the canonical `#` is derived, not given.
+        // A trailing `#` must match reality. Checked against `proposed` rather
+        // than `canonical` because the canonical `#` is derived from the
+        // position — comparing a derived mate marker to itself would always
+        // pass and never catch the lie. `parseSAN` dropped the suffix on its
+        // way in, so the raw input is the only place the user's claim survives.
         if let last = proposed.last, last.contains("#"), !state.isCheckmate {
             return .failure(.claimsCheckmateButPositionIsNot(san: last))
         }

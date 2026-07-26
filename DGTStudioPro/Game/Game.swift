@@ -96,18 +96,8 @@ internal final class Game {
         return currentState.position.kingSquare(for: currentState.activeColor)
     }
 
-    /// Engine evaluation at `currentPly`, sourced from `pgn.evaluations`.
-    /// Returns `nil` at ply 0 (no move has been scored), when the game
-    /// hasn't been analyzed, or when the specific ply wasn't evaluated.
-    internal var currentEvaluation: Evaluation? {
-        guard currentPly > 0 else { return nil }
-        return pgn.evaluation(atPly: currentPly - 1)
-    }
-
     internal var canAdvance: Bool { currentPly < moves.count }
     internal var canRetreat: Bool { currentPly > 0 }
-    internal var isAtStart:  Bool { currentPly == 0 }
-    internal var isAtEnd:    Bool { currentPly == moves.count }
 
     // MARK: Initializer
 

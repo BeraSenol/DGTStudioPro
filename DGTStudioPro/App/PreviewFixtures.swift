@@ -77,15 +77,46 @@ internal enum PreviewFixtures {
         PlayerStats.index(of: records()).sorted(by: PlayerStats.rankingOrder)
     }
     
-    internal static func rankedPlayers() -> [RankedPlayer] {
-        let histories = Glicko1.histories(from: records())
-        return playerStats().enumerated().map { offset, stats in
-            RankedPlayer(
-                rank: offset + 1,
-                stats: stats,
-                rating: histories[stats.key]?.last?.rating
-            )
+    /// A larger set that reaches the upper win bands. `records()` only ever
+    /// produces two of `RankingsColumnsView`'s four brackets, so a boundary
+    /// could be wrong in both directions unseen; this adds a dominant player
+    /// on twelve wins and a mid-tier one on six, giving 10+ / 5–9 / 1–4 /
+    /// none all at once. Built by appending *games*, not by hand-writing
+    /// stats — the folds stay in the loop, same reason as the type comment.
+    internal static func deepRecords() -> [GameRecord] {
+        var records = self.records()
+        for offset in 0..<12 {
+            records.append(game("Vasil", "Novak", .whiteWins, day: 20 + offset))
         }
+        for offset in 0..<6 {
+            records.append(game("Ines", "Tomas", .whiteWins, day: 40 + offset))
+        }
+        return records
+    }
+    
+    /// The ladder construction both fixtures share: rank by the D11′
+    /// comparator, then attach each player's latest Glicko rating. One
+    /// implementation so a change to either fold shows up in every canvas.
+    private static func ladder(from records: [GameRecord]) -> [RankedPlayer] {
+        let histories = Glicko1.histories(from: records)
+        return PlayerStats.index(of: records)
+            .sorted(by: PlayerStats.rankingOrder)
+            .enumerated()
+            .map { offset, stats in
+                RankedPlayer(
+                    rank: offset + 1,
+                    stats: stats,
+                    rating: histories[stats.key]?.last?.rating
+                )
+            }
+    }
+    
+    internal static func rankedPlayers() -> [RankedPlayer] {
+        ladder(from: records())
+    }
+    
+    internal static func deepRankedPlayers() -> [RankedPlayer] {
+        ladder(from: deepRecords())
     }
     
     internal static func topStats() -> PlayerStats { playerStats()[0] }

@@ -48,17 +48,17 @@ internal struct PlayersIconsView: View {
 #Preview("With Players") {
     @Previewable @State var selection: PlayerStats.ID?
     
-    PlayersIconsView(          // → PlayersGalleryView / PlayersColumnsView
+    PlayersIconsView(
         players: PreviewFixtures.playerStats(),
         selectedKey: $selection,
         onShowInLibrary: { _ in }
     )
-//    .frame(width: 720, height: 420)
+    .frame(width: 720, height: 420)
 }
 
 #Preview("Empty") {
     @Previewable @State var selection: PlayerStats.ID?
     
     PlayersIconsView(players: [], selectedKey: $selection, onShowInLibrary: { _ in })
-//        .frame(width: 720, height: 420)
+        .frame(width: 720, height: 420)
 }

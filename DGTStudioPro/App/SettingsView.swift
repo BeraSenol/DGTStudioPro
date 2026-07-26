@@ -312,4 +312,5 @@ internal struct SettingsView: View {
 #Preview {
     SettingsView()
         .modelContainer(for: PGN.self, inMemory: true)
+        .environment(SleepInhibitor(defaults: UserDefaults(suiteName: "preview")!))
 }

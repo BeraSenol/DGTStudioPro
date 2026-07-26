@@ -39,9 +39,12 @@ internal final class GameAnalysisDriver {
     )
     
     // MARK: Status
-    /// Coarse-grained view-facing state. The inspector uses this to pick
-    /// between the Analyze button, the progress + Stop combo, and the
-    /// error message row.
+    /// Coarse-grained pass state, read only by `AnalysisQueueController`:
+    /// `.analyzing` supplies `currentProgress`, and the terminal case maps
+    /// to an `AnalysisQueue.Outcome` when the awaited pass returns. No view
+    /// reads this — since M-batch the inspector's control row switches on
+    /// `queue.status(of:)` (`AnalysisQueue.ItemStatus`), which knows about
+    /// waiting and queue position and this type does not.
     internal enum Status: Equatable {
         case idle
         case analyzing(progress: Double)

@@ -124,20 +124,61 @@ internal struct PlayersColumnsView: View {
 
 // MARK: Previews
 
+/// Opens with no band selected, and can't do otherwise — `selectedBandID` is
+/// private `@State`, so a preview has no way to preselect. That is worth
+/// seeing rather than working around: it is exactly how the mode presents on
+/// every fresh visit, band list on the left and placeholder on the right.
+#Preview("Bands") {
+    @Previewable @State var selection: PlayerStats.ID?
+    
+    RankingsColumnsView(
+        players: PreviewFixtures.rankedPlayers(),
+        selectedKey: $selection,
+        onShowInLibrary: { _ in }
+    )
+    .frame(width: 820, height: 420)
+}
+
+/// All four brackets populated. The small fixture reaches only "1–4 wins"
+/// and "No wins", so the 5–9 and 10+ boundaries — and the `compactMap` that
+/// drops empty bands — are unwitnessed without this one.
+#Preview("All Four Bands") {
+    @Previewable @State var selection: PlayerStats.ID?
+    
+    RankingsColumnsView(
+        players: PreviewFixtures.deepRankedPlayers(),
+        selectedKey: $selection,
+        onShowInLibrary: { _ in }
+    )
+    .frame(width: 820, height: 420)
+}
+
+/// Two independent empty states that both have to hold: the band list takes
+/// its own "No players" arm rather than rendering an empty `List`, and the
+/// detail pane still shows its placeholder.
+#Preview("Empty") {
+    @Previewable @State var selection: PlayerStats.ID?
+    
+    RankingsColumnsView(players: [], selectedKey: $selection, onShowInLibrary: { _ in })
+        .frame(width: 820, height: 420)
+}
+
+// MARK: Previews
+
 #Preview("With Players") {
     @Previewable @State var selection: PlayerStats.ID?
     
-    PlayersIconsView(          // → PlayersGalleryView / PlayersColumnsView
+    PlayersColumnsView(
         players: PreviewFixtures.playerStats(),
         selectedKey: $selection,
         onShowInLibrary: { _ in }
     )
-//    .frame(width: 720, height: 420)
+    .frame(width: 720, height: 420)
 }
 
 #Preview("Empty") {
     @Previewable @State var selection: PlayerStats.ID?
     
-    PlayersIconsView(players: [], selectedKey: $selection, onShowInLibrary: { _ in })
-//        .frame(width: 720, height: 420)
+    PlayersColumnsView(players: [], selectedKey: $selection, onShowInLibrary: { _ in })
+        .frame(width: 720, height: 420)
 }

@@ -15,27 +15,23 @@ import Foundation
 /// throughout the app. UCI input from the engine arrives in side-to-move
 /// perspective and is flipped at the parsing layer when black is to move.
 internal enum Evaluation: Equatable, Sendable, Codable {
-    
+
     // MARK: Cases
-    
+
     /// Material-equivalent advantage in centipawns, signed from white's
     /// perspective. `centipawns(0)` is a drawn position; `centipawns(100)`
     /// is roughly "white is a pawn ahead".
     case centipawns(Int)
-    
+
     /// Forced mate in N plies, signed from white's perspective.
     /// `mate(3)` means white mates in 3; `mate(-3)` means black mates
     /// in 3. `mate(0)` indicates the position is already checkmate
     /// (rarely emitted in stored evaluations) and is treated as 0.5
     /// by the probability projection to avoid sign-of-zero ambiguity.
     case mate(Int)
-    
-    // MARK: Constants
-    
-    internal static let drawn: Evaluation = .centipawns(0)
-    
+
     // MARK: Computed Properties
-    
+
     /// Probability that white wins the resulting game, in `[0, 1]`.
     ///
     /// Centipawns project via a sigmoid with k=400, the de-facto-standard
@@ -51,7 +47,7 @@ internal enum Evaluation: Equatable, Sendable, Codable {
             return n > 0 ? 1.0 : 0.0
         }
     }
-    
+
     /// Returns the evaluation with its sign flipped (white ↔ black
     /// perspective). Used by the UCI parser to normalize side-to-move-
     /// relative engine output to white-relative storage.
@@ -66,7 +62,7 @@ internal enum Evaluation: Equatable, Sendable, Codable {
 // MARK: PGN `[%eval ...]` Tag Format
 
 extension Evaluation {
-    
+
     /// Parses the *content* of a `[%eval ...]` PGN comment tag (the value
     /// between the keyword and the closing bracket — the caller is
     /// expected to have stripped the wrapping syntax).
@@ -82,7 +78,7 @@ extension Evaluation {
     internal init?(parsingEvalTagContent content: String) {
         let trimmed = content.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return nil }
-        
+
         if trimmed.hasPrefix("#") {
             let mateStr = String(trimmed.dropFirst())
             guard let n = Int(mateStr) else { return nil }
@@ -97,12 +93,16 @@ extension Evaluation {
             self = .centipawns(cp)
         }
     }
-    
+
     /// Parses a complete `[%eval ...]` tag, including its wrapping
-    /// brackets and keyword. Convenience for the PGN parser's comment
-    /// scanning loop — recognizes the exact Lichess/Chess.com shape
+    /// brackets and keyword — recognizes the exact Lichess/Chess.com shape
     /// and returns nil otherwise. Whitespace around the inner value
     /// is tolerated; missing space between keyword and value is not.
+    ///
+    /// No production caller: the parser's scanner strips the wrapper itself
+    /// and calls `init?(parsingEvalTagContent:)`. Kept, with `evalTag`, as
+    /// the pinned round-trip pair — D24′ writes no evals, so the emitting
+    /// half waits for a decision that reverses that.
     internal init?(parsingEvalTag tag: String) {
         let trimmed = tag.trimmingCharacters(in: .whitespaces)
         let prefix = "[%eval "
@@ -115,7 +115,7 @@ extension Evaluation {
         )
         self.init(parsingEvalTagContent: inner)
     }
-    
+
     /// Renders the *content* of a `[%eval ...]` tag in the Lichess /
     /// Chess.com convention.
     ///
@@ -132,9 +132,11 @@ extension Evaluation {
             return "#\(n)"
         }
     }
-    
+
     /// Renders the full `[%eval ...]` comment tag, ready to embed
-    /// inside `{...}` PGN movetext comments.
+    /// inside `{...}` PGN movetext comments. Unused in production —
+    /// `PGNSerializer` writes no evaluations (D24′); this and
+    /// `init?(parsingEvalTag:)` exist as the round-tripped pair.
     internal var evalTag: String {
         "[%eval \(evalTagContent)]"
     }

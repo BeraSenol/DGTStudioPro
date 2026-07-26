@@ -31,10 +31,6 @@ internal struct ImportProgress {
     
     internal var completed: Int { results.count }
     
-    internal var fraction: Double {
-        total > 0 ? Double(completed) / Double(total) : 0
-    }
-    
     internal var importedCount: Int {
         results.filter {
             if case .imported = $0.outcome { return true }
@@ -200,4 +196,67 @@ private struct ImportResultRow: View {
             return "Game is ongoing."
         }
     }
+}
+
+// MARK: Previews
+
+/// Mid-batch: `isFinished` false, so the header shows the determinate
+/// progress and the dismiss affordance reads as an interruption rather
+/// than an acknowledgement.
+#Preview("Running") {
+    ImportStatusView(
+        progress: ImportProgress(
+            total: 12,
+            results: [
+                ImportResult(fileName: "1. Bera vs Reinaud.pgn", outcome: .imported(name: "Bera vs Reinaud")),
+                ImportResult(fileName: "2. Bera vs Lorenzo.pgn", outcome: .imported(name: "Bera vs Lorenzo")),
+                ImportResult(fileName: "3. Lorenzo vs Reinaud.pgn", outcome: .imported(name: "Lorenzo vs Reinaud"))
+            ],
+            isFinished: false
+        ),
+        onDismiss: {}
+    )
+}
+
+#Preview("Finished — All Imported") {
+    ImportStatusView(
+        progress: ImportProgress(
+            total: 3,
+            results: [
+                ImportResult(fileName: "1. Bera vs Reinaud.pgn", outcome: .imported(name: "Bera vs Reinaud")),
+                ImportResult(fileName: "2. Bera vs Lorenzo.pgn", outcome: .imported(name: "Bera vs Lorenzo")),
+                ImportResult(fileName: "3. Lorenzo vs Reinaud.pgn", outcome: .imported(name: "Lorenzo vs Reinaud"))
+            ],
+            isFinished: true
+        ),
+        onDismiss: {}
+    )
+}
+
+/// The failure rows and the summary counts that partition them.
+/// `.ongoingGame` is Decision #3 arriving as an import result — a `*` game
+/// is refused at the door, not stored and hidden.
+///
+/// The `.duplicate` row is deliberately absent: its associated
+/// `PersistentIdentifier` can't be built without an inserted model, so
+/// previewing it would mean standing up a container for one row. It is
+/// covered instead by `PGNStoreTests`' dedupe pins and the import manual
+/// check.
+#Preview("Finished — Mixed Failures") {
+    ImportStatusView(
+        progress: ImportProgress(
+            total: 5,
+            results: [
+                ImportResult(fileName: "1. Bera vs Reinaud.pgn", outcome: .imported(name: "Bera vs Reinaud")),
+                ImportResult(fileName: "truncated.pgn", outcome: .failed(.malformedPGN(reason: "unbalanced braces"))),
+                ImportResult(fileName: "no-tags.pgn", outcome: .failed(.missingRequiredTags(["White", "Black", "Result"]))),
+                ImportResult(fileName: "adjourned.pgn", outcome: .failed(.ongoingGame)),
+                ImportResult(fileName: "locked.pgn", outcome: .failed(
+                    .fileReadFailed(URL(fileURLWithPath: "/tmp/locked.pgn"), underlying: CocoaError(.fileReadNoPermission))
+                ))
+            ],
+            isFinished: true
+        ),
+        onDismiss: {}
+    )
 }

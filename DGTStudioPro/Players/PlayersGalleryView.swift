@@ -100,10 +100,65 @@ internal struct PlayersGalleryView: View {
 
 // MARK: Previews
 
+/// No selection: the preview pane falls back to `players.first`, so the
+/// gallery is never blank while players exist. That fallback is the reason
+/// the empty state below is reachable only with an empty list.
+#Preview("Gallery") {
+    @Previewable @State var selection: PlayerStats.ID?
+    
+    RankingsGalleryView(
+        players: PreviewFixtures.rankedPlayers(),
+        selectedKey: $selection,
+        onShowInLibrary: { _ in }
+    )
+    .frame(width: 720, height: 520)
+}
+
+/// Preselected to the *last* player, which is the filmstrip's real case:
+/// `onChange(of: selectedKey)` centres the selection, and only an initially
+/// off-screen target proves the scroll happens at all.
+#Preview("Preselected — Scrolls Filmstrip") {
+    @Previewable @State var selection: PlayerStats.ID? = PreviewFixtures.deepRankedPlayers().last?.id
+    
+    RankingsGalleryView(
+        players: PreviewFixtures.deepRankedPlayers(),
+        selectedKey: $selection,
+        onShowInLibrary: { _ in }
+    )
+    .frame(width: 720, height: 520)
+}
+
+/// The nil-rating arm. The grid prints an em dash here rather than
+/// "Unrated" — deliberately: the gallery's grid is metrics, and the word
+/// belongs to the inspector, which says it in full.
+#Preview("Unrated") {
+    @Previewable @State var selection: PlayerStats.ID?
+    
+    let unrated = PreviewFixtures.rankedPlayers().map {
+        RankedPlayer(rank: $0.rank, stats: $0.stats, rating: nil)
+    }
+    
+    RankingsGalleryView(
+        players: unrated,
+        selectedKey: $selection,
+        onShowInLibrary: { _ in }
+    )
+    .frame(width: 720, height: 520)
+}
+
+#Preview("Empty") {
+    @Previewable @State var selection: PlayerStats.ID?
+    
+    RankingsGalleryView(players: [], selectedKey: $selection, onShowInLibrary: { _ in })
+        .frame(width: 720, height: 520)
+}
+
+// MARK: Previews
+
 #Preview("With Players") {
     @Previewable @State var selection: PlayerStats.ID?
     
-    PlayersIconsView(          // → PlayersGalleryView / PlayersColumnsView
+    PlayersGalleryView(
         players: PreviewFixtures.playerStats(),
         selectedKey: $selection,
         onShowInLibrary: { _ in }
@@ -114,7 +169,7 @@ internal struct PlayersGalleryView: View {
 #Preview("Empty") {
     @Previewable @State var selection: PlayerStats.ID?
     
-    PlayersIconsView(players: [], selectedKey: $selection, onShowInLibrary: { _ in })
+    PlayersGalleryView(players: [], selectedKey: $selection, onShowInLibrary: { _ in })
         .frame(width: 720, height: 420)
 }
 

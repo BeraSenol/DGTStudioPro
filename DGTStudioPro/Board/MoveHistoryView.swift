@@ -84,10 +84,10 @@ internal struct MoveHistoryView: View {
                 .frame(width: 30, alignment: .trailing)
                 .padding(.trailing, 12)
             
-            moveCell(at: whiteIndex, isWhite: true)
+            moveCell(at: whiteIndex)
             
             if blackIndex < moves.count {
-                moveCell(at: blackIndex, isWhite: false)
+                moveCell(at: blackIndex)
             } else {
                 Spacer()
                     .frame(maxWidth: .infinity)
@@ -95,7 +95,7 @@ internal struct MoveHistoryView: View {
         }
     }
     
-    private func moveCell(at index: Int, isWhite: Bool) -> some View {
+    private func moveCell(at index: Int) -> some View {
         let san = moves[index]
         let isSelected = index == currentMoveIndex
         
@@ -123,18 +123,6 @@ internal struct MoveHistoryView: View {
         }
         .buttonStyle(.plain)
         .id(index)
-    }
-    
-    private func scrollToCurrent(proxy: ScrollViewProxy, animated: Bool) {
-        guard let index = currentMoveIndex else { return }
-        
-        if animated {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                proxy.scrollTo(index, anchor: .center)
-            }
-        } else {
-            proxy.scrollTo(index, anchor: .center)
-        }
     }
 }
 

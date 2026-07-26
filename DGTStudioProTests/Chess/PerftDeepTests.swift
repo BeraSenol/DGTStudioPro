@@ -10,9 +10,15 @@ import Testing
 
 /// Deep perft — depth 5 for all six canonical positions. About 468M leaf
 /// nodes summed across the suite, expected to take ~10–25 minutes
-/// wall-clock with a legal-move-filter generator. Not run as part of the
-/// ordinary test suite; invoke individually from the Xcode test navigator
-/// when you want to re-certify move generation.
+/// wall-clock with a legal-move-filter generator (33 minutes observed under
+/// coverage instrumentation).
+///
+/// **This suite carries no exclusion trait and therefore runs in ⌘U.** An
+/// earlier revision of this comment claimed otherwise, which is why a
+/// half-hour of the suite's wall time went unattributed. Never delete these
+/// tests — depth 5 is what makes accidental coincidence statistically
+/// impossible — but if ⌘U time hurts, give them `.tags(.slow)` and exclude
+/// that tag from the default plan, and update this paragraph when you do.
 ///
 /// The depth-5 reference values are the canonical perft results published
 /// on chessprogramming.org and used by Stockfish, Fairy-Stockfish, and

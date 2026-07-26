@@ -84,11 +84,6 @@ internal struct LibraryColumnsView: View {
         return groups.first(where: { $0.id == id })
     }
     
-    private var selectedPGN: PGN? {
-        guard let id = selectedPGNs.first else { return nil }
-        return games.first(where: { $0.id == id })
-    }
-    
     // MARK: Body
     internal var body: some View {
         HSplitView {

@@ -63,68 +63,67 @@ import os
 /// and begins the new one. The per-analysis UUID ensures the prior's
 /// termination handler doesn't disrupt the new analysis.
 internal actor StockfishEngine {
-
+    
     // MARK: Static Constants
-
+    
     private static let logger = Logger(
         subsystem: "com.berasenol.dgtstudiopro",
         category: "engine"
     )
-
+    
     private static let uciLogger = Logger(
         subsystem: "com.berasenol.dgtstudiopro",
         category: "uci"
     )
-
+    
     // MARK: Errors
-
+    
     internal enum EngineError: Error, Equatable {
-        case binaryNotFound
         case startupFailed(String)
         case alreadyStarted
         case notStarted
     }
-
+    
     // MARK: Stored State
-
+    
     private let binaryURL: URL
-
+    
     private var process: Process?
     private var stdinHandle: FileHandle?
     private var stdoutHandle: FileHandle?
-
+    
     /// Raw stdout bytes awaiting a complete `\n`-terminated line. `Data`,
     /// not `String` — see the type doc's F2 note on split codepoints.
     private var stdoutBuffer = Data()
-
+    
     /// Feeds stdout chunks to `stdoutTask`, in arrival order (F2). Finished
     /// by the handler on EOF (engine exited / closed stdout) or by
     /// `teardown()`.
     private var stdoutContinuation: AsyncStream<Data>.Continuation?
-
+    
     /// The single actor-isolated consumer of the stdout stream.
     private var stdoutTask: Task<Void, Never>?
-
+    
     private(set) var engineName: String?
     private(set) var engineAuthor: String?
-
+    
     // Analysis state — one active at a time in the eval-only phase.
     private var currentContinuation: AsyncStream<Evaluation>.Continuation?
     private var currentSideToMove: PieceColor = .white
     private var currentAnalysisID: UUID?
-
+    
     // One-shot handshake continuations. Throwing (F4): resumed with success
     // by `uciok`/`readyok`, or with `EngineError.startupFailed` by process
     // termination, stdout EOF, or the handshake timeout.
     private var uciOKContinuation: CheckedContinuation<Void, any Error>?
     private var readyOKContinuation: CheckedContinuation<Void, any Error>?
-
+    
     // MARK: Initialization
-
+    
     internal init(binaryURL: URL) {
         self.binaryURL = binaryURL
     }
-
+    
     /// Resolves the bundled Stockfish binary, if present. Returns nil
     /// when the binary isn't in the app's Resources — typically because
     /// the developer hasn't run through the steps in `Engine_README.md`,
@@ -133,16 +132,16 @@ internal actor StockfishEngine {
     internal static var defaultBinaryURL: URL? {
         Bundle.main.url(forResource: "stockfish", withExtension: nil)
     }
-
+    
     /// Reports whether the engine subprocess is currently running.
     /// Useful for UI state ("Start engine" vs "Engine running") and
     /// for tests that verify clean lifecycle transitions.
     internal var isRunning: Bool {
         process?.isRunning ?? false
     }
-
+    
     // MARK: Lifecycle
-
+    
     /// Spawns the subprocess and performs the UCI handshake (sends
     /// `uci`, awaits `uciok`; sends `isready`, awaits `readyok`).
     /// After this returns, the engine is ready to accept analysis
@@ -158,9 +157,9 @@ internal actor StockfishEngine {
             Self.logger.error("start() called but engine is already running")
             throw EngineError.alreadyStarted
         }
-
+        
         Self.logger.info("Starting engine at \(self.binaryURL.path, privacy: .public)")
-
+        
         let proc = Process()
         proc.executableURL = binaryURL
         let stdin = Pipe()
@@ -169,7 +168,7 @@ internal actor StockfishEngine {
         proc.standardInput = stdin
         proc.standardOutput = stdout
         proc.standardError = stderr
-
+        
         // The ordered stdout pipeline (F2) — see the type doc. The handler
         // captures no `self`; it only bridges bytes into the stream. Raw
         // `read(2)` keeps a dead pipe from raising through `availableData`,
@@ -190,7 +189,7 @@ internal actor StockfishEngine {
                 stdoutContinuation.finish()
             }
         }
-
+        
         // One long-lived, actor-isolated consumer: line assembly and
         // dispatch run here, in chunk-arrival order.
         stdoutTask = Task {
@@ -199,7 +198,7 @@ internal actor StockfishEngine {
             }
             engineOutputEnded()
         }
-
+        
         // F4: the engine dying — at any point, including the clean `quit`
         // during `shutdown()` — must never strand a waiter. Termination
         // fails any pending handshake, finishes any live analysis stream,
@@ -210,7 +209,7 @@ internal actor StockfishEngine {
                 await self?.processDidTerminate(status: status)
             }
         }
-
+        
         do {
             try proc.run()
         } catch {
@@ -220,11 +219,11 @@ internal actor StockfishEngine {
             teardown()
             throw EngineError.startupFailed(error.localizedDescription)
         }
-
+        
         self.process = proc
         self.stdinHandle = stdin.fileHandleForWriting
         self.stdoutHandle = stdout.fileHandleForReading
-
+        
         // UCI handshake. Each continuation is registered synchronously
         // inside withCheckedThrowingContinuation's body before the function
         // suspends, so there's no race with stdout arrival; the timeout
@@ -241,12 +240,12 @@ internal actor StockfishEngine {
             for option in EngineConfiguration.current.uciOptionLines {
                 try writeLine(option)
             }
-
+            
             try writeLine("uci")
             try await awaitHandshake(timeout: handshakeTimeout, awaiting: "uciok") {
                 self.uciOKContinuation = $0
             }
-
+            
             try writeLine("isready")
             try await awaitHandshake(timeout: handshakeTimeout, awaiting: "readyok") {
                 self.readyOKContinuation = $0
@@ -266,12 +265,12 @@ internal actor StockfishEngine {
             throw (error as? EngineError)
             ?? EngineError.startupFailed("UCI handshake failed: \(error.localizedDescription)")
         }
-
+        
         Self.logger.info(
             "Engine ready: name='\(self.engineName ?? "?", privacy: .public)' author='\(self.engineAuthor ?? "?", privacy: .public)'"
         )
     }
-
+    
     /// Shuts the engine down: terminates any in-flight analysis,
     /// sends `quit`, gives the subprocess a brief grace period to exit
     /// cleanly, then force-terminates if necessary. Safe to call when
@@ -279,16 +278,16 @@ internal actor StockfishEngine {
     /// the failure path already tore down).
     internal func shutdown() async {
         guard let proc = process else { return }
-
+        
         Self.logger.info("Shutting down engine")
-
+        
         // Tear down any in-flight analysis.
         currentContinuation?.finish()
         currentContinuation = nil
         currentAnalysisID = nil
-
+        
         try? writeLine("quit")
-
+        
         // Grace period for the engine to drain `quit`. Async sleep
         // keeps the actor's executor free during the wait. (The clean
         // exit fires `processDidTerminate` during this sleep; it runs
@@ -298,12 +297,12 @@ internal actor StockfishEngine {
             Self.logger.info("Engine did not exit within grace period; force-terminating")
             proc.terminate()
         }
-
+        
         teardown()
-
+        
         Self.logger.info("Engine shutdown complete")
     }
-
+    
     /// Fires for every process exit — the clean `quit` during `shutdown()`,
     /// a startup-failure kill, and an unexpected mid-session crash alike.
     /// Anything still waiting on the engine must not wait forever (F4):
@@ -323,7 +322,7 @@ internal actor StockfishEngine {
         currentAnalysisID = nil
         teardown()
     }
-
+    
     /// Runs when the stdout stream finishes. A deliberate teardown already
     /// cleared `process` — nothing to do. Otherwise the engine closed its
     /// stdout while still tracked (a crash's first symptom): no further
@@ -342,7 +341,7 @@ internal actor StockfishEngine {
         currentContinuation = nil
         currentAnalysisID = nil
     }
-
+    
     /// Clears every piece of subprocess state: read source, pipeline,
     /// handles, process reference. Idempotent by construction — every line
     /// tolerates already-cleared state — so the shutdown path, the
@@ -357,9 +356,9 @@ internal actor StockfishEngine {
         stdinHandle = nil
         stdoutHandle = nil
     }
-
+    
     // MARK: Handshake (F4)
-
+    
     /// Awaits one handshake response with a deadline. `register` stores the
     /// throwing continuation (synchronously, before any suspension); the
     /// timeout task resumes it with `startupFailed` if the response doesn't
@@ -383,7 +382,7 @@ internal actor StockfishEngine {
         defer { timeoutTask.cancel() }
         try await withCheckedThrowingContinuation(register)
     }
-
+    
     /// Resumes any pending handshake continuation with `error`, exactly
     /// once each. No-op when nothing is pending.
     private func failHandshake(with error: EngineError) {
@@ -392,9 +391,9 @@ internal actor StockfishEngine {
         readyOKContinuation?.resume(throwing: error)
         readyOKContinuation = nil
     }
-
+    
     // MARK: Analysis
-
+    
     /// Begins analysis of `fen` to `depth` plies. Returns an
     /// `AsyncStream<Evaluation>` that yields progressively-deeper
     /// evaluations as Stockfish reports them, then completes when
@@ -421,7 +420,7 @@ internal actor StockfishEngine {
             }
         }
     }
-
+    
     private func beginAnalysis(
         fen: FEN,
         depth: Int,
@@ -430,15 +429,15 @@ internal actor StockfishEngine {
         let analysisID = UUID()
         let priorContinuation = currentContinuation
         let hadPriorAnalysis = priorContinuation != nil
-
+        
         currentContinuation = continuation
         currentSideToMove = fen.activeColor
         currentAnalysisID = analysisID
-
+        
         Self.logger.debug(
             "beginAnalysis id=\(analysisID, privacy: .public) depth=\(depth) fen='\(fen.string, privacy: .public)' replacing=\(hadPriorAnalysis)"
         )
-
+        
         // Capture analysisID in the termination closure so it can be
         // compared against currentAnalysisID at termination time. If the
         // current analysis has been replaced by a newer one, this
@@ -448,7 +447,7 @@ internal actor StockfishEngine {
                 await self?.handleStreamTermination(forAnalysisID: analysisID)
             }
         }
-
+        
         do {
             // If a prior analysis is active, abort its search before
             // sending the new position. Stockfish processes commands
@@ -467,13 +466,13 @@ internal actor StockfishEngine {
             currentContinuation = nil
             currentAnalysisID = nil
         }
-
+        
         // Notify the prior consumer that its stream is over. Its
         // termination handler will fire but will see currentAnalysisID
         // no longer matches and will no-op.
         priorContinuation?.finish()
     }
-
+    
     private func handleStreamTermination(forAnalysisID id: UUID) async {
         guard currentAnalysisID == id else {
             // Stale termination signal from a replaced analysis. Ignore.
@@ -481,9 +480,9 @@ internal actor StockfishEngine {
         }
         try? writeLine("stop")
     }
-
+    
     // MARK: Stdout Ingestion
-
+    
     /// Appends raw stdout bytes to the line buffer and flushes any
     /// complete lines to the response handler. UCI is line-oriented,
     /// but read chunks don't necessarily align with line boundaries —
@@ -505,12 +504,12 @@ internal actor StockfishEngine {
             handleStdoutLine(line)
         }
     }
-
+    
     /// Parses a single complete line from stdout and dispatches by
     /// response type.
     private func handleStdoutLine(_ line: String) {
         Self.uciLogger.debug("recv: \(line, privacy: .public)")
-
+        
         guard let response = UCIProtocol.parse(line) else {
             // Empty lines are normal between sections; only log non-empty
             // unparseables so we can spot real engine drift.
@@ -519,37 +518,37 @@ internal actor StockfishEngine {
             }
             return
         }
-
+        
         switch response {
         case .info(let info):
             guard let score = info.score else { return }
             let evaluation = score.toEvaluation(sideToMove: currentSideToMove)
             currentContinuation?.yield(evaluation)
-
+            
         case .bestMove:
             currentContinuation?.finish()
             currentContinuation = nil
             currentAnalysisID = nil
-
+            
         case .id(let key, let value):
             switch key {
             case "name":   engineName = value
             case "author": engineAuthor = value
             default:       break
             }
-
+            
         case .uciOK:
             uciOKContinuation?.resume(returning: ())
             uciOKContinuation = nil
-
+            
         case .readyOK:
             readyOKContinuation?.resume(returning: ())
             readyOKContinuation = nil
         }
     }
-
+    
     // MARK: Stdin
-
+    
     /// Writes a single UCI command line (newline appended) to the
     /// engine's stdin. Synchronous from the actor's perspective —
     /// `FileHandle.write(contentsOf:)` doesn't suspend.

@@ -71,17 +71,13 @@ internal struct BoardDestination: View {
     /// True after "Keep for Now" on the corrupt-draft alert, so it doesn't
     /// re-present every render for the rest of this visit. The file stays on
     /// disk as diagnostics; the offer returns at the next launch (or the
-    /// next visit to Board). Transient by design, like the flag above.
+    /// next visit to Board). Transient by design — losing the deferral across
+    /// a sidebar round-trip re-offers, which is the safe direction.
     @State private var corruptOfferDeferred = false
     
-    /// True for a beat after recovery auto-resolves, flashing "Position
-    /// restored — play continues." under the HUD (M6.2). Transient by
-    /// design, like the flags above.
-    @State private var showsRestoredFlash = false
-    
     /// True while the movetext editor sheet is open (M-lib.3). Transient by
-    /// design, like the flags above — losing "sheet open" across a sidebar
-    /// round-trip is fine.
+    /// design, like `corruptOfferDeferred` — losing "sheet open" across a
+    /// sidebar round-trip is fine.
     @State private var editingMovetext = false
     
     // MARK: Body
@@ -307,11 +303,6 @@ internal struct BoardDestination: View {
             }
     }
     
-    /// Presents the new-game sheet whenever the session offers one
-    /// (`shouldOfferNewGame`) or the HUD requested one manually. Dismissal
-    /// through the binding (swipe, ⎋, Not Now) counts as "Not Now" — it
-    /// clears the manual request and tells the session not to re-prompt
-    /// until the board leaves and returns to the start.
     /// Presents the resume alert while a resumable draft pends. The setter
     /// deliberately ignores dismissal: the offer is answered by its buttons
     /// (which clear `pendingDraft`, flipping the getter), never by evasion —

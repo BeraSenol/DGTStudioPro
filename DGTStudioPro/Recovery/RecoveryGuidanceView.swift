@@ -27,7 +27,7 @@ internal struct RecoveryGuidanceView: View {
     
     internal let guidance: RecoveryGuidance
     
-    /// Wired by the destination to `sessionLog.exportViaSavePanel()`.
+    /// Wired by `SessionSidebarPanel` to `sessionLog.exportViaSavePanel()`.
     internal let onExportDiagnostics: () -> Void
     
     // MARK: Body
@@ -104,7 +104,7 @@ internal struct RecoveryGuidanceView: View {
     .frame(width: 420)
 }
 
-/// A full scramble — the scrolling/垂直 growth case for a sidebar-pinned
+/// A full scramble — the scrolling / vertical-growth case for a sidebar-pinned
 /// panel, where the checklist must not push the panel past its inset.
 #Preview("Scrambled Board") {
     var physical = Position.empty

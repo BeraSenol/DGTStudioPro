@@ -100,9 +100,10 @@ internal final class DGTConnection {
         return false
     }
     
-    /// True while the M7.3 auto-reconnect loop is running. The Board HUD
-    /// reads this to say "reconnecting…" instead of "no board connected",
-    /// and the connect dialog to avoid tearing the loop down on open.
+    /// True while the M7.3 auto-reconnect loop is running. The sidebar's
+    /// session panel reads this to say "reconnecting…" instead of showing no
+    /// card at all, and the connect dialog to avoid tearing the loop down on
+    /// open.
     internal var isReconnecting: Bool {
         if case .reconnecting = status { return true }
         return false

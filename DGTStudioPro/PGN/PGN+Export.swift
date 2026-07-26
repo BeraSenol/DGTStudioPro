@@ -9,9 +9,9 @@ import Foundation
 
 /// The export seam (D17′/D24′) — the model's side of `PGNSerializer`, kept
 /// out of the serializer so that stays a pure function of values with a
-/// fixture-free suite. The `PGN_GameRecord` pattern.
+/// fixture-free suite. The `PGN+GameRecord` pattern.
 extension PGN {
-
+    
     /// This game in the DGT reference shape, ready to write.
     internal var pgnText: String {
         PGNSerializer.text(
@@ -21,7 +21,7 @@ extension PGN {
             moves: moves
         )
     }
-
+    
     /// The suggested filename for this game at `index` (1-based) in an export.
     internal func exportFileName(index: Int) -> String {
         PGNSerializer.fileName(white: white, black: black, index: index)

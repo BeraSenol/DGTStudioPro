@@ -9,17 +9,17 @@ extension GameState {
     
     // MARK: Replay (7g)
     
-    /// Replays a sequence of SAN move strings starting from this state and
-    /// returns the resulting game state.
-    ///
     /// The first SAN string that fails to parse throws `ReplayError`,
     /// carrying the index (0-based), the offending string, and the
-    /// underlying `SANParseError`. Callers building higher-level importers
-    /// (e.g. `PGNStore`) wrap this with file or game context.
+    /// underlying `SANParseError`.
     ///
-    /// For per-move state inspection (UI scrubbing through history),
-    /// callers do their own loop calling `parseSAN` + `applying`. This
-    /// method exists for the common "I just want the final state" path.
+    /// No production caller today, and the reason is worth recording rather
+    /// than rediscovering: every walk the app actually performs needs the
+    /// per-ply state this method discards. `Game` scrubs history,
+    /// `LibraryGamePreviewState` stops at the first bad ply, and
+    /// `MovetextEdit.validate` needs each ply's canonical SAN — so all three
+    /// loop `parseSAN` + `applying` themselves. This stays as the "I just
+    /// want the final state" path, suited by `GameStateReplayTests`.
     internal func replay(_ sanMoves: [String]) throws -> GameState {
         var state = self
         for (index, san) in sanMoves.enumerated() {

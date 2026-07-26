@@ -30,7 +30,10 @@ extension Square {
     }
     
     /// The DGT field index (a8 = 0 … h1 = 63) for this app `Square`. The
-    /// inverse of `init(dgtField:)`; used when encoding outbound coordinates.
+    /// inverse of `init(dgtField:)`. No production caller — every DGT command
+    /// the app sends is a fixed byte — but `SquareDGTFieldTests` needs a
+    /// forward direction to prove the bijection round-trips rather than
+    /// trusting the mirror symmetry by eye.
     internal var dgtField: Int {
         assert(isOnBoard, "dgtField called on off-board square \(self)")
         return (7 - rank) * 8 + file

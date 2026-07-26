@@ -18,7 +18,8 @@ import Foundation
 /// accessors, and the draft-resume alert.
 ///
 /// Storage is deliberately untouched: tags stay in the form they arrived in,
-/// because the content hash covers them and D17′ export round-trips them.
+/// because the content hash covers them and D24′ export round-trips them
+/// byte for byte.
 /// This type owns the boundary, not the database.
 ///
 /// Rejected: a `tagForm(of:)` inverse ("Magnus Carlsen" → "Carlsen, Magnus").

@@ -264,7 +264,7 @@ extension GameState {
         }
     }
 
-    // MARK: King Moves (non-castling — castling lands in Phase 7d)
+    // MARK: King Moves
     private func appendPseudoLegalKingMoves(from square: Square, into moves: inout [Move]) {
         let color = activeColor
         let offsets: [Int] = [1, 7, 8, 9, -1, -7, -8, -9]

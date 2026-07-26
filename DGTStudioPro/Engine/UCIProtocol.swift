@@ -20,9 +20,11 @@ internal enum UCIProtocol {
     
     /// Parses a single line of UCI output. Returns `nil` if the line is
     /// empty, whitespace-only, or doesn't match a recognized response form
-    /// (including `option` discovery lines, which are deliberately
-    /// ignored — they're a startup-time concern and the eval-only phase
-    /// uses Stockfish's defaults).
+    /// (including `option` discovery lines, which are deliberately ignored:
+    /// the app *sends* its options from `EngineConfiguration.uciOptionLines`
+    /// rather than negotiating against the engine's advertised catalogue, so
+    /// there is nothing to do with an inbound `option` line. Parsing them
+    /// would only matter if option support ever became engine-dependent.)
     internal static func parse(_ line: String) -> UCIResponse? {
         let trimmed = line.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return nil }

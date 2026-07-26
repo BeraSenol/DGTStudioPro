@@ -231,10 +231,12 @@ internal enum AccessibilityID {
     internal static let libraryFilterChip      = "library.filterChip"
     internal static let libraryFilterChipClear = "library.filterChip.clear"
     
-    /// The Library's Export item — on the list's selection context menu and
-    /// on every card's. One constant: the two homes never coexist (the
-    /// view-mode picker guarantees it), so a family prefix would only fork
-    /// future lookups — the `context.showInLibrary` precedent.
+    /// The Library's Export affordances. The two *context menus* (list rows,
+    /// cards) never coexist — the view-mode picker guarantees it — but the
+    /// toolbar button coexists with both, so this constant is currently on
+    /// three live views at once. Split into `libraryExportButton` (toolbar)
+    /// and `libraryExport` (menus) before any UITest queries either, or the
+    /// query resolves ambiguously.
     internal static let libraryExport = "library.export"
     
     /// `gameCard.Quick Mate`, … — one per Library card, keyed by the game's
