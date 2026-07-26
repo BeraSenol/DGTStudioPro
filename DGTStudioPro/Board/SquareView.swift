@@ -49,20 +49,10 @@ internal struct SquareView: View, Equatable {
             }
             
             if let imageName = piece.imageName {
-                Image(imageName)
-                    .resizable()
-                    .renderingMode(.original)
-                    .aspectRatio(contentMode: .fit)
-                    .padding(squareSize * 0.06)
-            } else if let ghost = ghostPiece, let imageName = ghost.imageName {
-                // Ghost is only drawn when the real square is empty — once the
-                // physical rook lands, the ghost is occluded by the real piece.
-                Image(imageName)
-                    .resizable()
-                    .renderingMode(.original)
-                    .aspectRatio(contentMode: .fit)
-                    .padding(squareSize * 0.06)
-                    .opacity(0.5)
+                pieceImage(imageName)
+            } else if let imageName = ghostPiece?.imageName {
+                // Ghost only draws on an empty square — the real piece occludes it once landed.
+                pieceImage(imageName).opacity(0.5)
             }
             
             if highlight.contains(.selected) {
@@ -91,6 +81,14 @@ internal struct SquareView: View, Equatable {
             }
         }
         .frame(width: squareSize, height: squareSize)
+    }
+    
+    private func pieceImage(_ name: String) -> some View {
+        Image(name)
+            .resizable()
+            .renderingMode(.original)
+            .aspectRatio(contentMode: .fit)
+            .padding(squareSize * 0.06)
     }
 }
 

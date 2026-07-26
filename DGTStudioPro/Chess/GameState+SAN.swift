@@ -23,7 +23,7 @@ extension GameState {
     ///
     /// Errors are surfaced via `SANParseError`; callers building a per-game
     /// importer (Phase 7g) wrap these to add move-index context.
-    internal func parseSAN(_ san: String) throws -> Move {
+    internal func parseSAN(_ san: String) throws(SANParseError) -> Move {
         var s = san.trimmingCharacters(in: .whitespaces)
         guard !s.isEmpty else { throw SANParseError.empty }
         
@@ -60,7 +60,7 @@ extension GameState {
     /// checkmate.
     internal func san(for move: Move) -> String {
         if move.isCastling {
-            let castle = move.to.file == 6 ? "O-O" : "O-O-O"
+            let castle = move.castlingSide == .kingSide ? "O-O" : "O-O-O"
             return castle + checkOrMateSuffix(after: move)
         }
         
@@ -76,7 +76,7 @@ extension GameState {
     
     // MARK: Match Helpers (parser)
     
-    private func matchMove(_ tokens: SANTokens, original: String) throws -> Move {
+    private func matchMove(_ tokens: SANTokens, original: String) throws(SANParseError) -> Move {
         let candidates = legalMoves().filter { move in
             if move.pieceType != tokens.pieceType { return false }
             if move.to != tokens.toSquare { return false }
@@ -94,8 +94,8 @@ extension GameState {
         }
     }
     
-    private func matchCastling(kingside: Bool, original: String) throws -> Move {
-        let destinationFile = kingside ? 6 : 2  // g-file or c-file
+    private func matchCastling(kingside: Bool, original: String) throws(SANParseError) -> Move {
+        let destinationFile = (kingside ? CastlingSide.kingSide : .queenSide).kingDestinationFile
         let candidates = legalMoves().filter {
             $0.isCastling && $0.to.file == destinationFile
         }
@@ -144,9 +144,12 @@ extension GameState {
     
     private func checkOrMateSuffix(after move: Move) -> String {
         let next = applying(move)
-        if next.isCheckmate { return "#" }
-        if next.isInCheck   { return "+" }
-        return ""
+        // `isCheckmate` recomputes `isInCheck`, and each is a 64-square king
+        // scan plus a full attack scan. Ask once, then pay for `legalMoves()`
+        // only when there is a check to resolve. Every serialized ply pays
+        // this, and `MovetextEdit.validate` serializes every ply it parses.
+        guard next.isInCheck else { return "" }
+        return next.legalMoves().isEmpty ? "#" : "+"
     }
     
     // MARK: Tokenization (parser)
@@ -156,7 +159,7 @@ extension GameState {
     /// components. Works back-to-front because the target square is always
     /// the trailing piece of information; everything before it is the
     /// optional piece letter, optional disambiguator, and optional `x`.
-    private static func tokenize(_ input: String, original: String) throws -> SANTokens {
+    private static func tokenize(_ input: String, original: String) throws(SANParseError) -> SANTokens {
         var s = input
         
         // -- Promotion (three accepted forms) ---------------------------------
@@ -296,7 +299,7 @@ extension GameState {
 // MARK: FEN Forwarding
 
 extension FEN {
-    internal func parseSAN(_ san: String) throws -> Move {
+    internal func parseSAN(_ san: String) throws(SANParseError) -> Move {
         try GameState(self).parseSAN(san)
     }
     

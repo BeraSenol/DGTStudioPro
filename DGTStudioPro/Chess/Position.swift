@@ -50,12 +50,7 @@ internal struct Position: Codable, Equatable, Sendable {
         }
 
         result[move.from] = .empty
-
-        if let promotion = move.promotionType {
-            result[move.to] = Piece(move.pieceColor, promotion)
-        } else {
-            result[move.to] = Piece(move.pieceColor, move.pieceType)
-        }
+        result[move.to] = Piece(move.pieceColor, move.promotionType ?? move.pieceType)
 
         if move.isCastling, let rookFrom = move.rookFrom, let rookTo = move.rookTo {
             result[rookTo] = result[rookFrom]

@@ -120,12 +120,16 @@ internal struct EvaluationGraphView: View {
         }
     }
     
+    /// `curve` already opens with `move(to: start)`, so it *is* the leading
+    /// edge. An explicit move+line before `addPath` opened a *second* subpath
+    /// instead (the first a degenerate zero-area line), and `closeSubpath`
+    /// then cut diagonally from (end.x, baseY) back to `start` rather than
+    /// running along the baseline — invisible while ply 1 evaluates to
+    /// exactly 0.50, a left-tapering wedge otherwise.
     private func closedAreaPath(curve: Path, start: CGPoint, end: CGPoint, baseY: CGFloat) -> Path {
-        var area = Path()
-        area.move(to: CGPoint(x: start.x, y: baseY))
-        area.addLine(to: start)
-        area.addPath(curve)
+        var area = curve
         area.addLine(to: CGPoint(x: end.x, y: baseY))
+        area.addLine(to: CGPoint(x: start.x, y: baseY))
         area.closeSubpath()
         return area
     }

@@ -6,49 +6,58 @@
 //
 
 extension GameState {
-
+    
     // MARK: Entry Point
     internal func pseudoLegalMoves() -> [Move] {
         var moves: [Move] = []
         moves.reserveCapacity(48)
-
+        
         for square in Square.all {
             let piece = position[square]
             guard piece.isColor(activeColor), let type = piece.type else { continue }
-
+            
             switch type {
             case .pawn:
                 appendPseudoLegalPawnMoves(from: square, into: &moves)
             case .knight:
-                appendPseudoLegalKnightMoves(from: square, into: &moves)
+                appendPseudoLegalStepMoves(
+                    from: square, pieceType: .knight,
+                    offsets: Square.knightOffsets, maxFileDistance: 2,
+                    into: &moves
+                )
             case .bishop:
                 appendPseudoLegalSlidingMoves(
                     from: square, pieceType: .bishop,
-                    directions: [7, 9, -7, -9],
+                    directions: Square.bishopDirections,
                     into: &moves
                 )
             case .rook:
                 appendPseudoLegalSlidingMoves(
                     from: square, pieceType: .rook,
-                    directions: [1, 8, -1, -8],
+                    directions: Square.rookDirections,
                     into: &moves
                 )
             case .queen:
                 appendPseudoLegalSlidingMoves(
                     from: square, pieceType: .queen,
-                    directions: [1, 7, 8, 9, -1, -7, -8, -9],
+                    directions: Square.queenDirections,
                     into: &moves
                 )
             case .king:
-                appendPseudoLegalKingMoves(from: square, into: &moves)
+                appendPseudoLegalStepMoves(
+                    from: square, pieceType: .king,
+                    offsets: Square.kingOffsets, maxFileDistance: 1,
+                    into: &moves
+                )
+                appendCastlingMoves(from: square, into: &moves)
             }
         }
-
+        
         return moves
     }
-
+    
     // MARK: Legal Move Filter (7c)
-
+    
     /// Pseudo-legal moves filtered to remove any that leave the moving side's
     /// king in check.
     ///
@@ -69,23 +78,23 @@ extension GameState {
         }
         return pseudoLegalMoves().filter { isLegal($0, currentKingSquare: currentKingSquare) }
     }
-
+    
     /// Whether the moving side's king is currently attacked.
     internal var isInCheck: Bool {
         guard let kingSq = position.kingSquare(for: activeColor) else { return false }
         return position.isSquareAttacked(kingSq, by: activeColor.opponent)
     }
-
+    
     /// In check with no legal moves.
     internal var isCheckmate: Bool {
         isInCheck && legalMoves().isEmpty
     }
-
+    
     /// Not in check, but no legal moves.
     internal var isStalemate: Bool {
         !isInCheck && legalMoves().isEmpty
     }
-
+    
     /// Apply the move to a hypothetical position and check whether the moving
     /// side's king is left attacked. This single check naturally handles pins,
     /// EP discovered checks, moving while in check, and king self-checks —
@@ -101,7 +110,7 @@ extension GameState {
         let next = position.applying(move)
         return !next.isSquareAttacked(nextKingSquare, by: activeColor.opponent)
     }
-
+    
     // MARK: Pawn Moves
     private func appendPseudoLegalPawnMoves(from square: Square, into moves: inout [Move]) {
         let color = activeColor
@@ -109,7 +118,7 @@ extension GameState {
         let startRank      = color == .white ? 1 : 6
         let promotionRank  = color == .white ? 7 : 0
         let captureOffsets = color == .white ? [7, 9] : [-9, -7]
-
+        
         // Single push (and double push, only from start rank, only if both squares empty)
         let oneStep = square + direction
         if oneStep.isOnBoard && !position[oneStep].isOccupied {
@@ -125,7 +134,7 @@ extension GameState {
                     from: square, to: oneStep,
                     pieceType: .pawn, pieceColor: color
                 ))
-
+                
                 if square.rank == startRank {
                     let twoStep = square + 2 * direction
                     if !position[twoStep].isOccupied {
@@ -138,7 +147,7 @@ extension GameState {
                 }
             }
         }
-
+        
         // Diagonal captures (regular + en passant)
         for offset in captureOffsets {
             let target = square + offset
@@ -146,9 +155,9 @@ extension GameState {
             // File-distance check rejects file wraparound
             // (a-pawn capturing "left" or h-pawn capturing "right").
             guard abs(target.file - square.file) == 1 else { continue }
-
+            
             let targetPiece = position[target]
-
+            
             if let targetType = targetPiece.type, targetPiece.color == color.opponent {
                 // Regular capture (with promotion if landing on promotion rank)
                 if target.rank == promotionRank {
@@ -177,7 +186,7 @@ extension GameState {
             }
         }
     }
-
+    
     private func appendPromotions(
         from: Square,
         to: Square,
@@ -185,7 +194,7 @@ extension GameState {
         color: PieceColor,
         into moves: inout [Move]
     ) {
-        for promotion: PieceType in [.queen, .rook, .bishop, .knight] {
+        for promotion in PieceType.promotionTypes {
             moves.append(Move.make(
                 from: from, to: to,
                 pieceType: .pawn, pieceColor: color,
@@ -194,35 +203,51 @@ extension GameState {
             ))
         }
     }
-
-    // MARK: Knight Moves
-    private func appendPseudoLegalKnightMoves(from square: Square, into moves: inout [Move]) {
+    
+    // MARK: Step Moves (Knight / King)
+    
+    /// Non-sliding moves: one hop per offset, no ray. Knight and king differed
+    /// only in their offset table, their file-distance bound, and the piece
+    /// type stamped on the move — three parameters, not two functions.
+    ///
+    /// `maxFileDistance` is the wraparound guard and is *not* derivable from
+    /// the offsets: a knight legitimately changes file by 2, a king never by
+    /// more than 1, and both tables contain offsets that would wrap silently.
+    ///
+    /// Castling is not appended here. It stays at the `.king` case in
+    /// `pseudoLegalMoves` so this function has no piece-specific arm at all,
+    /// and so the emitted order is unchanged.
+    private func appendPseudoLegalStepMoves(
+        from square: Square,
+        pieceType: PieceType,
+        offsets: [Int],
+        maxFileDistance: Int,
+        into moves: inout [Move]
+    ) {
         let color = activeColor
-        let offsets: [Int] = [17, 15, 10, 6, -6, -10, -15, -17]
-
+        
         for offset in offsets {
             let target = square + offset
             guard target.isOnBoard else { continue }
-            // Knight jumps change file by 1 or 2; anything more is a wraparound.
-            guard abs(target.file - square.file) <= 2 else { continue }
-
+            guard abs(target.file - square.file) <= maxFileDistance else { continue }
+            
             let targetPiece = position[target]
             if let targetType = targetPiece.type {
                 guard targetPiece.color == color.opponent else { continue }
                 moves.append(Move.make(
                     from: square, to: target,
-                    pieceType: .knight, pieceColor: color,
+                    pieceType: pieceType, pieceColor: color,
                     capturedPieceType: targetType
                 ))
             } else {
                 moves.append(Move.make(
                     from: square, to: target,
-                    pieceType: .knight, pieceColor: color
+                    pieceType: pieceType, pieceColor: color
                 ))
             }
         }
     }
-
+    
     // MARK: Sliding Moves (Bishop / Rook / Queen)
     private func appendPseudoLegalSlidingMoves(
         from square: Square,
@@ -231,16 +256,16 @@ extension GameState {
         into moves: inout [Move]
     ) {
         let color = activeColor
-
+        
         for direction in directions {
             var previous = square
             var target = square + direction
-
+            
             // Walk the ray. Each step's file may change by at most 1 — anything
             // larger is a wraparound across the board edge.
             while target.isOnBoard && abs(target.file - previous.file) <= 1 {
                 let targetPiece = position[target]
-
+                
                 if let targetType = targetPiece.type {
                     if targetPiece.color == color.opponent {
                         moves.append(Move.make(
@@ -252,48 +277,18 @@ extension GameState {
                     // Ray stops on any occupied square (own or enemy).
                     break
                 }
-
+                
                 moves.append(Move.make(
                     from: square, to: target,
                     pieceType: pieceType, pieceColor: color
                 ))
-
+                
                 previous = target
                 target += direction
             }
         }
     }
-
-    // MARK: King Moves
-    private func appendPseudoLegalKingMoves(from square: Square, into moves: inout [Move]) {
-        let color = activeColor
-        let offsets: [Int] = [1, 7, 8, 9, -1, -7, -8, -9]
-
-        for offset in offsets {
-            let target = square + offset
-            guard target.isOnBoard else { continue }
-            // King steps change file by at most 1; anything more is a wraparound.
-            guard abs(target.file - square.file) <= 1 else { continue }
-
-            let targetPiece = position[target]
-            if let targetType = targetPiece.type {
-                guard targetPiece.color == color.opponent else { continue }
-                moves.append(Move.make(
-                    from: square, to: target,
-                    pieceType: .king, pieceColor: color,
-                    capturedPieceType: targetType
-                ))
-            } else {
-                moves.append(Move.make(
-                    from: square, to: target,
-                    pieceType: .king, pieceColor: color
-                ))
-            }
-        }
-
-        appendCastlingMoves(from: square, into: &moves)
-    }
-
+    
     // MARK: Castling (7d)
     //
     // Castling has its own conditions because the king's *transit* square must
@@ -302,14 +297,21 @@ extension GameState {
     // does fall out of the legal filter, so we don't repeat it here.
     private func appendCastlingMoves(from square: Square, into moves: inout [Move]) {
         let color = activeColor
-
+        
         // Castling rights imply king is on its home square; defensively double-check.
         let homeSquare = color == .white ? Squares.e1 : Squares.e8
         guard square == homeSquare else { return }
-
+        
+        // Rights before the scan. With neither side available, both branches
+        // below are dead and the out-of-check test can append nothing — and
+        // that test is this function's expensive half. Most nodes in a deep
+        // search have already spent both rights.
+        guard castlingRights.has(color, .kingSide)
+                || castlingRights.has(color, .queenSide) else { return }
+        
         // Cannot castle out of check.
         guard !position.isSquareAttacked(square, by: color.opponent) else { return }
-
+        
         // Kingside
         if castlingRights.has(color, .kingSide) {
             let f: Square = color == .white ? Squares.f1 : Squares.f8
@@ -324,7 +326,7 @@ extension GameState {
                 ))
             }
         }
-
+        
         // Queenside (b-file must be empty too — rook traverses it — but isn't part of the king's path)
         if castlingRights.has(color, .queenSide) {
             let b: Square = color == .white ? Squares.b1 : Squares.b8

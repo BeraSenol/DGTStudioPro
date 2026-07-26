@@ -34,6 +34,11 @@ internal enum PieceType: UInt8, CaseIterable, Codable, Sendable {
         UInt8(ascii: "K"), // 6: King
     ]
     
+    /// The four pieces a pawn may become, in SAN's conventional order — which
+    /// is also the order `appendPromotions` emits, and therefore the order the
+    /// perft counts were taken against.
+    internal static let promotionTypes: [PieceType] = [.queen, .rook, .bishop, .knight]
+    
     // MARK: Computed Properties
     internal var notation: String {
         switch self {

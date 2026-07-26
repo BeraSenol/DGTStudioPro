@@ -27,9 +27,7 @@ internal struct Move: Equatable, Hashable, Sendable {
     private static let castlingFlag:       UInt32 = 1 << 22
     private static let enPassantFlag:      UInt32 = 1 << 23
     private static let doublePawnPushFlag: UInt32 = 1 << 24
-
-    private static let kingSideKingFile: Int = 6
-
+    
     // MARK: Stored Properties
     internal let rawValue: UInt32
     
@@ -72,8 +70,11 @@ internal struct Move: Equatable, Hashable, Sendable {
         rawValue & Self.doublePawnPushFlag != 0
     }
     
+    /// A bit test, not an enum construction: the captured field is 0 (none) or
+    /// a valid 1–6, so "any bit set" and "decodes to non-nil" are the same
+    /// question. Called once per generated move by the castling-rights update.
     internal var isCapture: Bool {
-        capturedPieceType != nil
+        rawValue & (0x07 << Self.capturedTypeShift) != 0
     }
     
     internal var capturedSquare: Square? {
@@ -84,21 +85,27 @@ internal struct Move: Equatable, Hashable, Sendable {
         return to
     }
     
-    internal var rookFrom: Square? {
+    /// Which side this castling move is, read off the king's destination file.
+    internal var castlingSide: CastlingSide? {
         guard isCastling else { return nil }
-        return to.file == Self.kingSideKingFile ? to + 1 : to - 2
+        return to.file == CastlingSide.kingSide.kingDestinationFile ? .kingSide : .queenSide
+    }
+    
+    internal var rookFrom: Square? {
+        guard let castlingSide else { return nil }
+        return castlingSide == .kingSide ? to + 1 : to - 2
     }
     
     internal var rookTo: Square? {
-        guard isCastling else { return nil }
-        return to.file == Self.kingSideKingFile ? to - 1 : to + 1
+        guard let castlingSide else { return nil }
+        return castlingSide == .kingSide ? to - 1 : to + 1
     }
-
+    
     // MARK: Initializers
     private init(rawValue: UInt32) {
         self.rawValue = rawValue
     }
-
+    
     // MARK: Static Methods
     internal static func make(
         from: Square,
@@ -116,18 +123,18 @@ internal struct Move: Equatable, Hashable, Sendable {
         raw |= (UInt32(to) & 0x3F) << toShift
         raw |= (UInt32(pieceType.rawValue) & 0x07) << pieceTypeShift
         raw |= (UInt32(pieceColor.rawValue) & 0x01) << pieceColorShift
-
+        
         if let capturedPieceType {
             raw |= (UInt32(capturedPieceType.rawValue) & 0x07) << capturedTypeShift
         }
         if let promotionType {
             raw |= (UInt32(promotionType.rawValue) & 0x07) << promotionTypeShift
         }
-
+        
         if isCastling       { raw |= castlingFlag }
         if isEnPassant      { raw |= enPassantFlag }
         if isDoublePawnPush { raw |= doublePawnPushFlag }
-
+        
         return Move(rawValue: raw)
     }
 }

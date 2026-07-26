@@ -86,12 +86,12 @@ internal enum MovetextEdit {
             let move: Move
             do {
                 move = try state.parseSAN(san)
-            } catch let error as SANParseError {
-                return .failure(.illegalMove(index: index, san: san, reason: error))
             } catch {
-                // `parseSAN` only ever throws `SANParseError`; unreachable,
-                // present only to satisfy the non-throwing function's `catch`.
-                return .failure(.illegalMove(index: index, san: san, reason: .malformed(san)))
+                // `parseSAN` is `throws(SANParseError)`, so `error` is typed
+                // and this arm is exhaustive — the old second `catch` existed
+                // only to satisfy untyped `throws` and was documented as
+                // unreachable. The compiler now enforces what the comment claimed.
+                return .failure(.illegalMove(index: index, san: san, reason: error))
             }
             canonical.append(state.san(for: move))
             state = state.applying(move)
@@ -102,6 +102,9 @@ internal enum MovetextEdit {
         // position — comparing a derived mate marker to itself would always
         // pass and never catch the lie. `parseSAN` dropped the suffix on its
         // way in, so the raw input is the only place the user's claim survives.
+        // `contains`, not `hasSuffix`: `tokenize` drops move numbers and result
+        // tokens but not `!`/`?`, so `Qd2#!` still claims mate and a suffix
+        // test would wave it through.
         if let last = proposed.last, last.contains("#"), !state.isCheckmate {
             return .failure(.claimsCheckmateButPositionIsNot(san: last))
         }
@@ -150,16 +153,10 @@ extension MovetextEdit {
     /// follows the digits, so a bare number (not valid SAN anyway) falls
     /// through to validation, and real SAN — never digit-led — is untouched.
     private static func strippingMoveNumberPrefix(_ token: Substring) -> String {
-        var index = token.startIndex
-        while index < token.endIndex, token[index].isNumber {
-            index = token.index(after: index)
-        }
-        guard index > token.startIndex, index < token.endIndex, token[index] == "." else {
+        let afterDigits = token.drop(while: \.isNumber)
+        guard afterDigits.count < token.count, afterDigits.first == "." else {
             return String(token)
         }
-        while index < token.endIndex, token[index] == "." {
-            index = token.index(after: index)
-        }
-        return String(token[index...])
+        return String(afterDigits.drop(while: { $0 == "." }))
     }
 }

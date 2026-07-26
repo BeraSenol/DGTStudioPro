@@ -26,7 +26,7 @@ extension GameState {
             let move: Move
             do {
                 move = try state.parseSAN(san)
-            } catch let error as SANParseError {
+            } catch {
                 throw ReplayError.invalidMove(index: index, san: san, underlying: error)
             }
             state = state.applying(move)

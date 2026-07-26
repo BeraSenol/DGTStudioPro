@@ -46,7 +46,7 @@ internal enum SpecialCheckmate: String, Codable, Sendable, CaseIterable {
         guard let king = position.kingSquare(for: mated) else { return nil }
         
         if knightGivesCheck(at: king, by: attacker, in: position),
-           allNeighboursAreFriendly(of: king, color: mated, in: position) {
+           squaresAreFriendly(Square.kingOffsets, of: king, color: mated, in: position) {
             return .smothered
         }
         
@@ -61,16 +61,11 @@ internal enum SpecialCheckmate: String, Codable, Sendable, CaseIterable {
     
     // MARK: Predicates
     
-    /// King-neighbour index offsets (shared with the move generator and attack
-    /// scanner); each use pairs it with a `≤ 1` file-distance guard to reject
-    /// board-edge wraparound.
-    private static let neighbourOffsets = [1, 7, 8, 9, -1, -7, -8, -9]
-    
     private static func knightGivesCheck(
         at king: Square, by attacker: PieceColor, in position: Position
     ) -> Bool {
         let knight = Piece(attacker, .knight)
-        for offset in [17, 15, 10, 6, -6, -10, -15, -17] {
+        for offset in Square.knightOffsets {
             let from = king + offset
             guard from.isOnBoard, abs(from.file - king.file) <= 2 else { continue }
             if position[from] == knight { return true }
@@ -85,31 +80,25 @@ internal enum SpecialCheckmate: String, Codable, Sendable, CaseIterable {
     private static func rankSliderGivesCheck(
         at king: Square, by attacker: PieceColor, in position: Position
     ) -> Bool {
-        for direction in [1, -1] {
-            var previous = king
-            var target = king + direction
-            while target.isOnBoard, abs(target.file - previous.file) <= 1 {
-                let piece = position[target]
-                if let type = piece.type {
-                    if piece.color == attacker, type == .rook || type == .queen {
-                        return true
-                    }
-                    break   // any piece blocks the rest of this ray
-                }
-                previous = target
-                target += direction
-            }
+        // `rayHitsSlider` stops at the first occupied square and reports
+        // whether it's an enemy rook/queen — exactly the per-direction `break`
+        // this used to hand-roll.
+        [1, -1].contains {
+            position.rayHitsSlider(
+                from: king, direction: $0,
+                slider1: .rook, slider2: .queen,
+                attacker: attacker
+            )
         }
-        return false
     }
     
     /// Every on-board neighbour of the king holds a friendly piece. Off-board
     /// neighbours (edge or corner) are walls and don't disqualify — a corner
     /// king boxed by two pawns is still smothered.
-    private static func allNeighboursAreFriendly(
-        of king: Square, color: PieceColor, in position: Position
+    private static func squaresAreFriendly(
+        _ offsets: [Int], of king: Square, color: PieceColor, in position: Position
     ) -> Bool {
-        for offset in neighbourOffsets {
+        for offset in offsets {
             let square = king + offset
             guard square.isOnBoard, abs(square.file - king.file) <= 1 else { continue }
             guard position[square].isColor(color) else { return false }
@@ -123,13 +112,10 @@ internal enum SpecialCheckmate: String, Codable, Sendable, CaseIterable {
     private static func forwardSquaresAreFriendly(
         of king: Square, color: PieceColor, in position: Position
     ) -> Bool {
-        let forwardOffsets = color == .white ? [7, 8, 9] : [-9, -8, -7]
-        for offset in forwardOffsets {
-            let square = king + offset
-            guard square.isOnBoard, abs(square.file - king.file) <= 1 else { continue }
-            guard position[square].isColor(color) else { return false }
-        }
-        return true
+        squaresAreFriendly(
+            color == .white ? [7, 8, 9] : [-9, -8, -7],
+            of: king, color: color, in: position
+        )
     }
     
     /// White's back rank is rank 0 (the 1st rank); Black's is rank 7.

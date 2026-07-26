@@ -114,20 +114,21 @@ extension FEN {
         if field == "-" { return .none }
         
         var raw: UInt8 = 0
-        var seen: Set<Character> = []
         
+        // No `Set` needed: the character→bit map is injective, so a duplicate
+        // character *is* an already-set bit. The rejection contract is
+        // unchanged — `KQkqK` and `KK` still throw.
         for char in field {
-            guard seen.insert(char).inserted else {
-                throw FENParseError.malformedCastling(field)
-            }
-            
+            let mask: UInt8
             switch char {
-            case "K": raw |= CastlingRights.mask(for: .white, .kingSide).rawValue
-            case "Q": raw |= CastlingRights.mask(for: .white, .queenSide).rawValue
-            case "k": raw |= CastlingRights.mask(for: .black, .kingSide).rawValue
-            case "q": raw |= CastlingRights.mask(for: .black, .queenSide).rawValue
+            case "K": mask = CastlingRights.mask(for: .white, .kingSide).rawValue
+            case "Q": mask = CastlingRights.mask(for: .white, .queenSide).rawValue
+            case "k": mask = CastlingRights.mask(for: .black, .kingSide).rawValue
+            case "q": mask = CastlingRights.mask(for: .black, .queenSide).rawValue
             default:  throw FENParseError.malformedCastling(field)
             }
+            guard raw & mask == 0 else { throw FENParseError.malformedCastling(field) }
+            raw |= mask
         }
         
         return CastlingRights(rawValue: raw)

@@ -6,7 +6,7 @@
 //
 
 internal struct FEN: Equatable, Sendable {
-
+    
     // MARK: Static Constants
     internal static let starting = FEN(
         position: .starting,
@@ -16,9 +16,9 @@ internal struct FEN: Equatable, Sendable {
         halfmoveClock: 0,
         fullmoveNumber: 1
     )
-
+    
     internal static let startingString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-
+    
     // MARK: Stored Properties
     internal let position: Position
     internal let activeColor: PieceColor
@@ -26,31 +26,29 @@ internal struct FEN: Equatable, Sendable {
     internal let enPassantTarget: Square?
     internal let halfmoveClock: Int
     internal let fullmoveNumber: Int
-
+    
     // MARK: Computed Properties
     internal var string: String {
         "\(positionKey) \(halfmoveClock) \(fullmoveNumber)"
     }
-
+    
     internal var positionKey: String {
-        let placement: String = piecePlacement
         let color: Character = activeColor == .white ? "w" : "b"
-        let castling: String = castlingRights.fen
-        let enPassant: String = enPassantTarget?.algebraicNotation ?? "-"
-        return "\(placement) \(color) \(castling) \(enPassant)"
+        let enPassant = enPassantTarget?.algebraicNotation ?? "-"
+        return "\(piecePlacement) \(color) \(castlingRights.fen) \(enPassant)"
     }
-
+    
     internal var piecePlacement: String {
         var result = ""
         result.reserveCapacity(72)
-
-        for rank in stride(from: 7, through: 0, by: -1) {
+        
+        for rank in Square.ranks.reversed() {
             if rank < 7 { result.append("/") }
             var emptyRun = 0
-
+            
             for file in Square.files {
                 let piece = position[rank * 8 + file]
-
+                
                 if piece.isOccupied {
                     if emptyRun > 0 {
                         result.append(emptyRun.asciiDigit)
@@ -61,30 +59,13 @@ internal struct FEN: Equatable, Sendable {
                     emptyRun += 1
                 }
             }
-
+            
             if emptyRun > 0 {
                 result.append(emptyRun.asciiDigit)
             }
         }
-
+        
         return result
-    }
-
-    // MARK: Initializers
-    internal init(
-        position: Position,
-        activeColor: PieceColor,
-        castlingRights: CastlingRights,
-        enPassantTarget: Square?,
-        halfmoveClock: Int,
-        fullmoveNumber: Int
-    ) {
-        self.position = position
-        self.activeColor = activeColor
-        self.castlingRights = castlingRights
-        self.enPassantTarget = enPassantTarget
-        self.halfmoveClock = halfmoveClock
-        self.fullmoveNumber = fullmoveNumber
     }
 }
 

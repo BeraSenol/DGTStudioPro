@@ -19,21 +19,36 @@ internal enum Squares {
 }
 
 extension Square {
-
+    
     // MARK: Static Constants
     internal static let count = 64
     internal static let files = 0..<8
     internal static let ranks = 0..<8
     internal static let all = (0..<Square.count)
-
+    
+    /// Board-geometry offsets, shared by move generation, attack scanning and
+    /// mate-pattern classification — previously a private copy in each. Every
+    /// use must pair one with a file-distance guard: an offset alone wraps
+    /// across the board edge onto the next rank.
+    ///
+    /// `queenDirections` is spelled out rather than aliased to `kingOffsets`
+    /// despite holding the same values: the coincidence is arithmetic, not
+    /// semantic, and the generated move *order* is what the perft counts were
+    /// taken against.
+    internal static let knightOffsets:    [Int] = [17, 15, 10, 6, -6, -10, -15, -17]
+    internal static let kingOffsets:      [Int] = [1, 7, 8, 9, -1, -7, -8, -9]
+    internal static let rookDirections:   [Int] = [1, 8, -1, -8]
+    internal static let bishopDirections: [Int] = [7, 9, -7, -9]
+    internal static let queenDirections:  [Int] = [1, 7, 8, 9, -1, -7, -8, -9]
+    
     internal static func fileCharacter(_ file: Int) -> Character {
         fileIndicatorTable[file]
     }
-
+    
     internal static func rankCharacter(_ rank: Int) -> Character {
         rankIndicatorTable[rank]
     }
-
+    
     private static let algebraicNotationTable: [String] = {
         Square.all.map { square in
             let file = Character(UnicodeScalar(Int(UnicodeScalar("a").value) + square % 8)!)
@@ -41,59 +56,59 @@ extension Square {
             return String(file) + String(rank)
         }
     }()
-
+    
     private static let fileIndicatorTable: [Character] = {
         Square.files.map {
             Character(UnicodeScalar(Int(UnicodeScalar("a").value) + $0)!)
         }
     }()
-
+    
     private static let rankIndicatorTable: [Character] = {
         Square.ranks.map {
             Character(UnicodeScalar(Int(UnicodeScalar("1").value) + $0)!)
         }
     }()
-
+    
     // MARK: Computed Properties
     internal var isOnBoard: Bool { UInt(bitPattern: self) < Square.count }
     internal var file: Int { self % 8 }
     internal var rank: Int { self / 8 }
-
+    
     internal var fileIndicator: Character {
         Int.fileIndicatorTable[file]
     }
-
+    
     internal var rankIndicator: Character {
         Int.rankIndicatorTable[rank]
     }
-
+    
     internal var asciiDigit: Character {
         assert(UInt(bitPattern: self) <= 8, "asciiDigit called with value \(self), expected 0–8")
         return Character(UnicodeScalar(UInt8(ascii: "0") + UInt8(self)))
     }
-
+    
     internal var algebraicNotation: String {
         Int.algebraicNotationTable[self]
     }
-
+    
     // MARK: Static Methods
     internal static func fromAlgebraicNotation(_ name: String) -> Square? {
         var utf8 = name.utf8.makeIterator()
-
+        
         guard let fileByte = utf8.next(),
               let rankByte = utf8.next(),
               utf8.next() == nil else {
             return nil
         }
-
+        
         let file = Int(fileByte) - Int(UInt8(ascii: "a"))
         let rank = Int(rankByte) - Int(UInt8(ascii: "1"))
-
+        
         guard UInt(bitPattern: file) < 8,
               UInt(bitPattern: rank) < 8 else {
             return nil
         }
-
+        
         return rank * 8 + file
     }
 }

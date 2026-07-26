@@ -25,23 +25,14 @@ internal struct GameState: Equatable, Sendable {
     internal let halfmoveClock: Int
     internal let fullmoveNumber: Int
     
-    // MARK: Initializers
-    internal init(
-        position: Position,
-        activeColor: PieceColor,
-        castlingRights: CastlingRights,
-        enPassantTarget: Square?,
-        halfmoveClock: Int,
-        fullmoveNumber: Int
-    ) {
-        self.position = position
-        self.activeColor = activeColor
-        self.castlingRights = castlingRights
-        self.enPassantTarget = enPassantTarget
-        self.halfmoveClock = halfmoveClock
-        self.fullmoveNumber = fullmoveNumber
-    }
-    
+}
+
+// MARK: FEN Conversion
+
+/// Deliberately in an extension, not the type body: a conversion init inside
+/// the struct suppresses the synthesized memberwise init, which every call
+/// site here wants and which was previously hand-written to match exactly.
+extension GameState {
     internal init(_ fen: FEN) {
         self.init(
             position: fen.position,
@@ -53,7 +44,6 @@ internal struct GameState: Equatable, Sendable {
         )
     }
 }
-
 extension FEN {
     internal init(_ state: GameState) {
         self.init(

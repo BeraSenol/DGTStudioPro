@@ -8,6 +8,13 @@
 internal enum CastlingSide: Sendable {
     case kingSide
     case queenSide
+    
+    /// The king's destination file — g (6) kingside, c (2) queenside. One
+    /// home for a constant that was a private `Move.kingSideKingFile` plus
+    /// two bare literals in the SAN layer, none of which could see each other.
+    internal var kingDestinationFile: Int {
+        self == .kingSide ? 6 : 2
+    }
 }
 
 internal struct CastlingRights: Codable, Equatable, Hashable, Sendable {
@@ -53,6 +60,10 @@ internal struct CastlingRights: Codable, Equatable, Hashable, Sendable {
     }
     
     // MARK: Instance Methods
+    /// The readable accessor over a private mask. Production-called from
+    /// `appendCastlingMoves`; the waiver register's "test-only by decision"
+    /// entry covers the no-arg `init()` only, which nothing outside the suites
+    /// reaches (production goes through `.all`, `.none`, or `init(rawValue:)`).
     internal func has(_ color: PieceColor, _ side: CastlingSide) -> Bool {
         rawValue & Self.mask(for: color, side).rawValue != 0
     }

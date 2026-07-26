@@ -6,7 +6,9 @@
 //
 
 /// A stable identity for one of the 32 starting pieces — the currency
-/// `PieceTracker` assigns and `SquareView` keys its piece animation on.
+/// `PieceTracker` assigns, and the one `SquareView` would key piece animation
+/// on. It doesn't yet: the parameter is threaded and unread, waiting on the
+/// tracker-parity work that would make the physical mirror safe to animate.
 /// Lives with the tracker because the `< 32` bound *is* the tracker's slot
 /// design: White holds IDs 0–15 and Black 16–31, assigned once in
 /// `.starting` and never reissued (promotion reuses the pawn's identity).
@@ -23,14 +25,12 @@ internal struct PieceTracker: Equatable, Sendable {
     
     internal static let starting: PieceTracker = {
         var tracker = PieceTracker()
-        var id: UInt8 = 0
         
-        // White's Pieces: IDs 0–15
-        // Black's Pieces: IDs 16–31
-        for square in 0..<16 {
-            tracker.pieceIdentities[square] = PieceID(rawValue: id)
-            tracker.pieceIdentities[square + 48] = PieceID(rawValue: id + 16)
-            id += 1
+        // White's pieces take IDs 0–15 on a1–h2; Black's take 16–31 on a7–h8.
+        // The ID tracks the square index exactly, so no separate counter.
+        for square in 0 ..< 16 {
+            tracker.pieceIdentities[square]      = PieceID(rawValue: UInt8(square))
+            tracker.pieceIdentities[square + 48] = PieceID(rawValue: UInt8(square) + 16)
         }
         
         return tracker

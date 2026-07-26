@@ -102,24 +102,16 @@ internal struct MoveHistoryView: View {
         return Button {
             onMoveTapped?(index)
         } label: {
-            HStack(spacing: 5) {
-                Text(san)
-                    .font(
-                        .system(
-                            size: 12,
-                            weight: isSelected ? .semibold : .regular,
-                            design: .monospaced
-                        )
-                    )
-                    .foregroundStyle(isSelected ? .primary : .secondary)
-            }
-            .padding(.vertical, 3)
-            .padding(.horizontal, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .fill(.secondary.opacity(isSelected ? 0.20 : 0))
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
+            Text(san)
+                .font(.system(size: 12, weight: isSelected ? .semibold : .regular, design: .monospaced))
+                .foregroundStyle(isSelected ? .primary : .secondary)
+                .padding(.vertical, 3)
+                .padding(.horizontal, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(.secondary.opacity(isSelected ? 0.20 : 0))
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .buttonStyle(.plain)
         .id(index)
