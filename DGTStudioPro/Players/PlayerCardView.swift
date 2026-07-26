@@ -34,6 +34,30 @@ internal struct PlayerMonogram: View {
     }
 }
 
+/// One labelled metric in a gallery preview's grid. Both galleries carried a
+/// byte-identical private `statCell` — the `PlayerMonogram` precedent: shared
+/// presentation for the Players/Rankings pair lives here, once.
+internal struct PlayerStatCell: View {
+    
+    internal let label: String
+    internal let value: String
+    
+    internal init(_ label: String, _ value: String) {
+        self.label = label
+        self.value = value
+    }
+    
+    internal var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.body.monospacedDigit())
+        }
+    }
+}
+
 /// The Players analogue of `LibraryGameCardView`, used by the icons grids,
 /// the columns details, and the gallery filmstrips of *both* Players and
 /// Rankings — the latter passes `rank` (M-prs.4) and gets the badge.

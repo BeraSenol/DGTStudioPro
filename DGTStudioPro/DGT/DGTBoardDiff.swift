@@ -26,6 +26,21 @@ internal struct DGTBoardDiff: Equatable {
     
     internal var isEmpty: Bool { vacated.isEmpty && placed.isEmpty }
     
+    /// Every square the two positions disagree about. The two maps are
+    /// disjoint by construction — each differing square lands in exactly one
+    /// of them, decided by whether it ends up occupied — so this is a
+    /// concatenation wearing a union's clothes, and `changedSquares.count`
+    /// always equals `vacated.count + placed.count`.
+    ///
+    /// No production caller: `DGTReconstructor`, `RecoveryGuidance` and
+    /// `DGTDebugFormat` each read the two maps directly, because every one of
+    /// them needs to know *which* side a square fell on. Kept as the accessor
+    /// that states the disjointness invariant they all depend on and none of
+    /// them asserts — the `FEN.legalMoves()` category, test-only by decision.
+    internal var changedSquares: Set<Square> {
+        Set(vacated.keys).union(placed.keys)
+    }
+    
     internal init(from before: Position, to after: Position) {
         var vacated: [Square: Piece] = [:]
         var placed: [Square: Piece] = [:]

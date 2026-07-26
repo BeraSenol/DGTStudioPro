@@ -169,7 +169,7 @@ internal struct DGTConnectionView: View {
     /// app is handling it, and how to stand it down. The loop itself lives
     /// in `DGTConnection`; this panel is pure status.
     private func reconnectingPanel(_ device: DGTSerialDevice) -> some View {
-        VStack(spacing: 14) {
+        VStack(spacing: Metrics.groupSpacing) {
             ProgressView()
                 .controlSize(.large)
             Text("Reconnecting to \(device.name)…")
@@ -182,7 +182,7 @@ internal struct DGTConnectionView: View {
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)
         }
-        .padding()
+        .padding(Metrics.margin)
         .accessibilityIdentifier(AccessibilityID.dgtReconnectingPanel)
     }
     
@@ -231,61 +231,62 @@ internal struct DGTConnectionView: View {
     // MARK: Footer
     
     private var footer: some View {
-        HStack(spacing: Metrics.groupSpacing) {            switch connection.status {
-        case .disconnected, .searching:
-            Button("Rescan") { connection.search() }
-                .accessibilityIdentifier(AccessibilityID.dgtRescanButton)
-            Spacer()
-            Button("Cancel") { dismiss() }
-            Button("Connect") {
-                guard let device = selectedDevice else { return }
-                Task { await connection.connect(to: device) }
-            }
-            .keyboardShortcut(.defaultAction)
-            .disabled(selectedDevice == nil)
-            .accessibilityIdentifier(AccessibilityID.dgtConnectButton)
-            
-        case .connecting:
-            Spacer()
-            Button("Cancel") {
-                Task { await connection.disconnect() }
-            }
-            .accessibilityIdentifier(AccessibilityID.dgtCancelButton)
-            
-        case .reconnecting:
-            // Standing the loop down is deliberate but not destructive —
-            // nothing is lost; the game stays right there on screen.
-            // Ends in `.disconnected`, then `search()` swaps this panel
-            // for the device list in place.
-            Button("Stop Trying") {
-                Task {
-                    await connection.stopReconnecting()
-                    connection.search()
+        HStack(spacing: Metrics.groupSpacing) {
+            switch connection.status {
+            case .disconnected, .searching:
+                Button("Rescan") { connection.search() }
+                    .accessibilityIdentifier(AccessibilityID.dgtRescanButton)
+                Spacer()
+                Button("Cancel") { dismiss() }
+                Button("Connect") {
+                    guard let device = selectedDevice else { return }
+                    Task { await connection.connect(to: device) }
                 }
+                .keyboardShortcut(.defaultAction)
+                .disabled(selectedDevice == nil)
+                .accessibilityIdentifier(AccessibilityID.dgtConnectButton)
+                
+            case .connecting:
+                Spacer()
+                Button("Cancel") {
+                    Task { await connection.disconnect() }
+                }
+                .accessibilityIdentifier(AccessibilityID.dgtCancelButton)
+                
+            case .reconnecting:
+                // Standing the loop down is deliberate but not destructive —
+                // nothing is lost; the game stays right there on screen.
+                // Ends in `.disconnected`, then `search()` swaps this panel
+                // for the device list in place.
+                Button("Stop Trying") {
+                    Task {
+                        await connection.stopReconnecting()
+                        connection.search()
+                    }
+                }
+                .accessibilityIdentifier(AccessibilityID.dgtStopReconnectingButton)
+                Spacer()
+                Button("Close") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+                
+            case .connected:
+                Button("Disconnect", role: .destructive) {
+                    Task { await connection.disconnect() }
+                }
+                .accessibilityIdentifier(AccessibilityID.dgtDisconnectButton)
+                Spacer()
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+                
+            case .failed:
+                Spacer()
+                Button("Cancel") { dismiss() }
+                Button("Try Again") { connection.search() }
+                    .keyboardShortcut(.defaultAction)
+                    .accessibilityIdentifier(AccessibilityID.dgtRetryButton)
             }
-            .accessibilityIdentifier(AccessibilityID.dgtStopReconnectingButton)
-            Spacer()
-            Button("Close") { dismiss() }
-                .keyboardShortcut(.defaultAction)
-            
-        case .connected:
-            Button("Disconnect", role: .destructive) {
-                Task { await connection.disconnect() }
-            }
-            .accessibilityIdentifier(AccessibilityID.dgtDisconnectButton)
-            Spacer()
-            Button("Done") { dismiss() }
-                .keyboardShortcut(.defaultAction)
-            
-        case .failed:
-            Spacer()
-            Button("Cancel") { dismiss() }
-            Button("Try Again") { connection.search() }
-                .keyboardShortcut(.defaultAction)
-                .accessibilityIdentifier(AccessibilityID.dgtRetryButton)
         }
-        }
-        .padding()
+        .padding(Metrics.margin)
     }
     
     // MARK: Helpers

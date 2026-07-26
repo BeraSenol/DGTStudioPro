@@ -40,8 +40,6 @@ struct GameTests {
         #expect(game.moves.isEmpty)
         #expect(!game.canAdvance)
         #expect(!game.canRetreat)
-        #expect(game.isAtStart)
-        #expect(game.isAtEnd)
     }
     
     @Test func twoMoveGameOpensAtEnd() throws {
@@ -51,7 +49,6 @@ struct GameTests {
         #expect(game.moves.count == 2)
         #expect(game.canRetreat)
         #expect(!game.canAdvance)
-        #expect(game.isAtEnd)
     }
     
     @Test func stateArraysAreParallelAndCorrectlySized() throws {

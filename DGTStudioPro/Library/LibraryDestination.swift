@@ -68,32 +68,12 @@ internal struct LibraryDestination: View {
         return filteredGames.first(where: { $0.id == id })
     }
     
-    private var importSheetBinding: Binding<Bool> {
-        Binding(
-            get: { importProgress != nil },
-            set: { if !$0 { importProgress = nil } }
-        )
-    }
-    
-    private var pendingDeletionBinding: Binding<Bool> {
-        Binding(
-            get: { pendingDeletion != nil },
-            set: { if !$0 { pendingDeletion = nil } }
-        )
-    }
-    
-    private var pendingDirtyDeletionBinding: Binding<Bool> {
-        Binding(
-            get: { pendingDirtyDeletion != nil },
-            set: { if !$0 { pendingDirtyDeletion = nil } }
-        )
-    }
-    
-    private var pendingBatchDeletionBinding: Binding<Bool> {
-        Binding(
-            get: { pendingBatchDeletion != nil },
-            set: { if !$0 { pendingBatchDeletion = nil } }
-        )
+    /// Resolves a selection to models in **display order**. A `Set` carries
+    /// none, and the order is load-bearing twice: the queue crunches
+    /// top-to-bottom as shown, and D24′'s export *numbers the filenames* from
+    /// it. Three callers had this line copied.
+    private func gamesInDisplayOrder(_ ids: Set<PGN.ID>) -> [PGN] {
+        filteredGames.filter { ids.contains($0.id) }
     }
     
     // MARK: Body
@@ -101,7 +81,7 @@ internal struct LibraryDestination: View {
         coreContent
             .alert(
                 "Delete Game?",
-                isPresented: pendingDeletionBinding,
+                isPresented: Binding(present: $pendingDeletion),
                 presenting: pendingDeletion,
                 actions: { game in
                     Button("Delete", role: .destructive) { delete(game) }
@@ -113,7 +93,7 @@ internal struct LibraryDestination: View {
             )
             .alert(
                 "Discard Unsaved Changes?",
-                isPresented: pendingDirtyDeletionBinding,
+                isPresented: Binding(present: $pendingDirtyDeletion),
                 presenting: pendingDirtyDeletion,
                 actions: { game in
                     Button("Delete Anyway", role: .destructive) {
@@ -127,7 +107,7 @@ internal struct LibraryDestination: View {
             )
             .alert(
                 "Delete \(pendingBatchDeletion?.count ?? 0) Games?",
-                isPresented: pendingBatchDeletionBinding,
+                isPresented: Binding(present: $pendingBatchDeletion),
                 presenting: pendingBatchDeletion,
                 actions: { games in
                     Button("Delete \(games.count) Games", role: .destructive) {
@@ -189,11 +169,17 @@ internal struct LibraryDestination: View {
             .inspectorColumnWidth(min: 325, ideal: 320, max: 430)
         }
         .toolbar { toolbarContent }
-        .sheet(isPresented: importSheetBinding) {
+        .sheet(isPresented: Binding(present: $importProgress)) {
             if let importProgress {
                 ImportStatusView(progress: importProgress) {
                     self.importProgress = nil
                 }
+                // The footer button is disabled until the batch finishes for
+                // exactly this reason, but ⎋ doesn't route through the button.
+                // Dismissing mid-run nils the progress while `runImport` keeps
+                // going, so the rest of the batch imports invisibly and the
+                // completion log reports zero.
+                .interactiveDismissDisabled(!importProgress.isFinished)
             }
         }
     }
@@ -311,7 +297,7 @@ internal struct LibraryDestination: View {
     /// routes through the single-game path, so right-click → Analyze on
     /// one row keeps opening the inspector exactly as before.
     private func requestAnalysis(ids: Set<PGN.ID>) {
-        let ordered = filteredGames.filter { ids.contains($0.id) }
+        let ordered = gamesInDisplayOrder(ids)
         guard !ordered.isEmpty else { return }
         if ordered.count == 1 {
             requestAnalysis(ordered[0])
@@ -369,7 +355,7 @@ internal struct LibraryDestination: View {
                 ? "Export \(selectedPGNs.count) selected games as PGN files"
                 : "Export the selected game as a PGN file"
             )
-            .accessibilityIdentifier(AccessibilityID.libraryExport)
+            .accessibilityIdentifier(AccessibilityID.libraryExportButton)
         }
     }
     
@@ -557,10 +543,15 @@ internal struct LibraryDestination: View {
     /// its dirty-changes confirmation); two or more go through a batch
     /// confirmation.
     private func requestDelete(ids: Set<PGN.ID>) {
-        let games = filteredGames.filter { ids.contains($0.id) }
+        let games = gamesInDisplayOrder(ids)
         guard !games.isEmpty else { return }
         if games.count == 1 {
-            delete(games[0])
+            // Through the alert, not straight to `delete(_:)`. The card menus
+            // set `pendingDeletion` and get the "Delete Game?" confirmation;
+            // this path skipped it, so ⌫ and the toolbar deleted a single game
+            // outright while deleting *two* still asked. The alert's action
+            // calls `delete(_:)`, so the dirty-changes fork is unchanged.
+            pendingDeletion = games[0]
         } else {
             pendingBatchDeletion = games
         }
@@ -672,10 +663,28 @@ internal struct LibraryDestination: View {
     /// does — a `Set` carries no order, and here the order is *visible*: it
     /// numbers the filenames. Leaves selection and inspector untouched.
     private func requestExport(ids: Set<PGN.ID>) {
-        let ordered = filteredGames.filter { ids.contains($0.id) }
+        let ordered = gamesInDisplayOrder(ids)
         guard !ordered.isEmpty else { return }
         Self.logger.info("Export requested: \(ordered.count) game(s)")
         PGNExporter.export(ordered)
+    }
+}
+
+// MARK: Presentation Bindings
+
+fileprivate extension Binding where Value == Bool {
+    /// A presentation flag over optional state: `true` while a value is
+    /// present, and a dismissal clears the source. Four `@State` optionals
+    /// here each open-coded the same getter/setter pair.
+    ///
+    /// Deliberately `fileprivate`: `BoardDestination`'s offer bindings look
+    /// identical but ignore dismissal on purpose (`set: { _ in }` — D#3 is a
+    /// fork, not a suggestion), and folding those in would erase that.
+    init<T>(present source: Binding<T?>) {
+        self.init(
+            get: { source.wrappedValue != nil },
+            set: { if !$0 { source.wrappedValue = nil } }
+        )
     }
 }
 

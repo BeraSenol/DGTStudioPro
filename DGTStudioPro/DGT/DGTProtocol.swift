@@ -45,25 +45,25 @@ internal enum DGTPiece: UInt8, Sendable {
     case blackQueen  = 12
     
     // MARK: Computed Properties
-    /// Converts this DGT piece to the app's `Piece` type.
+    /// Converts this DGT piece to the app's `Piece` type. A `switch`, not a
+    /// raw-value-indexed table: a new DGT case would have compiled against the
+    /// table and trapped out of range at the decode boundary — here it's a
+    /// build error, which is the only witness a wire enum can rely on.
     internal var piece: Piece {
-        Self.pieceLookup[Int(rawValue)]
+        switch self {
+        case .empty:       .empty
+        case .whitePawn:   .whitePawn
+        case .whiteRook:   .whiteRook
+        case .whiteKnight: .whiteKnight
+        case .whiteBishop: .whiteBishop
+        case .whiteKing:   .whiteKing
+        case .whiteQueen:  .whiteQueen
+        case .blackPawn:   .blackPawn
+        case .blackRook:   .blackRook
+        case .blackKnight: .blackKnight
+        case .blackBishop: .blackBishop
+        case .blackKing:   .blackKing
+        case .blackQueen:  .blackQueen
+        }
     }
-    
-    // MARK: Static Constants
-    private static let pieceLookup: [Piece] = [
-        .empty,        // 0
-        .whitePawn,    // 1
-        .whiteRook,    // 2
-        .whiteKnight,  // 3
-        .whiteBishop,  // 4
-        .whiteKing,    // 5
-        .whiteQueen,   // 6
-        .blackPawn,    // 7
-        .blackRook,    // 8
-        .blackKnight,  // 9
-        .blackBishop,  // 10
-        .blackKing,    // 11
-        .blackQueen,   // 12
-    ]
 }

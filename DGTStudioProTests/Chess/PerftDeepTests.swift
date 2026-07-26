@@ -13,12 +13,14 @@ import Testing
 /// wall-clock with a legal-move-filter generator (33 minutes observed under
 /// coverage instrumentation).
 ///
-/// **This suite carries no exclusion trait and therefore runs in ⌘U.** An
-/// earlier revision of this comment claimed otherwise, which is why a
-/// half-hour of the suite's wall time went unattributed. Never delete these
-/// tests — depth 5 is what makes accidental coincidence statistically
-/// impossible — but if ⌘U time hurts, give them `.tags(.slow)` and exclude
-/// that tag from the default plan, and update this paragraph when you do.
+/// **Tagged `.slow` and excluded from the default test plan**, so ⌘U no
+/// longer runs them; invoke the suite from the test navigator, or run a plan
+/// that includes the tag. Never delete these tests — depth 5 is what makes
+/// accidental coincidence statistically impossible. Until July 2026 the suite
+/// carried no exclusion trait at all while a comment claimed otherwise, which
+/// is why a half-hour of wall time went unattributed and why six parallel
+/// depth-5 recursions were starving the `@MainActor` poll-based suites and
+/// the Stockfish handshake into timeouts that read as product bugs.
 ///
 /// The depth-5 reference values are the canonical perft results published
 /// on chessprogramming.org and used by Stockfish, Fairy-Stockfish, and
@@ -30,9 +32,9 @@ import Testing
 /// The position FENs are duplicated from `PerftTests` rather than shared
 /// so this file is self-contained and the chosen FENs can't drift apart
 /// from the canonical sources by accident.
-@Suite("Perft Deep (Depth 5)")
+@Suite("Perft Deep (Depth 5)", .tags(.slow))
 struct PerftDeepTests {
-    
+
     // MARK: Perft Implementation
     private func perft(_ state: GameState, depth: Int) -> Int {
         if depth == 0 { return 1 }
@@ -44,7 +46,7 @@ struct PerftDeepTests {
         }
         return total
     }
-    
+
     // MARK: Reference Position FENs
     private static let kiwipete =
     "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -"
@@ -56,16 +58,16 @@ struct PerftDeepTests {
     "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ -"
     private static let position6 =
     "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - -"
-    
+
     // MARK: Depth-5 Reference Counts
-    
+
     /// ~4.9M nodes. Fastest of the six — a useful warm-up that catches
     /// regressions in the basic move generation before committing to the
     /// slower tests.
     @Test func startingPositionDepth5() {
         #expect(perft(.starting, depth: 5) == 4_865_609)
     }
-    
+
     /// ~193.7M nodes. The heaviest test in the suite. Kiwipete at depth 5
     /// exercises virtually every move-generator interaction at scale: the
     /// canonical chessprogramming.org statistics for this depth report
@@ -75,7 +77,7 @@ struct PerftDeepTests {
         let state = GameState(try FEN(parsing: Self.kiwipete))
         #expect(perft(state, depth: 5) == 193_690_690)
     }
-    
+
     /// ~675K nodes — sparse endgame, the fastest of the non-starting
     /// positions. Stresses en passant and discovered attacks at scale
     /// (52K captures, 1165 en-passants at this depth).
@@ -83,7 +85,7 @@ struct PerftDeepTests {
         let state = GameState(try FEN(parsing: Self.position3))
         #expect(perft(state, depth: 5) == 674_624)
     }
-    
+
     /// ~15.8M nodes. Promotion-heavy. Depth 5 here is the depth that
     /// exercises both the white a7→a8 promotion path and black's
     /// b2→b1/g2→g1 promotion paths, with captures and castling interplay.
@@ -91,7 +93,7 @@ struct PerftDeepTests {
         let state = GameState(try FEN(parsing: Self.position4))
         #expect(perft(state, depth: 5) == 15_833_292)
     }
-    
+
     /// ~89.9M nodes. Promotion-with-capture stress. The white pawn on d7
     /// promotes by single push or by capture onto c8/e8, and the black
     /// knight on f2 generates a fan of discovered-attack lines that test
@@ -100,7 +102,7 @@ struct PerftDeepTests {
         let state = GameState(try FEN(parsing: Self.position5))
         #expect(perft(state, depth: 5) == 89_941_194)
     }
-    
+
     /// ~164.1M nodes. Dense middlegame with high branching factor. No
     /// special-case features (no castling, no EP, no near-promotion) —
     /// just enormous breadth, which tends to catch generator bugs that

@@ -144,7 +144,9 @@ internal final class AnalysisQueueController {
     /// hook skips the wasted engine work.)
     internal func gameWasDeleted(_ id: PersistentIdentifier) {
         queue.removeWaiting(id)
-        if queue.status(of: id) == .running {
+        // `status(of:)` answers `.running` by this same comparison, then
+        // scans `waiting` and `finished` to rule out the other cases.
+        if queue.current == id {
             driver.stop()
         }
     }
@@ -226,11 +228,10 @@ internal final class AnalysisQueueController {
             currentGameName = nil
         }
         
-        // Teardown can cancel between `startNext` and the walk — don't
-        // leave a phantom "running" item in the log.
-        if queue.current != nil {
-            queue.finishCurrent(.cancelled)
-        }
+        // Teardown can cancel between `startNext` and the walk — don't leave
+        // a phantom "running" item in the log. `finishCurrent` no-ops with
+        // nothing running, which is what the guard here was re-asking.
+        queue.finishCurrent(.cancelled)
         currentGameName = nil
         
         // Decision 4: release the subprocess at drain. The next batch

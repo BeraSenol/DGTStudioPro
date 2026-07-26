@@ -354,8 +354,7 @@ internal final class DGTLiveSession {
         // Transient playing-overlays (ghost rook, correction hint) are mutually
         // exclusive and recomputed each settle: clear both up front, then the
         // relevant branch re-sets its own.
-        clearGhost()
-        correctionHint = nil
+        clearPlayingOverlays()
         
         switch DGTReconstructor.reconstruct(from: game.currentState, physical: board) {
         case .noChange:
@@ -511,11 +510,9 @@ internal final class DGTLiveSession {
         archivedPGN = nil
         shouldOfferNewGame = false
         offeredNewGameForCurrentStart = true
-        clearGhost()
-        correctionHint = nil
+        clearPlayingOverlays()
         
-        let alreadySetUp = lastObservedBoard == game.currentState.position
-        mode = alreadySetUp ? .playing(game) : .awaitingSetup(game)
+        let alreadySetUp = beginTracking(game)
         
         sessionLog?.record(
             .info,
@@ -546,8 +543,8 @@ internal final class DGTLiveSession {
     /// Discards the current live game and returns to idle.
     internal func discardGame() {
         mode = .idle
-        clearGhost()
-        correctionHint = nil
+        clearPlayingOverlays()
+        offeredNewGameForCurrentStart = false
         offeredNewGameForCurrentStart = false
         // The explicit-Discard exit from a failed archive (M5): the player
         // chose to lose the game, so the suppression lifts with it.
@@ -614,9 +611,9 @@ internal final class DGTLiveSession {
             mode = .playing(game)
             sessionLog?.capture(.info, "Setup wait ended by manual result — nothing left to set up")
         }
-        clearGhost()            // defensive: playing-overlays can't be set in
-        correctionHint = nil    // either mode, but keep the exit symmetrical
-        // and future-proof
+        // Defensive: neither mode can have set these, but keep the exit
+        // symmetrical and future-proof.
+        clearPlayingOverlays()
     }
     
     // MARK: Roster
@@ -692,15 +689,9 @@ internal final class DGTLiveSession {
             archiveOutcome = .failed(message: error.localizedDescription)
             archivedPGN = nil
             saveDraft()
-            sessionLog?.record(
-                .error,
+            recordError(
                 "Archive failed: \(error) — draft kept, new-game entry suppressed until Retry or Discard"
             )
-            if sessionLog == nil {
-                Self.logger.error(
-                    "Archive failed: \(String(describing: error), privacy: .public)"
-                )
-            }
         }
     }
     
@@ -747,12 +738,7 @@ internal final class DGTLiveSession {
             )
         } catch {
             pendingDraft = .corrupt
-            sessionLog?.record(.error, "Draft file can't be read: \(error) — offering delete")
-            if sessionLog == nil {
-                Self.logger.error(
-                    "Draft file can't be read: \(String(describing: error), privacy: .public)"
-                )
-            }
+            recordError("Draft file can't be read: \(error) — offering delete")
         }
     }
     
@@ -771,8 +757,7 @@ internal final class DGTLiveSession {
             pendingDraft = nil
             shouldOfferNewGame = false
             offeredNewGameForCurrentStart = true
-            clearGhost()
-            correctionHint = nil
+            clearPlayingOverlays()
             
             if game.isFinished {
                 // The self-heal (M5): a decided draft means a previous run
@@ -788,8 +773,7 @@ internal final class DGTLiveSession {
                 )
                 archiveFinishedGame(game)
             } else {
-                let alreadySetUp = lastObservedBoard == game.currentState.position
-                mode = alreadySetUp ? .playing(game) : .awaitingSetup(game)
+                let alreadySetUp = beginTracking(game)
                 
                 sessionLog?.record(
                     .info,
@@ -799,12 +783,7 @@ internal final class DGTLiveSession {
             }
         } catch {
             pendingDraft = .corrupt
-            sessionLog?.record(.error, "Draft failed to resume: \(error) — offering delete")
-            if sessionLog == nil {
-                Self.logger.error(
-                    "Draft failed to resume: \(String(describing: error), privacy: .public)"
-                )
-            }
+            recordError("Draft failed to resume: \(error) — offering delete")
         }
     }
     
@@ -834,12 +813,7 @@ internal final class DGTLiveSession {
         do {
             try draftStore.save(game.draftSnapshot)
         } catch {
-            sessionLog?.record(.error, "Draft save failed: \(error)")
-            if sessionLog == nil {
-                Self.logger.error(
-                    "Draft save failed: \(String(describing: error), privacy: .public)"
-                )
-            }
+            recordError("Draft save failed: \(error)")
         }
     }
     
@@ -867,6 +841,41 @@ internal final class DGTLiveSession {
     private func clearGhost() {
         castlingGhostSquare = nil
         castlingGhostPiece = nil
+    }
+    
+    /// The transient playing-overlays as one unit. `settlePlaying` recomputes
+    /// them every settle and the four lifecycle exits drop them; naming the set
+    /// means a future third overlay is added in one place rather than five.
+    /// The recovery-exit in `settle` deliberately keeps the narrower
+    /// `clearGhost()`: a correction hint can't survive into recovery.
+    private func clearPlayingOverlays() {
+        clearGhost()
+        correctionHint = nil
+    }
+    
+    /// Enters tracking for `game`: straight to `playing` when the pieces
+    /// already stand where the game expects them, otherwise through the setup
+    /// gate. Returns whether the gate was skipped, which both callers put in
+    /// their log line. A fresh game and a resumed draft ask the identical
+    /// question of the identical `lastObservedBoard` — one home for it.
+    @discardableResult
+    private func beginTracking(_ game: LiveGame) -> Bool {
+        let alreadySetUp = lastObservedBoard == game.currentState.position
+        mode = alreadySetUp ? .playing(game) : .awaitingSetup(game)
+        return alreadySetUp
+    }
+    
+    /// An error that must reach *somewhere*: the exportable timeline when
+    /// wired, Console when not. `record` already Console-mirrors, so the
+    /// fallback fires only headless — which four call sites each open-coded,
+    /// every one of them having to remember the `nil` check and keep two
+    /// copies of the message in step.
+    private func recordError(_ message: String) {
+        if let sessionLog {
+            sessionLog.record(.error, message)
+        } else {
+            Self.logger.error("\(message, privacy: .public)")
+        }
     }
     
     /// Builds the pending correction hint for a recognized-but-incomplete move.

@@ -66,11 +66,27 @@ struct PlayerNameTests {
         #expect(PlayerName.displayForm(of: "  Bera\n") == "Bera")
     }
     
-    /// The display name and the identity key agree by construction — the
-    /// fold here is `Player.normalizedKey`'s minus the lowercasing.
-    @Test func displayFormAgreesWithTheIdentityFold() {
-        #expect(Player.normalizedKey(for: PlayerName.displayForm(of: "Magnus   Carlsen"))
-                == Player.normalizedKey(for: "Carlsen, Magnus"))
+    /// The display fold is *total*: after `displayForm`, `normalizedKey` has
+    /// nothing left to collapse, so it degenerates to `lowercased()`. That is
+    /// what "a display name and its identity key can never disagree about
+    /// what 'Magnus  Carlsen' is" means operationally (D23′).
+    @Test(arguments: PlayerNameTests.inputs)
+    func displayFormLeavesNothingForTheIdentityFold(_ raw: String) {
+        let display = PlayerName.displayForm(of: raw)
+        #expect(Player.normalizedKey(for: display) == display.lowercased())
+    }
+    
+    /// The consequence that matters: both arrival forms of one name reach one
+    /// identity. The tag form must go through `displayForm` here because
+    /// `resolvePlayer` display-forms *before* keying — keying a raw
+    /// "Carlsen, Magnus" is not a path the app takes, and its comma survives
+    /// `normalizedKey` untouched. (The previous revision of this test asserted
+    /// exactly that and could never have passed.)
+    @Test func bothArrivalFormsReachOneIdentity() {
+        let fromDisplay = Player.normalizedKey(for: PlayerName.displayForm(of: "Magnus   Carlsen"))
+        let fromTag     = Player.normalizedKey(for: PlayerName.displayForm(of: "Carlsen, Magnus"))
+        #expect(fromDisplay == fromTag)
+        #expect(fromDisplay == "magnus carlsen")
     }
     
     // MARK: Idempotency (D23′)

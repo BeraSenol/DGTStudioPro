@@ -245,17 +245,26 @@ internal struct LibraryColumnsView: View {
             let year = game.date.map { calendar.component(.year, from: $0) }
             buckets[year, default: []].append(game)
         }
+        // Sort on the year, then render. Sorting the *rendered* names and
+        // re-testing for the literal "Undated" made the ordering rule depend
+        // on display copy — rewording the placeholder would silently send
+        // undated games to the top — and string `>` only agrees with numeric
+        // order while every year has the same digit count.
         return buckets
-            .map { year, games in
-                let display = year.map(String.init) ?? "Undated"
-                let id = year.map { "year:\($0)" } ?? "year:undated"
-                return LibraryGroup(id: id, displayName: display, games: games)
-            }
-        // Most recent year first, undated last.
             .sorted { lhs, rhs in
-                if lhs.displayName == "Undated" { return false }
-                if rhs.displayName == "Undated" { return true }
-                return lhs.displayName > rhs.displayName
+                switch (lhs.key, rhs.key) {
+                case let (left?, right?): return left > right
+                case (_?, nil):           return true     // dated before undated
+                case (nil, _?):           return false
+                case (nil, nil):          return false
+                }
+            }
+            .map { year, games in
+                LibraryGroup(
+                    id: year.map { "year:\($0)" } ?? "year:undated",
+                    displayName: year.map(String.init) ?? "Undated",
+                    games: games
+                )
             }
     }
 }

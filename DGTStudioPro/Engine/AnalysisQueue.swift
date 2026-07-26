@@ -52,17 +52,18 @@ internal struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
         /// evaluations recorded before the stop stay in the PGN — same
         /// contract as the driver's `stop()` always had.
         case cancelled
+        
+        /// The popover's filter, named once instead of an `if case` at each
+        /// use site.
+        internal var isFailure: Bool {
+            if case .failed = self { true } else { false }
+        }
     }
     
     /// One completed item, in completion order.
     internal struct Finished: Equatable, Sendable {
         internal let id: ID
         internal let outcome: Outcome
-        
-        internal init(id: ID, outcome: Outcome) {
-            self.id = id
-            self.outcome = outcome
-        }
     }
     
     /// The queue's answer to "where does this game stand?" — what the
@@ -102,13 +103,15 @@ internal struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
     
     /// Failed items, in completion order, for the popover's error list.
     internal var failures: [Finished] {
-        finished.filter {
-            if case .failed = $0.outcome { return true }
-            return false
-        }
+        finished.filter(\.outcome.isFailure)
     }
     
-    internal var hasFailures: Bool { !failures.isEmpty }
+    /// `contains`, not `!failures.isEmpty`: the toolbar item reads this on
+    /// every render, and the array form built the whole list to ask whether
+    /// it was empty.
+    internal var hasFailures: Bool {
+        finished.contains { $0.outcome.isFailure }
+    }
     
     // MARK: Mutations
     

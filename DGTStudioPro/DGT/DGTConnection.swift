@@ -383,8 +383,7 @@ internal final class DGTConnection {
         switch event {
         case .boardDump(let position):
             physicalBoard = position
-            onBoardChanged?(position)
-            recorder?.record(position)
+            publishBoardChange()
             // First dump confirms a live, talking board — whether this was a
             // dialog connect or an M7.3 reconnect lap. Only now is the device
             // worth remembering (M7.1): an attempt that never produced a dump
@@ -401,34 +400,48 @@ internal final class DGTConnection {
             
         case .fieldUpdate(let square, let piece):
             physicalBoard[square] = piece
-            onBoardChanged?(physicalBoard)
-            recorder?.record(physicalBoard)
+            publishBoardChange()
             
         case .serialNumber(let value):
             boardInfo.serialNumber = value
-            Self.logger.info("Board serial: \(value, privacy: .public)")
-            sessionLog?.capture(.debug, "Board serial: \(value)")
+            noteBoardInfo("Board serial", value)
             
         case .longSerialNumber(let value):
             boardInfo.longSerialNumber = value
-            Self.logger.info("Board long serial: \(value, privacy: .public)")
-            sessionLog?.capture(.debug, "Board long serial: \(value)")
+            noteBoardInfo("Board long serial", value)
             
         case .trademark(let value):
             boardInfo.trademark = value
-            Self.logger.info("Board trademark: \(value, privacy: .public)")
-            sessionLog?.capture(.debug, "Board trademark: \(value)")
+            noteBoardInfo("Board trademark", value)
             
         case .version(let major, let minor):
-            boardInfo.version = "\(major).\(minor)"
-            Self.logger.info("Board version: \(major).\(minor, privacy: .public)")
-            sessionLog?.capture(.debug, "Board version: \(major).\(minor)")
+            let value = "\(major).\(minor)"
+            boardInfo.version = value
+            noteBoardInfo("Board version", value)
             
         case .hardwareVersion(let major, let minor):
-            boardInfo.hardwareVersion = "\(major).\(minor)"
-            Self.logger.info("Board hardware version: \(major).\(minor, privacy: .public)")
-            sessionLog?.capture(.debug, "Board hardware version: \(major).\(minor)")
+            let value = "\(major).\(minor)"
+            boardInfo.hardwareVersion = value
+            noteBoardInfo("Board hardware version", value)
         }
+    }
+    
+    /// The fan-out every physical-board change owes: the session's quiescence
+    /// timer, then the optional recorder. The *mutation* stays at the call site
+    /// — a dump replaces the board, a field update patches one square — because
+    /// it's the fan-out, not the write, that must not diverge between them.
+    private func publishBoardChange() {
+        onBoardChanged?(physicalBoard)
+        recorder?.record(physicalBoard)
+    }
+    
+    /// One board-identity milestone, Console and buffer from a single call, so
+    /// the two strings can't drift. `privacy: .public` is explicit because a
+    /// `String` interpolation is redacted by default — the previous per-case
+    /// lines relied on that annotation being remembered six times.
+    private func noteBoardInfo(_ label: String, _ value: String) {
+        Self.logger.info("\(label): \(value, privacy: .public)")
+        sessionLog?.capture(.debug, "\(label): \(value)")
     }
     
     private func handleStreamEnd() {

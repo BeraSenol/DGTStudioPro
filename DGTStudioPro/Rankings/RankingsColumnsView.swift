@@ -33,35 +33,45 @@ internal struct RankingsColumnsView: View {
     
     // MARK: Computed Properties
     
+    /// The fixed brackets, descending. Ranges rather than closures, which is
+    /// what lets the table be a `Sendable` constant built once instead of
+    /// four closures allocated per read — and the boundaries read as data.
+    private static let brackets: [(id: String, wins: ClosedRange<Int>)] = [
+        ("10+ wins", 10...Int.max),
+        ("5–9 wins", 5...9),
+        ("1–4 wins", 1...4),
+        ("No wins",  0...0),
+    ]
+    
     private var bands: [WinBand] {
         // `players` arrives ladder-ordered, so grouping preserves rank
         // order inside each band, and iterating fixed brackets keeps the
         // band list itself descending.
-        let brackets: [(id: String, contains: (Int) -> Bool)] = [
-            ("10+ wins", { $0 >= 10 }),
-            ("5–9 wins", { (5...9).contains($0) }),
-            ("1–4 wins", { (1...4).contains($0) }),
-            ("No wins",  { $0 == 0 }),
-        ]
-        return brackets.compactMap { bracket in
-            let members = players.filter { bracket.contains($0.stats.wins) }
+        Self.brackets.compactMap { bracket in
+            let members = players.filter { bracket.wins.contains($0.stats.wins) }
             guard !members.isEmpty else { return nil }
             return WinBand(id: bracket.id, players: members)
         }
     }
     
-    private var selectedBand: WinBand? {
+    private func selectedBand(in bands: [WinBand]) -> WinBand? {
         guard let id = selectedBandID else { return nil }
         return bands.first { $0.id == id }
     }
     
     // MARK: Body
     var body: some View {
-        HSplitView {
-            bandList
+        // Group once per render, then thread down — the move
+        // `RankingsDestination.ranked(from:histories:)` documents one level
+        // up. As a computed property `bands` was read three times a render:
+        // the empty check, the `ForEach`, and `selectedBand`.
+        let bands = self.bands
+        
+        return HSplitView {
+            bandList(bands)
                 .frame(minWidth: 200, idealWidth: 250, maxWidth: 300, maxHeight: .infinity)
             
-            detail
+            detail(bands)
                 .frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -70,7 +80,7 @@ internal struct RankingsColumnsView: View {
     // MARK: Instance Methods
     
     @ViewBuilder
-    private var bandList: some View {
+    private func bandList(_ bands: [WinBand]) -> some View {
         if bands.isEmpty {
             VStack {
                 Spacer()
@@ -98,10 +108,9 @@ internal struct RankingsColumnsView: View {
         }
     }
     
-    @ViewBuilder
-    private var detail: some View {
+    private func detail(_ bands: [WinBand]) -> some View {
         Group {
-            if let band = selectedBand {
+            if let band = selectedBand(in: bands) {
                 ScrollView {
                     LazyVGrid(
                         columns: [GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 16)],
@@ -129,4 +138,45 @@ internal struct RankingsColumnsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+}
+
+// MARK: Previews
+
+/// Opens with no band selected, and can't do otherwise — `selectedBandID` is
+/// private `@State`, so a preview has no way to preselect. That is worth
+/// seeing rather than working around: it is exactly how the mode presents on
+/// every fresh visit, band list on the left and placeholder on the right.
+#Preview("Bands") {
+    @Previewable @State var selection: PlayerStats.ID?
+    
+    RankingsColumnsView(
+        players: PreviewFixtures.rankedPlayers(),
+        selectedKey: $selection,
+        onShowInLibrary: { _ in }
+    )
+    .frame(width: 820, height: 420)
+}
+
+/// All four brackets populated. The small fixture reaches only "1–4 wins"
+/// and "No wins", so the 5–9 and 10+ boundaries — and the `compactMap` that
+/// drops empty bands — are unwitnessed without this one.
+#Preview("All Four Bands") {
+    @Previewable @State var selection: PlayerStats.ID?
+    
+    RankingsColumnsView(
+        players: PreviewFixtures.deepRankedPlayers(),
+        selectedKey: $selection,
+        onShowInLibrary: { _ in }
+    )
+    .frame(width: 820, height: 420)
+}
+
+/// Two independent empty states that both have to hold: the band list takes
+/// its own "No players" arm rather than rendering an empty `List`, and the
+/// detail pane still shows its placeholder.
+#Preview("Empty") {
+    @Previewable @State var selection: PlayerStats.ID?
+    
+    RankingsColumnsView(players: [], selectedKey: $selection, onShowInLibrary: { _ in })
+        .frame(width: 820, height: 420)
 }

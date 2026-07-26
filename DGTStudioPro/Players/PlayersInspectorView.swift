@@ -65,8 +65,8 @@ private struct ProfileSection: View {
             LabeledContent("Games", value: "\(stats.games)")
             LabeledContent("Win Rate", value: stats.winRate.formatted(.percent.precision(.fractionLength(0))))
             LabeledContent("Mates Delivered", value: "\(stats.matesDelivered)")
-            LabeledContent("First Played", value: stats.firstPlayed.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits)))
-            LabeledContent("Last Played", value: stats.lastPlayed.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits)))
+            LabeledContent("First Played", value: RosterSummary.displayDate(stats.firstPlayed))
+            LabeledContent("Last Played", value: RosterSummary.displayDate(stats.lastPlayed))
             LabeledContent("Rating", value: ratingDescription)
         } header: {
             Text("Player Profile")

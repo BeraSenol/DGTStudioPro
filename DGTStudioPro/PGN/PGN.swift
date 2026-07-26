@@ -99,10 +99,20 @@ internal final class PGN: Identifiable {
         PlayerName.displayForm(of: black)
     }
     
+    /// The one construction of a game's default name. `init`'s fallback and
+    /// `nameIsStaleDefault`'s comparison each built this string separately
+    /// and have to agree byte for byte: if they drift, `hasStaleDefaultName`
+    /// is true forever and `backfillEmptyNames` rewrites and saves every game
+    /// on every Library appearance — the shape of the 20 July field finding
+    /// documented below.
+    internal static func defaultName(white: String, black: String) -> String {
+        "\(PlayerName.displayForm(of: white)) vs \(PlayerName.displayForm(of: black))"
+    }
+    
     /// Default `name` for a game with these players, in display form.
     /// Used both for new imports and the backfill comparison.
     internal var defaultDisplayName: String {
-        "\(whiteDisplayName) vs \(blackDisplayName)"
+        Self.defaultName(white: white, black: black)
     }
     
     /// Whether `name` is a **stale stored default** that should be rewritten
@@ -119,8 +129,7 @@ internal final class PGN: Identifiable {
         storedName: String, white: String, black: String
     ) -> Bool {
         let legacyDefault = "\(white) vs \(black)"
-        let displayDefault =
-        "\(PlayerName.displayForm(of: white)) vs \(PlayerName.displayForm(of: black))"
+        let displayDefault = defaultName(white: white, black: black)
         return (storedName.isEmpty || storedName == legacyDefault)
         && storedName != displayDefault
     }
@@ -168,7 +177,7 @@ internal final class PGN: Identifiable {
         self.board = board
         self.moves = moves
         self.evaluations = evaluations
-        self.name = name ?? "\(PlayerName.displayForm(of: white)) vs \(PlayerName.displayForm(of: black))"
+        self.name = name ?? Self.defaultName(white: white, black: black)
         self.importedAt = .now
         self.contentHash = contentHash
     }

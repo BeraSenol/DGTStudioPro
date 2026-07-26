@@ -15,23 +15,35 @@ import Foundation
 /// throughout the app. UCI input from the engine arrives in side-to-move
 /// perspective and is flipped at the parsing layer when black is to move.
 internal enum Evaluation: Equatable, Sendable, Codable {
-
+    
     // MARK: Cases
-
+    
     /// Material-equivalent advantage in centipawns, signed from white's
     /// perspective. `centipawns(0)` is a drawn position; `centipawns(100)`
     /// is roughly "white is a pawn ahead".
     case centipawns(Int)
-
+    
     /// Forced mate in N plies, signed from white's perspective.
     /// `mate(3)` means white mates in 3; `mate(-3)` means black mates
     /// in 3. `mate(0)` indicates the position is already checkmate
     /// (rarely emitted in stored evaluations) and is treated as 0.5
     /// by the probability projection to avoid sign-of-zero ambiguity.
     case mate(Int)
-
+    
+    // MARK: Static Constants
+    
+    /// A dead-equal position: the sigmoid's fixed point, where
+    /// `whiteWinProbability` is exactly 0.5, and its own mirror under
+    /// `flipped` (`Int` has no negative zero). Named for the planned
+    /// vertical evaluation bar, which needs a neutral midpoint to draw
+    /// against and shouldn't spell it `.centipawns(0)` at every reference —
+    /// the `Position.starting` / `CastlingRights.none` convention.
+    internal static let drawn = Evaluation.centipawns(0)
+    
     // MARK: Computed Properties
-
+    
+    // MARK: Computed Properties
+    
     /// Probability that white wins the resulting game, in `[0, 1]`.
     ///
     /// Centipawns project via a sigmoid with k=400, the de-facto-standard
@@ -47,7 +59,7 @@ internal enum Evaluation: Equatable, Sendable, Codable {
             return n > 0 ? 1.0 : 0.0
         }
     }
-
+    
     /// Returns the evaluation with its sign flipped (white ↔ black
     /// perspective). Used by the UCI parser to normalize side-to-move-
     /// relative engine output to white-relative storage.
@@ -62,7 +74,13 @@ internal enum Evaluation: Equatable, Sendable, Codable {
 // MARK: PGN `[%eval ...]` Tag Format
 
 extension Evaluation {
-
+    
+    /// The widest centipawn magnitude an annotation may claim. Far past any
+    /// real engine output (a queen is ~900), so it rejects only nonsense —
+    /// but finite and well inside `Int`, which is what keeps
+    /// `Int(_: Double)` from trapping on a hostile file.
+    private static let centipawnLimit: Double = 1_000_000
+    
     /// Parses the *content* of a `[%eval ...]` PGN comment tag (the value
     /// between the keyword and the closing bracket — the caller is
     /// expected to have stripped the wrapping syntax).
@@ -78,7 +96,7 @@ extension Evaluation {
     internal init?(parsingEvalTagContent content: String) {
         let trimmed = content.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return nil }
-
+        
         if trimmed.hasPrefix("#") {
             let mateStr = String(trimmed.dropFirst())
             guard let n = Int(mateStr) else { return nil }
@@ -88,12 +106,18 @@ extension Evaluation {
             let normalized = trimmed.hasPrefix("+")
             ? String(trimmed.dropFirst())
             : trimmed
-            guard let pawns = Double(normalized) else { return nil }
-            let cp = Int((pawns * 100).rounded())
-            self = .centipawns(cp)
+            // `Double(_:)` accepts "inf", "nan" and overflowing literals, and
+            // `Int(_: Double)` traps on every one of them — so an untrusted
+            // `{[%eval inf]}` crashed the import instead of failing the
+            // annotation. The rejection belongs here, at the parse boundary,
+            // beside the others.
+            guard let pawns = Double(normalized), pawns.isFinite else { return nil }
+            let cp = (pawns * 100).rounded()
+            guard cp >= -Self.centipawnLimit, cp <= Self.centipawnLimit else { return nil }
+            self = .centipawns(Int(cp))
         }
     }
-
+    
     /// Parses a complete `[%eval ...]` tag, including its wrapping
     /// brackets and keyword — recognizes the exact Lichess/Chess.com shape
     /// and returns nil otherwise. Whitespace around the inner value
@@ -115,7 +139,7 @@ extension Evaluation {
         )
         self.init(parsingEvalTagContent: inner)
     }
-
+    
     /// Renders the *content* of a `[%eval ...]` tag in the Lichess /
     /// Chess.com convention.
     ///
@@ -132,7 +156,7 @@ extension Evaluation {
             return "#\(n)"
         }
     }
-
+    
     /// Renders the full `[%eval ...]` comment tag, ready to embed
     /// inside `{...}` PGN movetext comments. Unused in production —
     /// `PGNSerializer` writes no evaluations (D24′); this and

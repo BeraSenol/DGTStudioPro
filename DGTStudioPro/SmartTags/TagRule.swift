@@ -134,9 +134,18 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
             guard !needle.isEmpty else { return false }
             switch field {
             case .player:
-                return [record.white?.name, record.black?.name]
-                    .compactMap { $0 }
-                    .contains { compareString($0.lowercased(), needle) }
+                let seats = [record.white?.name, record.black?.name]
+                    .compactMap { $0?.lowercased() }
+                // Unknowns never match, negation included: a game with no
+                // resolved seat can neither prove nor disprove a player rule.
+                guard !seats.isEmpty else { return false }
+                // A negated comparison over two seats flips the quantifier.
+                // "Player is not Bera" has to mean *neither* seat is Bera;
+                // `contains` made it "some seat isn't Bera", which is true of
+                // every game Bera played against anyone — the exact inverse.
+                return comparison == .notEquals
+                ? seats.allSatisfy { compareString($0, needle) }
+                : seats.contains { compareString($0, needle) }
             default:
                 return compareString(stringSubject(of: record).lowercased(), needle)
             }

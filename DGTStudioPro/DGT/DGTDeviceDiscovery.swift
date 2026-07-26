@@ -61,9 +61,7 @@ internal enum DGTDeviceDiscovery {
         
         // Stable order: likely boards first, then alphabetical by path.
         return devices.sorted {
-            $0.isLikelyBoard != $1.isLikelyBoard
-            ? $0.isLikelyBoard && !$1.isLikelyBoard
-            : $0.path < $1.path
+            $0.isLikelyBoard == $1.isLikelyBoard ? $0.path < $1.path : $0.isLikelyBoard
         }
     }
     

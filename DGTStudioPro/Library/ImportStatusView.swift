@@ -19,6 +19,22 @@ internal struct ImportResult: Identifiable {
     internal enum Outcome {
         case imported(name: String)
         case failed(PGNStore.Error)
+        
+        /// The three buckets every consumer partitions into. The summary's
+        /// counts, the row icon, and the row tint each open-coded this match,
+        /// and each had to independently remember that a duplicate is *not*
+        /// a failure — it's the no-op the user asked for.
+        internal enum Category {
+            case imported, duplicate, failed
+        }
+        
+        internal var category: Category {
+            switch self {
+            case .imported:           .imported
+            case .failed(.duplicate): .duplicate
+            case .failed:             .failed
+            }
+        }
     }
 }
 
@@ -31,28 +47,14 @@ internal struct ImportProgress {
     
     internal var completed: Int { results.count }
     
-    internal var importedCount: Int {
-        results.filter {
-            if case .imported = $0.outcome { return true }
-            return false
-        }.count
-    }
+    internal var importedCount: Int  { count(of: .imported) }
+    internal var duplicateCount: Int { count(of: .duplicate) }
+    internal var failedCount: Int    { count(of: .failed) }
     
-    internal var duplicateCount: Int {
-        results.filter {
-            if case .failed(.duplicate) = $0.outcome { return true }
-            return false
-        }.count
-    }
-    
-    internal var failedCount: Int {
-        results.filter {
-            switch $0.outcome {
-            case .failed(.duplicate): return false
-            case .failed:             return true
-            case .imported:           return false
-            }
-        }.count
+    /// `count(where:)`, not `filter { … }.count` — the old form built three
+    /// throwaway arrays to ask three questions about their sizes.
+    private func count(of category: ImportResult.Outcome.Category) -> Int {
+        results.count { $0.outcome.category == category }
     }
 }
 
@@ -157,21 +159,20 @@ private struct ImportResultRow: View {
     }
     
     private var icon: String {
-        switch result.outcome {
-        case .imported:            return "checkmark.circle.fill"
-        case .failed(.duplicate):  return "doc.on.doc"
-        case .failed:              return "exclamationmark.triangle.fill"
+        switch result.outcome.category {
+        case .imported:  "checkmark.circle.fill"
+        case .duplicate: "doc.on.doc"
+        case .failed:    "exclamationmark.triangle.fill"
         }
     }
     
     private var tint: Color {
-        switch result.outcome {
-        case .imported:            return .green
-        case .failed(.duplicate):  return .orange
-        case .failed:              return .red
+        switch result.outcome.category {
+        case .imported:  .green
+        case .duplicate: .orange
+        case .failed:    .red
         }
     }
-    
     private var title: String {
         switch result.outcome {
         case .imported(let name):               return name

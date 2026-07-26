@@ -63,8 +63,11 @@ internal struct RosterSummary: Equatable, Sendable {
         }
     }
     
-    /// The one implementation of PGN's date rendering — `PGN.displayDate`
-    /// now delegates here, and the live inspector's private copy is gone.
+    /// The app's one short-date rendering. `PGN.displayDate` delegates here,
+    /// the live inspector's private copy is gone, and the Players surfaces
+    /// (list, inspector, gallery) route through it rather than each spelling
+    /// `.dateTime.year().month(.twoDigits).day(.twoDigits)` again — five
+    /// copies of one format, all identical, none of them the "one".
     internal static func displayDate(_ date: Date?) -> String {
         guard let date else { return unknownDate }
         return date.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits))

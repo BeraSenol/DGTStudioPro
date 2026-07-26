@@ -85,6 +85,14 @@ internal enum DGTReconstructor {
         let mover = lastLegal.activeColor
         let diff = DGTBoardDiff(from: before, to: physical)
         
+        // 0) Only removals → a piece (or pieces: attacker + captured) is in the
+        //    player's hand. A move is underway; wait rather than flag a desync.
+        //    Hoisted above move generation, which it makes unnecessary — every
+        //    step below needs a placement, so this used to walk `legalMoves()`
+        //    to reach a conclusion the diff already carried, on the settle that
+        //    fires most often.
+        if diff.placed.isEmpty { return .inProgress }
+        
         let vacatedByMover = diff.vacated.filter { $0.value.isColor(mover) }
         let placedByMover  = diff.placed.filter  { $0.value.isColor(mover) }
         
@@ -150,7 +158,7 @@ internal enum DGTReconstructor {
         //    b) is the field desync of 2026-07-18 (ply-20 O-O): the settle
         //    between the rook's lift and its landing fell through to
         //    `.unresolved` and tripped recovery mid-legal-castle. All-in-hand
-        //    states with nothing placed are already step 3's `.inProgress`.
+        //    states with nothing placed returned at step 0, before this ran.
         //    (Rook placed first with the king *untouched* is deliberately NOT
         //    here: that board is byte-identical to a completed legal rook
         //    move, which step 1 rightly commits — intent is unknowable at
@@ -172,13 +180,8 @@ internal enum DGTReconstructor {
                 return .castlingInProgress(castling)                    // c
             }
         }
-        // 3) Only removals → a piece (or pieces, e.g. attacker + captured) is
-        //    in hand. A move is underway; wait rather than flag a desync.
-        if diff.placed.isEmpty {
-            return .inProgress
-        }
         
-        // 4) Settled, with placements that don't complete any legal move.
+        // 3) Settled, with placements that don't complete any legal move.
         return .unresolved
     }
     

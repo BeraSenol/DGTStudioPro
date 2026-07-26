@@ -60,10 +60,8 @@ internal struct EngineConfiguration: Equatable, Sendable {
         self.hashMB = Self.hashChoicesMB.min {
             abs($0 - hashMB) < abs($1 - hashMB)
         } ?? Self.hashChoicesMB[0]
-        self.threads = min(
-            max(threads, Self.threadsRange.lowerBound),
-            Self.threadsRange.upperBound
-        )
+        let threadsRange = Self.threadsRange
+        self.threads = min(max(threads, threadsRange.lowerBound), threadsRange.upperBound)
     }
     
     // MARK: Persistence

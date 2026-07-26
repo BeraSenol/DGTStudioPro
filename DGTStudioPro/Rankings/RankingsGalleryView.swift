@@ -41,14 +41,14 @@ internal struct RankingsGalleryView: View {
                 
                 Grid(alignment: .leading, horizontalSpacing: 0, verticalSpacing: 0) {
                     GridRow {
-                        statCell("Wins", "\(player.stats.wins)")
-                        statCell("Record", "\(player.stats.wins)–\(player.stats.draws)–\(player.stats.losses)")
-                        statCell("Win Rate", player.stats.winRate.formatted(.percent.precision(.fractionLength(0))))
+                        PlayerStatCell("Wins", "\(player.stats.wins)")
+                        PlayerStatCell("Record", "\(player.stats.wins)–\(player.stats.draws)–\(player.stats.losses)")
+                        PlayerStatCell("Win Rate", player.stats.winRate.formatted(.percent.precision(.fractionLength(0))))
                     }
                     GridRow {
-                        statCell("Games", "\(player.stats.games)")
-                        statCell("Rating", player.rating?.displaySummary ?? "—")
-                        statCell("Mates", "\(player.stats.matesDelivered)")
+                        PlayerStatCell("Games", "\(player.stats.games)")
+                        PlayerStatCell("Rating", player.rating?.displaySummary ?? "—")
+                        PlayerStatCell("Mates", "\(player.stats.matesDelivered)")
                     }
                 }
                 .padding(.top, 4)
@@ -60,16 +60,6 @@ internal struct RankingsGalleryView: View {
                 systemImage: "person.crop.circle.dashed",
                 description: Text("Select a player to preview.")
             )
-        }
-    }
-    
-    private func statCell(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.body.monospacedDigit())
         }
     }
     

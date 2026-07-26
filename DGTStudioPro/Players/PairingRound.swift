@@ -35,15 +35,17 @@ internal enum PairingRound {
         and second: String,
         in records: [GameRecord]
     ) -> Int? {
-        let pairing: Set<String> = [first, second]
+        // Pair-as-set, without building a set per record. Self-pairing stays
+        // total: with `first == second` the first clause matches a game a
+        // player played against themselves, and an `a` vs `a` game still
+        // fails an `a` vs `b` query — the two cases `PairingRoundTests` pins.
         let latest = records
             .compactMap { record -> Int? in
-                guard
-                    let white = record.white,
-                    let black = record.black,
-                    Set([white.key, black.key]) == pairing
-                else { return nil }
-                return record.round
+                guard let white = record.white, let black = record.black else { return nil }
+                let isThisPairing =
+                (white.key == first && black.key == second)
+                || (white.key == second && black.key == first)
+                return isThisPairing ? record.round : nil
             }
             .max()
         return latest.map { $0 + 1 }

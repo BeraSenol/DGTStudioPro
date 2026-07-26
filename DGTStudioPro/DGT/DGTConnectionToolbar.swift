@@ -21,7 +21,10 @@ internal struct DGTConnectionToolbarModifier: ViewModifier {
     @Environment(DGTConnection.self) private var connection
     @State private var showSheet = false
     
-    var identifier: String = AccessibilityID.boardConnectButton
+    /// No default, per the `board.connectButton` agreement: a shared fallback
+    /// silently gives two hosts the same identifier, and a required parameter
+    /// makes forgetting a compile error.
+    let identifier: String
     
     func body(content: Content) -> some View {
         content
@@ -56,10 +59,13 @@ internal struct DGTConnectionToolbarModifier: ViewModifier {
         }
     }
     
+    /// Failure reads as "not connected" here by design — `tint` is what
+    /// distinguishes it (red vs plain). The enumerated `.failed` case returned
+    /// the same string as `default` and decided nothing; if a distinct failure
+    /// glyph is ever wanted, it goes back here.
     private var symbol: String {
         switch connection.status {
         case .connected: "antenna.radiowaves.left.and.right"
-        case .failed:    "antenna.radiowaves.left.and.right.slash"
         default:         "antenna.radiowaves.left.and.right.slash"
         }
     }
@@ -86,9 +92,7 @@ internal struct DGTConnectionToolbarModifier: ViewModifier {
 extension View {
     /// Adds the DGT board connect control + dialog to this view's toolbar.
     /// Requires a `DGTConnection` in the environment.
-    internal func dgtConnectionToolbar(
-        identifier: String = AccessibilityID.boardConnectButton
-    ) -> some View {
+    internal func dgtConnectionToolbar(identifier: String) -> some View {
         modifier(DGTConnectionToolbarModifier(identifier: identifier))
     }
 }

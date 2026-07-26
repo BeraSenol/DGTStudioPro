@@ -231,13 +231,13 @@ internal enum AccessibilityID {
     internal static let libraryFilterChip      = "library.filterChip"
     internal static let libraryFilterChipClear = "library.filterChip.clear"
     
-    /// The Library's Export affordances. The two *context menus* (list rows,
-    /// cards) never coexist — the view-mode picker guarantees it — but the
-    /// toolbar button coexists with both, so this constant is currently on
-    /// three live views at once. Split into `libraryExportButton` (toolbar)
-    /// and `libraryExport` (menus) before any UITest queries either, or the
-    /// query resolves ambiguously.
-    internal static let libraryExport = "library.export"
+    /// The Library's Export affordances, now split. The two *context menus*
+    /// — list rows and cards — never coexist, since the view-mode picker
+    /// guarantees only one mode is mounted, so they keep sharing
+    /// `libraryExport`. The toolbar button coexists with both and carries its
+    /// own, which is what made a query against the shared name ambiguous.
+    internal static let libraryExportButton = "library.export.button"
+    internal static let libraryExport       = "library.export"
     
     /// `gameCard.Quick Mate`, … — one per Library card, keyed by the game's
     /// display name (see `LibraryGameCardView`).

@@ -23,6 +23,17 @@ struct StockfishEngineTests {
         StockfishEngine.defaultBinaryURL != nil
     }
     
+    /// A ⌘U host is not a user's Mac. `readyok` lands *after* the
+    /// `setoption name Hash` write, so the handshake's slowest step —
+    /// allocating and zeroing the table — is precisely the one a saturated
+    /// host starves, and the depth-5 perft suites saturate every core in
+    /// parallel. The 5 s production default exists to protect a *user* from
+    /// a dead binary; inherited here it manufactures a startup failure out
+    /// of load. The dead-binary contract stays pinned by
+    /// `startThrowsOnHandshakeTimeout`, which passes 250 ms for the same
+    /// reason in the opposite direction.
+    private static let handshakeTimeout: Duration = .seconds(60)
+    
     // MARK: Lifecycle
     
     @Test(.enabled(if: stockfishAvailable))
@@ -30,8 +41,7 @@ struct StockfishEngineTests {
         let url = try #require(StockfishEngine.defaultBinaryURL)
         let engine = StockfishEngine(binaryURL: url)
         
-        try await engine.start()
-        defer { Task { await engine.shutdown() } }
+        try await engine.start(handshakeTimeout: Self.handshakeTimeout)
         
         let name = await engine.engineName
         let author = await engine.engineAuthor
@@ -50,7 +60,7 @@ struct StockfishEngineTests {
         let runningBeforeStart = await engine.isRunning
         #expect(runningBeforeStart == false)
         
-        try await engine.start()
+        try await engine.start(handshakeTimeout: Self.handshakeTimeout)
         let runningAfterStart = await engine.isRunning
         #expect(runningAfterStart == true)
         
@@ -64,7 +74,7 @@ struct StockfishEngineTests {
         let url = try #require(StockfishEngine.defaultBinaryURL)
         let engine = StockfishEngine(binaryURL: url)
         
-        try await engine.start()
+        try await engine.start(handshakeTimeout: Self.handshakeTimeout)
         defer { Task { await engine.shutdown() } }
         
         await #expect(throws: StockfishEngine.EngineError.alreadyStarted) {
@@ -78,7 +88,7 @@ struct StockfishEngineTests {
     func analyzesStartingPositionToReasonableEval() async throws {
         let url = try #require(StockfishEngine.defaultBinaryURL)
         let engine = StockfishEngine(binaryURL: url)
-        try await engine.start()
+        try await engine.start(handshakeTimeout: Self.handshakeTimeout)
         defer { Task { await engine.shutdown() } }
         
         let stream = engine.analyze(fen: .starting, depth: 10)
@@ -149,7 +159,7 @@ struct StockfishEngineTests {
         // leaking state between them.
         let url = try #require(StockfishEngine.defaultBinaryURL)
         let engine = StockfishEngine(binaryURL: url)
-        try await engine.start()
+        try await engine.start(handshakeTimeout: Self.handshakeTimeout)
         defer { Task { await engine.shutdown() } }
         
         for _ in 0..<3 {

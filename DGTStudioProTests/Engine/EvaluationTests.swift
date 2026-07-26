@@ -70,13 +70,14 @@ struct EvaluationTests {
         #expect(Evaluation.centipawns(-30).flipped == .centipawns(30))
         #expect(Evaluation.mate(3).flipped == .mate(-3))
         #expect(Evaluation.mate(-7).flipped == .mate(7))
+        // Zero is its own mirror — the one value `flipped` fixes.
+        #expect(Evaluation.drawn.flipped == .drawn)
     }
     
     /// Flipping twice is the identity, and a draw is its own mirror.
     @Test(arguments: [Evaluation.centipawns(0), .centipawns(123), .centipawns(-456), .mate(2), .mate(-9)])
     func doubleFlipIsIdentity(_ eval: Evaluation) {
         #expect(eval.flipped.flipped == eval)
-        #expect(Evaluation.drawn.flipped == .drawn)
     }
     
     // MARK: Parsing — Tag Content

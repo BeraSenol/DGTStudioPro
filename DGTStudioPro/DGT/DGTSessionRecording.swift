@@ -80,16 +80,13 @@ extension DGTSessionRecording {
     /// timestamps — deterministically, with no waiting — so intermediate
     /// mid-move states are filtered out exactly as the real timer filters them.
     internal func settledBoards(quiescence: Duration = .milliseconds(300)) -> [Position] {
-        guard !entries.isEmpty else { return [] }
         let gap = quiescence.inMilliseconds
         var settled: [Position] = []
-        for index in entries.indices {
-            let isLast = index == entries.index(before: entries.endIndex)
-            let stillLongEnough = isLast
-            || (entries[index + 1].offsetMillis - entries[index].offsetMillis) >= gap
-            if stillLongEnough {
-                settled.append(entries[index].board)
-            }
+        for (index, entry) in entries.enumerated() {
+            let next = index + 1
+            let isSettled = next == entries.count
+            || entries[next].offsetMillis - entry.offsetMillis >= gap
+            if isSettled { settled.append(entry.board) }
         }
         return settled
     }
@@ -189,7 +186,7 @@ internal final class DGTSessionRecorder {
             entries.removeFirst(entries.count - maxEntries)
         }
     }
-
+    
     internal func finish() -> DGTSessionRecording {
         DGTSessionRecording(identity: identity, recordedAt: recordedAt, entries: entries)
     }

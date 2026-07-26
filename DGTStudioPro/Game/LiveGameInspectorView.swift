@@ -21,24 +21,24 @@ import SwiftUI
 /// closures into `DGTLiveSession` so every game mutation keeps flowing
 /// through the session (and its diagnostic timeline).
 internal struct LiveGameInspectorView: View {
-
+    
     // MARK: Stored Properties
-
+    
     internal let game: LiveGame
     internal let onUpdateRoster: (LiveGame.Roster) -> Void
     internal let onResign: (PieceColor) -> Void
     internal let onAgreeDraw: () -> Void
     internal let onDiscard: () -> Void
-
+    
     // MARK: View State
-
+    
     @State private var isEditingDetails = false
     @State private var isChoosingResign = false
     @State private var isConfirmingDraw = false
     @State private var isConfirmingDiscard = false
-
+    
     // MARK: Body
-
+    
     internal var body: some View {
         List {
             rosterSection
@@ -46,7 +46,7 @@ internal struct LiveGameInspectorView: View {
             lifecycleSection
         }
         .listStyle(.sidebar)
-        .scrollsToCurrentMove(game.sanMoves.isEmpty ? nil : game.sanMoves.count - 1)
+        .scrollsToCurrentMove(currentMoveIndex)
         .accessibilityIdentifier(AccessibilityID.liveInspector)
         .sheet(isPresented: $isEditingDetails) {
             EditLiveGameDetailsSheet(
@@ -87,9 +87,9 @@ internal struct LiveGameInspectorView: View {
             Text("The game and its moves will be lost — it won't be saved to the Library.")
         }
     }
-
+    
     // MARK: Sections
-
+    
     private var rosterSection: some View {
         SevenTagRosterSection(
             roster: RosterSummary(game.roster, result: game.result),
@@ -101,7 +101,14 @@ internal struct LiveGameInspectorView: View {
             .accessibilityIdentifier(AccessibilityID.liveInspectorEditDetails)
         }
     }
-
+    
+    /// The last committed ply. A live game is always *at* its final move —
+    /// it never scrubs — and both the scroll sync and the transcript need
+    /// that, each having open-coded the empty check.
+    private var currentMoveIndex: Int? {
+        game.sanMoves.isEmpty ? nil : game.sanMoves.count - 1
+    }
+    
     /// D20′ — "Recording 101. Magnus Carlsen vs Ian Nepomniachtchi", the
     /// live twin of the review headline. Same formatter, so the two
     /// inspectors can't drift apart on the grammar.
@@ -113,12 +120,12 @@ internal struct LiveGameInspectorView: View {
             black: game.roster.black
         )
     }
-
+    
     private var movesSection: some View {
         Section {
             MoveHistoryView(
                 moves: game.sanMoves,
-                currentMoveIndex: game.sanMoves.isEmpty ? nil : game.sanMoves.count - 1,
+                currentMoveIndex: currentMoveIndex,
                 onMoveTapped: nil,   // live games don't scrub
                 scrollsIndependently: false
             )
@@ -128,7 +135,7 @@ internal struct LiveGameInspectorView: View {
             Text("Moves")
         }
     }
-
+    
     private var lifecycleSection: some View {
         Section {
             if !game.isFinished {
@@ -136,13 +143,13 @@ internal struct LiveGameInspectorView: View {
                     isChoosingResign = true
                 }
                 .accessibilityIdentifier(AccessibilityID.liveInspectorResign)
-
+                
                 Button("Agree Draw…") {
                     isConfirmingDraw = true
                 }
                 .accessibilityIdentifier(AccessibilityID.liveInspectorDraw)
             }
-
+            
             Button("Discard Game…", role: .destructive) {
                 isConfirmingDiscard = true
             }

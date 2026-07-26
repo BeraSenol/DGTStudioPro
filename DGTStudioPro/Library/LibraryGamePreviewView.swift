@@ -20,6 +20,8 @@ internal struct LibraryGamePreviewView: View {
     internal let game: PGN?
     internal let boardStyle: BoardStyle
 
+    @State private var preview: LibraryGamePreviewState?
+
     // MARK: Body
     internal var body: some View {
         VStack(spacing: 16) {
@@ -76,22 +78,18 @@ internal struct LibraryGamePreviewView: View {
         }
     }
 
-    /// One `BoardView` for both states — the no-game arm nil-coalesces to
-    /// an empty board rather than branching, so the board's construction
-    /// can't diverge either. `Position.empty` and not `.starting`: an empty
-    /// board reads as "nothing here," a starting position reads as "a game
-    /// about to begin," which would be a lie in a Library preview.
     private var board: some View {
-        let preview = game.map { LibraryGamePreviewState.compute(from: $0.moves) }
-        return BoardView(
+        BoardView(
             position: preview?.position ?? .empty,
             pieceTracker: preview?.pieceTracker ?? .empty,
             style: boardStyle,
             perspective: .white,
             lastMove: preview?.lastMove,
-            checkSquare: preview?.checkSquare,
-            selectedSquare: nil
+            checkSquare: preview?.checkSquare
         )
+        .task(id: game?.moves) {
+            preview = game.map { LibraryGamePreviewState.compute(from: $0.moves) }
+        }
     }
 }
 

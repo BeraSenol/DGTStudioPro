@@ -50,13 +50,11 @@ internal struct MovetextEditorSheet: View {
     
     // MARK: Derived
     
+    private typealias Validation = Result<MovetextEdit.Accepted, MovetextEdit.Rejection>
+    
     private var tokens: [String] { MovetextEdit.tokenize(text) }
     
-    private var validation: Result<MovetextEdit.Accepted, MovetextEdit.Rejection> {
-        MovetextEdit.validate(tokens, claimedResult: pgn.result)
-    }
-    
-    private var isValid: Bool {
+    private func isValid(_ validation: Validation) -> Bool {
         if case .success = validation { return true }
         return false
     }
@@ -64,6 +62,11 @@ internal struct MovetextEditorSheet: View {
     // MARK: Body
     
     internal var body: some View {
+        // Validate once per render. As a computed property this was pulled by
+        // both Save's gate and the status line, and each pull re-tokenized
+        // too — every keystroke replayed the whole game twice over.
+        let validation = MovetextEdit.validate(tokens, claimedResult: pgn.result)
+        
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Edit Moves")
@@ -82,7 +85,7 @@ internal struct MovetextEditorSheet: View {
                 .padding(.top, 8)
                 .accessibilityIdentifier(AccessibilityID.movetextEditorField)
             
-            statusLine
+            statusLine(validation)
                 .padding(.horizontal)
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -102,7 +105,7 @@ internal struct MovetextEditorSheet: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
-                .disabled(!isValid)
+                .disabled(!isValid(validation))
                 .accessibilityIdentifier(AccessibilityID.movetextEditorSave)
             }
             .padding()
@@ -114,7 +117,7 @@ internal struct MovetextEditorSheet: View {
     // MARK: Status
     
     @ViewBuilder
-    private var statusLine: some View {
+    private func statusLine(_ validation: Validation) -> some View {
         switch validation {
         case .success(let accepted):
             Label(

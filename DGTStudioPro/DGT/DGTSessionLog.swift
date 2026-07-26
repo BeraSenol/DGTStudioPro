@@ -135,13 +135,12 @@ internal final class DGTSessionLog {
         ]
         for entry in entries {
             let head = "\(stamp.string(from: entry.timestamp))  [\(entry.level.rawValue.uppercased())]  "
-            // Indent continuation lines of a multi-line message under the head.
-            let body = entry.message
-                .split(separator: "\n", omittingEmptySubsequences: false)
-                .enumerated()
-                .map { $0.offset == 0 ? String($0.element) : String(repeating: " ", count: head.count) + $0.element }
-                .joined(separator: "\n")
-            lines.append(head + body)
+            // Continuation lines of a multi-line message (a desync block) indent
+            // under the head so the block stays attached to its timestamp. The
+            // split/enumerate/map/join rebuilt the indent — and recounted
+            // `head` — once per line to say exactly this.
+            let indent = String(repeating: " ", count: head.count)
+            lines.append(head + entry.message.replacingOccurrences(of: "\n", with: "\n" + indent))
         }
         return lines.joined(separator: "\n")
     }
@@ -232,12 +231,16 @@ internal enum DGTDebugFormat {
     /// algebraic notation and pieces as FEN characters, ordered by square index
     /// for stable, diff-friendly output.
     internal static func diff(_ diff: DGTBoardDiff) -> String {
-        let vacated = diff.vacated.keys.sorted().map { square in
-            "\(square.algebraicNotation)=\(diff.vacated[square]!.fenCharacter)"
-        }.joined(separator: ",")
-        let placed = diff.placed.keys.sorted().map { square in
-            "\(square.algebraicNotation)=\(diff.placed[square]!.fenCharacter)"
-        }.joined(separator: ",")
-        return "vacated[\(vacated)] placed[\(placed)]"
+        "vacated[\(squares(diff.vacated))] placed[\(squares(diff.placed))]"
+    }
+    
+    /// `e2=P,e4=P` — sorted by square index, so two captures of the same board
+    /// render identically and a diff of two exports is about the boards.
+    /// Sorting the pairs rather than the keys drops a second lookup per entry
+    /// and the force-unwrap that came with it.
+    private static func squares(_ map: [Square: Piece]) -> String {
+        map.sorted { $0.key < $1.key }
+            .map { "\($0.key.algebraicNotation)=\($0.value.fenCharacter)" }
+            .joined(separator: ",")
     }
 }

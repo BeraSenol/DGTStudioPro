@@ -32,7 +32,7 @@ internal struct PlayersListView: View {
             }
             .width(60)
             TableColumn("Last Played") { player in
-                Text(player.lastPlayed.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits)))
+                Text(RosterSummary.displayDate(player.lastPlayed))
                     .foregroundStyle(.secondary)
             }
             .width(100)

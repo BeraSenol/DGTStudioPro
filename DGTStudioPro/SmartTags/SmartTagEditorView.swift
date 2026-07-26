@@ -238,6 +238,9 @@ private struct TagRuleRow: View {
             DatePicker("Value", selection: $rule.date, displayedComponents: .date)
                 .labelsHidden()
         case .result:
+            // Three cases, not `allCases`: Decision #3 keeps `*` out of the
+            // Library entirely, so a "result is *" rule could only ever match
+            // nothing. Offering it would be offering a dead rule.
             Picker("Result", selection: $rule.gameResult) {
                 Text(GameResult.whiteWins.rawValue).tag(GameResult.whiteWins)
                 Text(GameResult.blackWins.rawValue).tag(GameResult.blackWins)
@@ -256,7 +259,7 @@ private struct TagRuleRow: View {
 
 #Preview("New Tag") {
     SmartTagEditorView(draft: TagDraft(), onSave: { _ in })
-//        .frame(width: 520, height: 420)
+        .frame(width: 520, height: 420)
 }
 
 #Preview("Populated — Match All") {
@@ -269,7 +272,7 @@ private struct TagRuleRow: View {
         TagRule(field: .result, comparison: .equals, gameResult: .whiteWins)
     ]
     return SmartTagEditorView(draft: draft, onSave: { _ in })
-//        .frame(width: 520, height: 420)
+        .frame(width: 520, height: 420)
 }
 
 /// Every rule *kind* at once (string / result / number / date / boolean) —
@@ -288,5 +291,5 @@ private struct TagRuleRow: View {
         TagRule(field: .checkmate, comparison: .isTrue)
     ]
     return SmartTagEditorView(draft: draft, onSave: { _ in })
-//        .frame(width: 520, height: 520)
+        .frame(width: 520, height: 520)
 }

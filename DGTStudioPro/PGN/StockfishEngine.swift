@@ -231,19 +231,19 @@ internal actor StockfishEngine {
         // with a failure (exactly one wins — `failHandshake` nils as it
         // resumes).
         do {
-            // The user's engine options (M11 review — the Settings pane now
-            // binds to reality). `setoption` is only valid between `uciok`
-            // and `isready`, so this is the one window. Read fresh at every
-            // launch — and the engine relaunches per run (released at
-            // drain), so a Settings change applies to the next analysis
-            // with no restart-the-app story.
-            for option in EngineConfiguration.current.uciOptionLines {
-                try writeLine(option)
-            }
-            
             try writeLine("uci")
             try await awaitHandshake(timeout: handshakeTimeout, awaiting: "uciok") {
                 self.uciOKContinuation = $0
+            }
+            
+            // The user's engine options (M11 review — the Settings pane now
+            // binds to reality). `setoption` is only valid *after* `uciok`
+            // and before `isready`, so this is the one window — and this loop
+            // used to sit above `uci`, outside it. Read fresh at every launch;
+            // the engine relaunches per run (released at drain), so a Settings
+            // change applies to the next analysis with no restart story.
+            for option in EngineConfiguration.current.uciOptionLines {
+                try writeLine(option)
             }
             
             try writeLine("isready")
@@ -400,8 +400,9 @@ internal actor StockfishEngine {
     /// `bestmove` arrives.
     ///
     /// All emitted evaluations are normalized to white's perspective.
-    /// The default depth of 18 matches Lichess cloud analysis defaults
-    /// and balances responsiveness against evaluation quality.
+    /// `depth` is required, not defaulted: the M11 review collapsed the twin
+    /// `= 18` defaults into `EngineConfiguration.current.depth`, which
+    /// `GameAnalysisDriver` supplies. The comment outlived the default.
     ///
     /// Cancelling the consuming Task aborts the search via UCI `stop`.
     /// Calling `analyze(...)` again while a prior analysis is in flight

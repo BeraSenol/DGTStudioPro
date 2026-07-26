@@ -103,14 +103,7 @@ internal struct PGNStore {
             throw Error.duplicate(existingID: existing.persistentModelID, existingName: existing.name)
         }
         
-        // Persist the computed hash on the model so subsequent imports of
-        // the same game can find it via `existingPGN(withHash:)`. Without
-        // this assignment the row is stored with an empty `contentHash`,
-        // every future lookup misses, and deduplication silently no-ops.
-        pgn.contentHash = hash
-        modelContext.insert(pgn)
-        try resolvePlayers(for: pgn)   // M-prs.1 — link before the save below covers both
-        try modelContext.save()
+        try insertNewGame(pgn, hash: hash)
         
         Self.logger.info(
             "Imported: '\(pgn.name, privacy: .public)' \(pgn.white, privacy: .public) vs \(pgn.black, privacy: .public) [\(pgn.result.rawValue, privacy: .public)] plies=\(pgn.moves.count)"
@@ -166,10 +159,7 @@ internal struct PGNStore {
             return ArchiveResult(pgn: existing, deduplicated: true)
         }
         
-        pgn.contentHash = hash
-        modelContext.insert(pgn)
-        try resolvePlayers(for: pgn)   // M-prs.1 — same placement as the import door
-        try modelContext.save()
+        try insertNewGame(pgn, hash: hash)
         
         Self.logger.info(
             "Archived: '\(pgn.name, privacy: .public)' [\(pgn.result.rawValue, privacy: .public)] plies=\(pgn.moves.count)"
@@ -354,6 +344,21 @@ internal struct PGNStore {
     }
     
     // MARK: Private Helpers
+    
+    /// The shared tail of both doors. "One hash, two doors" is a rule about
+    /// `contentHash`; this is the *rest* of the door, and it was duplicated
+    /// line for line — including the ordering that carries weight, with
+    /// `resolvePlayers` before the save so one transaction covers the row and
+    /// its links. Persisting the hash is what makes the next import's
+    /// `existingPGN(withHash:)` hit: without the assignment the row stores an
+    /// empty hash, every future lookup misses, and dedupe silently no-ops.
+    private func insertNewGame(_ pgn: PGN, hash: String) throws {
+        pgn.contentHash = hash
+        modelContext.insert(pgn)
+        try resolvePlayers(for: pgn)
+        try modelContext.save()
+    }
+    
     private func parse(_ text: String) throws -> PGN {
         do {
             return try PGNParser.parse(text)

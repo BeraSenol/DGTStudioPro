@@ -77,7 +77,7 @@ internal struct PlayersDestination: View {
                 $0.whitePlayer?.normalizedName == selectedKey
                 || $0.blackPlayer?.normalizedName == selectedKey
             }
-            .sorted { ($0.date ?? $0.importedAt) > ($1.date ?? $1.importedAt) }
+            .sorted { $0.effectiveDate > $1.effectiveDate }
     }
     
     // MARK: Body
@@ -120,7 +120,8 @@ internal struct PlayersDestination: View {
     
     /// Resolves the pure stats key to its `Player` row and hops the
     /// sidebar into the programmatic player filter. Store-owned lookup,
-    /// never creates (D13′); a miss — impossible for a key the index
+    /// never creates (D9′ — the single creation door; D13′ is the
+    /// illegal-move alert sound); a miss — impossible for a key the index
     /// emitted — is a logged no-op.
     private func showInLibrary(key: PlayerStats.ID) {
         do {
