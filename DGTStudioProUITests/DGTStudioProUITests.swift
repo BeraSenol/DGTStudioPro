@@ -560,11 +560,11 @@ final class DGTStudioProUITests: XCTestCase {
                       "Diagnostics menu should be installed on the menu bar")
         diagnostics.click()
         
-        let export = menuBar.menuItems["Export Session Log…"]
+        let export = menuBar.menuItems["Export Session Log"]
         XCTAssertTrue(export.waitForExistence(timeout: 3),
-                      "Export Session Log… should exist")
+                      "Export Session Log should exist")
         XCTAssertTrue(export.isEnabled,
-                      "Export Session Log… should be enabled")
+                      "Export Session Log should be enabled")
         
         let start = menuBar.menuItems["Start Board Recording"]
         XCTAssertTrue(start.waitForExistence(timeout: 3),

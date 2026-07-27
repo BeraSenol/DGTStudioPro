@@ -561,7 +561,6 @@ internal actor StockfishEngine {
             throw EngineError.notStarted
         }
         Self.uciLogger.debug("send: \(command, privacy: .public)")
-        let data = (command + "\n").data(using: .utf8)!
-        try stdin.write(contentsOf: data)
+        try stdin.write(contentsOf: Data((command + "\n").utf8))
     }
 }

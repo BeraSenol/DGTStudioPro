@@ -537,11 +537,10 @@ internal final class DGTConnection {
                     // log the first occurrence and each *distinct* failure, not
                     // one line per 3 s lap. The next attempt's `teardownPort`
                     // still cleans up whatever this lap left behind.
-                    let message = "\(failure)"
-                    if message != lastReconnectFailureLogged {
-                        Self.logger.error("Reconnect attempt failed: \(message, privacy: .public)")
-                        sessionLog?.capture(.error, "Reconnect attempt failed: \(message)")
-                        lastReconnectFailureLogged = message
+                    if failure != lastReconnectFailureLogged {
+                        Self.logger.error("Reconnect attempt failed: \(failure, privacy: .public)")
+                        sessionLog?.capture(.error, "Reconnect attempt failed: \(failure)")
+                        lastReconnectFailureLogged = failure
                     }
                 }
             }

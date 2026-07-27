@@ -124,7 +124,7 @@ internal final class Game {
     /// fails to parse — the caller should treat that as corrupt PGN data
     /// (the import path catches its own malformed cases earlier; reaching
     /// here means the stored row diverged from the chess core's rules).
-    internal init(pgn: PGN) throws {
+    internal init(pgn: PGN) throws(BuildError) {
         self.pgn = pgn
         
         var states: [GameState] = [.starting]

@@ -95,12 +95,12 @@ internal struct ContentView: View {
                             Button {
                                 editorDraft = TagDraft(editing: tag)
                             } label: {
-                                Label("Edit Tag…", systemImage: "pencil")
+                                Label("Edit Tag", systemImage: "pencil")
                             }
                             Button(role: .destructive) {
                                 pendingTagDeletion = tag
                             } label: {
-                                Label("Delete Tag…", systemImage: "trash")
+                                Label("Delete Tag", systemImage: "trash")
                             }
                         }
                     }
@@ -114,7 +114,7 @@ internal struct ContentView: View {
                             Image(systemName: "plus")
                         }
                         .buttonStyle(.borderless)
-                        .help("New smart tag…")
+                        .help("New Smart Tag")
                         .accessibilityIdentifier(AccessibilityID.sidebarTagsAdd)
                     }
                 }
@@ -180,7 +180,7 @@ internal struct ContentView: View {
         }
         .alert(
             "Delete Tag?",
-            isPresented: pendingTagDeletionBinding,
+            isPresented: Binding(present: $pendingTagDeletion),
             presenting: pendingTagDeletion
         ) { tag in
             Button("Delete \"\(tag.name)\"", role: .destructive) {
@@ -204,13 +204,6 @@ internal struct ContentView: View {
     }
     
     // MARK: Tag CRUD (M-prs.5)
-    
-    private var pendingTagDeletionBinding: Binding<Bool> {
-        Binding(
-            get: { pendingTagDeletion != nil },
-            set: { if !$0 { pendingTagDeletion = nil } }
-        )
-    }
     
     /// Insert-or-update from the editor's value draft, one save either
     /// way. Update mutates the live model only *here*, after OK.
@@ -268,10 +261,10 @@ internal enum Destination: String, CaseIterable, Identifiable, Hashable {
     
     internal var systemImage: String {
         switch self {
-        case .board:    return "checkerboard.rectangle"
-        case .library:  return "books.vertical"
-        case .players:  return "person.2"
-        case .rankings: return "list.number"
+        case .board:    "checkerboard.rectangle"
+        case .library:  "books.vertical"
+        case .players:  "person.2"
+        case .rankings: "list.number"
         }
     }
 }

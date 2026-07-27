@@ -7,46 +7,48 @@
 
 import SwiftUI
 
-/// Adds a DGT-board connection control to a view's toolbar and presents the
-/// connect dialog (`DGTConnectionView`) as a sheet.
+/// The DGT-board connection control, as `ToolbarContent` a host composes into
+/// its **own** builder — not a `.toolbar` modifier. The modifier form is gone
+/// on purpose (see the note at the foot of this file): a second `.toolbar`
+/// merge is what kept Board's inspector column from running full height and
+/// made item order an accident of modifier nesting.
 ///
-/// Mirrors `InspectorToggleModifier`: a single reusable modifier so a
-/// destination opts in with one line (`.dgtConnectionToolbar()`), rather than
-/// each one open-coding a `ToolbarItem`. The button's icon and tint reflect the
-/// app-global `DGTConnection` status — green antenna when connected, plain when
-/// not, a small spinner mid-handshake — so the toolbar doubles as a live
-/// connection indicator.
-internal struct DGTConnectionToolbarModifier: ViewModifier {
+/// The button's icon and tint reflect the app-global `DGTConnection` status —
+/// green antenna when connected, red-tinted slash on failure, a small spinner
+/// mid-handshake or mid-reconnect — so the toolbar doubles as a live
+/// connection indicator. The sheet is the host's `@State`; this only flips it.
+internal struct DGTConnectionToolbarContent: ToolbarContent {
     
-    @Environment(DGTConnection.self) private var connection
-    @State private var showSheet = false
+    /// The status as a plain value rather than a `DGTConnection` read from the
+    /// environment, and the sheet as a `Binding` rather than owned `@State`:
+    /// dynamic properties inside a custom `ToolbarContent` are not the
+    /// well-trodden path they are inside a `View`, and neither is needed —
+    /// every branch below is a function of `status`, and the host already
+    /// holds both.
+    internal let status: DGTConnection.Status
     
     /// No default, per the `board.connectButton` agreement: a shared fallback
     /// silently gives two hosts the same identifier, and a required parameter
     /// makes forgetting a compile error.
-    let identifier: String
+    internal let identifier: String
     
-    func body(content: Content) -> some View {
-        content
-            .toolbar {
-                ToolbarItem {
-                    Button {
-                        showSheet = true
-                    } label: {
-                        label
-                    }
-                    .help(helpText)
-                    .accessibilityIdentifier(identifier)
-                }
+    @Binding internal var isSheetPresented: Bool
+    
+    internal var body: some ToolbarContent {
+        ToolbarItem {
+            Button {
+                isSheetPresented = true
+            } label: {
+                label
             }
-            .sheet(isPresented: $showSheet) {
-                DGTConnectionView()
-            }
+            .help(helpText)
+            .accessibilityIdentifier(identifier)
+        }
     }
     
     @ViewBuilder
     private var label: some View {
-        switch connection.status {
+        switch status {
         case .connecting, .reconnecting:
             // A spinner in the toolbar communicates the in-progress
             // handshake — or the M7.3 retry loop working to get the board
@@ -64,14 +66,14 @@ internal struct DGTConnectionToolbarModifier: ViewModifier {
     /// the same string as `default` and decided nothing; if a distinct failure
     /// glyph is ever wanted, it goes back here.
     private var symbol: String {
-        switch connection.status {
+        switch status {
         case .connected: "antenna.radiowaves.left.and.right"
         default:         "antenna.radiowaves.left.and.right.slash"
         }
     }
     
     private var tint: Color? {
-        switch connection.status {
+        switch status {
         case .connected: .green
         case .failed:    .red
         default:         nil
@@ -79,7 +81,7 @@ internal struct DGTConnectionToolbarModifier: ViewModifier {
     }
     
     private var helpText: String {
-        switch connection.status {
+        switch status {
         case .disconnected, .searching: "Connect a DGT e-Board"
         case .connecting:               "Connecting to board…"
         case .reconnecting:             "Board disconnected — reconnecting…"
@@ -89,10 +91,9 @@ internal struct DGTConnectionToolbarModifier: ViewModifier {
     }
 }
 
-extension View {
-    /// Adds the DGT board connect control + dialog to this view's toolbar.
-    /// Requires a `DGTConnection` in the environment.
-    internal func dgtConnectionToolbar(identifier: String) -> some View {
-        modifier(DGTConnectionToolbarModifier(identifier: identifier))
-    }
-}
+// The `DGTConnectionToolbarModifier` / `.dgtConnectionToolbar(identifier:)`
+// pair is deleted here, not parked: its one host now composes
+// `DGTConnectionToolbarContent` into its own builder, because a second
+// `.toolbar` modifier is what kept Board's inspector column from running full
+// height and made its item order an accident of nesting. A modifier that
+// re-introduces that is worse than no convenience at all.

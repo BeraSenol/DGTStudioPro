@@ -60,7 +60,7 @@ internal struct RecoveryGuidanceView: View {
             
             HStack {
                 Spacer()
-                Button("Export Diagnostics…", action: onExportDiagnostics)
+                Button("Export Diagnostics", action: onExportDiagnostics)
                     .controlSize(.small)
                     .accessibilityIdentifier(AccessibilityID.liveRecoveryExport)
             }

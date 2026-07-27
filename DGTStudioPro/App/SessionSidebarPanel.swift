@@ -221,16 +221,12 @@ internal struct SessionSidebarPanel: View {
     
     /// The restore checklist while `recovering`, nil otherwise. Recomputed
     /// on every observable change of `connection.physicalBoard`, so rows
-    /// disappear live as squares are fixed. `BoardDestination` computes
-    /// the same diff for the board's attention/target *overlays* (which
-    /// stay on the board by invariant) — two 64-square diffs per render is
-    /// still cheap; the original `.task(id:)` memoization note stands.
+    /// disappear live as squares are fixed. `BoardDestination` computes the
+    /// same diff for the board's attention/target *overlays* (which stay on
+    /// the board by invariant) — two 64-square diffs per render is still
+    /// cheap; the original `.task(id:)` memoization note stands.
     private var recoveryGuidance: RecoveryGuidance? {
-        guard session.needsRecovery, let game = session.liveGame else { return nil }
-        return RecoveryGuidance(
-            physical: connection.physicalBoard,
-            target: game.currentState.position
-        )
+        .current(session: session, connection: connection)
     }
 }
 

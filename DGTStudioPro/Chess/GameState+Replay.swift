@@ -20,7 +20,7 @@ extension GameState {
     /// `MovetextEdit.validate` needs each ply's canonical SAN — so all three
     /// loop `parseSAN` + `applying` themselves. This stays as the "I just
     /// want the final state" path, suited by `GameStateReplayTests`.
-    internal func replay(_ sanMoves: [String]) throws -> GameState {
+    internal func replay(_ sanMoves: [String]) throws(ReplayError) -> GameState {
         var state = self
         for (index, san) in sanMoves.enumerated() {
             let move: Move
@@ -38,7 +38,7 @@ extension GameState {
 // MARK: FEN Forwarding
 
 extension FEN {
-    internal func replay(_ sanMoves: [String]) throws -> GameState {
+    internal func replay(_ sanMoves: [String]) throws(ReplayError) -> GameState {
         try GameState(self).replay(sanMoves)
     }
 }

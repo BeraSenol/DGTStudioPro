@@ -80,7 +80,7 @@ extension LiveGame {
     /// - replay derived a terminal result but the draft says `.ongoing` →
     ///   inconsistent: the draft is written *after* every commit, so a
     ///   final-move mate is always already in the stored result.
-    internal convenience init(resuming draft: LiveGameDraft) throws {
+    internal convenience init(resuming draft: LiveGameDraft) throws(ResumeError) {
         let start: GameState
         do {
             start = GameState(try FEN(parsing: draft.startFEN))

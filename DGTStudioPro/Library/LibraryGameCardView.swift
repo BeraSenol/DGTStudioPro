@@ -45,7 +45,7 @@ internal struct LibraryGameCardView: View {
                 Label("Analyze", systemImage: "wand.and.stars")
             }
             Button(action: onExport) {
-                Label("Export PGN…", systemImage: "square.and.arrow.up")
+                Label("Export PGN", systemImage: "square.and.arrow.up")
             }
             .accessibilityIdentifier(AccessibilityID.libraryExport)
             Divider()

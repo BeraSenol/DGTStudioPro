@@ -88,8 +88,6 @@ internal struct PlayerStats: Sendable, Hashable, Identifiable {
     
     // MARK: Accumulator
     
-    private enum Color { case white, black }
-    
     private struct Accumulator {
         let key: String
         let name: String
@@ -107,7 +105,7 @@ internal struct PlayerStats: Sendable, Hashable, Identifiable {
             self.lastPlayed = record.effectiveDate
         }
         
-        mutating func absorb(_ record: GameRecord, as color: Color) {
+        mutating func absorb(_ record: GameRecord, as color: PieceColor) {
             games += 1
             firstPlayed = min(firstPlayed, record.effectiveDate)
             lastPlayed = max(lastPlayed, record.effectiveDate)

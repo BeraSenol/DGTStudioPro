@@ -39,15 +39,14 @@ internal enum PieceType: UInt8, CaseIterable, Codable, Sendable {
     /// perft counts were taken against.
     internal static let promotionTypes: [PieceType] = [.queen, .rook, .bishop, .knight]
     
-    // MARK: Computed Properties
     internal var notation: String {
         switch self {
-        case .pawn:   return ""
-        case .knight: return "N"
-        case .bishop: return "B"
-        case .rook:   return "R"
-        case .queen:  return "Q"
-        case .king:   return "K"
+        case .pawn:   ""
+        case .knight: "N"
+        case .bishop: "B"
+        case .rook:   "R"
+        case .queen:  "Q"
+        case .king:   "K"
         }
     }
     

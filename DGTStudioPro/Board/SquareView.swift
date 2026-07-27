@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-internal struct SquareView: View, Equatable {
+internal struct SquareView: View {
     
     // MARK: Stored Properties
     internal let piece: Piece

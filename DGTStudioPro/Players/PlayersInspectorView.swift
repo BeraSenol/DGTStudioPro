@@ -22,26 +22,26 @@ internal struct PlayersInspectorView: View {
     
     // MARK: Body
     internal var body: some View {
-        List {
-            if let stats {
+        // D26′ — empty renders outside the `List`; see `InspectorEmptyState`.
+        if let stats {
+            List {
                 ProfileSection(stats: stats, rating: rating)
                     .id(stats.key)   // reset per-player, the Library-inspector idiom
                 RecentGamesSection(playerKey: stats.key, games: recentGames)
-            } else {
-                emptySection
             }
+            .listStyle(.sidebar)
+        } else {
+            emptyState
         }
-        .listStyle(.sidebar)
     }
     
     // MARK: Instance Methods
-    private var emptySection: some View {
-        ContentUnavailableView(
-            "No Player Selected",
+    private var emptyState: some View {
+        InspectorEmptyState(
+            title: "No Player Selected",
             systemImage: "person.fill",
-            description: Text(
-                "Select a player to view their profile and recent games."
-            )
+            message: "Select a player to view their profile and recent games.",
+            identifier: AccessibilityID.playersInspectorEmpty
         )
     }
 }
@@ -55,13 +55,6 @@ private struct ProfileSection: View {
     
     var body: some View {
         Section {
-            HStack(spacing: 12) {
-                PlayerMonogram(name: stats.name, diameter: 44)
-                Text(stats.name)
-                    .font(.headline)
-            }
-            .padding(.vertical, 4)
-            
             LabeledContent("Games", value: "\(stats.games)")
             LabeledContent("Win Rate", value: stats.winRate.formatted(.percent.precision(.fractionLength(0))))
             LabeledContent("Mates Delivered", value: "\(stats.matesDelivered)")
@@ -69,7 +62,13 @@ private struct ProfileSection: View {
             LabeledContent("Last Played", value: RosterSummary.displayDate(stats.lastPlayed))
             LabeledContent("Rating", value: ratingDescription)
         } header: {
-            Text("Player Profile")
+            // The player's name, not "Player Profile" — the destination
+            // already says what kind of thing this is, and the header is the
+            // one place that can say *which*. The monogram-and-name row this
+            // replaces was the same name twice once the header carried it;
+            // the monogram stays where it identifies something the reader is
+            // choosing between, on the cards and rows.
+            InspectorSectionHeader(stats.name)
         }
         .accessibilityIdentifier(AccessibilityID.playersInspectorProfile)
     }

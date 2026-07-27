@@ -25,11 +25,6 @@ internal enum SevenTagRoster: String, CaseIterable, Sendable {
     case result = "Result"
 }
 
-private enum PGNPlaceholder: String, Codable {
-    case general = "?"
-    case date  = "????.??.??"
-}
-
 @Model
 internal final class PGN: Identifiable {
     
@@ -152,12 +147,12 @@ internal final class PGN: Identifiable {
     
     // MARK: Initializers
     internal init(
-        event: String = PGNPlaceholder.general.rawValue,
-        site: String = PGNPlaceholder.general.rawValue,
+        event: String = RosterSummary.unknownTag,
+        site: String = RosterSummary.unknownTag,
         date: Date? = nil,
         round: Int? = nil,
-        white: String = PGNPlaceholder.general.rawValue,
-        black: String = PGNPlaceholder.general.rawValue,
+        white: String = RosterSummary.unknownTag,
+        black: String = RosterSummary.unknownTag,
         moves: [String] = [],
         evaluations: [Evaluation?] = [],
         name: String? = nil,

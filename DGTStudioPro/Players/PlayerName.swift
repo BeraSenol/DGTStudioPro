@@ -58,13 +58,18 @@ internal enum PlayerName {
         return "\(given) \(last)"
     }
     
-    /// Trim and collapse interior whitespace runs — `Player.normalizedKey`'s
-    /// fold minus the lowercasing, so a display name and its identity key
-    /// can never disagree about what "Magnus  Carlsen" is. The old transform
-    /// trimmed with `.whitespaces` only and collapsed nothing, which let a
-    /// run survive into `Player.name` and from there into every row, card,
-    /// and monogram.
-    private static func folded(_ text: String) -> String {
+    /// **The** whitespace fold: trim and collapse interior runs. Identity
+    /// (`Player.normalizedKey`) and the content hash (`PGNStore.normalize`)
+    /// are this plus `lowercased()`, and both call through here — so a display
+    /// name, its identity key, and its hash input can never disagree about
+    /// what "Magnus  Carlsen" is. Three byte-identical copies is what this
+    /// replaces; the old transform trimmed with `.whitespaces` only and
+    /// collapsed nothing, which let a run survive into `Player.name` and from
+    /// there into every row, card, and monogram.
+    ///
+    /// Lowercasing commutes with the fold — whitespace has no case — so the
+    /// two callers may apply it either side without changing a stored hash.
+    internal static func folded(_ text: String) -> String {
         text
             .components(separatedBy: .whitespacesAndNewlines)
             .filter { !$0.isEmpty }

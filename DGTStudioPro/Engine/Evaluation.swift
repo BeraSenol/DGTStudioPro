@@ -42,8 +42,6 @@ internal enum Evaluation: Equatable, Sendable, Codable {
     
     // MARK: Computed Properties
     
-    // MARK: Computed Properties
-    
     /// Probability that white wins the resulting game, in `[0, 1]`.
     ///
     /// Centipawns project via a sigmoid with k=400, the de-facto-standard

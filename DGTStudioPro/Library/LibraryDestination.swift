@@ -339,7 +339,7 @@ internal struct LibraryDestination: View {
             } label: {
                 Label("Import", systemImage: "square.and.arrow.down")
             }
-            .help("Import PGN files…")
+            .help("Import PGN files")
             .accessibilityIdentifier(AccessibilityID.libraryImportButton)
         }
         ToolbarSpacer()
@@ -672,15 +672,17 @@ internal struct LibraryDestination: View {
 
 // MARK: Presentation Bindings
 
-fileprivate extension Binding where Value == Bool {
+extension Binding where Value == Bool {
     /// A presentation flag over optional state: `true` while a value is
-    /// present, and a dismissal clears the source. Four `@State` optionals
-    /// here each open-coded the same getter/setter pair.
+    /// present, and a dismissal clears the source. Five `@State` optionals
+    /// open-coded the same getter/setter pair — four here, one in
+    /// `ContentView` that couldn't see this while it was `fileprivate`.
     ///
-    /// Deliberately `fileprivate`: `BoardDestination`'s offer bindings look
-    /// identical but ignore dismissal on purpose (`set: { _ in }` — D#3 is a
-    /// fork, not a suggestion), and folding those in would erase that.
-    init<T>(present source: Binding<T?>) {
+    /// `BoardDestination`'s offer bindings look identical and are deliberately
+    /// **not** folded in: they ignore dismissal (`set: { _ in }` — D#3 is a
+    /// fork, not a suggestion), and routing them through here would erase
+    /// that. Same shape, different contract.
+    internal init<T>(present source: Binding<T?>) {
         self.init(
             get: { source.wrappedValue != nil },
             set: { if !$0 { source.wrappedValue = nil } }

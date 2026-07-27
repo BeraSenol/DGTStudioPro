@@ -53,13 +53,33 @@ internal struct RosterSummary: Equatable, Sendable {
     /// compile error here — the roster can't quietly lose a tag.
     internal subscript(tag: SevenTagRoster) -> String {
         switch tag {
-        case .event:  return event
-        case .site:   return site
-        case .date:   return Self.displayDate(date)
-        case .round:  return Self.displayRound(round)
-        case .white:  return PlayerName.displayForm(of: white)
-        case .black:  return PlayerName.displayForm(of: black)
-        case .result: return result.rawValue
+        case .event:  event
+        case .site:   site
+        case .date:   Self.displayDate(date)
+        case .round:  Self.displayRound(round)
+        case .white:  PlayerName.displayForm(of: white)
+        case .black:  PlayerName.displayForm(of: black)
+        case .result: result.rawValue
+        }
+    }
+    
+    /// The **stored** value for a tag — tag form, untransformed.
+    ///
+    /// D24′'s export shape needs `"Senol, Bera"`, not `"Bera Senol"`;
+    /// `subscript(_:)` is the display renderer and belongs to the sidebars.
+    /// That split used to live only in a comment on `PGNSerializer`, which
+    /// hard-coded the seven tag names and so would have silently dropped an
+    /// eighth. Driven from `allCases` on both sides, adding a roster case is
+    /// now a compile error in the export path too.
+    internal func tagValue(for tag: SevenTagRoster) -> String {
+        switch tag {
+        case .event:  event
+        case .site:   site
+        case .date:   PGNParser.pgnDateString(date)
+        case .round:  round.map(String.init) ?? Self.unknownTag
+        case .white:  white
+        case .black:  black
+        case .result: result.rawValue
         }
     }
     

@@ -52,7 +52,7 @@ internal struct PieceTracker: Equatable, Sendable {
     
     // MARK: Instance Methods
     
-    // Promotion reuses the pawn's identity on its new square.
+    /// Promotion reuses the pawn's identity on its new square.
     internal mutating func applyMove(_ move: Move) {
         if let captured = move.capturedSquare {
             pieceIdentities[captured] = nil

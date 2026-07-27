@@ -32,7 +32,7 @@ internal struct PGNStore {
     /// UTC Gregorian calendar backing the hash's date rendering.
     private static let hashCalendar: Calendar = {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "UTC")!
+        calendar.timeZone = .gmt
         return calendar
     }()
     
@@ -282,11 +282,7 @@ internal struct PGNStore {
         guard !display.isEmpty, display != "?" else { return nil }
         
         let key = Player.normalizedKey(for: display)
-        var descriptor = FetchDescriptor<Player>(
-            predicate: #Predicate { $0.normalizedName == key }
-        )
-        descriptor.fetchLimit = 1
-        if let existing = try modelContext.fetch(descriptor).first {
+        if let existing: Player = try first(#Predicate { $0.normalizedName == key }) {
             return existing
         }
         
@@ -305,11 +301,7 @@ internal struct PGNStore {
     /// only possible for a key no resolved link produced — which the
     /// stats index can't emit — so callers treat nil as a no-op.
     internal func player(withNormalizedKey key: String) throws -> Player? {
-        var descriptor = FetchDescriptor<Player>(
-            predicate: #Predicate { $0.normalizedName == key }
-        )
-        descriptor.fetchLimit = 1
-        return try modelContext.fetch(descriptor).first
+        try first(#Predicate { $0.normalizedName == key })
     }
     
     /// Links players on rows that predate the M-prs.1 schema (or whose
@@ -362,7 +354,10 @@ internal struct PGNStore {
     private func parse(_ text: String) throws -> PGN {
         do {
             return try PGNParser.parse(text)
-        } catch let error as PGNParser.Error {
+        } catch {
+            // `PGNParser.parse` is `throws(PGNParser.Error)`, so the `as` cast
+            // this used to need is gone and the switch below is exhaustive by
+            // the compiler rather than by convention.
             switch error {
             case .missingRequiredTags(let tags):
                 throw Error.missingRequiredTags(tags)
@@ -374,12 +369,17 @@ internal struct PGNStore {
         }
     }
     
-    private func existingPGN(withHash hash: String) throws -> PGN? {
-        var descriptor = FetchDescriptor<PGN>(
-            predicate: #Predicate { $0.contentHash == hash }
-        )
+    /// Fetch-limit-1 lookup. Three call sites built this by hand; the limit is
+    /// the load-bearing part — an unbounded fetch taken `.first` of is the kind
+    /// of thing that only hurts at five thousand games.
+    private func first<T: PersistentModel>(_ predicate: Predicate<T>) throws -> T? {
+        var descriptor = FetchDescriptor<T>(predicate: predicate)
         descriptor.fetchLimit = 1
         return try modelContext.fetch(descriptor).first
+    }
+    
+    private func existingPGN(withHash hash: String) throws -> PGN? {
+        try first(#Predicate { $0.contentHash == hash })
     }
     
     // MARK: Static Methods
@@ -396,14 +396,16 @@ internal struct PGNStore {
         ]
         let combined = parts.joined(separator: "|")
         let digest = Insecure.MD5.hash(data: Data(combined.utf8))
-        return digest.compactMap { String(format: "%02x", $0) }.joined()
+        // `map`, not `compactMap`: nothing here can be nil, and the old verb
+        // made a reader ask which bytes of a hash get dropped.
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
     
+    /// Fold + case, one implementation (`PlayerName.folded`). **Persistence
+    /// contract** — see `hashDateString`: this must keep producing
+    /// byte-identical output forever. It does; lowercasing commutes with the
+    /// fold, so routing through the shared helper is a refactor, not a change.
     private static func normalize(_ value: String) -> String {
-        value
-            .lowercased()
-            .components(separatedBy: .whitespacesAndNewlines)
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
+        PlayerName.folded(value).lowercased()
     }
 }

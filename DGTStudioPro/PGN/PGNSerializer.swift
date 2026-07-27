@@ -57,14 +57,16 @@ internal enum PGNSerializer {
         moves: [String]
     ) -> String {
         var out = ""
-        out += tag("Event",       roster.event)
-        out += tag("Site",        roster.site)
-        out += tag("Date",        PGNParser.pgnDateString(roster.date))
-        out += tag("Round",       roster.round.map(String.init) ?? unknownTag)
-        out += tag("White",       roster.white)
-        out += tag("Black",       roster.black)
-        out += tag("Result",      roster.result.rawValue)
+        // The seven, in the standard's order, from the enum that owns it —
+        // so an eighth roster tag is a compile error at `tagValue(for:)`
+        // rather than a line that quietly stops being written. `Board` and
+        // `TimeControl` follow because D24′ pins them there, outside the
+        // roster.
+        for tag in SevenTagRoster.allCases {
+            out += self.tag(tag.rawValue, roster.tagValue(for: tag))
+        }
         out += tag("Board",       board ?? unknownTag)
+        out += tag("TimeControl", timeControl ?? noTimeControl)
         out += tag("TimeControl", timeControl ?? noTimeControl)
         out += "\n"
         out += movetext(moves)

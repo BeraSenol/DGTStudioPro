@@ -79,11 +79,11 @@ internal struct MoveHistoryView: View {
         
         return HStack(spacing: 0) {
             Text("\(moveNumber).")
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .font(.callout)
                 .foregroundStyle(.tertiary)
                 .frame(width: 30, alignment: .trailing)
-                .padding(.trailing, 12)
-            
+                .padding(.trailing, 20)
+
             moveCell(at: whiteIndex)
             
             if blackIndex < moves.count {
@@ -103,13 +103,16 @@ internal struct MoveHistoryView: View {
             onMoveTapped?(index)
         } label: {
             Text(san)
-                .font(.system(size: 12, weight: isSelected ? .semibold : .regular, design: .monospaced))
+                .font(.body)
+                .fontWeight(isSelected ? .medium : .regular)
+                .fontDesign(.monospaced)
                 .foregroundStyle(isSelected ? .primary : .secondary)
                 .padding(.vertical, 3)
-                .padding(.horizontal, 6)
+                .padding(.horizontal, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 4, style: .continuous)
-                        .fill(.secondary.opacity(isSelected ? 0.20 : 0))
+                        .fill(.secondary.opacity(isSelected ? 0.25 : 0))
+                        .padding(.leading, 3)
                 )
                 .frame(maxWidth: .infinity, alignment: .leading)
         }

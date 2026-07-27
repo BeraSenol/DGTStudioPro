@@ -53,7 +53,7 @@ internal enum PGNParser {
     }
     
     // MARK: Entry Point
-    internal static func parse(_ text: String) throws -> PGN {
+    internal static func parse(_ text: String) throws(Error) -> PGN {
         let (tagSection, movetextSection) = splitSections(normalizeLineEndings(text))
         
         let tags = parseTags(from: tagSection)
@@ -179,7 +179,7 @@ internal enum PGNParser {
     /// aren't preserved in the move list.
     internal static func parseMovesAndEvaluations(
         from movetext: String
-    ) throws -> (moves: [String], evaluations: [Evaluation?]) {
+    ) throws(Error) -> (moves: [String], evaluations: [Evaluation?]) {
         let chars = Array(movetext)
         var i = 0
         
@@ -369,19 +369,19 @@ internal enum PGNParser {
         return i
     }
     
-    // Strip trailing !/? annotations; preserve + (check) and # (mate).
+    /// Strips trailing `!`/`?` and **preserves** `+` and `#`.
+    ///
+    /// Load-bearing and easy to misread: `GameRecord.endedInMate` reads
+    /// `moves.last?.hasSuffix("#")`, and D24′ round-trips `Qxg2#` byte for
+    /// byte, so mate and check must survive import. The app's *other* suffix
+    /// stripper — `GameState.parseSAN`'s cleaning step — drops all four,
+    /// which is correct there and wrong here. These are the only two.
     private static func stripAnnotations(_ san: String) -> String {
-        var end = san.endIndex
-        while end > san.startIndex {
-            let prev = san.index(before: end)
-            let c = san[prev]
-            if c == "!" || c == "?" {
-                end = prev
-            } else {
-                break
-            }
+        var result = san
+        while let last = result.last, last == "!" || last == "?" {
+            result.removeLast()
         }
-        return String(san[..<end])
+        return result
     }
 }
 

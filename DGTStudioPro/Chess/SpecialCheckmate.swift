@@ -61,16 +61,16 @@ internal enum SpecialCheckmate: String, Codable, Sendable, CaseIterable {
     
     // MARK: Predicates
     
+    /// `Position.hasPiece` is the shared step-and-compare walk — the same
+    /// primitive `isSquareAttacked`'s three arms use. This carried a fourth
+    /// copy of it.
     private static func knightGivesCheck(
         at king: Square, by attacker: PieceColor, in position: Position
     ) -> Bool {
-        let knight = Piece(attacker, .knight)
-        for offset in Square.knightOffsets {
-            let from = king + offset
-            guard from.isOnBoard, abs(from.file - king.file) <= 2 else { continue }
-            if position[from] == knight { return true }
-        }
-        return false
+        position.hasPiece(
+            Piece(attacker, .knight),
+            steppingFrom: king, offsets: Square.knightOffsets, maxFileDistance: 2
+        )
     }
     
     /// A rook or queen checking *along the king's rank* — rays left and right,

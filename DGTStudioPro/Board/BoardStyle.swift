@@ -20,19 +20,19 @@ internal enum BoardStyle: String, CaseIterable, Codable, Sendable {
     
     internal var light: Color {
         switch self {
-        case .leather:  return .leatherLight
-        case .rosewood: return .rosewoodLight
-        case .walnut:   return .walnutLight
-        case .wenge:    return .wengeLight
+        case .leather:  .leatherLight
+        case .rosewood: .rosewoodLight
+        case .walnut:   .walnutLight
+        case .wenge:    .wengeLight
         }
     }
     
     internal var dark: Color {
         switch self {
-        case .leather:  return .leatherDark
-        case .rosewood: return .rosewoodDark
-        case .walnut:   return .walnutDark
-        case .wenge:    return .wengeDark
+        case .leather:  .leatherDark
+        case .rosewood: .rosewoodDark
+        case .walnut:   .walnutDark
+        case .wenge:    .wengeDark
         }
     }
 }

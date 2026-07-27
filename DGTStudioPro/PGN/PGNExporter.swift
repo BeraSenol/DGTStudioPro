@@ -21,7 +21,10 @@ import os
 @MainActor
 internal enum PGNExporter {
     
-    private static let logger = Logger(subsystem: "DGTStudioPro", category: "pgnexport")
+    private static let logger = Logger(
+        subsystem: "com.berasenol.dgtstudiopro",
+        category: "pgnexport"
+    )
     
     /// Declared by the system via the `.pgn` extension; the fallback keeps
     /// the panel's filter usable rather than showing none if that ever fails.

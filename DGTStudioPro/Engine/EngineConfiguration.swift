@@ -56,12 +56,11 @@ internal struct EngineConfiguration: Equatable, Sendable {
     /// offered size, so a plist-edited 100 becomes 128 rather than
     /// rejecting or defaulting.
     internal init(depth: Int, hashMB: Int, threads: Int) {
-        self.depth = min(max(depth, Self.depthRange.lowerBound), Self.depthRange.upperBound)
+        self.depth = depth.clamped(to: Self.depthRange)
         self.hashMB = Self.hashChoicesMB.min {
             abs($0 - hashMB) < abs($1 - hashMB)
         } ?? Self.hashChoicesMB[0]
-        let threadsRange = Self.threadsRange
-        self.threads = min(max(threads, threadsRange.lowerBound), threadsRange.upperBound)
+        self.threads = threads.clamped(to: Self.threadsRange)
     }
     
     // MARK: Persistence
@@ -94,5 +93,14 @@ internal struct EngineConfiguration: Equatable, Sendable {
             "setoption name Hash value \(hashMB)",
             "setoption name Threads value \(threads)",
         ]
+    }
+}
+
+extension Comparable {
+    /// The standard clamp the stdlib doesn't ship. Two hand-rolled
+    /// `min(max(…))` pairs in the initializer above were the whole reason
+    /// this file had arithmetic in it at all.
+    internal func clamped(to range: ClosedRange<Self>) -> Self {
+        min(max(self, range.lowerBound), range.upperBound)
     }
 }

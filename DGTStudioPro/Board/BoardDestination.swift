@@ -75,10 +75,30 @@ internal struct BoardDestination: View {
     /// a sidebar round-trip re-offers, which is the safe direction.
     @State private var corruptOfferDeferred = false
     
-    /// True while the movetext editor sheet is open (M-lib.3). Transient by
-    /// design, like `corruptOfferDeferred` — losing "sheet open" across a
-    /// sidebar round-trip is fine.
-    @State private var editingMovetext = false
+    /// The editors a *loaded* archived game can request from the review
+    /// inspector. Transient by design, like `corruptOfferDeferred` — losing
+    /// "sheet open" across a sidebar round-trip is fine.
+    ///
+    /// One optional rather than two booleans because the two are mutually
+    /// exclusive by construction: both require `boardPGN`, and a click can
+    /// only ask for one. Two booleans would hand the window's single modal
+    /// slot a second way to be asked twice, for no gain.
+    @State private var activeEditor: BoardEditor?
+    
+    /// The connect dialog, lifted out of `DGTConnectionToolbarModifier` with
+    /// the button. It was always one of the sheets contending for the window's
+    /// single modal slot — the presentation-race note in `body` names it — it
+    /// was just hidden inside a modifier.
+    @State private var showConnectSheet = false
+    
+    /// Nested and private: this is presentation state for one destination's
+    /// inspector, not a shared vocabulary.
+    private enum BoardEditor: String, Identifiable {
+        case info
+        case movetext
+        
+        var id: String { rawValue }
+    }
     
     // MARK: Body
     
@@ -98,36 +118,10 @@ internal struct BoardDestination: View {
         // since D15′ (behavior unchanged, surface moved — `ContentView`
         // renders `tabState.boardLoadError` there).
         .navigationTitle(tabState.boardPGN?.name ?? "Board")
-        .toolbar {
-            ToolbarItem {
-                Button {
-                    tabState.boardPerspective = tabState.boardPerspective.opponent
-                } label: {
-                    Label("Flip Board", systemImage: "arrow.up.arrow.down")
-                }
-                // Enabled even with no game so it serves as the manual
-                // orientation toggle for the live mirror (view-only flip,
-                // separate from the decoder's coordinate transform).
-                .accessibilityIdentifier(AccessibilityID.boardFlipButton)
-            }
-            
-            ToolbarItem {
-                Button {
-                    editingMovetext = true
-                } label: {
-                    Label("Edit Moves…", systemImage: "square.and.pencil")
-                }
-                // Only a loaded archived game has movetext to edit; disabled on
-                // the live mirror (no `boardPGN`).
-                .disabled(tabState.boardPGN == nil)
-                .accessibilityIdentifier(AccessibilityID.boardEditMovesButton)
-            }
+        .toolbar { boardToolbarContent }
+        .sheet(isPresented: $showConnectSheet) {
+            DGTConnectionView()
         }
-        .inspectorToggle(
-            isPresented: $tabState.boardInspectorPresented,
-            identifier: AccessibilityID.boardInspectorToggle
-        )
-        .dgtConnectionToolbar(identifier: AccessibilityID.boardConnectButton)
         // The new-game dialog, at body level since D15′: the sidebar's
         // New Game button reaches Board with a game loaded too, so the
         // sheet can no longer live on the live branch alone. The *auto*
@@ -159,16 +153,42 @@ internal struct BoardDestination: View {
                 || session.resumableDraft != nil
             )
         }
-        // M-lib.3 (D18′) — the movetext editor, at body level and guarded by a
-        // loaded PGN (the toolbar affordance is disabled without one). It's
-        // mutually exclusive with the live new-game/archive sheets by branch
-        // (those present only when `boardPGN == nil`), so it joins that chain
-        // without contending. Commit runs the store write and rebuilds the
-        // cached Game, whose scrub state describes the pre-edit moves.
-        .sheet(isPresented: $editingMovetext) {
+        // The review inspector's two editors (D18′ movetext, and the metadata
+        // surface a loaded archived game never had), at body level rather than
+        // in the inspector: D15′ keeps modals as destination furniture, and
+        // both writes need `modelContext`, the store doors, and — for
+        // movetext — the cached `Game` rebuilt. The inspector only requests.
+        //
+        // Both are guarded by a loaded PGN, so they stay mutually exclusive
+        // with the live new-game/archive sheets by branch, and with each other
+        // by `activeEditor` being one value. Movetext commit rebuilds the
+        // cached Game, whose scrub state describes the pre-edit moves;
+        // metadata commit needs no rebuild, since the moves didn't change.
+        .sheet(item: $activeEditor) { editor in
             if let pgn = tabState.boardPGN {
-                MovetextEditorSheet(pgn: pgn) { proposed in
-                    applyEditedMovetext(proposed, to: pgn)
+                switch editor {
+                case .info:
+                    EditLiveGameDetailsSheet(
+                        // Tag form in, unmodified: the sheet's own initializer
+                        // folds "?" placeholders to empty fields, the same
+                        // boundary conversion `EditGameInfoSheet` performs.
+                        // `applyEditedInfo` is the existing door — one
+                        // transaction, hash refreshed, player links
+                        // re-resolved, default name kept in step.
+                        initialRoster: LiveGame.Roster(
+                            event: pgn.event,
+                            site:  pgn.site,
+                            date:  pgn.date,
+                            round: pgn.round,
+                            white: pgn.white,
+                            black: pgn.black
+                        ),
+                        onSave: { roster in applyEditedInfo(roster, to: pgn) }
+                    )
+                case .movetext:
+                    MovetextEditorSheet(pgn: pgn) { proposed in
+                        applyEditedMovetext(proposed, to: pgn)
+                    }
                 }
             }
         }
@@ -177,6 +197,40 @@ internal struct BoardDestination: View {
         .focusedSceneValue(\.activeGame, tabState.boardGame)
         .onAppear { loadIfNeeded() }
         .onChange(of: loadedGameID) { _, _ in loadIfNeeded() }
+    }
+    
+    // MARK: Toolbar
+    
+    /// One stream, in written order. Items merged from separate `.toolbar`
+    /// modifiers arrive without a region boundary SwiftUI can act on: the
+    /// toolbar stays undivided, the `.inspector` column tucks beneath it
+    /// instead of running full height, and left-to-right order becomes an
+    /// accident of modifier nesting rather than something written down. Board
+    /// had three streams and all three symptoms. The Library always had one,
+    /// and was the only destination that ever looked right.
+    @ToolbarContentBuilder
+    private var boardToolbarContent: some ToolbarContent {
+        ToolbarItem {
+            Button {
+                tabState.boardPerspective = tabState.boardPerspective.opponent
+            } label: {
+                Label("Flip Board", systemImage: "arrow.up.arrow.down")
+            }
+            // Enabled even with no game so it serves as the manual
+            // orientation toggle for the live mirror (view-only flip,
+            // separate from the decoder's coordinate transform).
+            .accessibilityIdentifier(AccessibilityID.boardFlipButton)
+        }
+        DGTConnectionToolbarContent(
+            status: connection.status,
+            identifier: AccessibilityID.boardConnectButton,
+            isSheetPresented: $showConnectSheet
+        )
+        ToolbarSpacer()
+        InspectorToggleContent(
+            isPresented: $tabState.boardInspectorPresented,
+            identifier: AccessibilityID.boardInspectorToggle
+        )
     }
     
     // MARK: Board Surface
@@ -236,8 +290,9 @@ internal struct BoardDestination: View {
                 moves: pgn.moves,
                 currentMoveIndex: game.currentPly > 0 ? game.currentPly - 1 : nil,
                 style: boardStyle,
-                onMoveTapped: { index in game.jump(to: index + 1)
-                }
+                onMoveTapped: { index in game.jump(to: index + 1) },
+                onEditInfo:   { activeEditor = .info },
+                onEditMoves:  { activeEditor = .movetext }
             )
             .inspectorColumnWidth(min: 325, ideal: 320, max: 430)
         }
@@ -455,24 +510,22 @@ internal struct BoardDestination: View {
                 onDiscard: { session.discardGame() }
             )
         } else if connection.isConnected {
-            ContentUnavailableView(
-                "No Live Game",
+            InspectorEmptyState(
+                title: "No Live Game",
                 systemImage: "checkerboard.rectangle",
-                description: Text(
-                    "Start a game from the board to see its details and moves here."
-                )
+                message: "Start a game from the board to see its details and moves here.",
+                identifier: AccessibilityID.liveInspectorNoGame
             )
         } else {
             // The former HUD `disconnected` banner, relocated: this empty
             // state used to say "start a game from the board" — impossible
             // advice with no board — while the banner spent the strip
             // above the board on a message with no action.
-            ContentUnavailableView(
-                "No Board Connected",
+            InspectorEmptyState(
+                title: "No Board Connected",
                 systemImage: "cable.connector.horizontal",
-                description: Text(
-                    "Connect your DGT board to record games live."
-                )
+                message: "Connect your DGT board to record games live.",
+                identifier: AccessibilityID.liveInspectorNoBoard
             )
         }
     }
@@ -502,17 +555,15 @@ internal struct BoardDestination: View {
         )
     }
     
-    /// The live restore checklist while `recovering` (M6.2), nil otherwise.
-    /// Recomputed on every observable change of `connection.physicalBoard`,
-    /// so highlights and the instruction list shrink as squares are fixed —
+    /// The board's attention/target overlays while `recovering` (M6.2), nil
+    /// otherwise. Recomputed on every observable change of
+    /// `connection.physicalBoard`, so highlights shrink as squares are fixed —
     /// a 64-square diff per render is cheap (reach for `.task(id:)`
-    /// memoization only if profiling ever demands it).
+    /// memoization only if profiling ever demands it). The sidebar's checklist
+    /// recomputes its own; see `RecoveryGuidance.current` for why that is two
+    /// computations and no longer two spellings.
     private var recoveryGuidance: RecoveryGuidance? {
-        guard session.needsRecovery, let game = session.liveGame else { return nil }
-        return RecoveryGuidance(
-            physical: connection.physicalBoard,
-            target: game.currentState.position
-        )
+        .current(session: session, connection: connection)
     }
     
     // MARK: Loading
@@ -560,29 +611,24 @@ internal struct BoardDestination: View {
             Self.logger.info(
                 "Opened game: \(loadedPGN.name, privacy: .public) [\(loadedPGN.moves.count) plies]"
             )
-        } catch let error as Game.BuildError {
+        } catch {
+            // `Game.init` is `throws(BuildError)` and `BuildError` has exactly
+            // one case, so this arm is total: the old `else` guarded a case
+            // that doesn't exist, and the trailing untyped `catch` below it was
+            // unreachable. The `parseSAN` typed-throws lesson, one layer up.
             clearBoard(error: nil)
-            if case .invalidMove(let index, let san, let underlying) = error {
+            switch error {
+            case .invalidMove(let index, let san, let underlying):
                 tabState.boardLoadError = "Move \(index + 1) couldn't be parsed."
                 Self.logger.error(
-                    """
-                    Game.init failed for \(loadedPGN.name, privacy: .public): \
-                    move \(index + 1) (index \(index)) SAN '\(san, privacy: .public)' \
-                    failed with \(String(describing: underlying), privacy: .public). \
-                    Prior moves: [\(loadedPGN.moves.prefix(index).joined(separator: " "), privacy: .public)]
-                    """
-                )
-            } else {
-                tabState.boardLoadError = "The game's move list couldn't be parsed."
-                Self.logger.error(
-                    "Game.init failed for \(loadedPGN.name, privacy: .public): \(String(describing: error), privacy: .public)"
+                            """
+                            Game.init failed for \(loadedPGN.name, privacy: .public): \
+                            move \(index + 1) (index \(index)) SAN '\(san, privacy: .public)' \
+                            failed with \(String(describing: underlying), privacy: .public). \
+                            Prior moves: [\(loadedPGN.moves.prefix(index).joined(separator: " "), privacy: .public)]
+                            """
                 )
             }
-        } catch {
-            clearBoard(error: "Couldn't open the game: \(error.localizedDescription)")
-            Self.logger.error(
-                "Game.init failed unexpectedly for \(loadedPGN.name, privacy: .public): \(error.localizedDescription, privacy: .public)"
-            )
         }
     }
     

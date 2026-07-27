@@ -76,10 +76,6 @@ internal final class Player: Identifiable {
     /// byte-compatible in spirit with `PGNStore`'s hash normalization of
     /// name fields — one folding rule for "same player", not two.
     internal static func normalizedKey(for displayName: String) -> String {
-        displayName
-            .lowercased()
-            .components(separatedBy: .whitespacesAndNewlines)
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
+        PlayerName.folded(displayName).lowercased()
     }
 }

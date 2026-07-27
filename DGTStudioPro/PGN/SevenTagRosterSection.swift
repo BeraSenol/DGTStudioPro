@@ -7,21 +7,33 @@
 
 import SwiftUI
 
-/// The Seven Tag Roster as one sidebar section (D22′): a headline, the seven
-/// tags in the standard's order, then whatever action the host wants beneath
-/// them. Shared by all three inspectors that show a game's metadata — the
-/// Board's review inspector, the live inspector, and the Library inspector.
+/// The Seven Tag Roster as one sidebar section (D22′): a headline carrying
+/// whatever action the host offers on it, then the seven tags in the
+/// standard's order. Shared by all three inspectors that show a game's
+/// metadata — the Board's review inspector, the live inspector, and the
+/// Library inspector.
 ///
 /// Rows are driven by `SevenTagRoster.allCases`, so a host cannot render six
 /// tags or invent an order. The labels are the PGN tag names verbatim and are
 /// deliberately not localized: they're the standard's identifiers, the same
 /// strings that appear in the file the user exports.
 ///
-/// The action slot is a `@ViewBuilder` rather than an `onEdit` closure so each
-/// host keeps its own title and accessibility identifier — the live
-/// inspector's "Edit Details…" is `live.inspector.editdetails`, and the
-/// review side's eventual "Edit Info…" will be its own registry entry, not a
-/// shared one pretending two buttons are the same button.
+/// The action renders **in the header**, trailing, not as a row beneath the
+/// tags: the rows are a fixed set of seven, so an eighth that is a verb reads
+/// as part of the roster, and the bottom of the section is the wrong end from
+/// the heading the action acts on. `InspectorEditButton` is the shape every
+/// host passes.
+///
+/// The slot stays a `@ViewBuilder` rather than an `onEdit` closure so each
+/// host keeps its own accessibility identifier and wording — the live
+/// inspector's Edit Details is `live.inspector.editdetails`, the review
+/// side's Edit Info is `board.editInfo`, not one entry pretending two buttons
+/// in two inspectors are the same button. A host with nothing to offer passes
+/// nothing and the header is a plain heading again.
+///
+/// The header itself is `InspectorSectionHeader` — shared with the Players
+/// and Rankings inspectors, which have the same header and no roster, so the
+/// shape could not stay in here once they wanted it.
 internal struct SevenTagRosterSection<Actions: View>: View {
     
     // MARK: Static Constants
@@ -44,11 +56,8 @@ internal struct SevenTagRosterSection<Actions: View>: View {
             ForEach(SevenTagRoster.allCases, id: \.self) { tag in
                 LabeledContent(tag.rawValue, value: value(for: tag))
             }
-            
-            actions()
         } header: {
-            Text(headline)
-                .textCase(nil)
+            InspectorSectionHeader(headline, actions: actions)
         }
     }
     
@@ -144,8 +153,11 @@ extension SevenTagRosterSection where Actions == EmptyView {
             ),
             headline: "Recording 101. Bera Senol vs Lorenzo Reinaud"
         ) {
-            Button("Edit Details…") {}
-                .accessibilityIdentifier(AccessibilityID.liveInspectorEditDetails)
+            InspectorEditButton(
+                label: "Edit Details",
+                identifier: AccessibilityID.liveInspectorEditDetails,
+                action: {}
+            )
         }
     }
     .listStyle(.sidebar)

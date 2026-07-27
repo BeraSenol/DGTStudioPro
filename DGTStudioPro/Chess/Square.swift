@@ -49,6 +49,25 @@ extension Square {
         rankIndicatorTable[rank]
     }
     
+    /// The inverses of `fileCharacter` / `rankCharacter`, nil outside 0–7.
+    /// `GameState+SAN` carried private copies (`fileIndex` / `rankIndex`) of
+    /// arithmetic whose forward direction already lived here — a third home
+    /// for the a–h / 1–8 convention after these tables and
+    /// `fromAlgebraicNotation`.
+    internal static func file(from character: Character) -> Int? {
+        index(of: character, base: "a")
+    }
+    
+    internal static func rank(from character: Character) -> Int? {
+        index(of: character, base: "1")
+    }
+    
+    private static func index(of character: Character, base: Unicode.Scalar) -> Int? {
+        guard let value = character.asciiValue else { return nil }
+        let index = Int(value) - Int(UInt8(ascii: base))
+        return Square.files.contains(index) ? index : nil
+    }
+    
     private static let algebraicNotationTable: [String] = {
         Square.all.map { square in
             let file = Character(UnicodeScalar(Int(UnicodeScalar("a").value) + square % 8)!)

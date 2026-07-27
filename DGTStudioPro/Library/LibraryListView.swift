@@ -66,7 +66,7 @@ internal struct LibraryListView: View {
                     onExportIDs(ids)
                 } label: {
                     Label(
-                        ids.count > 1 ? "Export \(ids.count) PGN Files…" : "Export PGN…",
+                        ids.count > 1 ? "Export \(ids.count) PGNs" : "Export PGN",
                         systemImage: "square.and.arrow.up"
                     )
                 }

@@ -32,8 +32,8 @@ internal enum LibraryFilter {
     /// For the filter chip and window titles (M-prs.6 wires the chip).
     internal var displayName: String {
         switch self {
-        case .smartTag(let tag): return tag.name
-        case .player(let player): return player.name
+        case .smartTag(let tag):  tag.name
+        case .player(let player): player.name
         }
     }
 
@@ -41,16 +41,16 @@ internal enum LibraryFilter {
     /// named "Blitz" never render identically.
     internal var kindLabel: String {
         switch self {
-        case .smartTag: return "Tag"
-        case .player:   return "Player"
+        case .smartTag: "Tag"
+        case .player:   "Player"
         }
     }
 
     /// The chip's and the filtered empty state's icon.
     internal var systemImage: String {
         switch self {
-        case .smartTag: return "tag"
-        case .player:   return "person"
+        case .smartTag: "tag"
+        case .player:   "person"
         }
     }
 }

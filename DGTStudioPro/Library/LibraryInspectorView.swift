@@ -34,8 +34,11 @@ internal struct LibraryInspectorView: View {
     
     // MARK: Body
     internal var body: some View {
-        List {
-            if let pgn {
+        // D26′ — the empty branch renders *outside* the `List`. Inside one it
+        // is a top-aligned row with sidebar chrome behind it, which is what
+        // made this inspector disagree with Board's centred column.
+        if let pgn {
+            List {
                 // .id forces SwiftUI to re-init this section when the
                 // user selects a different game, resetting per-game view
                 // state (the name-edit draft). It no longer tears down an
@@ -43,21 +46,20 @@ internal struct LibraryInspectorView: View {
                 // crunching while the user browses (decision 1).
                 LoadedSection(pgn: pgn, queue: queue)
                     .id(pgn.id)
-            } else {
-                emptySection
             }
+            .listStyle(.sidebar)
+        } else {
+            emptyState
         }
-        .listStyle(.sidebar)
     }
     
     // MARK: Instance Methods
-    private var emptySection: some View {
-        ContentUnavailableView(
-            "No Game Selected",
+    private var emptyState: some View {
+        InspectorEmptyState(
+            title: "No Game Selected",
             systemImage: "document.fill",
-            description: Text(
-                "Select a game from the library to view its details and analysis"
-            )
+            message: "Select a game from the library to view its details and analysis.",
+            identifier: AccessibilityID.libraryInspectorEmpty
         )
     }
 }
@@ -81,15 +83,23 @@ private struct LoadedSection: View {
         Group {
             identitySection
             
-            // D22′ — the seven tags as one object. The rows this replaces
-            // were already the standard's seven in the standard's order with
-            // display-form names, so nothing here renders differently; what
-            // changes is that the set can no longer drift from the other two
-            // inspectors, because there is only one of it.
+            // D22′ — the seven tags as one object, under the game's own name.
+            // "Game Details" labelled what the rows already say they are;
+            // the name is the one thing the section couldn't tell you, and
+            // putting it here is what lets the rename pencil sit beside what
+            // it renames. Board and the live inspector name their game in
+            // this same header, so the three now read alike.
             SevenTagRosterSection(
                 roster: RosterSummary(pgn),
-                headline: "Game Details"
-            )
+                headline: pgn.name
+            ) {
+                InspectorEditButton(
+                    label: "Rename",
+                    identifier: AccessibilityID.libraryInspectorRename
+                ) {
+                    beginEdit()
+                }
+            }
             
             evaluationSection
         }
@@ -97,18 +107,26 @@ private struct LoadedSection: View {
     
     // MARK: Identity
     
-    /// Open and the editable name, headerless at the top: what the game *is*
-    /// and what you can do with it, above what it records. Split out of the
-    /// roster section rather than left inside it — `PGN.name` is a
-    /// user-editable label, not one of the seven tags, and must not read as
-    /// one. It also fixes a small mislabelling: "Game Details" used to sit
-    /// above a button.
+    /// Open, and the rename field while one is in progress. The name's
+    /// *display* is the roster header now; what stays here is the editor,
+    /// because a `TextField` in a sidebar section header is a control at
+    /// caption size in a header whose height must not move. The header keeps
+    /// showing the committed name while the field holds the draft — before
+    /// and after, visible together.
+    ///
+    /// `PGN.name` is still deliberately not one of the seven tags: it is a
+    /// user label outside the content hash, which is why the rename needs no
+    /// `refreshHash` and why the pencil is its own registry entry rather than
+    /// a member of the Edit Info family.
     private var identitySection: some View {
         Section {
             openButton
-            nameRow
+            if isEditingName {
+                nameEditor
+            }
         }
     }
+    
     // MARK: Open Affordance
     
     /// "Open" button in the Library inspector. Asks macOS to open a
@@ -212,31 +230,17 @@ private struct LoadedSection: View {
     }
     
     // MARK: Instance Methods
-    @ViewBuilder
-    private var nameRow: some View {
-        if isEditingName {
-            HStack(spacing: 6) {
-                TextField("Name", text: $draftName)
-                    .textFieldStyle(.roundedBorder)
-                    .focused($isNameFieldFocused)
-                    .onSubmit { commitEdit() }
-                Button("Done") { commitEdit() }
-                    .buttonStyle(.borderless)
-            }
-        } else {
-            HStack(spacing: 6) {
-                Text(pgn.name)
-                    .font(.headline)
-                    .lineLimit(1)
-                Spacer()
-                Button {
-                    beginEdit()
-                } label: {
-                    Image(systemName: "pencil")
-                }
+    /// Renamed from `nameRow` with the display branch: it is only an editor
+    /// now, and the `if` that used to choose between the two moved to the
+    /// call site, where the row can be absent rather than empty.
+    private var nameEditor: some View {
+        HStack(spacing: 6) {
+            TextField("Name", text: $draftName)
+                .textFieldStyle(.roundedBorder)
+                .focused($isNameFieldFocused)
+                .onSubmit { commitEdit() }
+            Button("Done") { commitEdit() }
                 .buttonStyle(.borderless)
-                .help("Rename")
-            }
         }
     }
     

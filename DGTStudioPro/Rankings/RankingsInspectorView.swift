@@ -19,26 +19,33 @@ internal struct RankingsInspectorView: View {
     
     // MARK: Body
     internal var body: some View {
-        List {
-            if let ranked {
+        // D26′ — empty renders outside the `List`; see `InspectorEmptyState`.
+        if let ranked {
+            List {
                 RankSection(ranked: ranked, ratedGames: history.count)
                     .id(ranked.id)   // reset per-player, the inspector idiom
                 TrendSection(history: history)
-            } else {
-                emptySection
             }
+            .listStyle(.sidebar)
+        } else {
+            emptyState
         }
-        .listStyle(.sidebar)
     }
     
     // MARK: Instance Methods
-    private var emptySection: some View {
-        Section {
-            Text("No player selected")
-                .foregroundStyle(.secondary)
-        } header: {
-            Text("Ranking")
-        }
+    /// This was the furthest-drifted of the four: a secondary `Text` under a
+    /// "Ranking" section header, sentence-cased and symbol-less, so the
+    /// destination that ranks players looked like it had failed to load
+    /// rather than like it was waiting for a selection. `list.number` is the
+    /// destination's own empty-state symbol, which keeps it distinguishable
+    /// from Players' `person.fill` at the same title.
+    private var emptyState: some View {
+        InspectorEmptyState(
+            title: "No Player Selected",
+            systemImage: "list.number",
+            message: "Select a player to see their rank and rating trend.",
+            identifier: AccessibilityID.rankingsInspectorEmpty
+        )
     }
 }
 
@@ -51,18 +58,11 @@ private struct RankSection: View {
     
     var body: some View {
         Section {
-            HStack(spacing: 12) {
-                PlayerMonogram(name: ranked.stats.name, diameter: 44)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(ranked.stats.name)
-                        .font(.headline)
-                    Text("Rank #\(ranked.rank)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .padding(.vertical, 4)
-            
+            // The rank was a caption under the name in the identity row this
+            // replaces. It is a fact about the player exactly like Wins and
+            // Rating, so it becomes a row like them rather than chrome — and
+            // it leads, because it is what the destination sorts by (D11′).
+            LabeledContent("Rank", value: "#\(ranked.rank)")
             LabeledContent("Wins", value: "\(ranked.stats.wins)")
             LabeledContent("Record", value: "\(ranked.stats.wins)–\(ranked.stats.draws)–\(ranked.stats.losses)")
             LabeledContent("Rating", value: ranked.rating?.displaySummary ?? "Unrated")
@@ -73,7 +73,9 @@ private struct RankSection: View {
             }
             LabeledContent("Rated Games", value: "\(ratedGames)")
         } header: {
-            Text("Ranking")
+            // The player's name, matching Players and Library — see
+            // `ProfileSection`'s header for the argument.
+            InspectorSectionHeader(ranked.stats.name)
         }
         .accessibilityIdentifier(AccessibilityID.rankingsInspectorProfile)
     }

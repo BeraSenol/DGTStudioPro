@@ -25,8 +25,10 @@ internal struct DGTSerialDevice: Identifiable, Equatable, Sendable {
     
     /// Whether this device looks like a USB serial adapter of the kind a DGT
     /// board presents as. Used only to sort candidates; never to auto-connect.
+    internal static let boardNameHints = ["usbserial", "usbmodem", "ftdi", "dgt"]
+    
     internal var isLikelyBoard: Bool {
         let haystack = (path + " " + name).lowercased()
-        return ["usbserial", "usbmodem", "ftdi", "dgt"].contains { haystack.contains($0) }
+        return Self.boardNameHints.contains { haystack.contains($0) }
     }
 }

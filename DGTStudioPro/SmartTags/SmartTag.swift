@@ -18,13 +18,13 @@ internal enum TagColor: String, Codable, CaseIterable, Identifiable, Sendable {
     
     internal var color: Color {
         switch self {
-        case .red:    return .red
-        case .orange: return .orange
-        case .yellow: return .yellow
-        case .green:  return .green
-        case .blue:   return .blue
-        case .purple: return .purple
-        case .gray:   return .gray
+        case .red:    .red
+        case .orange: .orange
+        case .yellow: .yellow
+        case .green:  .green
+        case .blue:   .blue
+        case .purple: .purple
+        case .gray:   .gray
         }
     }
 }

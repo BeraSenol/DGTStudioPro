@@ -99,10 +99,6 @@ internal struct PlayersDestination: View {
                 )
                 .inspectorColumnWidth(min: 325, ideal: 320, max: 430)
             }
-            .inspectorToggle(
-                isPresented: $tabState.playersInspectorPresented,
-                identifier: AccessibilityID.playersInspectorToggle
-            )
             .toolbar { toolbarContent }
             .onAppear {
                 // Players must work even if Library was never visited this
@@ -171,6 +167,12 @@ internal struct PlayersDestination: View {
         .accessibilityIdentifier(AccessibilityID.playersEmptyState)
     }
     
+    /// One stream, the Library's shape: every item in a single builder with
+    /// `ToolbarSpacer` marking the break before the inspector toggle. Stacking
+    /// `.inspectorToggle` as a second `.toolbar` modifier left the toolbar
+    /// undivided and the inspector column tucked below it — see
+    /// `InspectorToggleContent`.
+    @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem {
             // Same macOS segmented-picker caveat as the Library's: the
@@ -184,6 +186,11 @@ internal struct PlayersDestination: View {
             .pickerStyle(.segmented)
             .accessibilityIdentifier(AccessibilityID.playersViewModePicker)
         }
+        ToolbarSpacer()
+        InspectorToggleContent(
+            isPresented: $tabState.playersInspectorPresented,
+            identifier: AccessibilityID.playersInspectorToggle
+        )
     }
     
     private func backfillPlayerLinks() {

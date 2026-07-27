@@ -92,12 +92,21 @@ internal enum AccessibilityID {
     
     // MARK: Movetext Editor (M-lib.3, D18′)
     
-    /// The board's "Edit Moves…" toolbar affordance (enabled only for a loaded
-    /// archived game) and the editor sheet it presents. Unlike the live
-    /// families, this sheet *is* reachable in a boardless UI run — a loaded PGN
-    /// needs no hardware — so a future XCUITest can harden it; for now the
-    /// validator and store suites are the contract.
+    /// The review inspector's two edit affordances and the sheets they
+    /// request. `board.editMoves` kept its name through the move off the
+    /// toolbar into the Moves section header — same action, same destination,
+    /// only the surface changed, so unlike D15′'s `board.loaderror` →
+    /// `sidebar.loaderror` there was nothing to rename. `board.editInfo` is
+    /// the entry `SevenTagRosterSection`'s doc predicted: the review side's
+    /// own identifier rather than borrowing the live inspector's
+    /// `live.inspector.editdetails`, since two buttons in two inspectors are
+    /// not one button.
+    ///
+    /// Unlike the live families, both are reachable in a boardless UI run — a
+    /// loaded PGN needs no hardware — so a future XCUITest can harden them;
+    /// for now the validator and store suites are the contract.
     internal static let boardEditMovesButton = "board.editMoves"
+    internal static let boardEditInfoButton  = "board.editInfo"
     internal static let movetextEditorSheet  = "movetext.editor"
     internal static let movetextEditorField  = "movetext.editor.field"
     internal static let movetextEditorStatus = "movetext.editor.status"
@@ -127,10 +136,23 @@ internal enum AccessibilityID {
     internal static let liveInspectorDraw        = "live.inspector.draw"
     internal static let liveInspectorDiscard     = "live.inspector.discard"
     
+    /// The live inspector's two empty states (D26′). Constants rather than a
+    /// suffix-taking helper for the `liveHUD*` reason: a closed set whose
+    /// suffixes a helper would only scatter back to the call sites.
+    internal static let liveInspectorNoGame      = "live.inspector.nogame"
+    internal static let liveInspectorNoBoard     = "live.inspector.noboard"
+    
     internal static let liveNewGameSheet  = "live.newgame.sheet"
     internal static let liveNewGameStart  = "live.newgame.start"
     internal static let liveNewGameNotNow = "live.newgame.notnow"
     
+    /// The `live.` prefix is now narrower than the truth: `EditLiveGameDetailsSheet`
+    /// is presented from the Board's *review* inspector too, over an archived
+    /// PGN seeded into a `LiveGame.Roster`. Shared sheet, shared identifiers —
+    /// correct, because the two callers can never coexist (one branch has a
+    /// live game and no PGN, the other has a PGN and no live game). The type's
+    /// name has the same problem; renaming it is a mechanical change and
+    /// travels alone.
     internal static let liveEditDetailsSheet  = "live.editdetails.sheet"
     internal static let liveEditDetailsSave   = "live.editdetails.save"
     internal static let liveEditDetailsCancel = "live.editdetails.cancel"
@@ -216,6 +238,16 @@ internal enum AccessibilityID {
     internal static let libraryDeleteButton    = "library.deleteButton"
     internal static let libraryGamesTable      = "library.gamesTable"
     internal static let libraryInspectorToggle = "library.inspectorToggle"
+    /// D26′ — the shared `InspectorEmptyState`. Distinct from
+    /// `libraryEmptyState`, which is the *content area* with no games at all.
+    internal static let libraryInspectorEmpty  = "library.inspector.empty"
+    
+    /// The rename pencil, which moved onto the roster section header when the
+    /// header became the game's own name. It edits `PGN.name` — a user label
+    /// outside the content hash — not a tag, so it is deliberately not part
+    /// of the `board.editInfo` / `live.inspector.editdetails` family even
+    /// though all three are now the same glyph in the same place.
+    internal static let libraryInspectorRename = "library.inspector.rename"
     
     /// Analysis-queue toolbar family (M-batch). `queue.status` has a
     /// UITest witness (asserted *absent* while the queue is idle); the
@@ -269,6 +301,7 @@ internal enum AccessibilityID {
     internal static let playersTable            = "players.table"
     internal static let playersInspectorToggle  = "players.inspectorToggle"
     internal static let playersInspectorProfile = "players.inspector.profile"
+    internal static let playersInspectorEmpty   = "players.inspector.empty"
     
     /// `playerRow.Anish Giri`, … — one per list-mode row, keyed by the
     /// player's display name (the `gameRow(_:)` precedent).
@@ -289,6 +322,7 @@ internal enum AccessibilityID {
     internal static let rankingsTable            = "rankings.table"
     internal static let rankingsInspectorToggle  = "rankings.inspectorToggle"
     internal static let rankingsInspectorProfile = "rankings.inspector.profile"
+    internal static let rankingsInspectorEmpty   = "rankings.inspector.empty"
     
     /// `rankingRow.1.Liren Ding`, … — rank *and* name, so asserting a
     /// row's existence pins the ladder's computed order without geometry

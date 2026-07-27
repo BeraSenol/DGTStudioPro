@@ -17,9 +17,9 @@ import SwiftUI
 /// unchanged — their witness stays the hardware checklist, so the
 /// re-home is not a contract break.
 internal struct LiveGameHUDView: View {
-    
+
     // MARK: Phase
-    
+
     /// Everything the banner can say. Derivation (including priority between
     /// overlapping session flags) lives in `SessionSidebarPanel.hudPhase` —
     /// moved there with the card itself by D15′.
@@ -48,23 +48,23 @@ internal struct LiveGameHUDView: View {
         /// or the player discards from the inspector.
         case archiveFailed(result: GameResult, message: String)
     }
-    
+
     // MARK: Stored Properties
-    
+
     internal let phase: Phase
-    
+
     /// Invoked by the "New Game…" button (shown while `idle` / `finished`).
     /// Presenting the dialog is the destination's job.
     internal let onNewGame: () -> Void
-    
+
     /// Invoked by the "Retry" button (shown while `archiveFailed`). The
     /// matching Discard lives in the inspector behind its existing
     /// destructive confirmation, so the HUD stays state-free. Defaulted so
     /// existing call sites and previews stay valid.
     internal var onRetryArchive: () -> Void = {}
-    
+
     // MARK: Body
-    
+
     internal var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack {
@@ -74,34 +74,34 @@ internal struct LiveGameHUDView: View {
                 Spacer(minLength: 0)
                 Image(systemName: symbolName)
                     .foregroundStyle(tint)
-                    .font(.headline)
+                    .font(.body)
             }
-            
+
             if let subtitle {
                 Text(subtitle)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            
+
             if showsNewGameButton {
                 Button("New Game", action: onNewGame)
-                    .padding(.top)
+                    .padding(.top, 10)
                     .buttonStyle(.bordered)
                     .foregroundStyle(tint)
                     .controlSize(.small)
                     .frame(maxWidth: .infinity)
                     .accessibilityIdentifier(AccessibilityID.liveHUDNewGame)
             }
-            
+
             if case .archiveFailed = phase {
                 Button("Retry", action: onRetryArchive)
-                    .padding(.top)
-                    .buttonStyle(.bordered)
-                    .foregroundStyle(tint)
-                    .controlSize(.small)
-                    .frame(maxWidth: .infinity)
-                    .accessibilityIdentifier(AccessibilityID.liveHUDRetryArchive)
+                .padding(.top, 10)
+                .buttonStyle(.bordered)
+                .foregroundStyle(tint)
+                .controlSize(.small)
+                .frame(maxWidth: .infinity)
+                .accessibilityIdentifier(AccessibilityID.liveHUDRetryArchive)
             }
         }
         .padding()
@@ -114,16 +114,16 @@ internal struct LiveGameHUDView: View {
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier(accessibilityIdentifier)
     }
-    
+
     // MARK: Phase Presentation
-    
+
     private var showsNewGameButton: Bool {
         switch phase {
         case .idle, .finished: true
         default: false
         }
     }
-    
+
     private var title: String {
         switch phase {
         case .reconnecting:
@@ -144,7 +144,7 @@ internal struct LiveGameHUDView: View {
             Self.headline(for: result) + " — not saved yet"
         }
     }
-    
+
     private var subtitle: String? {
         switch phase {
         case .reconnecting:
@@ -167,7 +167,7 @@ internal struct LiveGameHUDView: View {
             "\(message) Retry, or discard the game from the inspector."
         }
     }
-    
+
     private var symbolName: String {
         switch phase {
         case .reconnecting:  "arrow.triangle.2.circlepath"
@@ -180,7 +180,7 @@ internal struct LiveGameHUDView: View {
         case .archiveFailed: "exclamationmark.arrow.circlepath"
         }
     }
-    
+
     private var tint: Color {
         switch phase {
         case .reconnecting:  .orange
@@ -193,7 +193,7 @@ internal struct LiveGameHUDView: View {
         case .archiveFailed: .red
         }
     }
-    
+
     private var accessibilityIdentifier: String {
         switch phase {
         case .reconnecting:  AccessibilityID.liveHUDReconnecting
@@ -206,7 +206,7 @@ internal struct LiveGameHUDView: View {
         case .archiveFailed: AccessibilityID.liveHUDArchiveFailed
         }
     }
-    
+
     /// A human headline for a terminal result. `.ongoing` is unreachable
     /// from the `finished` phase but kept total for safety.
     private static func headline(for result: GameResult) -> String {

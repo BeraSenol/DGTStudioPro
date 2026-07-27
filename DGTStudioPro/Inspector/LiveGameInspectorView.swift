@@ -95,10 +95,12 @@ internal struct LiveGameInspectorView: View {
             roster: RosterSummary(game.roster, result: game.result),
             headline: headline
         ) {
-            Button("Edit Details…") {
+            InspectorEditButton(
+                label: "Edit Details",
+                identifier: AccessibilityID.liveInspectorEditDetails
+            ) {
                 isEditingDetails = true
             }
-            .accessibilityIdentifier(AccessibilityID.liveInspectorEditDetails)
         }
     }
     
@@ -139,18 +141,18 @@ internal struct LiveGameInspectorView: View {
     private var lifecycleSection: some View {
         Section {
             if !game.isFinished {
-                Button("Resign…") {
+                Button("Resign") {
                     isChoosingResign = true
                 }
                 .accessibilityIdentifier(AccessibilityID.liveInspectorResign)
                 
-                Button("Agree Draw…") {
+                Button("Agree Draw") {
                     isConfirmingDraw = true
                 }
                 .accessibilityIdentifier(AccessibilityID.liveInspectorDraw)
             }
             
-            Button("Discard Game…", role: .destructive) {
+            Button("Discard Game", role: .destructive) {
                 isConfirmingDiscard = true
             }
             .accessibilityIdentifier(AccessibilityID.liveInspectorDiscard)

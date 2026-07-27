@@ -27,8 +27,11 @@ extension GameState {
         var s = san.trimmingCharacters(in: .whitespaces)
         guard !s.isEmpty else { throw SANParseError.empty }
         
-        // Strip trailing check / mate / annotation suffixes.
-        while let last = s.last, last == "+" || last == "#" || last == "!" || last == "?" {
+        // Strip trailing check / mate / annotation suffixes. This drops all
+        // four; `PGNParser.stripAnnotations` deliberately keeps `+`/`#` (the
+        // `endedInMate` signal). The app has exactly these two strippers and
+        // they are meant to differ — D18′'s correction turns on which is which.
+        while let last = s.last, "+#!?".contains(last) {
             s.removeLast()
         }
         guard !s.isEmpty else { throw SANParseError.malformed(san) }
@@ -87,11 +90,7 @@ extension GameState {
             return true
         }
         
-        switch candidates.count {
-        case 0:  throw SANParseError.noMatchingMove(original)
-        case 1:  return candidates[0]
-        default: throw SANParseError.ambiguous(original, count: candidates.count)
-        }
+        return try Self.unique(candidates, original: original)
     }
     
     private func matchCastling(kingside: Bool, original: String) throws(SANParseError) -> Move {
@@ -99,6 +98,15 @@ extension GameState {
         let candidates = legalMoves().filter {
             $0.isCastling && $0.to.file == destinationFile
         }
+        return try Self.unique(candidates, original: original)
+    }
+    
+    /// Zero matches is a parse failure, one is the answer, more is ambiguity
+    /// the writer owes a disambiguator for. Both matchers ended in this exact
+    /// switch — two copies free to drift on which error a tie produces.
+    private static func unique(
+        _ candidates: [Move], original: String
+    ) throws(SANParseError) -> Move {
         switch candidates.count {
         case 0:  throw SANParseError.noMatchingMove(original)
         case 1:  return candidates[0]
@@ -224,16 +232,16 @@ extension GameState {
             break
         case 1:
             let c = disambiguator[0]
-            if let file = fileIndex(from: c) {
+            if let file = Square.file(from: c) {
                 fromFile = file
-            } else if let rank = rankIndex(from: c) {
+            } else if let rank = Square.rank(from: c) {
                 fromRank = rank
             } else {
                 throw SANParseError.malformed(original)
             }
         case 2:
-            guard let file = fileIndex(from: disambiguator[0]),
-                  let rank = rankIndex(from: disambiguator[1]) else {
+            guard let file = Square.file(from: disambiguator[0]),
+                  let rank = Square.rank(from: disambiguator[1]) else {
                 throw SANParseError.malformed(original)
             }
             fromFile = file
@@ -281,18 +289,6 @@ extension GameState {
         case "N": return .knight
         default:  return nil
         }
-    }
-    
-    private static func fileIndex(from c: Character) -> Int? {
-        guard let v = c.asciiValue else { return nil }
-        let index = Int(v) - Int(UInt8(ascii: "a"))
-        return (0 ..< 8).contains(index) ? index : nil
-    }
-    
-    private static func rankIndex(from c: Character) -> Int? {
-        guard let v = c.asciiValue else { return nil }
-        let index = Int(v) - Int(UInt8(ascii: "1"))
-        return (0 ..< 8).contains(index) ? index : nil
     }
 }
 

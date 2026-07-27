@@ -545,7 +545,6 @@ internal final class DGTLiveSession {
         mode = .idle
         clearPlayingOverlays()
         offeredNewGameForCurrentStart = false
-        offeredNewGameForCurrentStart = false
         // The explicit-Discard exit from a failed archive (M5): the player
         // chose to lose the game, so the suppression lifts with it.
         archiveOutcome = nil

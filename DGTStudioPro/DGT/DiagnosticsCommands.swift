@@ -33,14 +33,14 @@ internal struct DiagnosticsCommands: Commands {
     
     internal var body: some Commands {
         CommandMenu("Diagnostics") {
-            Button("Export Session Log…") {
+            Button("Export Session Log") {
                 sessionLog.exportViaSavePanel()
             }
             
             Divider()
             
             if connection.isRecording {
-                Button("Stop & Export Board Recording…") {
+                Button("Stop & Export Board Recording") {
                     guard let recording = connection.stopRecording() else {
                         return
                     }

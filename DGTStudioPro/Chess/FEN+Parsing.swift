@@ -22,7 +22,7 @@ extension FEN {
     /// unknown castling-rights characters, and non-square EP targets all
     /// throw a typed `FENParseError`. Whitespace splitting is forgiving
     /// (multiple spaces and leading/trailing whitespace are tolerated).
-    internal init(parsing string: String) throws {
+    internal init(parsing string: String) throws(FENParseError) {
         let fields = string.split(whereSeparator: { $0.isWhitespace })
         
         guard fields.count == 4 || fields.count == 6 else {
@@ -63,7 +63,7 @@ extension FEN {
     /// digits 1–8 represent runs of empty squares; letters represent pieces
     /// per the FEN convention (uppercase white, lowercase black). Each rank
     /// must total exactly 8 files.
-    private static func parsePlacement(_ field: String) throws -> Position {
+    private static func parsePlacement(_ field: String) throws(FENParseError) -> Position {
         let ranks = field.split(separator: "/", omittingEmptySubsequences: false)
         guard ranks.count == 8 else {
             throw FENParseError.malformedPlacement(field)
@@ -98,7 +98,7 @@ extension FEN {
     }
     
     /// Parses the active-color field. Accepts `w` (white) or `b` (black).
-    private static func parseActiveColor(_ field: String) throws -> PieceColor {
+    private static func parseActiveColor(_ field: String) throws(FENParseError) -> PieceColor {
         switch field {
         case "w": return .white
         case "b": return .black
@@ -110,7 +110,7 @@ extension FEN {
     /// non-repeating subset of `KQkq` in any order. Duplicate characters
     /// are rejected (strict-on-shape; the chess core's other parsers do
     /// the same).
-    private static func parseCastling(_ field: String) throws -> CastlingRights {
+    private static func parseCastling(_ field: String) throws(FENParseError) -> CastlingRights {
         if field == "-" { return .none }
         
         var raw: UInt8 = 0
@@ -138,7 +138,7 @@ extension FEN {
     /// square in algebraic notation. Does not validate that the square is on
     /// a plausible EP rank — that's a position-validity concern, not a parse
     /// concern.
-    private static func parseEnPassant(_ field: String) throws -> Square? {
+    private static func parseEnPassant(_ field: String) throws(FENParseError) -> Square? {
         if field == "-" { return nil }
         guard let square = Square.fromAlgebraicNotation(field) else {
             throw FENParseError.malformedEnPassant(field)
@@ -147,7 +147,7 @@ extension FEN {
     }
     
     /// Parses the halfmove clock. Must be a non-negative integer.
-    private static func parseHalfmoveClock(_ field: String) throws -> Int {
+    private static func parseHalfmoveClock(_ field: String) throws(FENParseError) -> Int {
         guard let value = Int(field), value >= 0 else {
             throw FENParseError.malformedInteger(field)
         }
@@ -156,7 +156,7 @@ extension FEN {
     
     /// Parses the fullmove number. Must be a positive integer (FEN spec
     /// requires fullmove ≥ 1; the starting position has fullmove 1).
-    private static func parseFullmoveNumber(_ field: String) throws -> Int {
+    private static func parseFullmoveNumber(_ field: String) throws(FENParseError) -> Int {
         guard let value = Int(field), value >= 1 else {
             throw FENParseError.malformedInteger(field)
         }

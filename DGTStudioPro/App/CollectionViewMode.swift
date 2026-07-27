@@ -18,10 +18,10 @@ internal enum CollectionViewMode: String, CaseIterable, Identifiable {
 
     internal var systemImage: String {
         switch self {
-        case .icons:   return "square.grid.2x2"
-        case .list:    return "list.bullet"
-        case .columns: return "rectangle.split.3x1"
-        case .gallery: return "squares.below.rectangle"
+        case .icons:   "square.grid.2x2"
+        case .list:    "list.bullet"
+        case .columns: "rectangle.split.3x1"
+        case .gallery: "squares.below.rectangle"
         }
     }
 }

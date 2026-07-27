@@ -17,6 +17,18 @@ internal struct BoardInspectorView: View {
     internal let style: BoardStyle
     internal let onMoveTapped: ((Int) -> Void)?
     
+    /// The two edit requests. Presentation belongs to `BoardDestination`
+    /// (D15′ — modals are destination furniture) and so does the write; this
+    /// view only asks, which is what keeps it renderable in a canvas.
+    ///
+    /// Optional and defaulted — the `LiveGameHUDView.onRetryArchive`
+    /// precedent — so a host with nothing to offer omits them and the buttons
+    /// simply don't render. That replaces the retired toolbar item's
+    /// `.disabled(boardPGN == nil)`: an affordance that can't act now doesn't
+    /// exist rather than sitting there greyed out.
+    internal var onEditInfo: (() -> Void)? = nil
+    internal var onEditMoves: (() -> Void)? = nil
+    
     internal var body: some View {
         List {
             metadataSection
@@ -30,11 +42,24 @@ internal struct BoardInspectorView: View {
     }
     
     // MARK: Instance Methods
+    /// The action slot D22′ built and named this exact button for: "the review
+    /// side's eventual 'Edit Info…' will be its own registry entry". It rides
+    /// the section header, trailing the headline — the same shape and the
+    /// same place as the live inspector's Edit Details, so the two metadata
+    /// surfaces read as one idea in two states.
     private var metadataSection: some View {
         SevenTagRosterSection(
             roster: pgn.map { RosterSummary($0) },
             headline: headline
-        )
+        ) {
+            if let onEditInfo {
+                InspectorEditButton(
+                    label: "Edit Info",
+                    identifier: AccessibilityID.boardEditInfoButton,
+                    action: onEditInfo
+                )
+            }
+        }
     }
     
     /// D20′ — "Reviewing 1. Magnus Carlsen vs Ian Nepomniachtchi". Falls
@@ -60,6 +85,13 @@ internal struct BoardInspectorView: View {
         }
     }
     
+    /// Edit Moves lives in the **header** — where the roster section's action
+    /// now sits too, so what was once a deliberate break is the inspector's
+    /// one rule. The reason it arrived there first still holds on its own:
+    /// `MoveHistoryView` doesn't scroll itself (`scrollsIndependently: false`)
+    /// — the enclosing List does — so a row after it is a row after every ply,
+    /// which on a hundred-move game is an affordance the user has to go
+    /// looking for.
     private var movesSection: some View {
         Section {
             MoveHistoryView(
@@ -71,7 +103,17 @@ internal struct BoardInspectorView: View {
             .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
             .listRowSeparator(.hidden)
         } header: {
-            Text("Moves")
+            HStack {
+                Text("Moves")
+                Spacer(minLength: 0)
+                if let onEditMoves {
+                    InspectorEditButton(
+                        label: "Edit Moves",
+                        identifier: AccessibilityID.boardEditMovesButton,
+                        action: onEditMoves
+                    )
+                }
+            }
         }
     }
 }
@@ -102,7 +144,9 @@ internal struct BoardInspectorView: View {
         ],
         currentMoveIndex: 14,
         style: .walnut,
-        onMoveTapped: { _ in }
+        onMoveTapped: { _ in },
+        onEditInfo: {},
+        onEditMoves: {}
     )
     .frame(width: 300, height: 600)
 }

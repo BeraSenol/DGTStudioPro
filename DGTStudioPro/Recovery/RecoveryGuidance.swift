@@ -138,3 +138,28 @@ internal struct RecoveryGuidance: Equatable, Sendable {
         self.items = items.sorted { $0.square < $1.square }
     }
 }
+
+// MARK: Live Derivation
+
+extension RecoveryGuidance {
+    
+    /// The live restore checklist, or nil when nothing needs restoring.
+    ///
+    /// Two consumers compute this independently **by decision**: the board's
+    /// attention/target overlays (`BoardDestination`) and the sidebar's
+    /// checklist (`SessionSidebarPanel`) each recompute per render, which is
+    /// cheap at 64 squares and keeps them from sharing state. Two
+    /// *computations* was the decision; two *spellings* of it was not — the
+    /// guard and the construction were byte-identical in both views.
+    @MainActor
+    internal static func current(
+        session: DGTLiveSession,
+        connection: DGTConnection
+    ) -> RecoveryGuidance? {
+        guard session.needsRecovery, let game = session.liveGame else { return nil }
+        return RecoveryGuidance(
+            physical: connection.physicalBoard,
+            target: game.currentState.position
+        )
+    }
+}
