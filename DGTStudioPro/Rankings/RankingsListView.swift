@@ -16,11 +16,13 @@ internal struct RankingsListView: View {
     var body: some View {
         Table(players, selection: $selectedKey) {
             TableColumn("Rank") { player in
-                Text("\(player.rank)")
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
+                if RankMedal(rank: player.rank) != nil {
+                    RankBadge(rank: player.rank)
+                } else {
+                    Text("\(player.rank)").monospacedDigit().foregroundStyle(.secondary)
+                }
             }
-            .width(44)
+            .width(52)
             TableColumn("Player") { player in
                 // Rank travels in the identifier so the UI test pins the
                 // ladder's computed *order* without geometry queries.

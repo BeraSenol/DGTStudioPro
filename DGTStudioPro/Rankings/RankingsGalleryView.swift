@@ -34,7 +34,7 @@ internal struct RankingsGalleryView: View {
                 HStack(spacing: 8) {
                     Text("#\(player.rank)")
                         .font(.title2.weight(.bold).monospacedDigit())
-                        .foregroundStyle(.tint)
+                        .foregroundStyle(RankMedal.style(forRank: player.rank))
                     Text(player.stats.name)
                         .font(.title2.weight(.semibold))
                 }

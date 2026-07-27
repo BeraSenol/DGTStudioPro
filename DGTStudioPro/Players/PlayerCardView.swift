@@ -58,6 +58,75 @@ internal struct PlayerStatCell: View {
     }
 }
 
+/// The podium tint for a ladder position: gold, silver, bronze, and nothing
+/// below third. `init?(rank:)` is the single statement of the podium's depth,
+/// so no surface can decide the top four are special.
+///
+/// The literals are mid-luminance on purpose. Metallic gold (#D4AF37) and
+/// silver (#C0C0C0) are near-white and disappear against a light window,
+/// while darkening them enough to read there turns them muddy in dark mode;
+/// these sit in the middle so one literal serves both appearances and no
+/// asset is needed. If per-appearance tuning is ever wanted, that is a colour
+/// set in the catalog — and the mapping stays an exhaustive `switch self`
+/// either way, the `BoardStyle` argument: a new case should be a compile
+/// error, not a blank swatch.
+internal enum RankMedal: String, CaseIterable, Identifiable, Sendable {
+    case gold, silver, bronze
+    
+    internal init?(rank: Int) {
+        switch rank {
+        case 1:  self = .gold
+        case 2:  self = .silver
+        case 3:  self = .bronze
+        default: return nil
+        }
+    }
+    
+    internal var id: String { rawValue }
+    
+    internal var color: Color {
+        switch self {
+        case .gold:   Color(red: 0.78, green: 0.60, blue: 0.13)
+        case .silver: Color(red: 0.60, green: 0.62, blue: 0.65)
+        case .bronze: Color(red: 0.72, green: 0.45, blue: 0.20)
+        }
+    }
+    
+    /// The style for *any* rank — the medal on the podium, `.tint` below it.
+    /// Erased rather than `Color?` with an `.accentColor` fallback, because
+    /// the unmedalled badge has always been `.tint` and therefore follows a
+    /// host's `.tint()`; collapsing it to `.accentColor` would be a silent
+    /// behaviour change for every rank from fourth down.
+    internal static func style(forRank rank: Int) -> AnyShapeStyle {
+        if let medal = RankMedal(rank: rank) {
+            AnyShapeStyle(medal.color)
+        } else {
+            AnyShapeStyle(.tint)
+        }
+    }
+}
+
+/// The ladder position as a chip — one rendering behind the icons badge and
+/// the table's Rank column, so the podium can't be gold in one and blue in
+/// the other.
+///
+/// The outer inset deliberately stays with the caller: the card needs it to
+/// hold the chip off its corner, and a table cell must not inherit it.
+internal struct RankBadge: View {
+    
+    internal let rank: Int
+    
+    internal var body: some View {
+        let style = RankMedal.style(forRank: rank)
+        Text("#\(rank)")
+            .font(.caption2.weight(.bold).monospacedDigit())
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(style.opacity(0.2)))
+            .foregroundStyle(style)
+    }
+}
+
 /// The Players analogue of `LibraryGameCardView`, used by the icons grids,
 /// the columns details, and the gallery filmstrips of *both* Players and
 /// Rankings — the latter passes `rank` (M-prs.4) and gets the badge.
@@ -88,13 +157,19 @@ internal struct PlayerCardView: View {
                 }
                 .overlay(alignment: .topLeading) {
                     if let rank {
-                        rankBadge(rank)
+                        RankBadge(rank: rank)
+                            .padding(4)
                     }
                 }
             
             Text(stats.name)
                 .font(.callout)
-                .lineLimit(2)
+            // Reserved, not merely capped: a one-line name otherwise
+            // makes a shorter card, so a grid's rows ragged themselves
+            // off whichever names happened to land in them — and the two
+            // destinations sort differently, so the same player got two
+            // heights. Two lines, always.
+                .lineLimit(2, reservesSpace: true)
                 .multilineTextAlignment(.center)
                 .padding(.vertical, 2)
                 .frame(width: 94)
@@ -126,17 +201,6 @@ internal struct PlayerCardView: View {
                 .accessibilityIdentifier(AccessibilityID.contextShowInLibrary)
             }
         }
-    }
-    
-    // MARK: Instance Methods
-    private func rankBadge(_ rank: Int) -> some View {
-        Text("#\(rank)")
-            .font(.caption2.weight(.bold).monospacedDigit())
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(.tint.opacity(0.2)))
-            .foregroundStyle(.tint)
-            .padding(4)
     }
 }
 

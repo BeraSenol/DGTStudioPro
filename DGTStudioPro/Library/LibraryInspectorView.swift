@@ -5,6 +5,7 @@
 //  Created by Supreme Leader on 12/04/2026.
 //
 
+import AppKit
 import SwiftData
 import SwiftUI
 
@@ -77,6 +78,7 @@ private struct LoadedSection: View {
     @FocusState private var isNameFieldFocused: Bool
     @State private var isEditingName: Bool = false
     @State private var draftName: String = ""
+    @State private var isShowingPGN: Bool = true
     
     // MARK: Body
     var body: some View {
@@ -102,8 +104,11 @@ private struct LoadedSection: View {
             }
             
             evaluationSection
+            
+            pgnSection
         }
     }
+    
     
     // MARK: Identity
     
@@ -229,6 +234,90 @@ private struct LoadedSection: View {
         pgn.evaluations.contains { $0 != nil }
     }
     
+    // MARK: PGN Section
+    
+    /// The game as a file: `PGN.pgnText`, byte-identical to what Export
+    /// writes (D24′). Deliberately not its own rendering of the model — an
+    /// inspector that formatted its own tag block would be a third PGN shape
+    /// in the app, free to drift from the one the reference files pin, and
+    /// the entire value of showing raw text is that it is what the file will
+    /// say. Side effect worth having: a serializer defect is now visible in
+    /// the sidebar instead of only in an exported file nobody re-reads.
+    ///
+    /// Last, and collapsed by default: it is the longest section and the
+    /// least often wanted, so the inspector's first screenful is unchanged.
+    /// `Section(isExpanded:)` is the platform sidebar disclosure — a
+    /// `DisclosureGroup` nested inside a section would give one control two
+    /// sets of chrome.
+    ///
+    /// Expansion resets per game, because `LoadedSection` carries
+    /// `.id(pgn.id)` — the same reset the rename draft gets. Holding it open
+    /// across a selection change would mean lifting the flag above that
+    /// `.id` and threading a binding down, which is more machinery than the
+    /// affordance earns.
+    private var pgnSection: some View {
+        Section(isExpanded: $isShowingPGN) {
+            // The string is built only while the section is open, but the
+            // row is unconditional: this view's body re-runs on every
+            // `queue.currentProgress` tick while *this* game is analyzing,
+            // and `pgnText` rebuilds the whole export string each pass. An
+            // `if` around the row instead would leave the section with no
+            // content to hang a disclosure control on when collapsed.
+            Text(isShowingPGN ? pgn.pgnText : "")
+                .font(.system(.caption, design: .monospaced))
+                .textSelection(.enabled)
+            // A `List` row proposes a height, and a multi-line `Text`
+            // that accepts one collapses to a single truncated line —
+            // which is what this section did until `fixedSize` told it
+            // to take its ideal height instead. Vertical only: the
+            // horizontal proposal still comes from the frame below, so
+            // movetext lines wrap at the inspector's width rather than
+            // running off it. `lineLimit(nil)` is stated beside it
+            // because the truncation reads like an inherited limit, and
+            // the next person to see it will go looking for one.
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier(AccessibilityID.libraryInspectorPGN)
+        } header: {
+            InspectorSectionHeader("PGN") {
+                copyPGNButton
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+    
+    /// Puts the exported bytes on the pasteboard, so a game reaches a mail
+    /// draft or an analysis site without a round trip through the
+    /// filesystem. In the header rather than beside the text so it works
+    /// while the section is collapsed.
+    ///
+    /// `NSPasteboard` because SwiftUI has no pasteboard-write API a button
+    /// action can call: `.copyable(_:)` routes through the system Copy
+    /// command and needs the view focused, which a sidebar section header
+    /// cannot promise. Not an `InspectorEditButton` — that type hardcodes
+    /// the pencil precisely so three inspectors' edit affordances cannot
+    /// drift, and widening it to take a symbol would turn a named affordance
+    /// into a generic icon button and lose exactly that guarantee. Extract
+    /// only if a second copy affordance appears.
+    private var copyPGNButton: some View {
+        Button {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(pgn.pgnText, forType: .string)
+        } label: {
+            Image(systemName: "doc.on.doc")
+        }
+        .buttonStyle(.borderless)
+        // `InspectorEditButton`'s reason: a glyph at header font size is an
+        // ~11 pt mouse target.
+        .font(.body)
+        .padding(.trailing, 8)
+        .help("Copy PGN")
+        .accessibilityLabel("Copy PGN")
+        .accessibilityIdentifier(AccessibilityID.libraryInspectorCopyPGN)
+    }
+    
     // MARK: Instance Methods
     /// Renamed from `nameRow` with the display branch: it is only an editor
     /// now, and the `if` that used to choose between the two moved to the
@@ -272,7 +361,7 @@ private struct LoadedSection: View {
         ),
         queue: AnalysisQueueController()
     )
-    .frame(width: 300, height: 500)
+    .frame(width: 300, height: 700)
 }
 
 #Preview("Custom Name") {
@@ -288,10 +377,37 @@ private struct LoadedSection: View {
         ),
         queue: AnalysisQueueController()
     )
-    .frame(width: 300, height: 500)
+    .frame(width: 300, height: 700)
 }
 
 #Preview("Empty") {
     LibraryInspectorView(queue: AnalysisQueueController())
-        .frame(width: 300, height: 400)
+        .frame(width: 300, height:700)
+}
+
+/// The raw-PGN section against a game that actually has movetext — the other
+/// three previews carry none, so the section renders a tag block over an
+/// empty body in all of them. An odd ply count is the case worth seeing: the
+/// serializer's white-only final line (`4. Qxf7#`), with the mate suffix
+/// emitted verbatim.
+///
+/// The section starts collapsed, as it does in the app; the canvas is live,
+/// so expanding it is a click.
+#Preview("Raw PGN") {
+    LibraryInspectorView(
+        pgn: PGN(
+            event: "Club Championship",
+            site: "Antwerp",
+            date: .now,
+            round: 3,
+            white: "Senol, Bera",
+            black: "Reinaud, Lorenzo",
+            moves: ["e4", "e5", "Bc4", "Nc6", "Qh5", "Nf6", "Qxf7#"],
+            result: .whiteWins,
+            timeControl: "-",
+            board: "DGT 3000448278"
+        ),
+        queue: AnalysisQueueController()
+    )
+    .frame(width: 320, height:700)
 }

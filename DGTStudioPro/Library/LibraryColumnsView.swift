@@ -188,7 +188,7 @@ internal struct LibraryColumnsView: View {
                     }
                 }
             }
-            .padding(16)
+            .padding(CollectionGridMetrics.inset)
         }
     }
     

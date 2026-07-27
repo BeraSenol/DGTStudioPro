@@ -67,7 +67,6 @@ internal enum PGNSerializer {
         }
         out += tag("Board",       board ?? unknownTag)
         out += tag("TimeControl", timeControl ?? noTimeControl)
-        out += tag("TimeControl", timeControl ?? noTimeControl)
         out += "\n"
         out += movetext(moves)
         out += "\(roster.result.rawValue)\n"

@@ -9,27 +9,16 @@ import SwiftUI
 
 internal struct RankingsIconsView: View {
     
-    // MARK: Static Constants
-    private static let columnCount = 6
-    private static let columnSpacing: CGFloat = 16
-    
     // MARK: Stored Properties
     let players: [RankedPlayer]
     @Binding var selectedKey: PlayerStats.ID?
     let onShowInLibrary: (PlayerStats.ID) -> Void
     
-    // MARK: Computed Properties
-    private var columns: [GridItem] {
-        Array(
-            repeating: GridItem(.flexible(minimum: 120), spacing: Self.columnSpacing),
-            count: Self.columnCount
-        )
-    }
-    
     // MARK: Body
     var body: some View {
         ScrollView {
-            LazyVGrid(columns: columns, spacing: Self.columnSpacing) {
+            LazyVGrid(columns: CollectionGridMetrics.columns,
+                      spacing: CollectionGridMetrics.spacing) {
                 ForEach(players) { player in
                     PlayerCardView(
                         stats: player.stats,
@@ -40,7 +29,7 @@ internal struct RankingsIconsView: View {
                     )
                 }
             }
-            .padding(16)
+                      .padding(16)
         }
     }
 }
@@ -58,10 +47,11 @@ internal struct RankingsIconsView: View {
     .frame(width: 860, height: 300)
 }
 
-/// Six fixed columns at a 120pt minimum, so wrapping only shows itself with
-/// more players than one row holds — the width here is deliberately enough
-/// for a full row, since a too-narrow canvas hides the grid's real behaviour
-/// behind horizontal squeeze instead.
+/// The canvas is deliberately wide enough for a full row: wrapping only shows
+/// itself with more players than one row holds, and a too-narrow canvas hides
+/// the grid's real behaviour behind horizontal squeeze instead. The column
+/// count and floor that decide what "a full row" is live in
+/// `CollectionGridMetrics`.
 #Preview("Wraps To Two Rows") {
     @Previewable @State var selection: PlayerStats.ID? = PreviewFixtures.topStats().id
     

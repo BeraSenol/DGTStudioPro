@@ -87,7 +87,7 @@ internal struct LibraryGameCardView: View {
     private var nameLabel: some View {
         Text(game.name)
             .font(.callout)
-            .lineLimit(2)
+            .lineLimit(2, reservesSpace: true)
             .multilineTextAlignment(.center)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)

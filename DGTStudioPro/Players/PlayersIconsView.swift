@@ -9,27 +9,18 @@ import SwiftUI
 
 internal struct PlayersIconsView: View {
     
-    // MARK: Static Constants
-    private static let columnCount = 6
-    private static let columnSpacing: CGFloat = 16
-    
     // MARK: Stored Properties
     let players: [PlayerStats]
     @Binding var selectedKey: PlayerStats.ID?
     let onShowInLibrary: (PlayerStats.ID) -> Void
     
-    // MARK: Computed Properties
-    private var columns: [GridItem] {
-        Array(
-            repeating: GridItem(.flexible(minimum: 120), spacing: Self.columnSpacing),
-            count: Self.columnCount
-        )
-    }
-    
     // MARK: Body
     var body: some View {
         ScrollView {
-            LazyVGrid(columns: columns, spacing: Self.columnSpacing) {
+            LazyVGrid(
+                columns: CollectionGridMetrics.columns, 
+                spacing: CollectionGridMetrics.spacing
+            ) {
                 ForEach(players) { player in
                     PlayerCardView(
                         stats: player,
@@ -39,6 +30,7 @@ internal struct PlayersIconsView: View {
                     )
                 }
             }
+            .padding(CollectionGridMetrics.inset)
         }
     }
 }

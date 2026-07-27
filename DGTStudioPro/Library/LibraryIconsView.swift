@@ -9,11 +9,7 @@ import SwiftData
 import SwiftUI
 
 internal struct LibraryIconsView: View {
-
-    // MARK: Static Constants
-    private static let columnCount = 6
-    private static let columnSpacing: CGFloat = 16
-
+    
     // MARK: Stored Properties
     let games: [PGN]
     @Binding var selectedPGNs: Set<PGN.ID>
@@ -21,19 +17,14 @@ internal struct LibraryIconsView: View {
     let onAnalyze: (PGN) -> Void
     let onExport: (PGN) -> Void
     let onDelete: (PGN) -> Void
-
-    // MARK: Computed Properties
-    private var columns: [GridItem] {
-        Array(
-            repeating: GridItem(.flexible(minimum: 120), spacing: Self.columnSpacing),
-            count: Self.columnCount
-        )
-    }
-
+    
     // MARK: Body
     var body: some View {
         ScrollView {
-            LazyVGrid(columns: columns, spacing: Self.columnSpacing) {
+            LazyVGrid(
+                columns: CollectionGridMetrics.columns,
+                spacing: CollectionGridMetrics.spacing
+            ) {
                 ForEach(games) { game in
                     LibraryGameCardView(
                         game: game,
@@ -46,7 +37,7 @@ internal struct LibraryIconsView: View {
                     )
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(CollectionGridMetrics.inset)
         }
     }
 }
@@ -67,7 +58,7 @@ private func iconsPreviewGames() -> [PGN] {
 
 #Preview("With Games") {
     @Previewable @State var selection: Set<PGN.ID> = []
-
+    
     LibraryIconsView(
         games: iconsPreviewGames(),
         selectedPGNs: $selection,
@@ -81,7 +72,7 @@ private func iconsPreviewGames() -> [PGN] {
 
 #Preview("Empty") {
     @Previewable @State var selection: Set<PGN.ID> = []
-
+    
     LibraryIconsView(
         games: [],
         selectedPGNs: $selection,

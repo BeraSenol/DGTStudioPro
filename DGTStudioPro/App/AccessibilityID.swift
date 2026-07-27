@@ -249,6 +249,13 @@ internal enum AccessibilityID {
     /// though all three are now the same glyph in the same place.
     internal static let libraryInspectorRename = "library.inspector.rename"
     
+    /// The raw-PGN section: the text itself, and the copy affordance in its
+    /// header. Split because the header stays visible while the section is
+    /// collapsed — a test can copy without expanding, which is the point of
+    /// putting the button there rather than beside the text.
+    internal static let libraryInspectorPGN     = "library.inspector.pgn"
+    internal static let libraryInspectorCopyPGN = "library.inspector.pgn.copy"
+    
     /// Analysis-queue toolbar family (M-batch). `queue.status` has a
     /// UITest witness (asserted *absent* while the queue is idle); the
     /// popover internals are manual-checklist territory — clicking
