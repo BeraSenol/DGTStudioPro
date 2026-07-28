@@ -143,16 +143,30 @@ internal actor StockfishEngine {
     // MARK: Lifecycle
     
     /// Spawns the subprocess and performs the UCI handshake (sends
-    /// `uci`, awaits `uciok`; sends `isready`, awaits `readyok`).
-    /// After this returns, the engine is ready to accept analysis
-    /// requests.
+    /// `uci`, awaits `uciok`; sends the configured options, then
+    /// `isready`, awaits `readyok`). After this returns, the engine is
+    /// ready to accept analysis requests.
     ///
     /// Throws `EngineError.startupFailed` when the process exits or goes
-    /// silent before completing the handshake, or when `handshakeTimeout`
+    /// silent before completing the handshake, or when either deadline
     /// elapses first (F4). A failed start leaves nothing behind — the
     /// half-started process is terminated and all state cleared — so the
     /// caller may retry.
-    internal func start(handshakeTimeout: Duration = .seconds(5)) async throws {
+    ///
+    /// The two waits carry separate deadlines because they are different
+    /// in kind. `uciok` is a pure protocol reply — the engine parses one
+    /// word and answers, so a slow one is a broken one. `readyok` is an
+    /// *allocation barrier*: it is the first thing the engine answers
+    /// after `setoption`, so it covers building the transposition table
+    /// (128 MB by default) and sizing the thread pool, which is precisely
+    /// what `isready` exists for in the UCI contract. One constant served
+    /// both only while the options were being sent outside their window
+    /// and silently ignored — the bug fixed 27 July. Making them land
+    /// gave the second wait real work to cover.
+    internal func start(
+        handshakeTimeout: Duration = .seconds(5),
+        readyTimeout: Duration = .seconds(30)
+    ) async throws {
         guard process == nil else {
             Self.logger.error("start() called but engine is already running")
             throw EngineError.alreadyStarted
@@ -247,7 +261,7 @@ internal actor StockfishEngine {
             }
             
             try writeLine("isready")
-            try await awaitHandshake(timeout: handshakeTimeout, awaiting: "readyok") {
+            try await awaitHandshake(timeout: readyTimeout, awaiting: "readyok") {
                 self.readyOKContinuation = $0
             }
         } catch {
@@ -292,6 +306,13 @@ internal actor StockfishEngine {
         // keeps the actor's executor free during the wait. (The clean
         // exit fires `processDidTerminate` during this sleep; it runs
         // `teardown()` itself, and the repeat below is a guarded no-op.)
+        // `try?`, load-bearing: this is the one suspension point on the
+        // teardown path, and a cancelled caller (tab close, cancelled
+        // `.task`) makes it throw immediately. Swallowing that means
+        // cancellation skips the *grace period* and falls straight through to
+        // `terminate()` + `teardown()` — the engine-teardown invariant, upheld
+        // by construction. Any rewrite that returns or rethrows here orphans
+        // the subprocess precisely when the tab is going away.
         try? await Task.sleep(for: .milliseconds(500))
         if proc.isRunning {
             Self.logger.info("Engine did not exit within grace period; force-terminating")

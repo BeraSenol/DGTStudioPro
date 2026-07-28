@@ -71,16 +71,16 @@ internal protocol DGTPortProviding: Actor {
 /// `open` call itself can't hang on modem-control lines; the flag is cleared
 /// immediately afterwards so the readability source behaves like a pipe.
 internal actor DGTSerialPort: DGTPortProviding {
-
+    
     // MARK: Logging
-
+    
     private static let logger = Logger(
         subsystem: "com.berasenol.dgtstudiopro",
         category: "dgt"
     )
-
+    
     // MARK: Errors
-
+    
     internal enum PortError: Error, Equatable {
         case openFailed(errno: Int32)
         case configureFailed(errno: Int32)
@@ -88,30 +88,30 @@ internal actor DGTSerialPort: DGTPortProviding {
         case notOpen
         case writeFailed(errno: Int32)
     }
-
+    
     // MARK: State
-
+    
     private var fileDescriptor: Int32 = -1
     private var fileHandle: FileHandle?
     private var framer = DGTFramer()
     private var eventContinuation: AsyncStream<DGTEvent>.Continuation?
-
+    
     /// Feeds raw chunks from the readability handler to `readLoopTask`, in
     /// arrival order (F2). Finished by the handler on EOF/read-error (F1)
     /// or by `close()`.
     private var byteContinuation: AsyncStream<Data>.Continuation?
-
+    
     /// The single actor-isolated consumer of the byte stream. Ends when the
     /// byte stream finishes; `readSourceEnded()` then decides whether that
     /// end was deliberate.
     private var readLoopTask: Task<Void, Never>?
-
+    
     internal init() {}
-
+    
     internal var isOpen: Bool { fileDescriptor >= 0 }
-
+    
     // MARK: Open / Close
-
+    
     /// Opens and configures the serial device at `path`, starts the ordered
     /// inbound pipeline, and returns a stream of decoded events. The stream
     /// finishes when the port closes — explicitly, or because the device
@@ -121,28 +121,28 @@ internal actor DGTSerialPort: DGTPortProviding {
             Self.logger.error("open() called while already open")
             throw PortError.alreadyOpen
         }
-
+        
         let fd = path.withCString { Darwin.open($0, O_RDWR | O_NOCTTY | O_NONBLOCK) }
         guard fd >= 0 else {
             let err = errno
             Self.logger.error("open(\(path, privacy: .public)) failed: errno=\(err, privacy: .public)")
             throw PortError.openFailed(errno: err)
         }
-
+        
         do {
             try configure(fd)
         } catch {
             Darwin.close(fd)
             throw error
         }
-
+        
         fileDescriptor = fd
         framer = DGTFramer()
-
+        
         // The ordered byte pipeline (F2) — see the type doc.
         let (bytes, byteContinuation) = AsyncStream.makeStream(of: Data.self)
         self.byteContinuation = byteContinuation
-
+        
         let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: false)
         // Raw `read(2)` instead of `availableData` (F1) — see the type doc.
         // The closure captures no `self`: it only bridges bytes (and the
@@ -165,47 +165,53 @@ internal actor DGTSerialPort: DGTPortProviding {
             }
         }
         fileHandle = handle
-
+        
         // One long-lived, actor-isolated consumer: `ingest` runs here, on
         // the actor, in stream order. (An unstructured `Task` created in an
         // actor-isolated method inherits the actor's isolation.)
+        // Load-bearing ordering: this task is created before `eventContinuation`
+        // is assigned (by the `AsyncStream` build closure below), and is safe
+        // only because a `Task` created in actor-isolated code cannot run until
+        // this synchronous stretch yields the actor. Introducing any `await`
+        // between here and the `return` lets `ingest` run first, and
+        // `eventContinuation?.yield(event)` would drop those events silently.
         readLoopTask = Task {
             for await chunk in bytes {
                 ingest(chunk)
             }
             readSourceEnded()
         }
-
+        
         Self.logger.info("Opened serial port \(path, privacy: .public) (fd=\(fd))")
-
+        
         return AsyncStream { continuation in
             self.eventContinuation = continuation
         }
     }
-
+    
     /// Closes the port, finishes the event stream, and resets all state. Safe
     /// to call when not open (no-op).
     internal func close() {
         guard fileDescriptor >= 0 else { return }
         Self.logger.info("Closing serial port (fd=\(self.fileDescriptor))")
-
+        
         fileHandle?.readabilityHandler = nil
         fileHandle = nil
         Darwin.close(fileDescriptor)
         fileDescriptor = -1
-
+        
         // End the byte pipeline; `readLoopTask` drains what's buffered and
         // exits on its own (`readSourceEnded()` sees fd == -1 and stands
         // down — late frames yield into a finished event stream, harmlessly).
         byteContinuation?.finish()
         byteContinuation = nil
         readLoopTask = nil
-
+        
         eventContinuation?.finish()
         eventContinuation = nil
         framer = DGTFramer()
     }
-
+    
     /// Runs when the byte stream finishes. If `close()` initiated it, the fd
     /// is already -1 and everything is torn down — nothing to do. Otherwise
     /// the device vanished or the read failed (F1): close the port ourselves,
@@ -215,9 +221,9 @@ internal actor DGTSerialPort: DGTPortProviding {
         Self.logger.error("Serial read source ended (device vanished or read failed) — closing port")
         close()
     }
-
+    
     // MARK: Write
-
+    
     /// Sends a single-byte command to the board.
     internal func send(_ command: DGTCommand) throws {
         guard fileDescriptor >= 0 else {
@@ -235,9 +241,9 @@ internal actor DGTSerialPort: DGTPortProviding {
         }
         Self.logger.debug("send command 0x\(String(command.rawValue, radix: 16), privacy: .public)")
     }
-
+    
     // MARK: Inbound
-
+    
     /// Feeds received bytes through the framer + decoder and yields any
     /// resulting events. Runs only on `readLoopTask`, in chunk-arrival
     /// order (F2).
@@ -253,9 +259,9 @@ internal actor DGTSerialPort: DGTPortProviding {
             eventContinuation?.yield(event)
         }
     }
-
+    
     // MARK: termios Configuration
-
+    
     /// Configures the fd for 9600 8N1 raw, no flow control, then clears the
     /// non-blocking flag used during `open`.
     private func configure(_ fd: Int32) throws {
@@ -263,22 +269,22 @@ internal actor DGTSerialPort: DGTPortProviding {
         guard tcgetattr(fd, &settings) == 0 else {
             throw PortError.configureFailed(errno: errno)
         }
-
+        
         cfmakeraw(&settings)                       // raw: no canonical, echo, signals
         cfsetispeed(&settings, speed_t(B9600))
         cfsetospeed(&settings, speed_t(B9600))
-
+        
         settings.c_cflag |= tcflag_t(CLOCAL | CREAD)   // ignore modem ctrl, enable receiver
         settings.c_cflag &= ~tcflag_t(PARENB)          // no parity      ┐
         settings.c_cflag &= ~tcflag_t(CSTOPB)          // 1 stop bit     ├ 8N1
         settings.c_cflag &= ~tcflag_t(CSIZE)           //                │
         settings.c_cflag |= tcflag_t(CS8)              // 8 data bits    ┘
         settings.c_cflag &= ~tcflag_t(CRTSCTS)         // no hardware flow control
-
+        
         guard tcsetattr(fd, TCSANOW, &settings) == 0 else {
             throw PortError.configureFailed(errno: errno)
         }
-
+        
         // Drop O_NONBLOCK so the readability source behaves like a pipe (the
         // handler only fires when bytes are actually ready).
         let flags = fcntl(fd, F_GETFL)

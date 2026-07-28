@@ -101,10 +101,10 @@ private struct LoadedSection: View {
                 ) {
                     beginEdit()
                 }
+                .padding(.trailing, 8)
             }
             
             evaluationSection
-            
             pgnSection
         }
     }
@@ -125,7 +125,6 @@ private struct LoadedSection: View {
     /// a member of the Edit Info family.
     private var identitySection: some View {
         Section {
-            openButton
             if isEditingName {
                 nameEditor
             }
@@ -133,18 +132,17 @@ private struct LoadedSection: View {
     }
     
     // MARK: Open Affordance
-    
     /// "Open" button in the Library inspector. Asks macOS to open a
     /// window for this game's `persistentModelID`. macOS handles dedup —
     /// re-clicking activates the existing window. With "Prefer Tabs:
     /// Always," multiple opened games merge as native tabs of one window.
-    private var openButton: some View {
+    private var reviewButton: some View {
         Button {
             openWindow(value: pgn.persistentModelID)
         } label: {
-            Label("Open", systemImage: "checkerboard.rectangle")
+            Label("Review", systemImage: "checkerboard.rectangle")
         }
-        .help("Open this game in a new window")
+        .help("Review this game in a new window")
     }
     
     // MARK: Evaluation Section
@@ -161,7 +159,12 @@ private struct LoadedSection: View {
             .frame(height: 100)
             .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
             
-            analysisControlRow
+            HStack {
+                Spacer()
+                reviewButton
+                analysisControlRow
+                Spacer()
+            }
         } header: {
             Text("Evaluation")
         }
@@ -246,9 +249,14 @@ private struct LoadedSection: View {
     ///
     /// Last, and collapsed by default: it is the longest section and the
     /// least often wanted, so the inspector's first screenful is unchanged.
-    /// `Section(isExpanded:)` is the platform sidebar disclosure — a
-    /// `DisclosureGroup` nested inside a section would give one control two
-    /// sets of chrome.
+    ///
+    /// The collapse is a plain `if`, not `Section(isExpanded:)`. The platform
+    /// control only appears on hover, and a section whose one affordance is
+    /// invisible until the pointer happens to cross it is a section that
+    /// reads as a truncated line of text — which is exactly how this one
+    /// read. Every other section in this inspector is a plain `Section` with
+    /// no disclosure chrome, so dropping the binding leaves no native control
+    /// to collide with the one drawn here.
     ///
     /// Expansion resets per game, because `LoadedSection` carries
     /// `.id(pgn.id)` — the same reset the rename draft gets. Holding it open
@@ -256,36 +264,74 @@ private struct LoadedSection: View {
     /// `.id` and threading a binding down, which is more machinery than the
     /// affordance earns.
     private var pgnSection: some View {
-        Section(isExpanded: $isShowingPGN) {
-            // The string is built only while the section is open, but the
-            // row is unconditional: this view's body re-runs on every
+        Section {
+            // The `if` *is* the collapse now, so it also does the gating the
+            // ternary used to: this view's body re-runs on every
             // `queue.currentProgress` tick while *this* game is analyzing,
-            // and `pgnText` rebuilds the whole export string each pass. An
-            // `if` around the row instead would leave the section with no
-            // content to hang a disclosure control on when collapsed.
-            Text(isShowingPGN ? pgn.pgnText : "")
-                .font(.system(.caption, design: .monospaced))
-                .textSelection(.enabled)
-            // A `List` row proposes a height, and a multi-line `Text`
-            // that accepts one collapses to a single truncated line —
-            // which is what this section did until `fixedSize` told it
-            // to take its ideal height instead. Vertical only: the
-            // horizontal proposal still comes from the frame below, so
-            // movetext lines wrap at the inspector's width rather than
-            // running off it. `lineLimit(nil)` is stated beside it
-            // because the truncation reads like an inherited limit, and
-            // the next person to see it will go looking for one.
-                .lineLimit(nil)
-                .fixedSize(horizontal: false, vertical: true)
-                .multilineTextAlignment(.leading)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .accessibilityIdentifier(AccessibilityID.libraryInspectorPGN)
+            // and `pgnText` rebuilds the whole export string each pass.
+            if isShowingPGN {
+                rawPGNText
+            }
         } header: {
             InspectorSectionHeader("PGN") {
-                copyPGNButton
+                // `InspectorSectionHeader` stacks its actions at spacing 0 —
+                // right for a lone pencil, flush for two glyphs.
+                HStack(spacing: 12) {
+                    copyPGNButton
+                    disclosureButton
+                }
+                .padding(.trailing, 8)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+    
+    /// The bytes themselves, extracted so the section body is the shape of
+    /// the decision — open or not — rather than a modifier chain wrapped in
+    /// an `if`.
+    private var rawPGNText: some View {
+        Text(pgn.pgnText)
+            .font(.system(.caption, design: .monospaced))
+            .textSelection(.enabled)
+        // A `List` row proposes a height, and a multi-line `Text` that
+        // accepts one collapses to a single truncated line — which is
+        // what this section did until `fixedSize` told it to take its
+        // ideal height instead. Vertical only: the horizontal proposal
+        // still comes from the frame below, so movetext lines wrap at
+        // the inspector's width rather than running off it.
+        // `lineLimit(nil)` is stated beside it because the truncation
+        // reads like an inherited limit, and the next person to see it
+        // will go looking for one.
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityIdentifier(AccessibilityID.libraryInspectorPGN)
+    }
+    
+    /// The always-visible disclosure. One chevron rotated rather than two
+    /// symbols swapped, so the state change is a continuous motion the eye
+    /// tracks instead of a substitution it has to re-read — and so there is
+    /// one glyph to keep consistent if a second collapsible section ever
+    /// wants the same control.
+    ///
+    /// Leading of the copy button, which keeps the *action* glyph rightmost
+    /// where the roster header above puts its rename pencil.
+    private var disclosureButton: some View {
+        Button {
+            withAnimation(.snappy(duration: 0.2)) {
+                isShowingPGN.toggle()
+            }
+        } label: {
+            Image(systemName: "chevron.right")
+                .rotationEffect(.degrees(isShowingPGN ? 90 : 0))
+        }
+        .buttonStyle(.borderless)
+        // `InspectorEditButton`'s reason: a glyph at header font size is an
+        // ~11 pt mouse target.
+        .font(.body)
+        .help(isShowingPGN ? "Hide PGN" : "Show PGN")
+        .accessibilityLabel(isShowingPGN ? "Hide PGN" : "Show PGN")
+        .accessibilityIdentifier(AccessibilityID.libraryInspectorPGNDisclosure)
     }
     
     /// Puts the exported bytes on the pasteboard, so a game reaches a mail
@@ -312,7 +358,6 @@ private struct LoadedSection: View {
         // `InspectorEditButton`'s reason: a glyph at header font size is an
         // ~11 pt mouse target.
         .font(.body)
-        .padding(.trailing, 8)
         .help("Copy PGN")
         .accessibilityLabel("Copy PGN")
         .accessibilityIdentifier(AccessibilityID.libraryInspectorCopyPGN)

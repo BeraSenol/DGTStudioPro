@@ -72,8 +72,15 @@ internal struct FEN: Equatable, Sendable {
 // MARK: Move Generation
 
 extension FEN {
-    /// Legal moves from this position — a convenience that round-trips
-    /// through `GameState`, whose generator is the single source of legality.
+    /// Legal moves from this position, via `GameState` — the single source of
+    /// legality.
+    ///
+    /// **Test-only by decision, not rot.** No production caller: every app path
+    /// already holds a `GameState`. It is kept because it is the one symbol
+    /// that exercises the `FEN` → `GameState` conversion init against real
+    /// generation, so a drift between the two six-field shapes fails a test
+    /// rather than surfacing as a wrong move list somewhere downstream. See
+    /// the waiver register's "test-only by decision" list.
     internal func legalMoves() -> [Move] {
         GameState(self).legalMoves()
     }

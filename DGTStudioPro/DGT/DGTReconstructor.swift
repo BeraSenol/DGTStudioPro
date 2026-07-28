@@ -214,8 +214,12 @@ internal enum DGTReconstructor {
     
     /// The promoted piece type if this looks like a promotion (a pawn left
     /// `from` and a non-pawn of the mover's color sits on `to`), else nil.
-    /// Underpromotion is assumed never to occur physically, so the detected
-    /// piece is read directly (effectively always a queen).
+    ///
+    /// The arrived piece is read off the board rather than assumed, which is
+    /// what makes underpromotion work: a physical board has no channel for
+    /// "I intend a rook" other than the player putting a rook there, so the
+    /// square *is* the declaration. In practice it is a queen every time —
+    /// that is a fact about players, not a constraint this function may take.
     private static func promotionType(
         from: Square,
         to: Square,

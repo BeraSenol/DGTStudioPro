@@ -257,7 +257,6 @@ internal struct BoardDestination: View {
             perspective:      tabState.boardPerspective,
             lastMove:         lastMove,
             checkSquare:      checkSquare,
-            selectedSquare:   nil,
             ghostSquare:      ghostSquare,
             ghostPiece:       ghostPiece,
             attentionSquares: attentionSquares,

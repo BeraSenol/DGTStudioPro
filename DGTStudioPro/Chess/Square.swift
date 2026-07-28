@@ -55,17 +55,23 @@ extension Square {
     /// for the a–h / 1–8 convention after these tables and
     /// `fromAlgebraicNotation`.
     internal static func file(from character: Character) -> Int? {
-        index(of: character, base: "a")
+        index(of: character, base: "a", in: Square.files)
     }
     
     internal static func rank(from character: Character) -> Int? {
-        index(of: character, base: "1")
+        index(of: character, base: "1", in: Square.ranks)
     }
     
-    private static func index(of character: Character, base: Unicode.Scalar) -> Int? {
+    /// `bounds` is passed rather than assumed: this helper serves both
+    /// `file(from:)` and `rank(from:)`, and hardcoding `Square.files` made the
+    /// rank path bounds-check against the file range. Identical values today —
+    /// which is the state a shared constant drifts out of.
+    private static func index(
+        of character: Character, base: Unicode.Scalar, in bounds: Range<Int>
+    ) -> Int? {
         guard let value = character.asciiValue else { return nil }
         let index = Int(value) - Int(UInt8(ascii: base))
-        return Square.files.contains(index) ? index : nil
+        return bounds.contains(index) ? index : nil
     }
     
     private static let algebraicNotationTable: [String] = {

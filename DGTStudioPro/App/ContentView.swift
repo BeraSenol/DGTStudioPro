@@ -112,6 +112,7 @@ internal struct ContentView: View {
                             editorDraft = TagDraft()
                         } label: {
                             Image(systemName: "plus")
+                                .padding(.trailing, 8)
                         }
                         .buttonStyle(.borderless)
                         .help("New Smart Tag")

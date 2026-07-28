@@ -33,14 +33,17 @@ internal struct DiagnosticsCommands: Commands {
     
     internal var body: some Commands {
         CommandMenu("Diagnostics") {
-            Button("Export Session Log") {
+            // Ellipsis per HIG: this opens an NSSavePanel rather than acting
+            // immediately. Same for the stop-and-export item below; "Start
+            // Board Recording" correctly has none.
+            Button("Export Session Log…") {
                 sessionLog.exportViaSavePanel()
             }
             
             Divider()
             
             if connection.isRecording {
-                Button("Stop & Export Board Recording") {
+                Button("Stop & Export Board Recording…") {
                     guard let recording = connection.stopRecording() else {
                         return
                     }

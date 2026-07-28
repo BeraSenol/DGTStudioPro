@@ -365,6 +365,10 @@ internal struct PGNStore {
                 throw Error.malformedPGN(reason: "Unbalanced braces in movetext")
             case .unbalancedParentheses:
                 throw Error.malformedPGN(reason: "Unbalanced parentheses in movetext")
+            case .multipleGames:
+                throw Error.malformedPGN(
+                    reason: "This file contains more than one game. Split it into one game per file."
+                )
             }
         }
     }

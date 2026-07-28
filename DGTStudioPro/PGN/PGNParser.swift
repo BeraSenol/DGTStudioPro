@@ -50,6 +50,13 @@ internal enum PGNParser {
         case missingRequiredTags(Set<String>)
         case unbalancedBraces
         case unbalancedParentheses
+        /// The file holds more than one game. `parse` returns a single `PGN`,
+        /// and the movetext scanner has no notion of SAN shape — every token
+        /// that isn't a result token becomes a move — so without this the
+        /// second game's `[Event "…"]` block would be stored as plies and the
+        /// row would import silently corrupt. Refusing is the honest answer
+        /// until a splitting importer exists.
+        case multipleGames
     }
     
     // MARK: Entry Point
@@ -68,6 +75,13 @@ internal enum PGNParser {
                 """
             )
             throw Error.missingRequiredTags(missing)
+        }
+        
+        // A tag pair can only open a *new* game once the movetext has begun —
+        // legal movetext never starts a line with `[Key "`. See `Error.multipleGames`.
+        if containsTagPairLine(movetextSection) {
+            logger.error("Parse failed: file contains more than one game")
+            throw Error.multipleGames
         }
         
         let (moves, evaluations) = try parseMovesAndEvaluations(from: movetextSection)
@@ -342,6 +356,17 @@ internal enum PGNParser {
         text
             .replacingOccurrences(of: "\r\n", with: "\n")
             .replacingOccurrences(of: "\r", with: "\n")
+    }
+    
+    /// Whether any line of `text` opens a PGN tag pair. Used to detect a
+    /// second game inside what should be one game's movetext; deliberately
+    /// line-anchored, since `[` inside a brace comment is legal and common.
+    private static func containsTagPairLine(_ text: String) -> Bool {
+        text.components(separatedBy: .newlines).contains { line in
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard trimmed.hasPrefix("["), trimmed.hasSuffix("]") else { return false }
+            return parseTag(trimmed) != nil
+        }
     }
     
     private static func splitSections(_ text: String) -> (tags: String, movetext: String) {

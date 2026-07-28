@@ -291,8 +291,7 @@ private struct Layout {
         style: .leather,
         perspective: .white,
         lastMove: nil,
-        checkSquare: nil,
-        selectedSquare: nil
+        checkSquare: nil
     )
     .frame(width: 800, height: 800)
 }
@@ -304,8 +303,7 @@ private struct Layout {
         style: .rosewood,
         perspective: .white,
         lastMove: nil,
-        checkSquare: nil,
-        selectedSquare: nil
+        checkSquare: nil
     )
     .frame(width: 800, height: 800)
 }
@@ -317,8 +315,7 @@ private struct Layout {
         style: .walnut,
         perspective: .white,
         lastMove: nil,
-        checkSquare: nil,
-        selectedSquare: nil
+        checkSquare: nil
     )
     .frame(width: 800, height: 800)
 }
@@ -330,8 +327,7 @@ private struct Layout {
         style: .wenge,
         perspective: .white,
         lastMove: nil,
-        checkSquare: nil,
-        selectedSquare: nil
+        checkSquare: nil
     )
     .frame(width: 800, height: 800)
 }
@@ -353,7 +349,6 @@ private struct Layout {
         perspective: .white,
         lastMove: LastMove(from: Squares.e1, to: Squares.g1),
         checkSquare: nil,
-        selectedSquare: nil,
         ghostSquare: Squares.f1,
         ghostPiece: .whiteRook
     )
@@ -376,7 +371,6 @@ private struct Layout {
         perspective: .black,
         lastMove: LastMove(from: Squares.e8, to: Squares.c8),
         checkSquare: nil,
-        selectedSquare: nil,
         ghostSquare: Squares.d8,
         ghostPiece: .blackRook
     )

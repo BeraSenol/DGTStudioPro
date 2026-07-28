@@ -256,6 +256,12 @@ internal enum AccessibilityID {
     internal static let libraryInspectorPGN     = "library.inspector.pgn"
     internal static let libraryInspectorCopyPGN = "library.inspector.pgn.copy"
     
+    /// The section's own disclosure control. It exists because the platform
+    /// one doesn't: a `Section(isExpanded:)` in a sidebar `List` reveals its
+    /// chevron on hover, and a section nobody can see is collapsible is a
+    /// section nobody expands.
+    internal static let libraryInspectorPGNDisclosure = "library.inspector.pgn.disclosure"
+    
     /// Analysis-queue toolbar family (M-batch). `queue.status` has a
     /// UITest witness (asserted *absent* while the queue is idle); the
     /// popover internals are manual-checklist territory — clicking

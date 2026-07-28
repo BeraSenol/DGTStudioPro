@@ -209,7 +209,16 @@ internal final class DGTConnection {
     /// Enumerates attached serial devices for the connect dialog. Synchronous
     /// and cheap; the "progress bar while searching" UX is the dialog's, since
     /// IOKit enumeration returns immediately.
+    /// Precondition: not currently connected. `search()` demotes `status` to
+    /// `.searching` without tearing the port down, and `handle(_:)` only
+    /// promotes to `.connected` from `.connecting` / `.reconnecting` — so
+    /// calling this on a live board strands the UI in `.searching` while the
+    /// session keeps committing moves off a port nobody thinks is open. The
+    /// connect dialog upholds this today (`onAppear` guards on `isConnected`,
+    /// and Rescan only exists in the disconnected footers); the assertion puts
+    /// the invariant on the object that owns the status rather than on a view.
     internal func search() {
+        assert(!isConnected, "search() while connected strands status in .searching")
         cancelReconnect()
         cancelErrorClear()
         status = .searching

@@ -264,7 +264,14 @@ internal final class DGTLiveSession {
     
     // MARK: Private State
     
-    @ObservationIgnored private var quiescenceTask: Task<Void, Never>?
+    /// The armed settle. Readable — never writable — outside the type so
+    /// tests can `await` the settle itself instead of polling a wall clock
+    /// for its side effects (F7). Under a full ⌘U a dozen `@MainActor`
+    /// suites share one actor, so a 10 ms timer lags arbitrarily and any
+    /// fixed ceiling is a guess that a loaded machine eventually beats;
+    /// awaiting the task makes scheduling delay extend the wait instead of
+    /// failing the run. Only `boardChanged` assigns it.
+    @ObservationIgnored private(set) var quiescenceTask: Task<Void, Never>?
     
     /// The stillness window between the last field update and a
     /// reconstruction attempt — long enough that the player's hand has left
@@ -393,8 +400,7 @@ internal final class DGTLiveSession {
             // *next* settle to flag recovery one move late under a
             // misleading breadcrumb (F5). Fail loudly, on the spot.
             guard game.commit(move) else {
-                sessionLog?.record(
-                    .error,
+                recordError(
                     "settle: commit refused reconstructed move "
                     + "\(move.from.algebraicNotation)→\(move.to.algebraicNotation) — entering recovery"
                 )
@@ -498,8 +504,7 @@ internal final class DGTLiveSession {
         // in the UI: starting fresh would overwrite the draft that is the
         // finished game's only safety net (requirements 6/8 — never lost).
         guard !archiveFailed else {
-            sessionLog?.record(
-                .error,
+            recordError(
                 "New game refused: the finished game hasn't been saved yet — retry or discard first"
             )
             return

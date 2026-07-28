@@ -77,7 +77,12 @@ extension FEN {
             var file = 0
             
             for char in rankString {
-                if let digit = char.wholeNumberValue, (1...8).contains(digit) {
+                // ASCII-only: `wholeNumberValue` is true for `٥`, `Ⅷ`, `五` and the
+                // fullwidth forms, each of which would parse as an empty-square run.
+                // The draft sidecar is user-editable (`LiveGame+Draft` resumes through
+                // this parser), so this is the untrusted-file boundary the `[%eval …]`
+                // lesson names, not a theoretical one.
+                if char.isASCII, let digit = char.wholeNumberValue, (1...8).contains(digit) {
                     file += digit
                     if file > 8 { throw FENParseError.malformedPlacement(field) }
                 } else if let piece = pieceFromFENCharacter(char) {
@@ -148,7 +153,10 @@ extension FEN {
     
     /// Parses the halfmove clock. Must be a non-negative integer.
     private static func parseHalfmoveClock(_ field: String) throws(FENParseError) -> Int {
-        guard let value = Int(field), value >= 0 else {
+        // Digits only: `Int(_:)` accepts a leading sign, so `+5` and `-0` would both
+        // pass the range test below while being malformed FEN.
+        guard field.allSatisfy(\.isASCII), field.allSatisfy(\.isNumber),
+              let value = Int(field), value >= 0 else {
             throw FENParseError.malformedInteger(field)
         }
         return value
@@ -157,7 +165,9 @@ extension FEN {
     /// Parses the fullmove number. Must be a positive integer (FEN spec
     /// requires fullmove ≥ 1; the starting position has fullmove 1).
     private static func parseFullmoveNumber(_ field: String) throws(FENParseError) -> Int {
-        guard let value = Int(field), value >= 1 else {
+        // Digits only — see `parseHalfmoveClock`. `+1` is not a fullmove number.
+        guard field.allSatisfy(\.isASCII), field.allSatisfy(\.isNumber),
+              let value = Int(field), value >= 1 else {
             throw FENParseError.malformedInteger(field)
         }
         return value

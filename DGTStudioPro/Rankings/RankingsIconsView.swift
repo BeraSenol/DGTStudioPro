@@ -17,8 +17,10 @@ internal struct RankingsIconsView: View {
     // MARK: Body
     var body: some View {
         ScrollView {
-            LazyVGrid(columns: CollectionGridMetrics.columns,
-                      spacing: CollectionGridMetrics.spacing) {
+            LazyVGrid(
+                columns: CollectionGridMetrics.columns,
+                spacing: CollectionGridMetrics.spacing
+            ) {
                 ForEach(players) { player in
                     PlayerCardView(
                         stats: player.stats,
@@ -29,7 +31,7 @@ internal struct RankingsIconsView: View {
                     )
                 }
             }
-                      .padding(16)
+            .padding(CollectionGridMetrics.inset)
         }
     }
 }

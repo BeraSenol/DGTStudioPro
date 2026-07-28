@@ -58,7 +58,16 @@ struct DGTLiveSessionTests {
             if condition() { return }
             try await Task.sleep(for: .milliseconds(25))
         }
-        #expect(condition(), "Timed out after \(timeout) waiting for condition")
+    }
+    /// Awaits the armed settle, so everything after it observes a settle
+    /// that has *definitely* run — deterministic, with no clock and no
+    /// ceiling to re-guess (F7 superseded: a 2 s poll flaked, and so did
+    /// its 5 s replacement). The `#require` is the vacuity guard: a nil
+    /// task means no `boardChanged` preceded this call, and awaiting it
+    /// would pass for the wrong reason.
+    private func settled(_ session: DGTLiveSession) async throws {
+        try await #require(session.quiescenceTask).value.self
+        await session.quiescenceTask?.value
     }
     
     // MARK: Idle

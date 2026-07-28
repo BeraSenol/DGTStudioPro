@@ -109,6 +109,14 @@ internal enum MovetextEdit {
             return .failure(.claimsCheckmateButPositionIsNot(san: last))
         }
         
+        // Decision #3 first: `*` is refused regardless of the final position,
+        // so checking it after the position-forced block only meant a `*` on a
+        // real mate was reported as a checkmate-result mismatch — true, but not
+        // the sentence the user needs.
+        guard claimedResult != .ongoing else {
+            return .failure(.resultRequiresDecision)
+        }
+        
         // Position-forced results.
         if state.isCheckmate {
             let winner: GameResult = state.activeColor == .white ? .blackWins : .whiteWins
@@ -119,11 +127,6 @@ internal enum MovetextEdit {
             guard claimedResult == .draw else {
                 return .failure(.stalemateRequiresDraw(claimed: claimedResult))
             }
-        }
-        
-        // Never a finished game.
-        guard claimedResult != .ongoing else {
-            return .failure(.resultRequiresDecision)
         }
         
         return .success(Accepted(moves: canonical, finalState: state))

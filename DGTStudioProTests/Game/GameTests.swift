@@ -65,10 +65,15 @@ struct GameTests {
             _ = try Game(pgn: pgn)
             Issue.record("Expected throw on malformed SAN")
         } catch let Game.BuildError.invalidMove(index, san, _) {
+            // Total, not merely first-matching: `Game.init` is
+            // `throws(BuildError)` and `BuildError` has exactly one case, so
+            // the compiler proves this arm exhaustive and an untyped `catch`
+            // after it is dead code. Same call the production loader made at
+            // `BoardDestination.loadIfNeeded`. If a second `BuildError` case
+            // is ever added, this stops compiling — which is the right
+            // failure, since the new case would need its own assertion.
             #expect(index == 1)
             #expect(san == "garbage")
-        } catch {
-            Issue.record("Expected Game.BuildError.invalidMove, got \(error)")
         }
     }
     

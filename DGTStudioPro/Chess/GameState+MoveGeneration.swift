@@ -309,6 +309,18 @@ extension GameState {
         guard castlingRights.has(color, .kingSide)
                 || castlingRights.has(color, .queenSide) else { return }
         
+        // Rights imply a rook on its home corner for any position reached
+        // through `applying` — the revocation rules maintain that. They do
+        // *not* imply it for a position parsed from a FEN, and the draft
+        // sidecar resumes through `FEN(parsing:)`, so a hand-edited file can
+        // hand us `KQ` with a bare back rank. Without this, `O-O` is generated
+        // and `Position.applying` copies an empty square onto f1.
+        // Free for perft: in a legal position the test is always true, so
+        // neither the generated set nor its order changes.
+        let homeRook = Piece(color, .rook)
+        let kingSideRookHome:  Square = color == .white ? Squares.h1 : Squares.h8
+        let queenSideRookHome: Square = color == .white ? Squares.a1 : Squares.a8
+        
         // Cannot castle out of check.
         guard !position.isSquareAttacked(square, by: color.opponent) else { return }
         
@@ -316,7 +328,8 @@ extension GameState {
         if castlingRights.has(color, .kingSide) {
             let f: Square = color == .white ? Squares.f1 : Squares.f8
             let g: Square = color == .white ? Squares.g1 : Squares.g8
-            if !position[f].isOccupied
+            if position[kingSideRookHome] == homeRook
+                && !position[f].isOccupied
                 && !position[g].isOccupied
                 && !position.isSquareAttacked(f, by: color.opponent) {
                 moves.append(Move.make(
@@ -332,7 +345,8 @@ extension GameState {
             let b: Square = color == .white ? Squares.b1 : Squares.b8
             let c: Square = color == .white ? Squares.c1 : Squares.c8
             let d: Square = color == .white ? Squares.d1 : Squares.d8
-            if !position[b].isOccupied
+            if position[queenSideRookHome] == homeRook
+                && !position[b].isOccupied
                 && !position[c].isOccupied
                 && !position[d].isOccupied
                 && !position.isSquareAttacked(d, by: color.opponent) {

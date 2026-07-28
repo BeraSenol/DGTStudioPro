@@ -31,12 +31,20 @@ internal struct LibraryGameCardView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding()
         .contentShape(Rectangle())
-        // Double-tap first so SwiftUI's gesture-disambiguation pipeline
-        // routes a second click to `onOpen`; the single-tap fallback
-        // selects. Single-click incurs the standard macOS double-click
-        // interval (~250 ms) of latency, which matches Finder/Mail.
+        // Selection is a `simultaneousGesture`, not a second `onTapGesture`,
+        // so it can never be the *loser* in gesture disambiguation. Two
+        // sequential taps made SwiftUI hold the single click for the full
+        // double-click interval before it could rule out a second — and that
+        // is not what AppKit does: `NSTableView` and Finder select on
+        // mouse-down and only the open action waits. Simultaneous recognition
+        // restores that shape; `onOpen` still fires on the second click.
+        //
+        // Consequence: a double-click runs `onSelect` first (and possibly
+        // again on the second tap). Every call site assigns
+        // `selectedPGNs = [game.id]`, so it is idempotent by construction —
+        // and select-then-open is Finder's order anyway.
         .onTapGesture(count: 2, perform: onOpen)
-        .onTapGesture(perform: onSelect)
+        .simultaneousGesture(TapGesture().onEnded { onSelect() })
         .contextMenu {
             Button(action: onOpen) {
                 Label("Open in Board", systemImage: "checkerboard.rectangle")
