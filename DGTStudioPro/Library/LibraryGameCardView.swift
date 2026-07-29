@@ -21,7 +21,7 @@ internal struct LibraryGameCardView: View {
     
     // MARK: Body
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 5) {
             documentIcon
             nameLabel
             Text(game.displayDate)
@@ -29,7 +29,6 @@ internal struct LibraryGameCardView: View {
                 .foregroundStyle(.tint)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding()
         .contentShape(Rectangle())
         // Selection is a `simultaneousGesture`, not a second `onTapGesture`,
         // so it can never be the *loser* in gesture disambiguation. Two
@@ -75,14 +74,15 @@ internal struct LibraryGameCardView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .foregroundStyle(.white)
-                .frame(width: 96, height: 96)
+                .frame(width: 80)
                 .fontWeight(.ultraLight)
+                .padding(.leading, 6)
             
             Text(displayResult(game.result))
                 .font(.system(size: 18, weight: .semibold, design: .monospaced))
                 .foregroundStyle(.white)
                 .tracking(game.result == .draw ? 4 : 2)
-                .offset(y: 4)
+                .offset(x: 2, y: 4)
         }
         .padding()
         .background {
@@ -95,13 +95,12 @@ internal struct LibraryGameCardView: View {
     private var nameLabel: some View {
         Text(game.name)
             .font(.callout)
-            .lineLimit(2, reservesSpace: true)
+            .lineLimit(3)
             .multilineTextAlignment(.center)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .frame(width: 126)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
             .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .fill(isSelected ? Color.accentColor : .clear)
             )
             .foregroundStyle(isSelected ? Color.white : .primary)
@@ -210,9 +209,9 @@ private func sampleGame(
             game: sampleGame(
                 white: "Fischer",
                 black: "Spassky",
-                name: "Game of the Century"
+                name: "Game of the Century But With a Longer Text"
             ),
-            isSelected: false,
+            isSelected: true,
             onSelect: {},
             onOpen: {},
             onAnalyze: {},

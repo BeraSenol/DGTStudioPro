@@ -423,4 +423,74 @@ struct DGTReconstructorTests {
         )
         #expect(DGTReconstructor.reconstruct(from: start, physical: final) == .unresolved)
     }
+
+    // MARK: Field DESYNC Fixtures (20 July 2026)
+
+    /// The first of the two field-session desyncs (M1 item 19): with the
+    /// white king on e2 and the black queen on a3 along a clear third
+    /// rank, the king landed on f3 — a single-piece diff whose only
+    /// pairing (e2→f3) walks straight into the queen's rank, so no legal
+    /// move matches and reconstruction must land on `.unresolved` (the
+    /// `enterRecovery` door; the session-level round trip is pinned in
+    /// `DGTLiveSessionTests`). The full field boards were not recorded —
+    /// these fixtures rebuild the *recorded geometry*: king-into-check,
+    /// single-piece diff, no legal match, which is exactly what the
+    /// verdict turns on. On failure, both boards attach as PNGs.
+    @MainActor
+    @Test func fieldDesyncKingIntoQueensRankIsUnresolved() throws {
+        let previous = Position.make { pos in
+            pos[Squares.e2] = .whiteKing
+            pos[Squares.g8] = .blackKing
+            pos[Squares.a3] = .blackQueen
+        }
+        let state = GameState.test(previous)
+
+        var physical = previous
+        physical[Squares.e2] = .empty
+        physical[Squares.f3] = .whiteKing
+
+        // The recorded shape: a single-piece diff…
+        let diff = DGTBoardDiff(from: previous, to: physical)
+        #expect(diff.vacated == [Squares.e2: .whiteKing])
+        #expect(diff.placed == [Squares.f3: .whiteKing])
+
+        // …that reconstruction cannot explain.
+        let result = DGTReconstructor.reconstruct(from: state, physical: physical)
+        if result != .unresolved {
+            BoardAttachmentSupport.attach(previous, named: "field-desync-1-previous.png")
+            BoardAttachmentSupport.attach(physical, named: "field-desync-1-physical.png")
+        }
+        #expect(result == .unresolved,
+                "Ke2→f3 onto Qa3's clear rank is king-into-check; got \(String(describing: result))")
+    }
+
+    /// The second field desync: the king stood on d2, itself the block on
+    /// the c3–e1 diagonal, and landed on e1 — the square that diagonal
+    /// reaches the moment d2 empties behind the move. Same verdict shape
+    /// and attachment treatment as the first fixture.
+    @MainActor
+    @Test func fieldDesyncKingAlongTheOpenedDiagonalIsUnresolved() throws {
+        let previous = Position.make { pos in
+            pos[Squares.d2] = .whiteKing
+            pos[Squares.g8] = .blackKing
+            pos[Squares.c3] = .blackBishop
+        }
+        let state = GameState.test(previous)
+
+        var physical = previous
+        physical[Squares.d2] = .empty
+        physical[Squares.e1] = .whiteKing
+
+        let diff = DGTBoardDiff(from: previous, to: physical)
+        #expect(diff.vacated == [Squares.d2: .whiteKing])
+        #expect(diff.placed == [Squares.e1: .whiteKing])
+
+        let result = DGTReconstructor.reconstruct(from: state, physical: physical)
+        if result != .unresolved {
+            BoardAttachmentSupport.attach(previous, named: "field-desync-2-previous.png")
+            BoardAttachmentSupport.attach(physical, named: "field-desync-2-physical.png")
+        }
+        #expect(result == .unresolved,
+                "Kd2→e1 stays on the c3–e1 diagonal that opens behind it; got \(String(describing: result))")
+    }
 }
