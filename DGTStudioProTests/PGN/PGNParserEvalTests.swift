@@ -77,6 +77,24 @@ struct PGNParserEvalTests {
         #expect(evals == [.mate(-3)])
     }
 
+    // MARK: Hostile Payloads
+
+    /// Hostile eval payloads must fail the *annotation*, never the import
+    /// (M1 item 17): pre-guard, `Double(_:)` accepted "inf"/"nan"/overflow
+    /// literals and the centipawn conversion trapped — one poisoned
+    /// comment crashed the whole import instead of shedding itself. The
+    /// moves must survive with no evaluation recorded.
+    @Test func hostileEvalPayloadsFailTheAnnotationNotTheImport() throws {
+        for payload in ["inf", "-inf", "nan", "1e999", "999999999"] {
+            let (moves, evals) = try PGNParser.parseMovesAndEvaluations(
+                from: "1. e4 {[%eval \(payload)]} e5"
+            )
+            #expect(moves == ["e4", "e5"], "Moves must survive payload '\(payload)'")
+            #expect(evals.allSatisfy { $0 == nil },
+                    "Payload '\(payload)' must record no evaluation, got \(evals)")
+        }
+    }
+
     // MARK: Sparse Evaluations
 
     @Test func missingEvalsLeaveNilSlots() throws {

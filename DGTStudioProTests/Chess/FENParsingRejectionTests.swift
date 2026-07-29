@@ -146,6 +146,35 @@ struct FENParsingRejectionTests {
         }
     }
 
+    /// The 29 July hardening pins (M1 item 15): `Int(_:)` accepts a
+    /// leading sign, so `+5` and `-0` parsed as 5 and 0 before the
+    /// digits-only guard — the pre-existing `-1` case rejected on
+    /// negativity alone and could not distinguish the guard from its
+    /// absence. `+1` pins the fullmove half of the same rule.
+    @Test func rejectsSignedMoveCounters() {
+        #expect(throws: FENParseError.malformedInteger("+5")) {
+            try FEN(parsing: "8/8/8/8/8/8/8/8 w - - +5 1")
+        }
+        #expect(throws: FENParseError.malformedInteger("-0")) {
+            try FEN(parsing: "8/8/8/8/8/8/8/8 w - - -0 1")
+        }
+        #expect(throws: FENParseError.malformedInteger("+1")) {
+            try FEN(parsing: "8/8/8/8/8/8/8/8 w - - 0 +1")
+        }
+    }
+
+    /// Placement digits are ASCII-only (M1 item 15): `wholeNumberValue`
+    /// answers for any Unicode numeral, so an Arabic-Indic `٥` (five)
+    /// walked the rank arithmetic as 5 before the `isASCII` guard. The
+    /// rank deliberately sums to 8 (٥ + 3), so this trips exactly on the
+    /// charset rule rather than on a file-count side effect — the same
+    /// trick the `80/…` case documents.
+    @Test func rejectsNonASCIIPlacementDigits() {
+        #expect(throws: FENParseError.malformedPlacement("٥3/8/8/8/8/8/8/8")) {
+            try FEN(parsing: "٥3/8/8/8/8/8/8/8 w - -")
+        }
+    }
+
     // MARK: Positive Control — Four-Field EPD
 
     /// The complement to the rejection cases: a well-formed four-field EPD

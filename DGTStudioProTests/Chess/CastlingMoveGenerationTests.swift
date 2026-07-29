@@ -87,6 +87,47 @@ struct CastlingMoveGenerationTests {
         #expect(moves.first?.to == Squares.c1)
     }
 
+    // MARK: Rights Without Rooks (hand-edited state)
+
+    /// The rook-home guard (M1 item 16): rights imply a home rook only
+    /// for positions reached through `applying` — a FEN can lie, and the
+    /// draft sidecar resumes through `FEN(parsing:)`. A hand-edited `KQ`
+    /// over a bare back rank must generate no castling at all; pre-guard,
+    /// `O-O` was emitted and `Position.applying` copied an empty square
+    /// onto f1.
+    @Test func rightsWithoutRooksGenerateNoCastling() {
+        let bareBackRank = Position.make { pos in
+            pos[Squares.e1] = .whiteKing
+            pos[Squares.e8] = .blackKing
+        }
+        let state = GameState.test(bareBackRank, castlingRights: .all)
+        #expect(castlingMoves(in: state).isEmpty)
+    }
+
+    /// One missing rook kills exactly its own wing; the other stays legal.
+    @Test func missingKingsideRookKillsOnlyKingside() {
+        let pos = Position.make { pos in
+            pos[Squares.e1] = .whiteKing
+            pos[Squares.a1] = .whiteRook      // queenside rook only
+            pos[Squares.e8] = .blackKing
+        }
+        let state = GameState.test(pos, castlingRights: .all)
+        let moves = castlingMoves(in: state)
+        #expect(moves.count == 1)
+        #expect(moves.first?.to == Squares.c1)
+    }
+
+    /// A foreign piece on the rook's home square is not a rook: the guard
+    /// compares the piece (`position[home] == homeRook`), not occupancy —
+    /// a knight parked on h1 under `KQ` rights must not castle kingside.
+    @Test func wrongPieceOnRookHomeSquareDoesNotCastle() {
+        let pos = castlingPosition { p in p[Squares.h1] = .whiteKnight }
+        let state = GameState.test(pos, castlingRights: .all)
+        let moves = castlingMoves(in: state)
+        #expect(moves.count == 1)
+        #expect(moves.first?.to == Squares.c1)
+    }
+
     // MARK: Path Blocked
     @Test func pieceBetweenBlocksKingside() {
         let pos = castlingPosition { p in p[Squares.f1] = .whiteBishop }

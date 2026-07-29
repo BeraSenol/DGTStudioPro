@@ -152,6 +152,42 @@ struct TagRuleTests {
         #expect(TagRule(field: .timed, comparison: .isTrue).matches(mate) == false)
     }
     
+    // MARK: Negation Quantifier
+
+    /// The 27 July quantifier fix, finally pinned (M1 item 18): "Player
+    /// is not X" means *neither* seat is X. Under `contains` it read
+    /// "some seat isn't X" — true of every game X ever played against
+    /// anyone, the exact inverse of the rule's plain meaning.
+    @Test func playerNotEqualsFlipsTheQuantifier() {
+        let notBera = TagRule(field: .player, comparison: .notEquals, text: "bera")
+
+        // X vs Y: one seat IS Bera → excluded.
+        #expect(notBera.matches(record(white: "Bera", black: "Reinaud")) == false)
+        #expect(notBera.matches(record(white: "Christophe", black: "Bera")) == false)
+        // Third parties only → matched.
+        #expect(notBera.matches(record(white: "Christophe", black: "Reinaud")))
+        // No resolved seat: nothing can prove or disprove a player rule —
+        // unknowns never match, negation included.
+        #expect(notBera.matches(record(white: nil, black: nil)) == false)
+    }
+
+    /// Documents — deliberately does not bless — the single-subject
+    /// `.notEquals` behavior M2 will decide (M1 item 18): `white` /
+    /// `black` / `event` / `site` fold an unknown subject to "", and
+    /// `"" != needle` is true, so "White is not X" currently matches
+    /// games whose white seat never resolved — unlike `.player`, which
+    /// guards emptiness. If M2 changes the fold, this is the test that
+    /// should start failing; that is its entire job. The half-resolved
+    /// `.player` reading rides along on the same terms: the one resolved
+    /// seat satisfies the negation, the missing seat abstains.
+    @Test func singleSubjectNotEqualsCurrentlyMatchesUnknowns() {
+        let notCarlsen = TagRule(field: .white, comparison: .notEquals, text: "carlsen")
+        #expect(notCarlsen.matches(record(white: nil)))
+
+        let notBera = TagRule(field: .player, comparison: .notEquals, text: "bera")
+        #expect(notBera.matches(record(white: "Christophe", black: nil)))
+    }
+
     // MARK: Combinator
     
     @Test func evaluateAnyAllAndZeroRules() {

@@ -112,6 +112,24 @@ struct EvaluationTests {
         #expect(Evaluation(parsingEvalTagContent: "abc") == nil)
         #expect(Evaluation(parsingEvalTagContent: "1.2.3") == nil)
     }
+
+    /// Hostile numerics (M1 item 17): `Double(_:)` happily parses "inf",
+    /// "nan" and overflow-to-infinity literals, and `Int(_: Double)`
+    /// traps on every one of them — so `{[%eval inf]}` in an imported
+    /// file crashed the import before the `isFinite` + magnitude guard
+    /// landed. Each must fail the *annotation* (nil), never the process.
+    @Test func rejectsNonFiniteAndOverflowingContent() {
+        #expect(Evaluation(parsingEvalTagContent: "inf") == nil)
+        #expect(Evaluation(parsingEvalTagContent: "-inf") == nil)
+        #expect(Evaluation(parsingEvalTagContent: "nan") == nil)
+        // Overflows Double to +infinity.
+        #expect(Evaluation(parsingEvalTagContent: "1e999") == nil)
+        // Finite, but past the ±1,000,000 cp magnitude gate.
+        #expect(Evaluation(parsingEvalTagContent: "999999999") == nil)
+        // The gate is inclusive: exactly ±1,000,000 cp still parses.
+        #expect(Evaluation(parsingEvalTagContent: "10000") == .centipawns(1_000_000))
+        #expect(Evaluation(parsingEvalTagContent: "-10000") == .centipawns(-1_000_000))
+    }
     
     // MARK: Parsing — Full Tag
     
