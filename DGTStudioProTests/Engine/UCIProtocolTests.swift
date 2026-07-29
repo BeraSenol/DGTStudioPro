@@ -19,6 +19,18 @@ struct UCIProtocolTests {
         #expect(UCIProtocol.parse("\n") == nil)
     }
     
+    /// The distinguishing pin for the `.whitespacesAndNewlines` trim.
+    /// `emptyLineReturnsNil`'s `"\n"` case cannot do this job: pre-fix,
+    /// the un-trimmed newline fell through the unknown-keyword exit —
+    /// the same `nil` as the empty exit, so both spellings passed it.
+    /// A *keyword* wearing the newline only parses when the trim
+    /// actually removes it.
+    @Test func keywordSurvivesTrailingNewlineOrCR() {
+        #expect(UCIProtocol.parse("readyok\n") == .readyOK)
+        #expect(UCIProtocol.parse("uciok\r\n") == .uciOK)
+        #expect(UCIProtocol.parse(" readyok \n") == .readyOK)
+    }
+
     @Test func unknownKeywordReturnsNil() {
         #expect(UCIProtocol.parse("garbage") == nil)
         // `option name X type spin ...` lines are deliberately not recognized

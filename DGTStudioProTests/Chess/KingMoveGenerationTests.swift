@@ -5,13 +5,6 @@
 //  Created by Supreme Leader on 06/05/2026.
 //
 
-//
-//  KingMoveGenerationTests.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 06/05/2026.
-//
-
 import Testing
 @testable import DGTStudioPro
 

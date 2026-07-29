@@ -79,8 +79,11 @@ internal final class TabState {
     // MARK: Library Destination
     
     /// Whether the Library destination's inspector is open. Default
-    /// `false`; `LibraryDestination` auto-opens it for Gallery view via
-    /// `onAppear`/`onChange(of: viewMode)`.
+    /// `true` — the 25 July UI pass chose inspector-open as the Library's
+    /// resting shape (this doc had rotted to `false`; code is truth).
+    /// `LibraryDestination` additionally force-opens it for Gallery view
+    /// via `onAppear`/`onChange(of: viewMode)` — that hook only ever
+    /// opens, so the two never fight.
     internal var libraryInspectorPresented: Bool = true
 
     /// The tab's engine-analysis queue. A batch must survive destination

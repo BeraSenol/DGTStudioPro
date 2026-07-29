@@ -187,6 +187,16 @@ internal final class AnalysisQueueController {
         runTask = Task { @MainActor [weak self] in
             await self?.run()
             self?.runTask = nil
+            // Re-check the line after clearing the task: an `enqueue`
+            // landing during the drain's `driver.shutdown()` grace
+            // (a ≥500 ms suspension inside `run()`) saw a non-nil
+            // `runTask` in the guard above and was refused a start —
+            // pre-fix that item sat "#1 in line" forever (M1 item 1).
+            // A teardown-emptied queue makes this a no-op, and a
+            // grace-window batch pays decision 4's fresh handshake
+            // exactly as any post-drain batch does. Pinned by
+            // `AnalysisQueueControllerTests`.
+            self?.startRunIfNeeded()
         }
     }
     

@@ -111,6 +111,22 @@ internal actor StockfishEngine {
     private var currentContinuation: AsyncStream<Evaluation>.Continuation?
     private var currentSideToMove: PieceColor = .white
     private var currentAnalysisID: UUID?
+
+    /// `bestmove` replies still owed by searches abandoned via replacement
+    /// (`beginAnalysis` over a live search). The engine answers every `go`
+    /// with exactly one `bestmove` — a replacement `stop` just hurries it
+    /// along — and serial UCI delivers that reply *after* the
+    /// replacement's `go` was written, i.e. while `currentContinuation`
+    /// already belongs to the NEW analysis. `.bestMove` consumes from this
+    /// budget before it may finish anything, and `.info` drops lines while
+    /// the budget is open (they are the abandoned search's stragglers —
+    /// yielding one would convert it under the new side-to-move and flip
+    /// its sign into the new stream). The consumer-cancel `stop`
+    /// (`handleStreamTermination`) deliberately does not count here: its
+    /// `bestmove` targets the still-current analysis and must run the
+    /// normal finish-and-clear path. Pinned by
+    /// `replacementAnalysisSurvivesStaleBestMove`.
+    private var staleBestMovesOwed = 0
     
     // One-shot handshake continuations. Throwing (F4): resumed with success
     // by `uciok`/`readyok`, or with `EngineError.startupFailed` by process
@@ -376,6 +392,9 @@ internal actor StockfishEngine {
         process = nil
         stdinHandle = nil
         stdoutHandle = nil
+        // Owed stale replies die with the process; a fresh start must not
+        // eat its first real `bestmove` against a dead search's debt.
+        staleBestMovesOwed = 0
     }
     
     // MARK: Handshake (F4)
@@ -477,6 +496,10 @@ internal actor StockfishEngine {
             // to apply correctly.
             if hadPriorAnalysis {
                 try writeLine("stop")
+                // The abandoned search now owes one stale `bestmove`.
+                // Counted only after the write succeeds — a failed write
+                // means the engine is gone, and teardown resets the budget.
+                staleBestMovesOwed += 1
             }
             try writeLine("position fen \(fen.string)")
             try writeLine("go depth \(depth)")
@@ -543,11 +566,23 @@ internal actor StockfishEngine {
         
         switch response {
         case .info(let info):
+            // Stragglers of an abandoned search: the engine is serial, so
+            // until the owed `bestmove` arrives, every info line belongs
+            // to the dead search — see `staleBestMovesOwed`.
+            guard staleBestMovesOwed == 0 else { return }
             guard let score = info.score else { return }
             let evaluation = score.toEvaluation(sideToMove: currentSideToMove)
             currentContinuation?.yield(evaluation)
-            
+
         case .bestMove:
+            // A stale reply from an abandoned search must not finish the
+            // stream it never belonged to — pre-guard, it prematurely
+            // ended the *next* analysis's stream, which then completed
+            // empty (M1 item 8). See `staleBestMovesOwed`.
+            if staleBestMovesOwed > 0 {
+                staleBestMovesOwed -= 1
+                return
+            }
             currentContinuation?.finish()
             currentContinuation = nil
             currentAnalysisID = nil

@@ -172,6 +172,55 @@ struct StockfishEngineTests {
         }
     }
 
+    /// The stale-`bestmove` guard (M1 item 8). Replacing a live search
+    /// makes the engine answer the abandoned `go` with one hurried
+    /// `bestmove`; serial UCI delivers it *after* the replacement's `go`
+    /// was sent — while the current stream already belongs to the new
+    /// analysis. Pre-guard, that stale reply finished the new stream,
+    /// which then completed empty (or worse: carrying only the abandoned
+    /// search's stragglers). Deterministic, not a race: depth 24 keeps
+    /// the first search alive past the replacement call, and the
+    /// abandoned search's `bestmove` always precedes the new search's
+    /// first `info` in the pipe.
+    @Test(.enabled(if: stockfishAvailable))
+    func replacementAnalysisSurvivesStaleBestMove() async throws {
+        let url = try #require(StockfishEngine.defaultBinaryURL)
+        let engine = StockfishEngine(binaryURL: url)
+        try await engine.start(handshakeTimeout: Self.handshakeTimeout)
+        defer { Task { await engine.shutdown() } }
+
+        // A deep search we never drain — proven live by awaiting its
+        // first info, then abandoned by the replacement below.
+        let abandoned = engine.analyze(fen: .starting, depth: 24)
+        var abandonedIterator = abandoned.makeAsyncIterator()
+        _ = await abandonedIterator.next()
+
+        // Queen odds again — the sign oracle: the replacement's own
+        // deepest eval must be decisively black-favored, so a
+        // near-level straggler from the abandoned starting-position
+        // search standing in its place also fails the test.
+        let fen = try FEN(parsing:
+                            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq -"
+        )
+        let stream = engine.analyze(fen: fen, depth: 8)
+        var evals: [Evaluation] = []
+        for await evaluation in stream {
+            evals.append(evaluation)
+        }
+
+        // Single literal, deliberately: `#expect`'s comment is `Comment?`,
+        // which a string literal satisfies but a `String` expression
+        // (e.g. two literals joined with `+`) does not.
+        #expect(!evals.isEmpty,
+                "The replacement stream must carry its own evaluations — a stale bestmove from the abandoned search must not finish it")
+        switch try #require(evals.last) {
+        case .centipawns(let cp):
+            #expect(cp < -500, "Expected the replacement's queen-odds eval, got \(cp)cp")
+        case .mate(let n):
+            #expect(n < 0, "Mate should favor black, got mate(\(n))")
+        }
+    }
+
     // MARK: Startup Hardening (F4 — no Stockfish binary required)
 
     /// A binary that launches and exits before speaking UCI must fail the

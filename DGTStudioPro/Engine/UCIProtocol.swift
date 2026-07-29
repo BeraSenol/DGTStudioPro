@@ -26,7 +26,14 @@ internal enum UCIProtocol {
     /// there is nothing to do with an inbound `option` line. Parsing them
     /// would only matter if option support ever became engine-dependent.)
     internal static func parse(_ line: String) -> UCIResponse? {
-        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        // `.whitespacesAndNewlines`, not `.whitespaces` (which is space +
+        // tab only): the framer upstream strips \n before calling, so this
+        // is correctness of the pure function, not a production bug — a
+        // bare "\n" takes the empty exit instead of falling through as an
+        // unknown keyword, and a keyword carrying a stray \r or \n still
+        // parses rather than silently reading as garbage. Pinned by
+        // `keywordSurvivesTrailingNewlineOrCR`.
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         
         let tokens = trimmed

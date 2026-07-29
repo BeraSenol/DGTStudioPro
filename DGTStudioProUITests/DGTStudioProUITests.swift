@@ -57,6 +57,16 @@ final class DGTStudioProUITests: XCTestCase {
     // MARK: Launch
     
     private func launch() {
+        // Hermeticity lives app-side: under `-uiTestSeed` the app points
+        // every `@AppStorage` at `UITestSeed.scratchDefaults`, a scratch
+        // suite wiped once per launch — so every run starts from the
+        // declared property defaults (List everywhere) no matter what
+        // daily use left in the real preferences, and in-test picker
+        // clicks read and write the same live store. An argument-domain
+        // pin here was tried and reverted the same day: the argument
+        // domain outranks *writes*, so clicking a view-mode segment
+        // changed the control but never the content (two previously
+        // green card tests went red).
         app.launchArguments = ["-uiTestSeed", "YES"]
         app.launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10),
@@ -235,15 +245,23 @@ final class DGTStudioProUITests: XCTestCase {
         assertPicked(list,    "List segment should be selected")
     }
     
-    /// Select a row, open the inspector, and the profile section loads.
+    /// Select a row and the profile section loads. The inspector ships
+    /// OPEN (`TabState.playersInspectorPresented = true`, the 25 July UI
+    /// pass), so the toggle is a fallback, not a step: blind-toggling
+    /// here *closed* the open inspector, and the profile could never
+    /// appear — latent since the default flipped, unmasked 29 July when
+    /// the view-mode leak stopped failing this test earlier. The final
+    /// assert demands the profile either way — no vacuous path.
     func test_players_selection_populatesInspectorProfile() {
         launch()
         element(AccessibilityID.sidebarDestination("players")).click()
         XCTAssertTrue(waitFor(element(AccessibilityID.playerRow("Anish Giri"))))
-        
+
         element(AccessibilityID.playerRow("Anish Giri")).click()
-        element(AccessibilityID.playersInspectorToggle).click()
-        
+        if !element(AccessibilityID.playersInspectorProfile).waitForExistence(timeout: 2) {
+            element(AccessibilityID.playersInspectorToggle).click()
+        }
+
         XCTAssertTrue(waitFor(element(AccessibilityID.playersInspectorProfile)),
                       "Inspector should show the selected player's profile")
     }
@@ -295,14 +313,18 @@ final class DGTStudioProUITests: XCTestCase {
         assertPicked(list,    "List segment should be selected")
     }
     
+    /// Same open-by-default contract as the Players twin: toggle only
+    /// if the profile isn't already presenting (see that test's doc).
     func test_rankings_selection_populatesInspectorProfile() {
         launch()
         element(AccessibilityID.sidebarDestination("rankings")).click()
         XCTAssertTrue(waitFor(element(AccessibilityID.rankingRow(1, "Liren Ding"))))
-        
+
         element(AccessibilityID.rankingRow(1, "Liren Ding")).click()
-        element(AccessibilityID.rankingsInspectorToggle).click()
-        
+        if !element(AccessibilityID.rankingsInspectorProfile).waitForExistence(timeout: 2) {
+            element(AccessibilityID.rankingsInspectorToggle).click()
+        }
+
         XCTAssertTrue(waitFor(element(AccessibilityID.rankingsInspectorProfile)),
                       "Inspector should show the selected player's ranking")
     }
@@ -316,7 +338,21 @@ final class DGTStudioProUITests: XCTestCase {
     /// lives inside the content area the assertion targets).
     func test_tags_createSaveAndFilter() {
         launch()
-        element(AccessibilityID.sidebarTagsAdd).click()
+        // Menu-bar door (`SmartTagCommands`) — the third vector, after
+        // two dead ends the 29 July runs proved: the header's + is
+        // AX-invisible (no AXButton anywhere; only a StaticText mirror
+        // whose synthesized click fires nothing), and a `.contextMenu`
+        // on a macOS List section header never surfaces. The menu bar is
+        // what this suite already drives reliably (Game, Diagnostics),
+        // and it restores keyboard/VoiceOver access as a side effect.
+        let fileMenu = app.menuBars.menuBarItems["File"]
+        XCTAssertTrue(fileMenu.waitForExistence(timeout: 5),
+                      "File menu should be present")
+        fileMenu.click()
+        let newTag = app.menuBars.menuItems["New Smart Tag…"]
+        XCTAssertTrue(newTag.waitForExistence(timeout: 3),
+                      "File menu should offer New Smart Tag…")
+        newTag.click()
         XCTAssertTrue(waitFor(element(AccessibilityID.tagsEditor)),
                       "Editor sheet should appear")
         
@@ -560,7 +596,10 @@ final class DGTStudioProUITests: XCTestCase {
                       "Diagnostics menu should be installed on the menu bar")
         diagnostics.click()
         
-        let export = menuBar.menuItems["Export Session Log"]
+        // Title carries the HIG ellipsis (it opens a save panel) since
+        // ab33bdf; menu-item queries match byte-for-byte, so the query
+        // carries it too — same as Stop & Export below. Code is truth.
+        let export = menuBar.menuItems["Export Session Log…"]
         XCTAssertTrue(export.waitForExistence(timeout: 3),
                       "Export Session Log should exist")
         XCTAssertTrue(export.isEnabled,

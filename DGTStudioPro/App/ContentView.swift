@@ -116,6 +116,15 @@ internal struct ContentView: View {
                         }
                         .buttonStyle(.borderless)
                         .help("New Smart Tag")
+                        // Pointer-only affordance: macOS exposes no
+                        // AXButton for a borderless button in a List
+                        // section header, and a header `.contextMenu`
+                        // never surfaces either — both proven by 29 July
+                        // UITest runs. Every other input path (keyboard,
+                        // VoiceOver, the UITest suite) goes through
+                        // File ▸ New Smart Tag… (`SmartTagCommands`, fed
+                        // by the `.focusedSceneValue` below). Witness for
+                        // this button: the manual checklist.
                         .accessibilityIdentifier(AccessibilityID.sidebarTagsAdd)
                     }
                 }
@@ -174,6 +183,10 @@ internal struct ContentView: View {
                 )
             }
         }
+        // The menu-bar door: File ▸ New Smart Tag… drives this binding
+        // from `SmartTagCommands` — the `activeGame` pattern, second use.
+        // Scene-scoped, so the command reaches whichever tab is frontmost.
+        .focusedSceneValue(\.tagEditorDraft, $editorDraft)
         .sheet(item: $editorDraft) { draft in
             SmartTagEditorView(draft: draft) { finished in
                 commit(finished)
@@ -274,7 +287,12 @@ internal enum Destination: String, CaseIterable, Identifiable, Hashable {
 
 #Preview {
     ContentView(loadedGameID: .constant(nil))
-        .modelContainer(for: PGN.self, inMemory: true)
+        // All three models, explicitly — the App container's load-bearing
+        // invariant applies to canvases too: this body runs a `@Query`
+        // over `SmartTag`, which has no relationships, so inference from
+        // `PGN` alone never pulls it into the schema and the canvas
+        // traps on the query.
+        .modelContainer(for: [PGN.self, Player.self, SmartTag.self], inMemory: true)
         .environment(OpenGamesRegistry())
         .environment(DGTConnection())
         .environment(DGTLiveSession())

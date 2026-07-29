@@ -98,13 +98,11 @@ internal final class GameAnalysisDriver {
             "analyze begin: pgn='\(pgn.name, privacy: .public)' plies=\(pgn.moves.count) depth=\(depth)"
         )
         
-        // Reset (or initialize) the evaluations array to nil-per-ply.
-        // Preserves the empty-or-same-length-as-moves invariant on PGN
-        // and gives the graph a flat baseline to animate against as evals
-        // stream in. Re-analyzing replaces prior results entirely.
-        pgn.evaluations = Array(repeating: nil, count: pgn.moves.count)
-        status = .analyzing(progress: 0)
-        
+        // The evaluations reset lives in `runAnalysis`, *after* a
+        // successful engine start: resetting here destroyed the previous
+        // analysis even when `start()` then threw, so a broken binary
+        // cost the user their stored graph for nothing (M1 item 9a).
+
         // The pass still runs in its own Task — that is what ``stop()``
         // cancels — but the caller awaits its completion. Cancelling the
         // *awaiting* task does not cancel the pass; teardown goes through
@@ -175,7 +173,16 @@ internal final class GameAnalysisDriver {
             status = .failed(message: "Engine failed to start: \(error).")
             return
         }
-        
+
+        // Only now — with a live engine — is destroying the previous
+        // analysis justified. Nil-per-ply preserves PGN's
+        // empty-or-same-length-as-moves invariant and gives the graph a
+        // flat baseline to animate against; re-analyzing replaces prior
+        // results entirely. (Sat in `analyze()` before the start attempt
+        // until 29 July — see the note there, M1 item 9a.)
+        pgn.evaluations = Array(repeating: nil, count: pgn.moves.count)
+        status = .analyzing(progress: 0)
+
         var state = GameState.starting
         let total = pgn.moves.count
         
@@ -193,7 +200,16 @@ internal final class GameAnalysisDriver {
                     \(total - index) plies left unevaluated
                     """
                 )
-                break
+                // `.failed`, not a bare `break` into `.done`: the popover
+                // used to report success for a pass that stopped at an
+                // unparseable ply (M1 item 9b). The controller's outcome
+                // mapping always claimed failures are recorded — now the
+                // driver actually hands it one.
+                status = .failed(
+                    message: "Move \(index + 1) ('\(san)') won't parse — analysis "
+                    + "stopped there; earlier evaluations were kept."
+                )
+                return
             }
             state = state.applying(move)
             let fen = FEN(state)
@@ -211,7 +227,22 @@ internal final class GameAnalysisDriver {
             // cancellation on its next iteration and we don't want a
             // brief "still analyzing" flicker on the way out.
             if Task.isCancelled { break }
-            
+
+            // A dead engine finishes every remaining stream instantly, so
+            // the old loop raced through the tail and landed on `.done`
+            // with nothing evaluated (M1 item 9b). One actor hop per ply
+            // is nothing next to the search that just ran.
+            guard await engine.isRunning else {
+                Self.logger.error(
+                    "Engine died mid-pass at ply \(index + 1)/\(total) for pgn='\(pgn.name, privacy: .public)'"
+                )
+                status = .failed(
+                    message: "The engine quit at move \(index + 1) of \(total); "
+                    + "evaluations up to there were kept."
+                )
+                return
+            }
+
             status = .analyzing(
                 progress: Double(index + 1) / Double(max(total, 1))
             )

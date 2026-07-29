@@ -27,10 +27,14 @@ import Foundation
 /// assertions are therefore deterministic, observing state set by the
 /// synchronous lifecycle calls alone. The tests that genuinely need `settle`
 /// are grouped under "Timer-Driven Settle": they shrink `quiescence` to
-/// 10 ms and `poll(until:)` for the *outcome* instead of sleeping a fixed
-/// margin (F7 — the old fixed 450 ms waits raced the scheduler under
-/// parallel-suite load, a test-only flake with a session-bug signature;
-/// polling is load-independent).
+/// 10 ms and `await settled(_:)` — awaiting the armed quiescence task
+/// itself — so every assertion observes a settle that has definitely
+/// run. (F7's full history, kept so it isn't relived: fixed 450 ms
+/// sleeps raced the scheduler under parallel-suite load; the 2 s poll
+/// that replaced them flaked the same way, as did its 5 s successor —
+/// and a poll that returns silently on timeout passes vacuously, which
+/// this suite did for a while without anyone noticing. Awaiting the
+/// task needs no ceiling at all, so there is nothing left to re-guess.)
 @MainActor
 @Suite("DGT Live Session")
 struct DGTLiveSessionTests {
@@ -39,35 +43,19 @@ struct DGTLiveSessionTests {
         .init(white: "White", black: "Black")
     }
     
-    /// Polls `condition` every 25 ms until it holds or `timeout` elapses,
-    /// then asserts it. Timer-driven tests await *outcomes*, not clocks —
-    /// see the suite's timing note (F7). The 5 s ceiling and 25 ms interval
-    /// deliberately match `DGTLiveSessionArchiveTests`' calibration: under
-    /// a full ⌘U the Perft suites saturate every core and a dozen
-    /// `@MainActor` suites interleave on the main actor, so settle's turn
-    /// can lag seconds past its 10 ms quiescence. A 2 s ceiling missed
-    /// under that load (July 2026 — which tests failed varied run to run,
-    /// the flake signature); on an idle machine the poll still returns in
-    /// tens of milliseconds, so the ceiling costs nothing when green.
-    private func poll(
-        timeout: Duration = .seconds(5),
-        until condition: () -> Bool
-    ) async throws {
-        let deadline = ContinuousClock.now + timeout
-        while ContinuousClock.now < deadline {
-            if condition() { return }
-            try await Task.sleep(for: .milliseconds(25))
-        }
-    }
     /// Awaits the armed settle, so everything after it observes a settle
     /// that has *definitely* run — deterministic, with no clock and no
-    /// ceiling to re-guess (F7 superseded: a 2 s poll flaked, and so did
-    /// its 5 s replacement). The `#require` is the vacuity guard: a nil
+    /// ceiling to re-guess (F7 superseded twice: a 2 s poll flaked, so
+    /// did its 5 s replacement, and the poll's silent-return-on-timeout
+    /// made every wait in this suite vacuous — the reason `poll` is gone
+    /// rather than repaired). The `#require` is the vacuity guard: a nil
     /// task means no `boardChanged` preceded this call, and awaiting it
-    /// would pass for the wrong reason.
+    /// would pass for the wrong reason. The task inherits the session's
+    /// main-actor context, so when this returns, `settle`'s mutations
+    /// are fully visible to the caller.
     private func settled(_ session: DGTLiveSession) async throws {
-        try await #require(session.quiescenceTask).value.self
-        await session.quiescenceTask?.value
+        let armed = try #require(session.quiescenceTask)
+        await armed.value
     }
     
     // MARK: Idle
@@ -229,9 +217,10 @@ struct DGTLiveSessionTests {
         let session = DGTLiveSession()
         session.quiescence = .milliseconds(10)
         session.boardChanged(.starting)
-        
-        try await poll { session.shouldOfferNewGame }
-        
+
+        try await settled(session)
+        #expect(session.shouldOfferNewGame == true)
+
         session.dismissNewGameOffer()
         #expect(session.shouldOfferNewGame == false)
     }
@@ -248,9 +237,10 @@ struct DGTLiveSessionTests {
         let e4 = try GameState.starting.parseSAN("e4")
         let boardAfterE4 = GameState.starting.applying(e4).position
         session.boardChanged(boardAfterE4)            // cancels the prior task, arms a new one
-        
-        try await poll { session.liveGame?.plyCount == 1 }
-        
+
+        try await settled(session)
+
+        #expect(session.liveGame?.plyCount == 1)
         #expect(session.liveGame?.sanMoves == ["e4"])
         #expect(session.needsRecovery == false)
     }
@@ -273,10 +263,11 @@ struct DGTLiveSessionTests {
         var garbage = Position.starting
         garbage[Squares.e5] = .whitePawn
         session.boardChanged(garbage)
-        try await poll { session.needsRecovery }
-        
+        try await settled(session)
+        #expect(session.needsRecovery == true)
+
         session.resign(.white)
-        
+
         #expect(session.needsRecovery == false)
         #expect(session.liveGame?.isFinished == true)
         #expect(session.liveGame?.result == .blackWins)
@@ -293,8 +284,9 @@ struct DGTLiveSessionTests {
         var garbage = Position.starting
         garbage[Squares.e5] = .whitePawn
         session.boardChanged(garbage)
-        try await poll { session.needsRecovery }
-        
+        try await settled(session)
+        #expect(session.needsRecovery == true)
+
         session.agreeDraw()
         
         #expect(session.needsRecovery == false)
@@ -323,8 +315,9 @@ struct DGTLiveSessionTests {
         var garbage = Position.starting
         garbage[Squares.e5] = .whitePawn
         session.boardChanged(garbage)
-        try await poll { session.needsRecovery }
-        
+        try await settled(session)
+        #expect(session.needsRecovery == true)
+
         #expect(fired == 1)
         
         session.resign(.white)                        // recovery exit, not a desync
@@ -372,8 +365,9 @@ struct DGTLiveSessionTests {
         
         let e4 = try GameState.starting.parseSAN("e4")
         session.boardChanged(GameState.starting.applying(e4).position)
-        try await poll { session.liveGame?.plyCount == 1 }
-        
+        try await settled(session)
+        #expect(session.liveGame?.plyCount == 1)
+
         #expect(try store.load()?.sanMoves == ["e4"])
     }
     
@@ -560,11 +554,14 @@ struct DGTLiveSessionTests {
     /// silently overwrite the offered draft). Declining the resume hands
     /// over to the ordinary offer on the spot.
     ///
-    /// The suppression is a *negative*, so the test awaits the positive
-    /// breadcrumb the suppressed settle now leaves in the session log (F7)
-    /// — proof the settle actually ran — before asserting the flag stayed
-    /// down. (The old version slept a fixed 450 ms and asserted nothing had
-    /// happened: vacuously green if settle never ran at all.)
+    /// The suppression is a *negative*: awaiting the armed settle is what
+    /// makes "the flag stayed down" meaningful — the settle has provably
+    /// run before the flag is read. The breadcrumb it leaves in the
+    /// session log is asserted too, pinning *which* branch suppressed the
+    /// offer (the pending-draft guard, not an accident of timing).
+    /// History, kept short: a fixed 450 ms sleep here was vacuously green
+    /// if settle never ran; the breadcrumb poll that replaced it still
+    /// returned silently on timeout.
     @Test func pendingDraftSuppressesTheNewGameOffer() async throws {
         let store = temporaryStore()
         let game = LiveGame(roster: roster())
@@ -578,9 +575,9 @@ struct DGTLiveSessionTests {
         session.loadPendingDraft()
         
         session.boardChanged(.starting)
-        try await poll {
-            log.entries.contains { $0.message.contains("offer suppressed") }
-        }
+        try await settled(session)
+        #expect(log.entries.contains { $0.message.contains("offer suppressed") },
+                "The suppressed settle should leave its breadcrumb")
         #expect(session.shouldOfferNewGame == false)
         
         session.deletePendingDraft()

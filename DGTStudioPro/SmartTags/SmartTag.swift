@@ -5,6 +5,7 @@
 //  Created by Supreme Leader on 04/05/2026.
 //
 
+import os
 import SwiftData
 import SwiftUI
 
@@ -121,6 +122,13 @@ internal final class SmartTag: Identifiable {
             try context.save()
             defaults.set(true, forKey: StorageKeys.didSeedDefaultSmartTags)
         } catch {
+            // The assertion is the debug-build witness; the log line is
+            // the release breadcrumb. Without it a failed seed on a
+            // release build is silent — the flag stays unset (a retry
+            // next launch, deliberately), but the sidebar just looks
+            // inexplicably empty with nothing in Console to say why.
+            Logger(subsystem: "com.berasenol.dgtstudiopro", category: "smarttags")
+                .error("Default smart-tag seed failed: \(error.localizedDescription, privacy: .public)")
             assertionFailure("Default smart-tag seed failed: \(error)")
         }
     }

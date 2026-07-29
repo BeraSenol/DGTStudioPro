@@ -1,5 +1,5 @@
 //
-//  DGTCommandTests.swift
+//  DGTProtocolTests.swift
 //  DGTStudioPro
 //
 //  Created by Supreme Leader on 24/05/2026.
@@ -17,10 +17,12 @@ import Testing
 /// protocol PDF in the project); a regression here breaks communication
 /// silently, with no compiler help. The piece mapping is the subtle one:
 /// DGT orders pieces **P, R, N, B, K, Q**, whereas the app's `PieceType`
-/// is pawn, knight, bishop, rook, queen, king. The `pieceLookup` table
-/// bridges that reordering by raw index, so a single transposed entry
-/// would turn every rook coming off the board into a knight (or vice
-/// versa) without ever failing to compile.
+/// is pawn, knight, bishop, rook, queen, king. `DGTPiece.piece` bridges
+/// that reordering with an exhaustive switch — it replaced the retired
+/// raw-indexed `pieceLookup` table, whose single transposed entry would
+/// have turned every rook coming off the board into a knight without
+/// ever failing to compile. The switch makes a wrong *shape* a build
+/// error; this suite still pins the wrong *values* the compiler can't.
 @Suite("DGT Protocol Constants & Piece Mapping")
 struct DGTCommandTests {
     

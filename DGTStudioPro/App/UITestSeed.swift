@@ -17,6 +17,31 @@ internal enum UITestSeed {
     internal static var isActive: Bool {
         ProcessInfo.processInfo.arguments.contains(launchArgument)
     }
+
+    /// Scratch `UserDefaults` suite for seeded launches. The App points
+    /// `.defaultAppStorage` here when `isActive`, so every `@AppStorage`
+    /// in the window reads *and writes* this suite instead of the real
+    /// preferences: daily use can't leak a view mode into a test run
+    /// (the 29 July baseline — five row tests red because Players
+    /// launched in whatever mode the human last browsed in), and test
+    /// clicks can't pollute the human's settings. Wiped here, once per
+    /// process (`static let`), so every run starts from the declared
+    /// `@AppStorage` property defaults; wiping per-window would reset
+    /// mid-test writes when opening a game spawns a second window.
+    ///
+    /// Rejected first: pinning the keys through launch-argument defaults
+    /// (`-playersViewMode list`). The argument domain outranks every
+    /// other domain on *reads*, so a test clicking a view-mode segment
+    /// updated the control but the re-read snapped content back to the
+    /// pin — two previously-green card tests went red the same day.
+    internal static let scratchDefaults: UserDefaults = {
+        let name = "BeraSenol.DGTStudioPro.uitest"
+        // Never nil: the documented nil cases are passing the bundle ID
+        // or the global domain, and this constant is neither.
+        let defaults = UserDefaults(suiteName: name)!
+        defaults.removePersistentDomain(forName: name)
+        return defaults
+    }()
     
     /// Stable game names. These are the strings the UI test looks up as
     /// `gameCard.<name>` — shared with the UI suite via `SeedGameName`.

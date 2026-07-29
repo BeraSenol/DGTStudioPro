@@ -114,6 +114,18 @@ struct DGTLiveSessionArchiveTests {
         }
     }
 
+    /// Awaits the armed quiescence task itself — the negative-assertion
+    /// tool: after this returns, the settle has *definitely* run on the
+    /// main actor, so "nothing changed" finally means something. The
+    /// positive waits in this suite keep `poll` (each call site asserts
+    /// the outcome right after, so a timeout fails there with the real
+    /// value); the two fixed sleeps this helper replaced were the last
+    /// waits that could pass without the settle ever running.
+    private static func settled(_ session: DGTLiveSession) async throws {
+        let armed = try #require(session.quiescenceTask)
+        await armed.value
+    }
+
     /// A controllable archive door for the failure paths: throws while
     /// `shouldFail`, otherwise delegates to the real store — so Retry can
     /// be tested as "the transient condition cleared".
@@ -206,13 +218,13 @@ struct DGTLiveSessionArchiveTests {
         #expect(try drafts.load() == nil)
 
         // Clearing pieces after the finish must not enter recovery…
-        // (A fixed sleep is fine for this one step: there is no positive
-        // state change to poll for, and the assertion holds even if this
-        // settle coalesces into the next board's under extreme load — a
-        // finished game's settle never trips recovery either way. 100 ms
-        // is a 10× margin over the suite's 10 ms quiescence.)
+        // Awaiting the armed settle replaces the old 100 ms fixed sleep:
+        // the negative below is asserted after a settle that provably
+        // ran, instead of hoping the margin covered it (it also retires
+        // that comment's "coalesces under extreme load" caveat — there
+        // is no window left to coalesce across).
         session.boardChanged(states[0].position)   // any mid-clear board
-        try await Task.sleep(for: .milliseconds(100))
+        try await Self.settled(session)
         #expect(session.needsRecovery == false)
 
         // …and restoring the start position offers the next game.
@@ -264,8 +276,10 @@ struct DGTLiveSessionArchiveTests {
         #expect(try Self.libraryCount(in: context) == 0)
 
         // The start position must NOT offer a new game while unresolved.
+        // Awaiting the armed settle replaces the old 450 ms fixed sleep —
+        // the suppressed settle has provably run when the flag is read.
         session.boardChanged(.starting)
-        try await Task.sleep(for: .milliseconds(450))
+        try await Self.settled(session)
         #expect(session.shouldOfferNewGame == false)
     }
 

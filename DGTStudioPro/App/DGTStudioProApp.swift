@@ -200,6 +200,12 @@ internal struct DGTStudioProApp: App {
                 .environment(dgtConnection)
                 .environment(dgtSession)
                 .environment(sessionLog)
+                // Test hosts stay hermetic: a seeded launch points every
+                // `@AppStorage` in the tab at the once-wiped scratch suite
+                // (see `UITestSeed.scratchDefaults` for the full why,
+                // including the rejected argument-domain pin). A normal
+                // launch keeps `.standard` — a no-op outside UI tests.
+                .defaultAppStorage(UITestSeed.isActive ? UITestSeed.scratchDefaults : .standard)
         }
         .modelContainer(sharedContainer)
         .defaultLaunchBehavior(.presented)
@@ -214,11 +220,21 @@ internal struct DGTStudioProApp: App {
         .commands {
             GameNavigationCommands()
             DiagnosticsCommands(connection: dgtConnection, sessionLog: sessionLog)
+            // File ▸ New Smart Tag… — the AX-reachable door into the
+            // D12′ editor; the sidebar header's + is pointer-only (see
+            // `SmartTagCommands` for the evidence).
+            SmartTagCommands()
         }
         
         Settings {
             SettingsView()
                 .environment(sleepInhibitor)
+                // Same scratch-suite redirection as the WindowGroup.
+                // Settings isn't exercised under the seed today, but a
+                // future settings UITest silently reading the human's
+                // real preferences is exactly the leak class the
+                // WindowGroup line exists to close.
+                .defaultAppStorage(UITestSeed.isActive ? UITestSeed.scratchDefaults : .standard)
         }
         .modelContainer(sharedContainer)
     }

@@ -15,7 +15,6 @@ import SwiftUI
 /// as the secondary stat. Declared here rather than in its own file because
 /// it's presentation composition — but `internal`, not file-scoped: all four
 /// Rankings mode views consume it. The tested contracts are the comparator
-/// and the fold underneath.internal struct RankedPlayer: Identifiable, Hashable {
 /// and the fold underneath.
 internal struct RankedPlayer: Identifiable, Hashable {
     internal let rank: Int

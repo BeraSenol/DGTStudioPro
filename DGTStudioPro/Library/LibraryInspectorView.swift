@@ -78,7 +78,7 @@ private struct LoadedSection: View {
     @FocusState private var isNameFieldFocused: Bool
     @State private var isEditingName: Bool = false
     @State private var draftName: String = ""
-    @State private var isShowingPGN: Bool = true
+    @State private var isShowingPGN: Bool = false
     
     // MARK: Body
     var body: some View {
