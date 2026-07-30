@@ -34,10 +34,11 @@ internal enum Evaluation: Equatable, Sendable, Codable {
     
     /// A dead-equal position: the sigmoid's fixed point, where
     /// `whiteWinProbability` is exactly 0.5, and its own mirror under
-    /// `flipped` (`Int` has no negative zero). Named for the planned
-    /// vertical evaluation bar, which needs a neutral midpoint to draw
-    /// against and shouldn't spell it `.centipawns(0)` at every reference —
-    /// the `Position.starting` / `CastlingRights.none` convention.
+    /// `flipped` (`Int` has no negative zero). Named for the vertical
+    /// evaluation bar — which, since M3, consumes it: a nil per-ply
+    /// evaluation folds to this in `EvaluationBarReading`, so ply 0 reads
+    /// neutral without spelling `.centipawns(0)` at the fold site — the
+    /// `Position.starting` / `CastlingRights.none` convention.
     internal static let drawn = Evaluation.centipawns(0)
     
     // MARK: Computed Properties

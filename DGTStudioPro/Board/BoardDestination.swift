@@ -234,12 +234,30 @@ internal struct BoardDestination: View {
     }
     
     // MARK: Board Surface
-    
+
+    /// The evaluation bar's fixed width and its gap to the board (M3,
+    /// D33′). Named rather than inline so the `boardSurface` geometry and
+    /// any future reader agree on what the two magic numbers are.
+    private static let evaluationBarWidth: CGFloat = 16
+    private static let evaluationBarGap: CGFloat = 10
+
     /// The board itself, shared by the game view and the live mirror. Both
     /// render the same `BoardView` with the same padding, sizing, and
     /// `"board"` accessibility identifier — only the inputs differ. Keeping
     /// this in one place means the identifier and the modifier tail can't
     /// drift between the two branches.
+    ///
+    /// `evaluation` (M3, D33′) hangs the vertical eval bar on the board's
+    /// leading edge. Nil — the default, and the only value the live branch
+    /// ever passes — renders the board exactly as before: the bar is
+    /// review-surface furniture, and a live game never shows one (no live
+    /// engine eval, assumed-never). The `BoardView` is built once and
+    /// placed by whichever branch runs, so the eleven inputs can't drift
+    /// between them. The explicit `GeometryReader` math exists because
+    /// `BoardView` is strictly square (`aspectRatio(1, .fit)`): a plain
+    /// `HStack` would give the bar the container's full height while the
+    /// board fits square inside it — the bar must borrow the *board's*
+    /// side, which only this computation knows.
     private func boardSurface(
         position: Position,
         tracker: PieceTracker,
@@ -248,9 +266,10 @@ internal struct BoardDestination: View {
         ghostSquare: Square?,
         ghostPiece: Piece?,
         attentionSquares: Set<Square> = [],
-        targetSquares: Set<Square> = []
+        targetSquares: Set<Square> = [],
+        evaluation: EvaluationBarReading? = nil
     ) -> some View {
-        BoardView(
+        let board = BoardView(
             position:         position,
             pieceTracker:     tracker,
             style:            boardStyle,
@@ -262,6 +281,30 @@ internal struct BoardDestination: View {
             attentionSquares: attentionSquares,
             targetSquares:    targetSquares
         )
+
+        return Group {
+            if let evaluation {
+                GeometryReader { geometry in
+                    let side = max(0, min(
+                        geometry.size.width - Self.evaluationBarWidth - Self.evaluationBarGap,
+                        geometry.size.height
+                    ))
+                    HStack(spacing: Self.evaluationBarGap) {
+                        EvaluationBarView(
+                            reading: evaluation,
+                            perspective: tabState.boardPerspective,
+                            style: boardStyle
+                        )
+                        .frame(width: Self.evaluationBarWidth, height: side)
+                        board
+                            .frame(width: side, height: side)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            } else {
+                board
+            }
+        }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier(AccessibilityID.board)
@@ -278,7 +321,16 @@ internal struct BoardDestination: View {
             lastMove:    game.lastMove,
             checkSquare: game.checkSquare,
             ghostSquare: nil,
-            ghostPiece:  nil
+            ghostPiece:  nil,
+            // M3 (D33′): the bar exists iff the game carries analysis —
+            // `evaluations.isEmpty` is the `hasAnalysis` projection's exact
+            // truth, so bar presence and the "Analyzed" tag rule can't
+            // disagree. Per-ply nil (ply 0, a skipped ply) folds to the
+            // neutral reading inside `EvaluationBarReading`, matching the
+            // graph's `?? 0.5` below.
+            evaluation:  pgn.evaluations.isEmpty
+                ? nil
+                : EvaluationBarReading(game.currentEvaluation)
         )
         .inspector(isPresented: $tabState.boardInspectorPresented) {
             BoardInspectorView(

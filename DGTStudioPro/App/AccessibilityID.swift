@@ -74,6 +74,10 @@ internal enum AccessibilityID {
     internal static let board                = "board"
     internal static let boardFlipButton      = "board.flipButton"
     internal static let boardInspectorToggle = "board.inspectorToggle"
+    /// The M3 evaluation bar (D33′) — present only on the review surface
+    /// over an analysed game, so tests asserting absence on live/unanalysed
+    /// boards have a stable handle too.
+    internal static let boardEvaluationBar   = "board.evaluationBar"
     /// The toolbar's connect control (`DGTConnectionToolbar`). Migrated
     /// late (M-ux.3): the value lived as a *parameter default*, which the
     /// header's `accessibilityIdentifier("` enforcement grep cannot see —

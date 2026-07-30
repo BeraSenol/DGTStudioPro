@@ -108,10 +108,11 @@ internal final class Game {
     /// entry at all, being the one position no move produced. The
     /// empty-versus-full array shapes are `PGN.evaluation(atPly:)`'s job.
     ///
-    /// No production caller yet: this is the accessor the planned vertical
-    /// evaluation bar needs, built with the walk it belongs to rather than
-    /// re-derived at the bar. The `BoardView.selectedSquare` category —
-    /// capability with a named consumer, not rot.
+    /// Consumed since M3 by the vertical evaluation bar
+    /// (`BoardDestination.content` feeds it to `EvaluationBarReading`) —
+    /// built with the walk it belongs to rather than re-derived at the bar,
+    /// exactly as planned when this sat caller-less in the
+    /// `BoardView.selectedSquare` category.
     internal var currentEvaluation: Evaluation? {
         guard currentPly > 0 else { return nil }
         return pgn.evaluation(atPly: currentPly - 1)
