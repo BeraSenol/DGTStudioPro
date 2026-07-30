@@ -23,6 +23,13 @@ Players editing UITest M5 recorded as its honest gap, plus **D40′**, the
 orphan sweep the test's own preparation turned up. Base `3f785a3`. M6, M7 and
 M8 remain, unchanged and still reorderable.*
 
+*Revised 30 July 2026 (last): the **between-milestone sweep** moved to Landed
+— the first standalone run of M5's own agreement, which found the epilogue
+uncommitted, minted **D41′**, folded the columns grids onto their shared
+metrics, and closed the inspector-header AX question with a passing test.
+Base `3f785a3`. **M6, M7 and M8 remain** — still reorderable on appetite, and
+now the only things left on this roadmap.*
+
 ---
 
 ## M6 — Live-mirror piece animation
@@ -158,6 +165,73 @@ GM).
 ---
 
 ## Landed
+
+### Between-milestone sweep *(landed 30 July 2026)*
+
+The first standalone run of M5's own new agreement — a grep-level conformance
+pass belongs *between* milestones, not only inside them. Three commits on
+`3f785a3`, ⌘U green before the pass began (all four Players-editing UITests
+included). One decision minted: **D41′**.
+
+**Its headline finding was not a grep result.** The M5 epilogue — six source
+files, both rewritten documents — was sitting **unstaged**, while both of those
+documents stated the tree was committed and named a base the epilogue was not
+part of. A ⌘U-green delivery existed only in the working tree. `git status`
+found it as the sweep's first command, and it is now `d33abd3`. The standing
+"a discarded working tree is a discarded delivery" agreement gains its sharpest
+instance and a new corollary: the sentence claiming the tree is clean is the
+one most likely to be stale, because it is written at commit time and never
+re-read.
+
+**Findings, in full.**
+
+- **D41′ — `Player.createdAt` deleted** (`43311f9`). A stored `@Model` column
+  assigned in `init` and read by nothing in 211 sources. Deleted rather than
+  surfaced because it is redundant with a *better* sibling: it records when the
+  row was minted, i.e. import time, while `PlayerStats.firstPlayed` answers the
+  question it appears to answer — "since when have I played this person?" —
+  from game dates. On a back-filled archive the two disagree and `createdAt` is
+  the wrong one. Lightweight migration, no plan needed.
+- **The columns detail grids fold into `CollectionGridMetrics`** (`40e201d`,
+  travelling alone as a mechanical change). `PlayersColumnsView` and
+  `RankingsColumnsView` restated `spacing: 16` and `.padding(16)` while
+  `LibraryColumnsView`'s equivalent card grid already read the constants — one
+  sibling reading and two agreeing by coincidence, which is the twin-read-site
+  shape, not merely a literal. Rendered output unchanged. Card *sizing* stays
+  local by decision.
+- **The AX question is answered.** `test_players_profileHeaderControls_areHittable`
+  **passed**: an inspector section header's borderless controls are AX-visible
+  on macOS, where M1 proved a *sidebar* header's + button is not. The finding
+  does not transfer, no menu-bar remedy is needed, and the three UITests queued
+  behind the answer are unnecessary. Closes an open item with evidence rather
+  than a decision.
+
+**Verified clean, recorded because a negative result is what makes the
+positives credible.** Standing prohibitions all zero (`DispatchQueue`,
+`Combine`, `NotificationCenter`, `Thread.sleep`, `@unchecked Sendable`,
+`nonisolated(unsafe)`, TODO/FIXME/HACK). D27′'s beta surface still entirely
+empty — the only `ContentBuilder` hits are `ToolbarContentBuilder`; build
+settings unchanged. All 144 `AccessibilityID` entries referenced, no raw
+identifier strings, no residue from D40′'s removal of
+`players.inspector.deleteItem`. All 495 private declarations referenced.
+D40′'s new dead-guard grep re-run across all fifteen `.disabled(…)` sites:
+every enabling value is producible, so D40′'s was the only one. The post-M4
+audit's two fixes verified still single-stated (`EvaluationBarView.width`, the
+shared pencil's 10 pt inset). Previews conform to the waiver register:
+`BoardDestination` is the only View file without one and is waived;
+`AnalysisQueueStatusView`'s apparent `#Preview` is its own doc comment
+explaining why it has none.
+
+**Gate.** Tree committed and clean — the three commits above on `3f785a3`,
+plus this document and the instructions as the fourth; every finding either
+fixed or recorded with a D-number; the mechanical change travels alone; both
+documents reconciled with what the code and the test run actually say.
+
+*(⌘U after this pass is expected green — nothing here changes behaviour. The
+`createdAt` deletion touches a schema attribute nothing reads, and the grid
+fold substitutes constants of identical value.)*
+
+---
 
 ### M5 epilogue — the orphan sweep *(landed 30 July 2026)*
 
