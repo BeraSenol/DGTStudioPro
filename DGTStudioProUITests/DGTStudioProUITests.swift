@@ -356,7 +356,14 @@ final class DGTStudioProUITests: XCTestCase {
         XCTAssertTrue(waitFor(element(AccessibilityID.tagsEditor)),
                       "Editor sheet should appear")
         
+        // The container's arrival doesn't imply its fields have resolved —
+        // this was the one click in the flow without a wait in front of
+        // it, and under ⌘U load the name field lags the sheet by a beat
+        // (30 July run: "No matches found" here while `tagsEditor` had
+        // just matched). Same waitFor discipline as every other step.
         let nameField = element(AccessibilityID.tagsEditorName)
+        XCTAssertTrue(waitFor(nameField),
+                      "Editor name field should resolve inside the sheet")
         nameField.click()
         app.typeKey("a", modifierFlags: .command)
         app.typeText("Blitz")
@@ -459,10 +466,16 @@ final class DGTStudioProUITests: XCTestCase {
     /// stale-cache render of a ghost game — and Dismiss must unbind into
     /// an honest no-game tab whose session panel disappears whole (D15′).
     ///
-    /// Single-window by construction: the launch window closes right
-    /// after the game window opens, so every identifier below has exactly
-    /// one match — the two-Libraries ambiguity is dissolved rather than
-    /// disambiguated.
+    /// Frontmost-window scoped, deliberately: with Prefer Tabs "Always"
+    /// (the app's own design assumption), `openWindow` merges as a native
+    /// *tab* — there is no second window to close and the background
+    /// Library tab isn't in the AX tree; with tabs off there *are* two
+    /// windows, whose duplicate Library identifiers would make app-wide
+    /// queries ambiguous. Driving everything inside
+    /// `app.windows.firstMatch` (the key surface either way) is the one
+    /// shape correct under both. The first version of this test closed a
+    /// "launch window" that doesn't exist under tabs — it failed on the
+    /// 30 July run exactly there.
     func test_deletingTheOpenGame_showsLoadErrorCard_andDismissClears() {
         launch()
 
@@ -475,39 +488,38 @@ final class DGTStudioProUITests: XCTestCase {
         XCTAssertTrue(waitFor(card), "Seeded game card should exist in Icons mode")
         card.doubleClick()
         XCTAssertTrue(waitFor(element(AccessibilityID.board), 8),
-                      "Board should appear in the game window")
+                      "Board should appear after opening the game")
 
-        // Close the launch window — identifiable as the one still showing
-        // Library content while the new window sits on Board.
-        let launchWindow = app.windows
-            .containing(.any, identifier: AccessibilityID.libraryContent)
-            .firstMatch
-        XCTAssertTrue(waitFor(launchWindow), "The launch window should still be up")
-        launchWindow.buttons[XCUIIdentifierCloseWindow].click()
+        // Everything below happens on the frontmost surface — the game
+        // tab (tabs on) or the game window (tabs off).
+        let front = app.windows.firstMatch
+        func within(_ identifier: String) -> XCUIElement {
+            front.descendants(matching: .any)[identifier]
+        }
 
-        // In the surviving game window: Library → select → delete → confirm.
-        element(AccessibilityID.sidebarDestination("library")).click()
-        let cardAgain = element(AccessibilityID.gameCard(SeedGameName.ruyLopez))
+        // Library → select the open game → delete → confirm.
+        within(AccessibilityID.sidebarDestination("library")).click()
+        let cardAgain = within(AccessibilityID.gameCard(SeedGameName.ruyLopez))
         XCTAssertTrue(waitFor(cardAgain),
                       "The open game should still be listed before deletion")
         cardAgain.click()
-        element(AccessibilityID.libraryDeleteButton).click()
-        let confirm = app.sheets.buttons["Delete"]
+        within(AccessibilityID.libraryDeleteButton).click()
+        let confirm = front.sheets.buttons["Delete"]
         XCTAssertTrue(waitFor(confirm), "Single-game delete should ask first")
         confirm.click()
 
         // Back on Board, the tombstone resolves to the load-error card…
-        element(AccessibilityID.sidebarDestination("board")).click()
-        let errorCard = element(AccessibilityID.sidebarLoadError)
+        within(AccessibilityID.sidebarDestination("board")).click()
+        let errorCard = within(AccessibilityID.sidebarLoadError)
         XCTAssertTrue(waitFor(errorCard, 8),
                       "Deleting the open game should surface the load-error card")
 
         // …and Dismiss unbinds into an honest empty tab.
-        element(AccessibilityID.sidebarLoadErrorDismiss).click()
-        XCTAssertTrue(waitFor(element(AccessibilityID.board), 8),
+        within(AccessibilityID.sidebarLoadErrorDismiss).click()
+        XCTAssertTrue(waitFor(within(AccessibilityID.board), 8),
                       "Dismiss should land on the live mirror")
         XCTAssertFalse(errorCard.exists, "Dismiss should clear the card")
-        XCTAssertFalse(element(AccessibilityID.sessionPanel).exists,
+        XCTAssertFalse(within(AccessibilityID.sessionPanel).exists,
                        "No board, no error — the session panel disappears whole (D15′)")
         XCTAssertEqual(app.state, .runningForeground,
                        "The delete-open-game round trip must not crash the app")
