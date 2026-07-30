@@ -235,10 +235,13 @@ internal struct BoardDestination: View {
     
     // MARK: Board Surface
 
-    /// The evaluation bar's fixed width and its gap to the board (M3,
-    /// D33′). Named rather than inline so the `boardSurface` geometry and
-    /// any future reader agree on what the two magic numbers are.
-    private static let evaluationBarWidth: CGFloat = 16
+    /// The gap between the evaluation bar and the board (M3, D33′).
+    ///
+    /// The *width* is deliberately not here: it is `EvaluationBarView.width`,
+    /// stated once by the view that draws it. This constant briefly had a
+    /// sibling — `evaluationBarWidth = 16` — while the view framed itself at
+    /// 20, and the two never met. The gap stays here because it describes a
+    /// relationship between two views rather than either one of them.
     private static let evaluationBarGap: CGFloat = 10
 
     /// The board itself, shared by the game view and the live mirror. Both
@@ -286,7 +289,7 @@ internal struct BoardDestination: View {
             if let evaluation {
                 GeometryReader { geometry in
                     let side = max(0, min(
-                        geometry.size.width - Self.evaluationBarWidth - Self.evaluationBarGap,
+                        geometry.size.width - EvaluationBarView.width - Self.evaluationBarGap,
                         geometry.size.height
                     ))
                     HStack(spacing: Self.evaluationBarGap) {
@@ -295,7 +298,10 @@ internal struct BoardDestination: View {
                             perspective: tabState.boardPerspective,
                             style: boardStyle
                         )
-                        .frame(width: Self.evaluationBarWidth, height: side)
+                        // Height only: the bar states its own width, so
+                        // framing it here again would re-open the twin that
+                        // `EvaluationBarView.width` exists to close.
+                        .frame(height: side)
                         board
                             .frame(width: side, height: side)
                     }

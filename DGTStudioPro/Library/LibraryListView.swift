@@ -33,8 +33,16 @@ internal struct LibraryListView: View {
             // unclassified game shows nothing rather than the inspector's
             // em dash — a table cell is already an empty-when-absent
             // surface, and a column of dashes is noise.
+            //
+            // Read through `opening`, not off `ecoCode` directly: that
+            // accessor is where the both-or-neither invariant is checked,
+            // and a row carrying a code without a family is exactly the
+            // shape a second writer would leave behind. Reaching past it
+            // here would make this the one surface that prints a code the
+            // rest of the app calls unclassified — which is the failure the
+            // invariant was written to surface, defeated by the reader.
             TableColumn("ECO") { game in
-                Text(game.ecoCode ?? "").foregroundStyle(.secondary)
+                Text(game.opening?.code ?? "").foregroundStyle(.secondary)
             }
             .width(min: 44, ideal: 52)
             TableColumn("Event") { Text($0.event).lineLimit(1) }

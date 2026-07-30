@@ -43,6 +43,19 @@ internal struct InspectorEditButtonView: View {
     internal var body: some View {
         Button(action: action) {
             Image(systemName: "pencil")
+                // Trailing inset from the inspector's edge, stated here and
+                // nowhere else. It sits *inside* the label deliberately, so
+                // it widens the hit target rather than only pushing the glyph
+                // — the same reason `.font(.body)` is stated below.
+                //
+                // The Library inspector used to add its own `.padding(
+                // .trailing, 8)` on top of this, which put its Rename pencil
+                // at 18 pt while the other four sat at 10 — precisely the
+                // drift D26′ exists to prevent, and invisible until the two
+                // inspectors are opened side by side. A host that wants
+                // different spacing should change this number for everyone
+                // or make the case for a parameter; it should not quietly
+                // stack a second one.
                 .padding(.trailing, 10)
         }
         .buttonStyle(.borderless)

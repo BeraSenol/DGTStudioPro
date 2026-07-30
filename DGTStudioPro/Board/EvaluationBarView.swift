@@ -30,6 +30,23 @@ import SwiftUI
 /// live surface (no live engine eval, assumed-never).
 internal struct EvaluationBarView: View {
 
+    // MARK: Static Constants
+
+    /// The bar's fixed width, and the **one** place it is stated.
+    ///
+    /// It lived here as a bare `.frame(width: 20)` while `BoardDestination`
+    /// carried its own `evaluationBarWidth = 16` for the surrounding
+    /// geometry — two numbers for one measurement, disagreeing. The inner
+    /// fixed frame won on intrinsic size, so the bar drew 20 pt centred in a
+    /// 16 pt slot: 2 pt of bleed on each side and a gap that was really 8.
+    /// The caller's own doc claimed the constants existed "so the geometry
+    /// and any future reader agree", which is exactly the twin-read-site
+    /// symptom D25′ names — and its cure, applied here: where a value has an
+    /// owning type, that type holds it. The view that draws the bar owns how
+    /// wide the bar is; the caller owns only the *gap*, which is a
+    /// relationship between two views and belongs to neither alone.
+    internal static let width: CGFloat = 20
+
     // MARK: Stored Properties
 
     internal let reading: EvaluationBarReading
@@ -80,7 +97,7 @@ internal struct EvaluationBarView: View {
                 .lineLimit(1)
                 .fixedSize()
         }
-        .frame(width: 20)
+        .frame(width: Self.width)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Evaluation")
         .accessibilityValue(reading.label)

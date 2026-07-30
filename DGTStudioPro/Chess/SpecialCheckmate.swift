@@ -50,7 +50,6 @@ internal enum SpecialCheckmate: String, Codable, Sendable, CaseIterable {
         }
     }
 
-
     // MARK: Classification
     
     /// Recognises the mate pattern in `state`, or `nil` when the position is

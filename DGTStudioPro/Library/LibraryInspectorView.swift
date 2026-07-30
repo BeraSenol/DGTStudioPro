@@ -95,13 +95,16 @@ private struct LoadedSection: View {
                 roster: RosterSummary(pgn),
                 headline: pgn.name
             ) {
+                // No local padding: the trailing inset lives on
+                // `InspectorEditButtonView` for all five pencils. An 8 pt
+                // one here used to stack on top of the shared 10 and put
+                // this one alone at 18.
                 InspectorEditButtonView(
                     label: "Rename",
                     identifier: AccessibilityID.libraryInspectorRename
                 ) {
                     beginEdit()
                 }
-                .padding(.trailing, 8)
             }
             
             OpeningSection(opening: pgn.opening)

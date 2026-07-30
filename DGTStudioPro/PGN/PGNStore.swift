@@ -444,13 +444,26 @@ internal struct PGNStore {
     /// collection destinations the player backfills run at: Players and
     /// Rankings read neither field, so running it there would triple the
     /// scan to change nothing.
+    ///
+    /// **Predicated, unlike its two neighbours, and the difference is the
+    /// point.** `backfillPlayerLinks` fetches everything on purpose — a nil
+    /// `whitePlayer` on a `"?"` row is *correct*, not missing, so "needs
+    /// linking" isn't a predicate over the link alone. Here it is: `ecoCode`
+    /// is a plain stored column and `ecoCode == nil` is the whole filter, so
+    /// SQLite can answer it and the converged case fetches **zero rows**
+    /// instead of materializing every game in the Library — each of which
+    /// drags its full `moves` array along for a question about one optional
+    /// string. That happens on every Library appearance, which is what makes
+    /// it worth the predicate rather than a deferred measurement.
     @discardableResult
     internal func backfillClassifications(
         using table: ECOClassifier = ECOTable.bundled
     ) throws -> Int {
-        let games = try modelContext.fetch(FetchDescriptor<PGN>())
+        let games = try modelContext.fetch(
+            FetchDescriptor<PGN>(predicate: #Predicate { $0.ecoCode == nil })
+        )
         var classified = 0
-        for game in games where game.ecoCode == nil {
+        for game in games {
             if classify(game, using: table) { classified += 1 }
         }
         if classified > 0 {

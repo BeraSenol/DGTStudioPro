@@ -184,7 +184,10 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
     /// blobs must survive a schema change are not something to leave to a
     /// behaviour you'd have to look up. They match the property names, which
     /// is what every already-saved tag was written with.
-    internal enum CodingKeys: String, CodingKey {
+    /// `private`: synthesis of `encode(to:)` and the hand-written
+    /// `init(from:)` both live in this file, so nothing outside it has any
+    /// business naming the on-disk keys.
+    private enum CodingKeys: String, CodingKey {
         case id, field, comparison, text, number, date, gameResult, specialCheckmate
     }
 

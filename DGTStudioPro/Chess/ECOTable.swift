@@ -35,7 +35,7 @@ internal enum ECOTable {
     /// Resource base names, one per ECO volume. Fetched as `a.tsv`…`e.tsv`
     /// and renamed on the way in: bundle resources land flat at the Resources
     /// root, where a bare `a.tsv` says nothing about what it is.
-    internal static let resourceNames = [
+    private static let resourceNames = [
         "eco-a", "eco-b", "eco-c", "eco-d", "eco-e",
     ]
 
