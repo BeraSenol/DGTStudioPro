@@ -26,7 +26,17 @@ internal enum CollectionViewMode: String, CaseIterable, Identifiable {
     }
 }
 
-/// The icons grid's geometry, shared by Library, Players and Rankings.
+/// The icons grid's geometry, shared by Library, Players and Rankings — and,
+/// since the between-milestone sweep, the gutters and inset of the Players and
+/// Rankings *columns* detail grids too.
+///
+/// Those two are a narrower claim than the icons grids: they read `spacing`
+/// and `inset` only, and keep their own `.adaptive(minimum: 160, maximum: 200)`
+/// sizing, because a detail pane beside a group list is not as wide as a whole
+/// destination. The sweep found them restating both numbers as literals while
+/// `LibraryColumnsView`'s equivalent card grid already read them here — one
+/// sibling reading the constant and two agreeing with it by coincidence, which
+/// is the twin-read-site shape and would have drifted on the first inset edit.
 ///
 /// Collection-destination parity is an invariant, and it was being held by
 /// three private copies of the same two constants plus three *different*

@@ -113,8 +113,9 @@ internal struct RankingsColumnsView: View {
             if let band = selectedBand(in: bands) {
                 ScrollView {
                     LazyVGrid(
-                        columns: [GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 16)],
-                        spacing: 16
+                        columns: [GridItem(.adaptive(minimum: 160, maximum: 200),
+                                          spacing: CollectionGridMetrics.spacing)],
+                        spacing: CollectionGridMetrics.spacing
                     ) {
                         ForEach(band.players) { player in
                             PlayerCardView(
@@ -126,7 +127,7 @@ internal struct RankingsColumnsView: View {
                             )
                         }
                     }
-                    .padding(16)
+                    .padding(CollectionGridMetrics.inset)
                 }
             } else {
                 ContentUnavailableView(
