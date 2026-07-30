@@ -319,6 +319,31 @@ internal enum AccessibilityID {
     internal static let playersInspectorToggle  = "players.inspectorToggle"
     internal static let playersInspectorProfile = "players.inspector.profile"
     internal static let playersInspectorEmpty   = "players.inspector.empty"
+
+    // MARK: Player Editing (M5 — D37′, D38′)
+
+    /// The profile header's rename pencil, and the menu holding the two
+    /// operations that aren't a rename. Separate identifiers because they are
+    /// separate affordances: the pencil is D26′'s shared control with its
+    /// fixed meaning, and folding "merge" and "delete" into it would widen a
+    /// named affordance into a generic one.
+    internal static let playersRenameButton   = "players.inspector.rename"
+    internal static let playersActionsMenu    = "players.inspector.actionsMenu"
+    internal static let playersMergeMenuItem  = "players.inspector.mergeItem"
+    internal static let playersDeleteMenuItem = "players.inspector.deleteItem"
+
+    internal static let playerRenameSheet     = "player.renameSheet"
+    /// The **tag-form** field — "Senol, Bera". D37′: the tag is what games
+    /// store and export writes, and D23′ forbids deriving it back out of a
+    /// display name, so the tag is what the sheet edits. The identifier says
+    /// `tag` rather than `name` so a test asserting on it can't drift into
+    /// believing this field holds a display name.
+    internal static let playerRenameTagField  = "player.renameSheet.tag"
+    internal static let playerRenameSave      = "player.renameSheet.save"
+
+    internal static let playerMergeSheet      = "player.mergeSheet"
+    internal static let playerMergePicker     = "player.mergeSheet.survivor"
+    internal static let playerMergeConfirm    = "player.mergeSheet.merge"
     
     /// `playerRow.Anish Giri`, … — one per list-mode row, keyed by the
     /// player's display name (the `gameRow(_:)` precedent).

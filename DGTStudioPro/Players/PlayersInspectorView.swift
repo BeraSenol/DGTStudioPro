@@ -14,19 +14,50 @@ import SwiftUI
 /// per-player home; the trend chart is the Rankings inspector's job
 /// (M-prs.4).
 internal struct PlayersInspectorView: View {
-    
+
     // MARK: Stored Properties
     internal let stats: PlayerStats?
     internal let rating: Glicko1.Rating?
     internal let recentGames: [PGN]
-    
+
+    /// M5's three operations, as closures rather than store reach.
+    ///
+    /// This view is pure-value by design — stats and rating arrive computed —
+    /// and rename/merge/delete all need a resolved `Player`, a `modelContext`
+    /// and somewhere to put a sheet. Handing it closures keeps that property
+    /// intact: the destination already owns the context and the key→row bridge
+    /// (`showInLibrary`'s route), so it owns these too, and the inspector
+    /// stays previewable without a container.
+    ///
+    /// Defaulted so the three previews below and any future host can omit
+    /// them; the app always wires all three.
+    internal var onRename: () -> Void = {}
+    internal var onMerge: () -> Void = {}
+    internal var onDelete: () -> Void = {}
+
+    /// Whether Delete can do anything for this player (D38′'s orphan guard).
+    ///
+    /// The store door refuses a linked player because `.nullify` plus the next
+    /// `backfillPlayerLinks()` would recreate it; the menu says so up front
+    /// rather than offering an item that reports failure. Computed from
+    /// `recentGames` — the same games the section below lists, so the disabled
+    /// state and the visible reason can't disagree.
+    private var canDelete: Bool { recentGames.isEmpty }
+
     // MARK: Body
     internal var body: some View {
         // D26′ — empty renders outside the `List`; see `InspectorEmptyState`.
         if let stats {
             List {
-                ProfileSection(stats: stats, rating: rating)
-                    .id(stats.key)   // reset per-player, the Library-inspector idiom
+                ProfileSection(
+                    stats: stats,
+                    rating: rating,
+                    canDelete: canDelete,
+                    onRename: onRename,
+                    onMerge: onMerge,
+                    onDelete: onDelete
+                )
+                .id(stats.key)   // reset per-player, the Library-inspector idiom
                 RecentGamesSection(playerKey: stats.key, games: recentGames)
             }
             .listStyle(.sidebar)
@@ -49,10 +80,14 @@ internal struct PlayersInspectorView: View {
 // MARK: Profile
 
 private struct ProfileSection: View {
-    
+
     let stats: PlayerStats
     let rating: Glicko1.Rating?
-    
+    let canDelete: Bool
+    let onRename: () -> Void
+    let onMerge: () -> Void
+    let onDelete: () -> Void
+
     var body: some View {
         Section {
             LabeledContent("Games", value: "\(stats.games)")
@@ -68,11 +103,47 @@ private struct ProfileSection: View {
             // replaces was the same name twice once the header carried it;
             // the monogram stays where it identifies something the reader is
             // choosing between, on the cards and rows.
-            InspectorSectionHeader(stats.name)
+            InspectorSectionHeader(stats.name) {
+                // Two controls, the Library inspector's PGN-header shape: the
+                // D26′ pencil keeps its one fixed meaning (edit *this* thing's
+                // name), and everything that isn't a rename lives in a menu
+                // beside it. Widening the pencil to also merge and delete
+                // would turn a named affordance into a generic icon button and
+                // lose the guarantee three inspectors' pencils currently give.
+                HStack(spacing: 12) {
+                    InspectorEditButtonView(
+                        label: "Rename Player",
+                        identifier: AccessibilityID.playersRenameButton,
+                        action: onRename
+                    )
+                    actionsMenu
+                }
+            }
         }
         .accessibilityIdentifier(AccessibilityID.playersInspectorProfile)
     }
-    
+
+    private var actionsMenu: some View {
+        Menu {
+            Button("Merge Into…", action: onMerge)
+                .accessibilityIdentifier(AccessibilityID.playersMergeMenuItem)
+            Divider()
+            Button("Delete Player", role: .destructive, action: onDelete)
+                .disabled(!canDelete)
+                .accessibilityIdentifier(AccessibilityID.playersDeleteMenuItem)
+        } label: {
+            Image(systemName: "ellipsis.circle")
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        // `InspectorEditButtonView`'s reason: a glyph at header font size is
+        // an ~11 pt mouse target.
+        .font(.body)
+        .help(canDelete ? "Merge or delete this player" : "Merge this player")
+        .accessibilityIdentifier(AccessibilityID.playersActionsMenu)
+    }
+
     /// "Unrated" until the player has a rated game (decided, both sides
     /// resolved — the `Glicko1.histories` rule); the number itself
     /// formats through the one shared rule.
