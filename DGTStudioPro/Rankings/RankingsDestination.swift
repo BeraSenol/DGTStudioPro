@@ -200,7 +200,10 @@ internal struct RankingsDestination: View {
     
     private func backfillPlayerLinks() {
         do {
-            try PGNStore(modelContext: modelContext).backfillPlayerLinks()
+            let store = PGNStore(modelContext: modelContext)
+            try store.backfillPlayerLinks()
+            // D29′ — after links, which it reads (see the store doc).
+            try store.backfillPlayerTagNames()
         } catch {
             Self.logger.error("Player-link backfill failed: \(error.localizedDescription, privacy: .public)")
         }

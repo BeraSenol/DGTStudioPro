@@ -63,6 +63,13 @@ internal enum MovetextEdit {
         case stalemateRequiresDraw(claimed: GameResult)
         /// An archived game can't be `*` (Decision #3).
         case resultRequiresDecision
+        /// A result token (`1-0`, `0-1`, `1/2-1/2`, `*`) appears *before the
+        /// end* of the text — two concatenated games, which would otherwise
+        /// validate as one whenever the second game's plies happen to replay
+        /// legally (M2 item 3). The editor-door sibling of
+        /// `PGNParser.Error.multipleGames`. A *trailing* result token stays
+        /// legal: it's dropped as paste convenience, not treated as a claim.
+        case splicedGames(token: String)
     }
     
     /// Replays `proposed` from `start`, returning either the canonical,
@@ -102,9 +109,9 @@ internal enum MovetextEdit {
         // position — comparing a derived mate marker to itself would always
         // pass and never catch the lie. `parseSAN` dropped the suffix on its
         // way in, so the raw input is the only place the user's claim survives.
-        // `contains`, not `hasSuffix`: `tokenize` drops move numbers and result
-        // tokens but not `!`/`?`, so `Qd2#!` still claims mate and a suffix
-        // test would wave it through.
+        // `contains`, not `hasSuffix`: `tokenize` drops move numbers and a
+        // trailing result token but not `!`/`?`, so `Qd2#!` still claims mate
+        // and a suffix test would wave it through.
         if let last = proposed.last, last.contains("#"), !state.isCheckmate {
             return .failure(.claimsCheckmateButPositionIsNot(san: last))
         }
@@ -138,15 +145,31 @@ internal enum MovetextEdit {
 extension MovetextEdit {
     
     /// Splits free-form movetext into SAN tokens for validation: whitespace-
-    /// separated, with move numbers (`12.`, `12...`, and glued `1.e4`) and
-    /// result tokens (`1-0`, `0-1`, `1/2-1/2`, `*`) dropped. SAN only — no
-    /// comment/variation/NAG handling (that is the importer's job); a stray
-    /// `{…}` simply surfaces as an illegal ply, which is honest feedback.
-    internal static func tokenize(_ movetext: String) -> [String] {
-        movetext
+    /// separated, with move numbers (`12.`, `12...`, and glued `1.e4`) dropped,
+    /// and a result token (`1-0`, `0-1`, `1/2-1/2`, `*`) dropped **only when it
+    /// closes the text** — a pasted game usually ends in one, and the result is
+    /// claimed by the archived game, not by the paste. A result token with
+    /// tokens *after* it throws `.splicedGames`: it marks a second game glued
+    /// on, and silently dropping it was exactly how two games could validate
+    /// as one (M2 item 3). SAN only — no comment/variation/NAG handling (that
+    /// is the importer's job); a stray `{…}` simply surfaces as an illegal
+    /// ply, which is honest feedback.
+    ///
+    /// Note the asymmetry left in place, deliberately: a trailing token that
+    /// *contradicts* the claimed result (text ends `1-0`, game says `0-1`) is
+    /// still dropped without comment — the sheet shows the game's result and
+    /// validates against it; the paste's trailing token is convenience, never
+    /// a second source of truth.
+    internal static func tokenize(_ movetext: String) throws(Rejection) -> [String] {
+        let tokens = movetext
             .split(whereSeparator: \.isWhitespace)
             .map(strippingMoveNumberPrefix)
-            .filter { !$0.isEmpty && !resultTokens.contains($0) }
+            .filter { !$0.isEmpty }
+        if let index = tokens.firstIndex(where: { resultTokens.contains($0) }),
+           index != tokens.indices.last {
+            throw Rejection.splicedGames(token: tokens[index])
+        }
+        return tokens.filter { !resultTokens.contains($0) }
     }
     
     private static let resultTokens: Set<String> = Set(GameResult.allCases.map(\.rawValue))

@@ -56,7 +56,12 @@ internal struct LiveGameRosterForm: View {
     /// compile unchanged.
     internal var identifierPrefix = AccessibilityID.liveFormPrefix
     
-    /// Known-player display names for the seat pickers (M-lib.1, D16′).
+    /// Known-player **tag forms** for the seat pickers (M-lib.1, D16′;
+    /// form fixed by D29′ — the picker inserts `Player.tagName`, never
+    /// `Player.name`: a seat field is an editor over a tag, and "Senol,
+    /// Bera" is what the archive stores and D24′ exports). The menu labels
+    /// show the same string it inserts — showing display form while
+    /// inserting tag form would make the menu lie about its own effect.
     /// Empty — the default — renders plain text fields, so the edit and
     /// archive sheets compile and behave unchanged; the New Game sheet
     /// passes the `Player` registry. Free text always works: the menu
@@ -238,7 +243,14 @@ internal struct NewLiveGameSheet: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding([.horizontal, .top])
             
-            LiveGameRosterForm(roster: $roster, knownPlayers: players.map(\.name))
+            // D29′: tag form into the field ("Senol, Bera"), with `name` as
+            // the fallback for a pre-backfill row — display form is still a
+            // *valid* tag (D23′: no-comma names pass through), just not the
+            // remembered one.
+            LiveGameRosterForm(
+                roster: $roster,
+                knownPlayers: players.map { $0.tagName ?? $0.name }
+            )
             
             Divider()
             
@@ -312,12 +324,16 @@ internal struct NewLiveGameSheet: View {
         prefilledRound = next
     }
     
-    /// A seat resolves iff its trimmed text matches a known player under
-    /// the D9′ identity fold (case and whitespace folded, diacritics
-    /// preserved). Placeholders and empties resolve to no player, as
-    /// everywhere.
+    /// A seat resolves iff its text matches a known player under the D9′
+    /// identity fold (case and whitespace folded, diacritics preserved).
+    /// Routed through `PlayerName.displayForm(of:)` first, exactly like
+    /// `resolvePlayer`: the field carries **tag form** since D29′ ("Senol,
+    /// Bera"), and keying the raw text — as this did before — folds the
+    /// comma form to a key no `Player` row stores, silently killing the
+    /// Round prefill for every picker-inserted (or typed) tag-form name.
+    /// Placeholders and empties resolve to no player, as everywhere.
     private func resolvedKey(for field: String) -> String? {
-        let display = field.trimmingCharacters(in: .whitespacesAndNewlines)
+        let display = PlayerName.displayForm(of: field)
         guard !display.isEmpty, display != "?" else { return nil }
         let key = Player.normalizedKey(for: display)
         return players.contains { $0.normalizedName == key } ? key : nil

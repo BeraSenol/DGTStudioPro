@@ -49,11 +49,23 @@ internal struct MovetextEditorSheet: View {
     }
     
     // MARK: Derived
-    
+
     private typealias Validation = Result<MovetextEdit.Accepted, MovetextEdit.Rejection>
-    
-    private var tokens: [String] { MovetextEdit.tokenize(text) }
-    
+
+    /// Tokenization and validation as one step: `tokenize` refuses spliced
+    /// input (M2 item 3), so tokens and verdict now travel together — a
+    /// separate `tokens` property would re-tokenize *and* need its own story
+    /// for the throw. On a splice the tokens are empty, which is safe: Save
+    /// is gated on `.success`, so they're never committed.
+    private func checked() -> (tokens: [String], validation: Validation) {
+        do {
+            let tokens = try MovetextEdit.tokenize(text)
+            return (tokens, MovetextEdit.validate(tokens, claimedResult: pgn.result))
+        } catch {
+            return ([], .failure(error))
+        }
+    }
+
     private func isValid(_ validation: Validation) -> Bool {
         if case .success = validation { return true }
         return false
@@ -65,7 +77,7 @@ internal struct MovetextEditorSheet: View {
         // Validate once per render. As a computed property this was pulled by
         // both Save's gate and the status line, and each pull re-tokenized
         // too — every keystroke replayed the whole game twice over.
-        let validation = MovetextEdit.validate(tokens, claimedResult: pgn.result)
+        let check = checked()
         
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
@@ -85,7 +97,7 @@ internal struct MovetextEditorSheet: View {
                 .padding(.top, 8)
                 .accessibilityIdentifier(AccessibilityID.movetextEditorField)
             
-            statusLine(validation)
+            statusLine(check.validation)
                 .padding(.horizontal)
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -100,12 +112,12 @@ internal struct MovetextEditorSheet: View {
                 Spacer()
                 
                 Button("Save") {
-                    onCommit(tokens)
+                    onCommit(check.tokens)
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
-                .disabled(!isValid(validation))
+                .disabled(!isValid(check.validation))
                 .accessibilityIdentifier(AccessibilityID.movetextEditorSave)
             }
             .padding()
@@ -147,6 +159,8 @@ internal struct MovetextEditorSheet: View {
             return "This line ends in stalemate — the result must be a draw (1/2-1/2)."
         case .resultRequiresDecision:
             return "An archived game needs a decided result (not *)."
+        case .splicedGames(let token):
+            return "\(token) appears before the end — this looks like more than one game. Edit one game's moves only."
         }
     }
     

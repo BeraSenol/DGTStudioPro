@@ -56,6 +56,7 @@ extension LiveGame {
             round: roster.round,
             white: roster.white,
             black: roster.black,
+            board: roster.board,
             sanMoves: sanMoves,
             result: result,
             startedAt: startedAt,
@@ -96,7 +97,8 @@ extension LiveGame {
                 date: draft.date,
                 round: draft.round,
                 white: draft.white,
-                black: draft.black
+                black: draft.black,
+                board: draft.board   // D28′ — a resumed game keeps its board
             ),
             ruleSet: draft.ruleSet,
             startedAt: draft.startedAt

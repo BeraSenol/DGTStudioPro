@@ -121,6 +121,65 @@ struct PGNStorePlayerTests {
         #expect(second?.name == "ruy lopez")
     }
     
+    // MARK: Tag Form (D29′)
+
+    /// The resolver remembers the first-seen tag form — whitespace-folded,
+    /// comma structure and casing verbatim — beside the display form.
+    @Test func resolveStampsFirstSeenTagName() throws {
+        let context = try Self.makeContext()
+        let store = PGNStore(modelContext: context)
+
+        let player = try store.resolvePlayer(named: "Lopez,   Ruy")
+
+        #expect(player?.name == "Ruy Lopez")
+        #expect(player?.tagName == "Lopez, Ruy")
+    }
+
+    /// First-seen wins, `name`-casing style: a later sighting in a
+    /// different raw form reuses the row without rewriting its tag form —
+    /// even when the later form is the "better" comma form.
+    @Test func laterSightingDoesNotRewriteTagName() throws {
+        let context = try Self.makeContext()
+        let store = PGNStore(modelContext: context)
+
+        let first = try store.resolvePlayer(named: "Ruy Lopez")
+        let second = try store.resolvePlayer(named: "Lopez, Ruy")
+
+        #expect(second?.persistentModelID == first?.persistentModelID)
+        #expect(second?.tagName == "Ruy Lopez")
+    }
+
+    /// Pre-schema rows heal from their earliest linked game's seat tag;
+    /// the pass is idempotent and a second run reports no work.
+    @Test func backfillStampsTagNamesFromEarliestGameIdempotently() throws {
+        let context = try Self.makeContext()
+        let store = PGNStore(modelContext: context)
+        let later = try store.importPGN(text: Self.samplePGN(white: "CARLSEN, MAGNUS", round: 2))
+        let earlier = try store.importPGN(text: Self.samplePGN(white: "Carlsen, Magnus", round: 1))
+        earlier.date = Date(timeIntervalSince1970: 1_000)
+        later.date = Date(timeIntervalSince1970: 2_000)
+        let white = try #require(earlier.whitePlayer)
+        white.tagName = nil   // simulate a row that predates the field
+        try context.save()
+
+        #expect(try store.backfillPlayerTagNames() == 1)
+        #expect(white.tagName == "Carlsen, Magnus", "earliest game's tag should win")
+        #expect(try store.backfillPlayerTagNames() == 0)
+    }
+
+    /// A linkless row (a future deletion's orphan) stays nil and never
+    /// re-reports as work — readers fall back to `name`.
+    @Test func backfillSkipsLinklessPlayers() throws {
+        let context = try Self.makeContext()
+        let orphan = Player(name: "Nobody Linked")
+        context.insert(orphan)
+        try context.save()
+        let store = PGNStore(modelContext: context)
+
+        #expect(try store.backfillPlayerTagNames() == 0)
+        #expect(orphan.tagName == nil)
+    }
+
     /// A placeholder is the absence of a player, never a player named "?".
     @Test func placeholderAndEmptyTagsResolveToNoPlayer() throws {
         let context = try Self.makeContext()

@@ -80,7 +80,32 @@ struct PGNStoreArchiveTests {
         #expect(result.pgn.contentHash.count == 32)
         #expect(try Self.libraryCount(in: context) == 1)
     }
-    
+
+    // MARK: Board Tag (M2, D28′)
+
+    /// The archive door threads `Roster.board` to `PGN.board` — and because
+    /// the tag sits outside the content hash (D24′: equipment, not game),
+    /// a boarded game still dedupes against its board-less twin, which is
+    /// exactly the pre-M2 archive it might meet in the Library.
+    @Test func archiveThreadsBoardIdentityOutsideTheHash() throws {
+        let context = try Self.makeContext()
+        let store = PGNStore(modelContext: context)
+
+        var roster = Self.roster()
+        roster.board = "DGT 3000448278"
+        let boarded = LiveGame(roster: roster)
+        boarded.commit(try boarded.currentState.parseSAN("e4"))
+        boarded.resign(.white)
+
+        let first = try store.archive(boarded)
+        #expect(first.pgn.board == "DGT 3000448278")
+
+        // Same game, no board — the crash-resume / pre-M2 shape.
+        let second = try store.archive(Self.finishedGame())
+        #expect(second.deduplicated == true)
+        #expect(try Self.libraryCount(in: context) == 1)
+    }
+
     // MARK: Decision #3 — no `*` ever archives
     
     @Test func archiveRefusesAnOngoingGame() throws {

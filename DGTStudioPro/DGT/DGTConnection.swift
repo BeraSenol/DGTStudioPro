@@ -82,6 +82,21 @@ internal final class DGTConnection {
         internal var trademark: String?
         internal var version: String?
         internal var hardwareVersion: String?
+
+        /// The `[Board "…"]` tag value for games played on this board
+        /// (D28′): `"DGT "` + the long serial, matching the DGT reference
+        /// exports byte for byte (`DGT 3000448278` — ten digits, the *long*
+        /// serial; the short one is five characters). Falls back to the
+        /// short serial when only that answered — a truthful identity beats
+        /// a `?` — and nil until the handshake supplies either, which is
+        /// also why `connect(to:)` resetting `boardInfo` makes a mid-game
+        /// reconnect window read nil: exactly the case `Roster.board`'s
+        /// capture-at-start exists to survive. On the value type, not the
+        /// connection, so the composition is testable without a port.
+        internal var identityTag: String? {
+            guard let serial = longSerialNumber ?? serialNumber else { return nil }
+            return "DGT \(serial)"
+        }
     }
     
     // MARK: Observable State

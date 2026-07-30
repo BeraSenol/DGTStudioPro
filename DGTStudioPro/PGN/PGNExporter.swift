@@ -61,7 +61,15 @@ internal enum PGNExporter {
         panel.canChooseDirectories = true
         panel.canCreateDirectories = true
         guard panel.runModal() == .OK, let folder = panel.url else { return }
-        
+
+        // D32′ — same-named files are overwritten silently, by decision.
+        // Re-exporting into last time's folder should refresh the files
+        // (the export is a pure function of the Library rows), and the
+        // alternatives are worse: a skip silently exports less than was
+        // selected, a rename breaks the D24′ filename convention, and a
+        // per-file modal is the fifty-dialog batch the `write` doc already
+        // rejects. The single-game path keeps `NSSavePanel`'s own replace
+        // prompt — the system asks there, so we don't.
         for (offset, game) in games.enumerated() {
             write(game, to: folder.appending(path: game.exportFileName(index: offset + 1)))
         }

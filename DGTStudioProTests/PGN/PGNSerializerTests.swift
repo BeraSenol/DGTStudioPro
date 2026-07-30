@@ -147,4 +147,32 @@ struct PGNSerializerTests {
         ].joined(separator: "\n")
         #expect(PGN().pgnText == expected)
     }
+
+    // MARK: Archive-Shaped Export (M2 gate)
+
+    /// The M2 gate sentence, as bytes: a game shaped like the archive door
+    /// now produces it — tag-form seats from the D29′ picker, a real board
+    /// identity from the D28′ stamp — exports `[White "Senol, Bera"]` and
+    /// `[Board "DGT …"]`, not display names and not `?`. The reference
+    /// round-trips prove the same for imported files; this pins it for the
+    /// app's own archives, which never pass through the parser.
+    @Test func archiveShapedGameExportsTagFormAndBoard() {
+        let pgn = PGN(
+            event: "Casual Game",
+            site: "Home",
+            date: nil,
+            round: 4,
+            white: "Senol, Bera",
+            black: "Brouns, Reinaud",
+            moves: ["e4", "c6"],
+            result: .whiteWins,
+            board: "DGT 3000448278"
+        )
+        let text = pgn.pgnText
+
+        #expect(text.contains("[White \"Senol, Bera\"]"))
+        #expect(text.contains("[Black \"Brouns, Reinaud\"]"))
+        #expect(text.contains("[Board \"DGT 3000448278\"]"))
+        #expect(!text.contains("[Board \"?\"]"))
+    }
 }

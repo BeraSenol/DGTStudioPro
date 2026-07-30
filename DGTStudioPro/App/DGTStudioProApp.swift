@@ -94,6 +94,17 @@ internal struct DGTStudioProApp: App {
             session?.boardChanged(board)
         }
         
+        // M2 (D28′) — the board identity the new game stamps onto its
+        // roster. Strong capture, deliberately, same as the tracking loop's
+        // (the @Sendable weak-capture lesson does not apply to a plain
+        // @MainActor closure): session → connection is the only strong edge
+        // — the connection's own hooks capture the session weakly — so no
+        // cycle, and both objects are App-owned for the process lifetime
+        // anyway.
+        session.boardIdentity = {
+            connection.boardInfo.identityTag
+        }
+
         // M7.3 — a board vanishing mid-game auto-reconnects instead of
         // showing the failure banner. "Mid-game" is any game-bearing mode
         // (`liveGame` non-nil, finished-on-screen included: the finished

@@ -318,4 +318,21 @@ struct DGTConnectionTests {
         #expect(connection.status == .disconnected)
         #expect(connection.isReconnecting == false)
     }
+
+    // MARK: Board Identity Tag (M2, D28′)
+
+    /// `BoardInfo.identityTag` composes the `[Board "…"]` value the DGT
+    /// reference exports carry: "DGT " + long serial ("DGT 3000448278"),
+    /// short serial as fallback, nil when the handshake reported neither.
+    /// On the value type precisely so this pins without a port.
+    @Test func identityTagPrefersLongSerialAndFallsBack() {
+        var info = DGTConnection.BoardInfo()
+        #expect(info.identityTag == nil)
+
+        info.serialNumber = "12345"
+        #expect(info.identityTag == "DGT 12345")
+
+        info.longSerialNumber = "3000448278"
+        #expect(info.identityTag == "DGT 3000448278")
+    }
 }

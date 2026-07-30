@@ -171,21 +171,41 @@ struct TagRuleTests {
         #expect(notBera.matches(record(white: nil, black: nil)) == false)
     }
 
-    /// Documents — deliberately does not bless — the single-subject
-    /// `.notEquals` behavior M2 will decide (M1 item 18): `white` /
-    /// `black` / `event` / `site` fold an unknown subject to "", and
-    /// `"" != needle` is true, so "White is not X" currently matches
-    /// games whose white seat never resolved — unlike `.player`, which
-    /// guards emptiness. If M2 changes the fold, this is the test that
-    /// should start failing; that is its entire job. The half-resolved
-    /// `.player` reading rides along on the same terms: the one resolved
-    /// seat satisfies the negation, the missing seat abstains.
-    @Test func singleSubjectNotEqualsCurrentlyMatchesUnknowns() {
+    /// D30′ — the decision the M1 documentation test
+    /// (`singleSubjectNotEqualsCurrentlyMatchesUnknowns`) existed to trip
+    /// on: unknowns never match, **negation included**, for the single
+    /// subjects too. An unresolved seat and a `""`/`"?"` event/site fail
+    /// `.notEquals` — "White is not X" means the white player is known and
+    /// isn't X. The half-resolved `.player` reading is unchanged by
+    /// decision: the one resolved seat satisfies the negation, the missing
+    /// seat abstains.
+    @Test func singleSubjectNotEqualsNeverMatchesUnknowns() {
         let notCarlsen = TagRule(field: .white, comparison: .notEquals, text: "carlsen")
-        #expect(notCarlsen.matches(record(white: nil)))
+        #expect(notCarlsen.matches(record(white: nil)) == false)
+        #expect(notCarlsen.matches(record(white: "Anish Giri")))
+
+        let notCasual = TagRule(field: .event, comparison: .notEquals, text: "casual game")
+        #expect(notCasual.matches(record(event: "?")) == false)
+        #expect(notCasual.matches(record(event: "")) == false)
+        #expect(notCasual.matches(record(event: "Winter Open")))
+
+        // Positive comparisons deliberately keep matching an explicit "?".
+        #expect(TagRule(field: .event, comparison: .equals, text: "?").matches(record(event: "?")))
 
         let notBera = TagRule(field: .player, comparison: .notEquals, text: "bera")
         #expect(notBera.matches(record(white: "Christophe", black: nil)))
+    }
+
+    /// D30′'s other half: both sides of a string comparison ride
+    /// `PlayerName.folded` + `lowercased()`, so whitespace runs and
+    /// newlines in *either* the tag or the rule text stop mattering.
+    @Test func stringComparisonsFoldWhitespaceRunsBothSides() {
+        let doubleSpaced = record(white: "Anish  Giri", event: "Winter\nOpen")
+
+        #expect(TagRule(field: .white, comparison: .equals, text: "anish giri").matches(doubleSpaced))
+        #expect(TagRule(field: .white, comparison: .equals, text: " Anish\tGiri ").matches(doubleSpaced))
+        #expect(TagRule(field: .event, comparison: .contains, text: "winter open").matches(doubleSpaced))
+        #expect(TagRule(field: .player, comparison: .equals, text: "anish  giri").matches(doubleSpaced))
     }
 
     // MARK: Combinator

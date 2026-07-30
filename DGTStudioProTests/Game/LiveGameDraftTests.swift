@@ -26,7 +26,8 @@ struct LiveGameDraftTests {
 
     private func sampleDraft(
         date: Date? = instant,
-        round: Int? = 3
+        round: Int? = 3,
+        board: String? = "DGT 3000448278"
     ) -> LiveGameDraft {
         LiveGameDraft(
             schemaVersion: LiveGameDraft.currentSchemaVersion,
@@ -38,6 +39,7 @@ struct LiveGameDraftTests {
             round: round,
             white: "Wendy",
             black: "Blake",
+            board: board,
             sanMoves: ["e4", "e5", "Nf3"],
             result: .ongoing,
             startedAt: Self.instant,
@@ -54,10 +56,11 @@ struct LiveGameDraftTests {
         #expect(decoded == original)
     }
 
-    /// The two optionals (date, round) must survive as absent — a draft for
-    /// a casual game with no round shouldn't resurrect with invented values.
-    @Test func roundTripPreservesNilDateAndRound() throws {
-        let original = sampleDraft(date: nil, round: nil)
+    /// The optionals (date, round, board) must survive as absent — a draft
+    /// for a casual game with no round shouldn't resurrect with invented
+    /// values.
+    @Test func roundTripPreservesNilOptionals() throws {
+        let original = sampleDraft(date: nil, round: nil, board: nil)
 
         let data = try LiveGameDraft.encoder().encode(original)
         let decoded = try LiveGameDraft.decoder().decode(LiveGameDraft.self, from: data)
@@ -65,6 +68,24 @@ struct LiveGameDraftTests {
         #expect(decoded == original)
         #expect(decoded.date == nil)
         #expect(decoded.round == nil)
+        #expect(decoded.board == nil)
+    }
+
+    /// D28′'s schema stance, pinned: a version-1 file written *before* the
+    /// `board` field existed — no `board` key at all — still decodes, with
+    /// nil. If adding a field ever breaks this, `currentSchemaVersion` owes
+    /// a bump and this test the update.
+    @Test func preBoardVersionOneFileDecodesWithNilBoard() throws {
+        let pre = sampleDraft(board: nil)
+        let data = try LiveGameDraft.encoder().encode(pre)
+        // Synthesized Codable omits a nil optional's key entirely, so this
+        // encoding *is* a pre-M2 file — assert that premise, then decode it.
+        #expect(!String(decoding: data, as: UTF8.self).contains("\"board\""))
+
+        let decoded = try LiveGameDraft.decoder().decode(LiveGameDraft.self, from: data)
+
+        #expect(decoded.board == nil)
+        #expect(decoded == pre)
     }
 
     /// Dates are ISO 8601 in the file — human-readable and timezone-stable,

@@ -162,6 +162,17 @@ internal enum PGNParser {
         return dateFormatter.string(from: date)
     }
     
+    /// **Integer rounds only — the recorded contract (M2, D31′).** PGN
+    /// permits multipart rounds (`[Round "1.3"]`); this app does not model
+    /// them: `Int(_)` refuses anything but a plain integer, so a sub-round
+    /// imports as nil and exports as `[Round "?"]` — lossy, and deliberate.
+    /// Everything downstream of the tag is `Int`-shaped (`PGN.round` in the
+    /// content hash via `String.init`, `PairingRound`'s max-plus-one,
+    /// `TagRule`'s numeric rules, the New Game prefill), the DGT reference
+    /// files are integer-round, and nothing in this app's ecosystem
+    /// produces sub-rounds. Supporting them end to end would touch the
+    /// hash rendering for zero real input. Decided over full sub-round
+    /// support at D31′; `roundParsesIntegersOnly` is the pin.
     internal static func parseRound(_ round: String?) -> Int? {
         guard let round else { return nil }
         return Int(round)

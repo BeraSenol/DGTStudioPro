@@ -107,20 +107,50 @@ struct MovetextEditTests {
     }
     
     // MARK: Tokenization
-    
-    @Test func tokenizeStripsMoveNumbersAndResult() {
-        #expect(MovetextEdit.tokenize("1. e4 e5 2. Nf3 Nc6 1-0") == ["e4", "e5", "Nf3", "Nc6"])
+
+    @Test func tokenizeStripsMoveNumbersAndTrailingResult() throws {
+        #expect(try MovetextEdit.tokenize("1. e4 e5 2. Nf3 Nc6 1-0") == ["e4", "e5", "Nf3", "Nc6"])
     }
-    
-    @Test func tokenizeHandlesGluedNumbersAndBlackEllipsis() {
-        #expect(MovetextEdit.tokenize("1.e4 e5 2.Nf3 2...Nc6") == ["e4", "e5", "Nf3", "Nc6"])
+
+    @Test func tokenizeHandlesGluedNumbersAndBlackEllipsis() throws {
+        #expect(try MovetextEdit.tokenize("1.e4 e5 2.Nf3 2...Nc6") == ["e4", "e5", "Nf3", "Nc6"])
     }
-    
-    @Test func tokenizeToleratesWhitespaceAndNewlines() {
-        #expect(MovetextEdit.tokenize("  e4\n  e5 \t Nf3  ") == ["e4", "e5", "Nf3"])
+
+    @Test func tokenizeToleratesWhitespaceAndNewlines() throws {
+        #expect(try MovetextEdit.tokenize("  e4\n  e5 \t Nf3  ") == ["e4", "e5", "Nf3"])
     }
-    
-    @Test func tokenizeOfEmptyIsEmpty() {
-        #expect(MovetextEdit.tokenize("   \n  ") == [])
+
+    @Test func tokenizeOfEmptyIsEmpty() throws {
+        #expect(try MovetextEdit.tokenize("   \n  ") == [])
+    }
+
+    // MARK: Splice Refusal (M2 item 3)
+
+    @Test func midTextResultTokenIsRefused() {
+        // Two games glued together: without the refusal, the second game's
+        // plies replay legally from the first game's final position often
+        // enough that the splice validated as one game.
+        #expect(throws: MovetextEdit.Rejection.splicedGames(token: "1-0")) {
+            try MovetextEdit.tokenize("1. e4 e5 1-0 1. d4 d5")
+        }
+    }
+
+    @Test func midTextAsteriskIsRefused() {
+        #expect(throws: MovetextEdit.Rejection.splicedGames(token: "*")) {
+            try MovetextEdit.tokenize("e4 e5 * e4")
+        }
+    }
+
+    @Test func doubledTrailingResultIsRefusedAsSplice() {
+        // The first `1-0` has a token after it (the second), so it reads as
+        // mid-text — refusal, not silent double-drop.
+        #expect(throws: MovetextEdit.Rejection.splicedGames(token: "1-0")) {
+            try MovetextEdit.tokenize("e4 e5 1-0 1-0")
+        }
+    }
+
+    @Test func loneResultTokenTokenizesEmpty() throws {
+        // A result with no moves is a trailing result — dropped, not a splice.
+        #expect(try MovetextEdit.tokenize("1/2-1/2") == [])
     }
 }

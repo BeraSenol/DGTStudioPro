@@ -57,14 +57,27 @@ internal final class LiveGame {
         internal var round: Int?
         internal var white: String
         internal var black: String
-        
+
+        /// The `[Board "…"]` identity of the board this game is played on
+        /// (D28′) — "DGT 3000448278", composed by
+        /// `DGTConnection.BoardInfo.identityTag` and stamped once by
+        /// `DGTLiveSession.startNewGame` from its `boardIdentity` hook.
+        /// On the roster rather than read at archive time so it names the
+        /// board that *played* the game: it survives a mid-game cable pull
+        /// (reconnect clears `boardInfo` until the handshake answers) and a
+        /// crash-resume (the draft carries it). Not exposed by the roster
+        /// forms — equipment, not a seat; edits ride the value copy
+        /// untouched.
+        internal var board: String?
+
         internal init(
             event: String = "?",
             site: String = "?",
             date: Date? = .now,
             round: Int? = nil,
             white: String = "?",
-            black: String = "?"
+            black: String = "?",
+            board: String? = nil
         ) {
             self.event = event
             self.site = site
@@ -72,6 +85,7 @@ internal final class LiveGame {
             self.round = round
             self.white = white
             self.black = black
+            self.board = board
         }
     }
     

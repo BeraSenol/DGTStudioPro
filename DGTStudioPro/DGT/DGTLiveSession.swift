@@ -261,7 +261,17 @@ internal final class DGTLiveSession {
     /// headless by construction. Rejected: a view observing `needsRecovery`
     /// (couples the board surface to audio and re-fires on both exits).
     @ObservationIgnored internal var onDesync: (() -> Void)?
-    
+
+    /// Optional board-identity source (M2, D28′) — answers "which physical
+    /// board is this?" as a ready-made `[Board "…"]` tag value. Wired once
+    /// in `App.init()` to `connection.boardInfo.identityTag`; consulted
+    /// exactly once per game, in `startNewGame`, which stamps the answer
+    /// onto `Roster.board` (see that doc for why capture-at-start beats
+    /// read-at-archive). The same settable-hook pattern as its siblings —
+    /// the session never imports the connection — and nil in headless unit
+    /// tests, where games simply carry no board, like pre-M2 archives.
+    @ObservationIgnored internal var boardIdentity: (() -> String?)?
+
     // MARK: Private State
     
     /// The armed settle. Readable — never writable — outside the type so
@@ -510,6 +520,12 @@ internal final class DGTLiveSession {
             return
         }
         
+        // D28′: stamp the board identity at game start — the one write to
+        // `Roster.board`. The dialog's roster never carries one (the forms
+        // don't expose it), so this is an unconditional stamp, not a merge.
+        var roster = roster
+        roster.board = boardIdentity?()
+
         let game = LiveGame(roster: roster)
         archiveOutcome = nil
         archivedPGN = nil

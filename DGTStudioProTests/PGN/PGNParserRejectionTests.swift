@@ -110,6 +110,9 @@ struct PGNParserRejectionTests {
         #expect(PGNParser.parseResult(nil) == .ongoing)
     }
     
+    /// D31′ — integer-rounds-only is the *contract*, not an accident of
+    /// `Int.init`: `"3.1"` → nil is the decided, documented handling of
+    /// PGN's multipart rounds (see `parseRound`'s doc for the reasoning).
     @Test func roundParsesIntegersOnly() {
         #expect(PGNParser.parseRound("3") == 3)
         #expect(PGNParser.parseRound("?") == nil)

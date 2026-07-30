@@ -146,7 +146,11 @@ internal struct PGNStore {
             white: game.roster.white,
             black: game.roster.black,
             moves: game.sanMoves,
-            result: game.result
+            result: game.result,
+            // D28′: the board that played the game, stamped at game start.
+            // Outside the content hash by D24′ — equipment, not game — so
+            // threading it can't perturb dedupe against pre-M2 archives.
+            board: game.roster.board
         )
         let hash = Self.contentHash(for: pgn)
         
@@ -285,8 +289,11 @@ internal struct PGNStore {
         if let existing: Player = try first(#Predicate { $0.normalizedName == key }) {
             return existing
         }
-        
-        let player = Player(name: display)
+
+        // D29′: remember the first-seen tag form alongside the display form.
+        // Whitespace-folded only — comma structure, casing, and diacritics
+        // stay verbatim, so the picker re-inserts what the tag actually was.
+        let player = Player(name: display, tagName: PlayerName.folded(rawTag))
         modelContext.insert(player)
         Self.logger.info("Created player '\(display, privacy: .public)'")
         return player
@@ -333,6 +340,44 @@ internal struct PGNStore {
             Self.logger.info("Backfilled player links on \(relinked) game(s)")
         }
         return relinked
+    }
+
+    /// Heals `Player.tagName` on rows that predate the field (D29′) — the
+    /// eager half of the decision: existing players must insert tag form
+    /// from the picker *now*, not after they next happen to re-resolve.
+    /// "First seen" for a pre-schema row is reconstructed as the seat tag
+    /// of the earliest linked game (`effectiveDate`, then `importedAt` —
+    /// the chronological-order philosophy), which is deterministic and the
+    /// closest surviving witness to what created the row. A row with no
+    /// links (a future deletion's orphan) stays nil; readers fall back to
+    /// `name`. Idempotent, fetch-all-and-scan at personal scale, called
+    /// *after* `backfillPlayerLinks()` at the same three sites — it reads
+    /// the links, so the ordering lets a row linked this very pass be
+    /// stamped this very pass. A separate pass rather than a rider on the
+    /// link backfill, so each keeps an honest count contract. Returns the
+    /// number of players stamped.
+    @discardableResult
+    internal func backfillPlayerTagNames() throws -> Int {
+        let players = try modelContext.fetch(FetchDescriptor<Player>())
+        var stamped = 0
+        for player in players where player.tagName == nil {
+            let sightings = player.whiteGames.map { ($0, $0.white) }
+                + player.blackGames.map { ($0, $0.black) }
+            let earliest = sightings.min { lhs, rhs in
+                if lhs.0.effectiveDate != rhs.0.effectiveDate {
+                    return lhs.0.effectiveDate < rhs.0.effectiveDate
+                }
+                return lhs.0.importedAt < rhs.0.importedAt
+            }
+            guard let tag = earliest?.1 else { continue }
+            player.tagName = PlayerName.folded(tag)
+            stamped += 1
+        }
+        if stamped > 0 {
+            try modelContext.save()
+            Self.logger.info("Backfilled tag names on \(stamped) player(s)")
+        }
+        return stamped
     }
     
     // MARK: Private Helpers

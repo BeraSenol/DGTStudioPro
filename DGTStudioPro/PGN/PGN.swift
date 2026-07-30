@@ -43,8 +43,9 @@ internal final class PGN: Identifiable {
     /// deliberately **outside the content hash** (like `timeControl`): it
     /// identifies the equipment, not the game, so the same game imported
     /// from two boards must still dedupe — and folding it in would rot every
-    /// stored hash in place. Nil until a live game learns it (the archive
-    /// door doesn't thread it yet) or an import supplies it.
+    /// stored hash in place. Supplied by imports and — since M2 (D28′) — by
+    /// the archive door, from the identity `startNewGame` stamped onto the
+    /// roster at game start. Nil on pre-M2 archives and boardless games.
     internal var board: String?
     
     internal var moves: [String]

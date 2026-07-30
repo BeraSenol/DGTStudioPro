@@ -36,7 +36,12 @@ internal struct LiveGameDraft: Equatable, Codable, Sendable {
     // MARK: Static Constants
 
     /// The schema this build reads and writes. Bump on any breaking change
-    /// to the fields below.
+    /// to the fields below. **Additive optional fields are not breaking**
+    /// (recorded with D28′, which added `board`): synthesized `Codable`
+    /// reads a missing key as nil, and `JSONDecoder` ignores unknown keys,
+    /// so version 1 files and builds interoperate in both directions — a
+    /// bump would have declared every pre-M2 mid-game draft corrupt for a
+    /// field whose absence means exactly what nil means.
     internal static let currentSchemaVersion = 1
 
     // MARK: Stored Properties
@@ -54,6 +59,10 @@ internal struct LiveGameDraft: Equatable, Codable, Sendable {
     internal let round: Int?
     internal let white: String
     internal let black: String
+    /// The board's `[Board "…"]` identity (D28′). Optional and additive:
+    /// absent in version-1 files written before M2, which decode to nil —
+    /// see `currentSchemaVersion` for why that is not a schema break.
+    internal let board: String?
 
     /// The SAN transcript, oldest first — the replay source for resume.
     internal let sanMoves: [String]

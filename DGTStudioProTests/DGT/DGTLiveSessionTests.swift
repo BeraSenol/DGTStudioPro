@@ -99,10 +99,29 @@ struct DGTLiveSessionTests {
         let session = DGTLiveSession()
         session.boardChanged(.starting)          // records lastObservedBoard synchronously
         session.startNewGame(roster: roster())
-        
+
         #expect(session.liveGame != nil)
         #expect(session.awaitingPhysicalSetup == false)
         #expect(session.needsRecovery == false)
+    }
+
+    /// D28′ — the one write to `Roster.board`: `startNewGame` stamps the
+    /// hook's answer onto the roster, and a nil hook (headless tests, or a
+    /// handshake that never reported a serial) leaves it nil — pre-M2
+    /// archive shape, never an invented identity.
+    @Test func startNewGameStampsBoardIdentityFromHook() {
+        let session = DGTLiveSession()
+        session.boardIdentity = { "DGT 3000448278" }
+        session.startNewGame(roster: roster())
+
+        #expect(session.liveGame?.roster.board == "DGT 3000448278")
+    }
+
+    @Test func startNewGameWithoutHookLeavesBoardNil() {
+        let session = DGTLiveSession()
+        session.startNewGame(roster: roster())
+
+        #expect(session.liveGame?.roster.board == nil)
     }
     
     // MARK: discardGame

@@ -48,6 +48,7 @@ struct LiveGameDraftStoreTests {
             round: nil,
             white: white,
             black: "Blake",
+            board: nil,
             sanMoves: ["e4"],
             result: .ongoing,
             startedAt: Self.instant,

@@ -61,6 +61,7 @@ struct LiveGameResumeTests {
             round: nil,
             white: "Wendy",
             black: "Blake",
+            board: nil,
             sanMoves: sanMoves,
             result: result,
             startedAt: Date(timeIntervalSince1970: 1_750_000_000),
@@ -85,6 +86,26 @@ struct LiveGameResumeTests {
         #expect(snapshot.sanMoves == ["e4", "e5"])
         #expect(snapshot.result == .ongoing)
         #expect(snapshot.startedAt == game.startedAt)
+    }
+
+    /// D28′ — the board identity survives the snapshot → resume round trip,
+    /// so a crash-resumed game archives with the board that actually played
+    /// it (the reason the field lives on the roster at all).
+    @Test func boardIdentitySurvivesSnapshotAndResume() throws {
+        let game = LiveGame(roster: .init(
+            event: "Club Night",
+            site: "Home",
+            white: "Wendy",
+            black: "Blake",
+            board: "DGT 3000448278"
+        ))
+        try play(game, ["e4"])
+
+        let snapshot = game.draftSnapshot
+        #expect(snapshot.board == "DGT 3000448278")
+
+        let resumed = try LiveGame(resuming: snapshot)
+        #expect(resumed.roster.board == "DGT 3000448278")
     }
 
     // MARK: Resume — Success Paths

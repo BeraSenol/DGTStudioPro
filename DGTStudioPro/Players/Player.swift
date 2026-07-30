@@ -38,11 +38,25 @@ internal final class Player: Identifiable {
     /// First-seen display form ("Ruy Lopez"), produced by
     /// `PlayerName.displayForm(of:)` from whichever raw tag created the row.
     internal var name: String
-    
+
     /// The identity key — see the type comment. Written only alongside
     /// `name` in `init`.
     internal var normalizedName: String
-    
+
+    /// First-seen **tag form** ("Lopez, Ruy") — D29′, D23′'s "no inverse,
+    /// remember instead" made real. The New Game seat picker inserts this,
+    /// never `name`: a seat field is an editor over a tag (D24′ exports it
+    /// byte for byte), and deriving tag form back out of a display form is
+    /// undecidable. Whitespace rides `PlayerName.folded` (runs collapse);
+    /// comma structure, casing, and diacritics are preserved verbatim.
+    /// First-seen wins, like `name`'s casing — a later comma-form sighting
+    /// of a row created from free text does *not* upgrade it; one rule, not
+    /// two. Optional: rows predating the field carry nil until
+    /// `backfillPlayerTagNames()` heals them from their earliest linked
+    /// game; an orphaned pre-schema row (no links) stays nil and readers
+    /// fall back to `name`.
+    internal var tagName: String?
+
     internal var createdAt: Date
     
     // MARK: Relationships
@@ -64,9 +78,13 @@ internal final class Player: Identifiable {
     
     /// `name` must already be in display form — the resolver converts raw
     /// tags via `PlayerName.displayForm(of:)` before reaching here.
-    internal init(name: String) {
+    /// `tagName` is the whitespace-folded raw tag (D29′); the resolver is
+    /// the only production caller and always supplies it — the default
+    /// exists for fixtures that construct uninserted rows.
+    internal init(name: String, tagName: String? = nil) {
         self.name = name
         self.normalizedName = Self.normalizedKey(for: name)
+        self.tagName = tagName
         self.createdAt = .now
     }
     

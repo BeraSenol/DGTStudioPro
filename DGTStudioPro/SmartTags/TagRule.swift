@@ -20,9 +20,12 @@ import Foundation
 /// comparison (`isTrue`/`isFalse`) *is* the value.
 ///
 /// Matching rules, recorded:
-/// - String comparisons fold case via `lowercased()` — the identity
-///   philosophy (case-insensitive, diacritic-preserving), not locale
-///   collation.
+/// - String comparisons fold **both sides** through `PlayerName.folded` +
+///   `lowercased()` (D30′) — the identity philosophy exactly (case and
+///   whitespace runs folded, diacritics preserved), not locale collation.
+///   Before D30′ the needle trimmed `.whitespaces` only and the subject
+///   folded nothing, so a double-spaced tag escaped its own rule; aligning
+///   changes matching for already-saved tags, accepted at decision time.
 /// - A string rule with empty/whitespace text matches **nothing** — the
 ///   row-level sibling of "zero rules matches nothing"; without it, a
 ///   freshly added `contains ""` row would match the whole Library.
@@ -31,6 +34,13 @@ import Foundation
 /// - Unknowns never match: a nil `round` fails numeric rules, an undated
 ///   game fails date rules (its `importedAt` fallback orders folds; it
 ///   doesn't answer "when was this played").
+/// - **Negation included** (D30′, closing the 29 July correction): an
+///   unknown single subject — an unresolved `white`/`black` seat, a `""`
+///   or `"?"` `event`/`site` — fails `.notEquals` too. "White is not X"
+///   means *the white player is known and isn't X*; a game that doesn't
+///   say can neither prove nor disprove it, same as `.player`. Positive
+///   comparisons are deliberately untouched: "Event is ?" still finds
+///   ?-event games — explicit is different from accidental.
 internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
     
     // MARK: Field
@@ -130,12 +140,12 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
     internal func matches(_ record: GameRecord) -> Bool {
         switch field.kind {
         case .string:
-            let needle = text.trimmingCharacters(in: .whitespaces).lowercased()
+            let needle = fold(text)
             guard !needle.isEmpty else { return false }
             switch field {
             case .player:
                 let seats = [record.white?.name, record.black?.name]
-                    .compactMap { $0?.lowercased() }
+                    .compactMap { $0.map(fold) }
                 // Unknowns never match, negation included: a game with no
                 // resolved seat can neither prove nor disprove a player rule.
                 guard !seats.isEmpty else { return false }
@@ -147,7 +157,13 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
                 ? seats.allSatisfy { compareString($0, needle) }
                 : seats.contains { compareString($0, needle) }
             default:
-                return compareString(stringSubject(of: record).lowercased(), needle)
+                let subject = fold(stringSubject(of: record))
+                // D30′ — the `.player` guard, extended to single subjects for
+                // the negated case only (see the type doc's recorded rules).
+                if comparison == .notEquals {
+                    guard !subject.isEmpty, subject != "?" else { return false }
+                }
+                return compareString(subject, needle)
             }
             
         case .result:
@@ -187,7 +203,15 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
     }
     
     // MARK: Private Helpers
-    
+
+    /// The D30′ string fold — `PlayerName.folded` + `lowercased()`, i.e. the
+    /// identity fold `Player.normalizedKey` and the content hash compose.
+    /// Applied to *both* sides of every string comparison, so a rule and a
+    /// tag can never disagree about what "Magnus  Carlsen" is.
+    private func fold(_ value: String) -> String {
+        PlayerName.folded(value).lowercased()
+    }
+
     private func compareString(_ subject: String, _ needle: String) -> Bool {
         switch comparison {
         case .equals:     return subject == needle
