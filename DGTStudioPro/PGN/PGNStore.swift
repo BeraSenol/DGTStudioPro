@@ -473,6 +473,235 @@ internal struct PGNStore {
         return classified
     }
 
+    // MARK: Player Retag, Merge and Delete (M5 — D37′, D38′, D39′)
+
+    /// One game a retag touches, and which of its seats.
+    ///
+    /// **Both flags, on one entry per game, rather than one entry per seat.**
+    /// A player can hold both sides of the same row — a self-play game, or two
+    /// people sharing a name — and the seat-wise shape gets that wrong in a way
+    /// that is invisible until it bites: the collision pre-flight would compute
+    /// two hashes for such a game, one per seat rewritten in isolation, and
+    /// neither is the hash the row would actually end up with once *both* seats
+    /// change. The prospective hash has to be asked once per game, with every
+    /// seat the retag will touch substituted at the same time.
+    private struct Rewrite {
+        internal let game: PGN
+        internal let isWhite: Bool
+        internal let isBlack: Bool
+    }
+
+    /// One game a retag would rewrite, and the row it would collide with.
+    ///
+    /// **Identifiers and names, never the models** — `Error.duplicate`'s
+    /// precedent, and for its recorded reason: `Swift.Error` refines
+    /// `Sendable`, and a live `@Model` never is, so a rejection carrying `PGN`
+    /// references would not compile as an error payload at all. The names ride
+    /// along because the refusal has to *say* which two games it means — "this
+    /// would make two of your games identical" is unactionable otherwise — and
+    /// carrying them keeps the surface free of ID resolution, while the
+    /// identifiers stay the handle for a reveal-in-Library affordance.
+    internal struct HashCollision: Sendable {
+        /// The game being retagged.
+        internal let gameID: PersistentIdentifier
+        internal let gameName: String
+        /// The row its rewritten hash would land on.
+        internal let existingID: PersistentIdentifier
+        internal let existingName: String
+    }
+
+    /// Why a retag was refused. Both cases are pre-flight: nothing has been
+    /// written when one of these is thrown.
+    internal enum RetagRejection: Swift.Error {
+        /// D39′. The rewrite would give one or more games a content hash that
+        /// already belongs to a different row.
+        case wouldCollide([HashCollision])
+        /// `"?"` and empty are PGN's vocabulary for *no player*, and a retag
+        /// to nothing is a deletion wearing a rename's clothes — it would
+        /// strand games with an unnamed seat and no way back. Deleting the
+        /// player is the operation that means that, and it has its own door.
+        case emptyTag
+    }
+
+    /// Rewrites every game `player` appears in to carry `newTag` in that seat,
+    /// then re-resolves and rehashes each — the single door through which a
+    /// stored seat tag ever changes identity (D37′, D38′).
+    ///
+    /// **Why the games and not the registry.** `PGN.white` / `PGN.black` are
+    /// what export writes byte for byte (D24′) and what the content hash folds
+    /// (the one-hash invariant), while `Player.name` is *derived* from them
+    /// through `PlayerName.displayForm`. Renaming the registry row alone would
+    /// make `Player.name` a label that disagrees with every file the app
+    /// writes; rewriting the tags makes identity follow the tags, which is the
+    /// direction D23′ says names travel. The price, accepted at decision time:
+    /// seat tags are inside the hash, so every affected game's hash changes and
+    /// an export taken *before* the rename no longer dedupes against its own
+    /// game. That is not a leak — by the hash's own definition the players are
+    /// part of what identifies the game.
+    ///
+    /// **`newTag` is tag form, not display form** — "Senol, Bera". D23′ forbids
+    /// the inverse transform, so the caller must supply the form that gets
+    /// stored; the rename surface edits the tag and shows the derived display
+    /// form beneath it.
+    ///
+    /// Pre-flight and all-or-nothing (D39′): every prospective hash is checked
+    /// against the Library *and* against the rest of the batch before a single
+    /// field is written, so a refusal leaves the archive exactly as it was.
+    /// Returns the number of games rewritten.
+    @discardableResult
+    internal func retag(_ player: Player, to newTag: String) throws -> Int {
+        let display = PlayerName.displayForm(of: newTag)
+        guard !display.isEmpty, display != "?" else { throw RetagRejection.emptyTag }
+
+        let rewrites = Self.rewrites(for: player)
+        guard !rewrites.isEmpty else { return 0 }
+
+        try refuseCollisions(in: rewrites, becoming: newTag)
+
+        for rewrite in rewrites {
+            if rewrite.isWhite { rewrite.game.white = newTag }
+            if rewrite.isBlack { rewrite.game.black = newTag }
+            // Re-resolve then rehash, the `applyEdit` order: links follow the
+            // tags, and the hash is recomputed from what the row now says. Not
+            // `applyEdit` itself, which saves once per game — this is one
+            // transaction over the whole rewrite.
+            try resolvePlayers(for: rewrite.game)
+            rewrite.game.contentHash = Self.contentHash(for: rewrite.game)
+        }
+        try modelContext.save()
+        Self.logger.info(
+            "Retagged player to '\(newTag, privacy: .public)' across \(rewrites.count) game(s)"
+        )
+        return rewrites.count
+    }
+
+    /// Every game `player` appears in, once, with the seats it holds there.
+    ///
+    /// The union of the two relationship arrays, folded on identity — a row
+    /// present in both is one `Rewrite` with both flags set, never two.
+    private static func rewrites(for player: Player) -> [Rewrite] {
+        var byGame: [PersistentIdentifier: Rewrite] = [:]
+        for game in player.whiteGames {
+            byGame[game.persistentModelID] = Rewrite(game: game, isWhite: true, isBlack: false)
+        }
+        for game in player.blackGames {
+            let existing = byGame[game.persistentModelID]
+            byGame[game.persistentModelID] = Rewrite(
+                game: game,
+                isWhite: existing?.isWhite ?? false,
+                isBlack: true
+            )
+        }
+        return Array(byGame.values)
+    }
+
+    /// Folds `loser` into `survivor`: retag the loser's games to the survivor's
+    /// stored tag form, which relinks them by resolution, then delete the row
+    /// nothing points at any more (D38′).
+    ///
+    /// **Merge is retag, and it has to be.** Pure link surgery — move the
+    /// relationships, leave the tags — looks cheaper and is unstable:
+    /// `applyEdit` re-resolves both seats from the tag strings unconditionally,
+    /// so the first metadata edit on a merged game would read its untouched
+    /// tag, fail to find the survivor, and mint the deleted player straight
+    /// back. Rewriting the tags is what makes the merge survive the app's own
+    /// existing doors instead of needing them weakened.
+    ///
+    /// The survivor's `tagName` is the target, falling back to its display
+    /// `name` for a pre-D29′ orphan that never got one — the same fallback the
+    /// seat picker uses, for the same reason.
+    @discardableResult
+    internal func merge(_ loser: Player, into survivor: Player) throws -> Int {
+        guard loser.persistentModelID != survivor.persistentModelID else { return 0 }
+        let target = survivor.tagName ?? survivor.name
+        let moved = try retag(loser, to: target)
+        // Retagging resolved every game onto the survivor, so the loser is now
+        // orphaned by construction — but assert it rather than assume it: a
+        // still-linked loser means the target tag didn't fold onto the
+        // survivor's key, and deleting it here would nullify live links.
+        guard loser.whiteGames.isEmpty, loser.blackGames.isEmpty else {
+            Self.logger.error(
+                "Merge left '\(loser.name, privacy: .public)' still linked — not deleting"
+            )
+            return moved
+        }
+        modelContext.delete(loser)
+        try modelContext.save()
+        Self.logger.info(
+            "Merged '\(loser.name, privacy: .public)' into '\(survivor.name, privacy: .public)' (\(moved) seat(s))"
+        )
+        return moved
+    }
+
+    /// Deletes a player row that nothing links to.
+    ///
+    /// **Only orphans, and the guard is the point.** `.nullify` means deleting
+    /// a linked player strands its games with their seat tags intact — and the
+    /// next Library visit runs `backfillPlayerLinks()`, which resolves those
+    /// same tags and creates the row again. A delete that the app itself undoes
+    /// within one navigation is worse than no delete at all. For a player who
+    /// has games, the operation the user actually wants is rename (change what
+    /// they're called) or merge (they're someone else); this door refuses so
+    /// the surface can say that instead of appearing to work.
+    ///
+    /// Returns `false` when it refused, so the caller can explain rather than
+    /// silently no-op.
+    @discardableResult
+    internal func deleteOrphanedPlayer(_ player: Player) throws -> Bool {
+        guard player.whiteGames.isEmpty, player.blackGames.isEmpty else {
+            Self.logger.info(
+                "Refused to delete linked player '\(player.name, privacy: .public)' — the link backfill would recreate it"
+            )
+            return false
+        }
+        Self.logger.info("Deleting orphaned player '\(player.name, privacy: .public)'")
+        modelContext.delete(player)
+        try modelContext.save()
+        return true
+    }
+
+    /// D39′'s pre-flight. Throws `.wouldCollide` naming every game whose
+    /// rewritten hash would land on a row that isn't itself.
+    ///
+    /// Two sources of collision, and missing the second is the easy bug: a
+    /// rewritten game can collide with a row already in the Library, *or* with
+    /// another game in this same batch — which is exactly the double-imported
+    /// game that motivates merging in the first place, one copy under each
+    /// spelling of the name. The batch is checked against itself through
+    /// `seen`, so the second copy reports against the first rather than both
+    /// passing a Library probe that neither has been written into yet.
+    private func refuseCollisions(in rewrites: [Rewrite], becoming newTag: String) throws {
+        var collisions: [HashCollision] = []
+        var seen: [String: PGN] = [:]
+        for rewrite in rewrites {
+            let hash = Self.prospectiveHash(for: rewrite, becoming: newTag)
+            if let twin = seen[hash] {
+                collisions.append(Self.collision(rewrite.game, against: twin))
+                continue
+            }
+            seen[hash] = rewrite.game
+            if let existing = try existingPGN(withHash: hash),
+               existing.persistentModelID != rewrite.game.persistentModelID {
+                collisions.append(Self.collision(rewrite.game, against: existing))
+            }
+        }
+        guard collisions.isEmpty else {
+            Self.logger.error("Retag refused: \(collisions.count) hash collision(s)")
+            throw RetagRejection.wouldCollide(collisions)
+        }
+    }
+
+    /// Reads a collision off two live rows at the one point where both are in
+    /// hand, so the `Sendable` payload never has to reach back for them.
+    private static func collision(_ game: PGN, against existing: PGN) -> HashCollision {
+        HashCollision(
+            gameID: game.persistentModelID,
+            gameName: game.name,
+            existingID: existing.persistentModelID,
+            existingName: existing.name
+        )
+    }
+
     // MARK: Private Helpers
 
     /// The shared tail of both doors. "One hash, two doors" is a rule about
@@ -525,22 +754,84 @@ internal struct PGNStore {
     }
     
     // MARK: Static Methods
+
+    /// The model-typed spelling — what both doors and `refreshHash` call.
+    ///
+    /// A thin forward to the field-typed one below, which exists because D39′
+    /// needs a game's hash **as it would be** after a seat retag, and the only
+    /// alternatives were worse: mutate-hash-revert (a door that briefly writes
+    /// a lie into the model it is validating) or a second transcription of the
+    /// recipe (the "one content hash" invariant, broken by the very check
+    /// meant to protect it).
     private static func contentHash(for pgn: PGN) -> String {
+        contentHash(
+            event: pgn.event,
+            site: pgn.site,
+            date: pgn.date,
+            round: pgn.round,
+            white: pgn.white,
+            black: pgn.black,
+            result: pgn.result,
+            moves: pgn.moves
+        )
+    }
+
+    /// The recipe itself, over values — MD5 of the eight fields joined by `|`,
+    /// in this order, forever.
+    ///
+    /// **Persistence contract.** Every stored `contentHash` in the Library was
+    /// produced by this arrangement; changing the order, the separator, the
+    /// normalization or the digest silently un-dedupes the entire archive
+    /// against itself. `timeControl`, `board` and the four classification
+    /// columns are deliberately absent — equipment, clock and derived truth do
+    /// not identify a game.
+    private static func contentHash(
+        event: String,
+        site: String,
+        date: Date?,
+        round: Int?,
+        white: String,
+        black: String,
+        result: GameResult,
+        moves: [String]
+    ) -> String {
         let parts: [String] = [
-            normalize(pgn.event),
-            normalize(pgn.site),
-            pgn.date.map(hashDateString(from:)) ?? "",
-            pgn.round.map(String.init) ?? "",
-            normalize(pgn.white),
-            normalize(pgn.black),
-            pgn.result.rawValue,
-            pgn.moves.joined(separator: " ")
+            normalize(event),
+            normalize(site),
+            date.map(hashDateString(from:)) ?? "",
+            round.map(String.init) ?? "",
+            normalize(white),
+            normalize(black),
+            result.rawValue,
+            moves.joined(separator: " ")
         ]
         let combined = parts.joined(separator: "|")
         let digest = Insecure.MD5.hash(data: Data(combined.utf8))
         // `map`, not `compactMap`: nothing here can be nil, and the old verb
         // made a reader ask which bytes of a hash get dropped.
         return digest.map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// The hash the game *would* carry once every seat this retag touches
+    /// becomes `newTag` — D39′'s whole question, asked without writing to the
+    /// row it is asking about.
+    ///
+    /// Both flags are substituted in one call, which is the reason `Rewrite`
+    /// is per-game rather than per-seat: for a row the player holds on both
+    /// sides, asking twice with one seat changed each time produces two hashes
+    /// the game will never have.
+    private static func prospectiveHash(for rewrite: Rewrite, becoming newTag: String) -> String {
+        let game = rewrite.game
+        return contentHash(
+            event: game.event,
+            site: game.site,
+            date: game.date,
+            round: game.round,
+            white: rewrite.isWhite ? newTag : game.white,
+            black: rewrite.isBlack ? newTag : game.black,
+            result: game.result,
+            moves: game.moves
+        )
     }
     
     /// Fold + case, one implementation (`PlayerName.folded`). **Persistence
