@@ -106,6 +106,14 @@ internal final class SleepInhibitor {
     /// Non-nil exactly while inhibition is held.
     @ObservationIgnored private var token: ActivityToken?
 
+    /// Guards `observe` against a second external call: each call would arm
+    /// an independent self-rescheduling loop, and every predicate change
+    /// would then fan out into one queued re-arm per loop, forever —
+    /// harmless through `setInhibited`'s idempotence, but permanent
+    /// duplicate work (30 July audit). `App.init()` calls once; the guard
+    /// makes that a fact about this type rather than about its one caller.
+    @ObservationIgnored private var isObserving = false
+
     // MARK: Init
 
     /// `defaults` is injectable so the preference contract can be pinned
@@ -136,13 +144,22 @@ internal final class SleepInhibitor {
     /// not `self`, so there is no cycle, and the App owns all three objects
     /// for the process lifetime anyway.
     internal func observe(session: DGTLiveSession, connection: DGTConnection) {
+        guard !isObserving else { return }
+        isObserving = true
+        track(session: session, connection: connection)
+    }
+
+    /// The re-arm target: `onChange` recurses here, past the entry guard,
+    /// so the loop keeps rescheduling itself while a second external
+    /// `observe` still bounces off `isObserving`.
+    private func track(session: DGTLiveSession, connection: DGTConnection) {
         withObservationTracking {
             setInhibited(
                 isEnabled && (session.liveGame != nil || connection.isRecording)
             )
         } onChange: {
             Task { @MainActor in
-                self.observe(session: session, connection: connection)
+                self.track(session: session, connection: connection)
             }
         }
     }

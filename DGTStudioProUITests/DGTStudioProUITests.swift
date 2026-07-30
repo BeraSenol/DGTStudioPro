@@ -449,7 +449,70 @@ final class DGTStudioProUITests: XCTestCase {
         XCTAssertEqual(app.state, .runningForeground,
                        "Opening a game must not crash the app")
     }
-    
+
+    /// The load-error card's presence/dismiss witness, restored (the
+    /// `BoardDestination` waiver has named it since D15′ renamed the
+    /// family to `sidebar.loaderror`; the old `board.loaderror` test died
+    /// with that surface). Deleting the game a tab holds open must produce
+    /// the card on the next Board visit — the `loadIfNeeded` tombstone
+    /// guards (30 July) are what make that deterministic instead of a
+    /// stale-cache render of a ghost game — and Dismiss must unbind into
+    /// an honest no-game tab whose session panel disappears whole (D15′).
+    ///
+    /// Single-window by construction: the launch window closes right
+    /// after the game window opens, so every identifier below has exactly
+    /// one match — the two-Libraries ambiguity is dissolved rather than
+    /// disambiguated.
+    func test_deletingTheOpenGame_showsLoadErrorCard_andDismissClears() {
+        launch()
+
+        // Open the game — the openSeededGame pattern (Icons mode makes
+        // the card tappable). Ruy Lopez, so quickMate keeps its test.
+        let icons = segment(ModeSymbol.icons)
+        XCTAssertTrue(icons.waitForExistence(timeout: 5))
+        if !isPicked(icons) { icons.click() }
+        let card = element(AccessibilityID.gameCard(SeedGameName.ruyLopez))
+        XCTAssertTrue(waitFor(card), "Seeded game card should exist in Icons mode")
+        card.doubleClick()
+        XCTAssertTrue(waitFor(element(AccessibilityID.board), 8),
+                      "Board should appear in the game window")
+
+        // Close the launch window — identifiable as the one still showing
+        // Library content while the new window sits on Board.
+        let launchWindow = app.windows
+            .containing(.any, identifier: AccessibilityID.libraryContent)
+            .firstMatch
+        XCTAssertTrue(waitFor(launchWindow), "The launch window should still be up")
+        launchWindow.buttons[XCUIIdentifierCloseWindow].click()
+
+        // In the surviving game window: Library → select → delete → confirm.
+        element(AccessibilityID.sidebarDestination("library")).click()
+        let cardAgain = element(AccessibilityID.gameCard(SeedGameName.ruyLopez))
+        XCTAssertTrue(waitFor(cardAgain),
+                      "The open game should still be listed before deletion")
+        cardAgain.click()
+        element(AccessibilityID.libraryDeleteButton).click()
+        let confirm = app.sheets.buttons["Delete"]
+        XCTAssertTrue(waitFor(confirm), "Single-game delete should ask first")
+        confirm.click()
+
+        // Back on Board, the tombstone resolves to the load-error card…
+        element(AccessibilityID.sidebarDestination("board")).click()
+        let errorCard = element(AccessibilityID.sidebarLoadError)
+        XCTAssertTrue(waitFor(errorCard, 8),
+                      "Deleting the open game should surface the load-error card")
+
+        // …and Dismiss unbinds into an honest empty tab.
+        element(AccessibilityID.sidebarLoadErrorDismiss).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.board), 8),
+                      "Dismiss should land on the live mirror")
+        XCTAssertFalse(errorCard.exists, "Dismiss should clear the card")
+        XCTAssertFalse(element(AccessibilityID.sessionPanel).exists,
+                       "No board, no error — the session panel disappears whole (D15′)")
+        XCTAssertEqual(app.state, .runningForeground,
+                       "The delete-open-game round trip must not crash the app")
+    }
+
     func test_libraryInspectorToggle_isHittable() {
         launch()
         let toggle = element(AccessibilityID.libraryInspectorToggle)

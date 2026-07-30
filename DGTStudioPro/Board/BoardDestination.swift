@@ -581,16 +581,28 @@ internal struct BoardDestination: View {
             return
         }
         
-        if tabState.boardPGN?.persistentModelID == id, tabState.boardGame != nil {
+        // The cache honors live models only: a game deleted from the Library
+        // while this tab held it open (same window via the sidebar, or any
+        // other window) leaves `boardPGN` a tombstone whose attribute reads
+        // are stale at best. Falling through re-resolves, and the guard
+        // below lands on the load-error card — the honest surface for "this
+        // game is gone" (30 July audit; pinned by the load-error UITest).
+        if tabState.boardPGN?.persistentModelID == id,
+           tabState.boardPGN?.isDeleted == false,
+           tabState.boardGame != nil {
             Self.logger.debug(
                 "loadIfNeeded: cache hit for '\(self.tabState.boardPGN?.name ?? "?", privacy: .public)' — no reload"
             )
             return
         }
-        
+
         Self.logger.debug("loadIfNeeded: resolving id \(String(describing: id), privacy: .public)")
-        
-        guard let loadedPGN = modelContext.model(for: id) as? PGN else {
+
+        // The blessed id→model resolution plus the tombstone guard — the
+        // `AnalysisQueueController.run()` pattern: `model(for:)` happily
+        // resurrects an instance for a deleted id, and `as?` alone would
+        // wave the ghost through to `Game.init`.
+        guard let loadedPGN = modelContext.model(for: id) as? PGN, !loadedPGN.isDeleted else {
             clearBoard(error: "The game could not be found in the library.")
             Self.logger.error(
                 "PGN lookup failed for id \(String(describing: id), privacy: .public)"

@@ -206,8 +206,8 @@ internal final class GameAnalysisDriver {
                 // mapping always claimed failures are recorded — now the
                 // driver actually hands it one.
                 status = .failed(
-                    message: "Move \(index + 1) ('\(san)') won't parse — analysis "
-                    + "stopped there; earlier evaluations were kept."
+                    message: "\(Self.moveLabel(plyIndex: index, san: san)) won't parse — "
+                    + "analysis stopped there; earlier evaluations were kept."
                 )
                 return
             }
@@ -237,8 +237,8 @@ internal final class GameAnalysisDriver {
                     "Engine died mid-pass at ply \(index + 1)/\(total) for pgn='\(pgn.name, privacy: .public)'"
                 )
                 status = .failed(
-                    message: "The engine quit at move \(index + 1) of \(total); "
-                    + "evaluations up to there were kept."
+                    message: "The engine quit at \(Self.moveLabel(plyIndex: index, san: san)) "
+                    + "(ply \(index + 1) of \(total)); evaluations up to there were kept."
                 )
                 return
             }
@@ -262,5 +262,15 @@ internal final class GameAnalysisDriver {
         }
         
         status = Task.isCancelled ? .idle : .done
+    }
+
+    /// The user-facing name of a ply, in chess notation: ply index 2 is
+    /// "2. Nf3"-shaped for White, "2… Nc6"-shaped for Black. The failure
+    /// messages used to print the raw ply ordinal as "Move N", which in a
+    /// chess app reads as a full-move number and points at the wrong move
+    /// for every Black ply (30 July audit). Log lines keep ply indices —
+    /// they're for grep, not for reading at the popover.
+    private static func moveLabel(plyIndex: Int, san: String) -> String {
+        "\(plyIndex / 2 + 1)\(plyIndex.isMultiple(of: 2) ? ". " : "… ")\(san)"
     }
 }

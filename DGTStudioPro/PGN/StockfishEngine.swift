@@ -384,6 +384,20 @@ internal actor StockfishEngine {
     /// tolerates already-cleared state — so the shutdown path, the
     /// termination handler, and the startup-failure path can overlap safely.
     private func teardown() {
+        // A teardown that runs while a handshake is still suspended must
+        // fail it here: this clears `process`, after which
+        // `processDidTerminate` and `engineOutputEnded` guard themselves
+        // into no-ops and only the handshake's own timeout task would
+        // rescue a stranded `start()` — a Stop All inside the 5 s/30 s
+        // window used to report failure up to 30 s late (F4's "never
+        // strand a waiter", made total). `failHandshake` nils as it
+        // resumes, so every already-resumed path makes this a no-op.
+        // Pinned by `shutdownDuringThePendingHandshakeFailsStartPromptly`.
+        failHandshake(
+            with: EngineError.startupFailed(
+                "The engine was shut down before completing the UCI handshake."
+            )
+        )
         stdoutHandle?.readabilityHandler = nil
         stdoutContinuation?.finish()
         stdoutContinuation = nil

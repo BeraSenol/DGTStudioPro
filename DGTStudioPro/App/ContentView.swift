@@ -5,6 +5,7 @@
 //  Created by Supreme Leader on 24/03/2026.
 //
 
+import os
 import SwiftData
 import SwiftUI
 
@@ -34,7 +35,14 @@ import SwiftUI
 /// exit. Stale ids degrade to the full Library exactly like `.tag`; the
 /// `players` query exists solely for that id → model hop.
 internal struct ContentView: View {
-    
+
+    // MARK: Static Constants
+
+    private static let logger = Logger(
+        subsystem: "com.berasenol.dgtstudiopro",
+        category: "smarttags"
+    )
+
     // MARK: Window-Bound State
     
     @Binding internal var loadedGameID: PersistentIdentifier?
@@ -237,9 +245,9 @@ internal struct ContentView: View {
                 )
             )
         }
-        try? modelContext.save()
+        saveTags(after: "commit")
     }
-    
+
     private func delete(_ tag: SmartTag) {
         // Deleting the selected tag falls back to Library *before* the
         // model dies, so the detail switch never renders a stale id.
@@ -247,7 +255,23 @@ internal struct ContentView: View {
             selection = .destination(.library)
         }
         modelContext.delete(tag)
-        try? modelContext.save()
+        saveTags(after: "delete")
+    }
+
+    /// Tag edits are the one Library write outside `PGNStore`, so they owe
+    /// the same must-reach-somewhere trace its saves get — the bare `try?`
+    /// this replaces could lose a rename or delete with no Console witness
+    /// (30 July audit). Play is never interrupted for a tag: log loudly,
+    /// carry on — the `recordError` philosophy without the timeline, which
+    /// tags don't have.
+    private func saveTags(after operation: String) {
+        do {
+            try modelContext.save()
+        } catch {
+            Self.logger.error(
+                "Tag \(operation, privacy: .public) failed to save: \(error.localizedDescription, privacy: .public)"
+            )
+        }
     }
 }
 

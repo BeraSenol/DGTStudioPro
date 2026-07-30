@@ -250,4 +250,48 @@ struct StockfishEngineTests {
         }
         #expect(await engine.isRunning == false)
     }
+
+    /// The teardown-ordering hole (30 July audit): `shutdown()` during a
+    /// still-pending handshake clears `process` in `teardown()`, after
+    /// which `processDidTerminate` and `engineOutputEnded` both guard
+    /// themselves into no-ops — pre-fix, only the handshake's own timeout
+    /// task rescued the waiter, so a Stop All inside the window reported
+    /// failure up to 30 s late. The assertion is on the *message*: the
+    /// prompt teardown failure and the late timeout backstop throw
+    /// differently-worded `startupFailed`s, so equality distinguishes the
+    /// fix from the backstop with no wall-clock bound (the 60 s deadlines
+    /// here exist to be *not* hit — a regression fails this test after a
+    /// minute rather than flaking under load).
+    ///
+    /// `/bin/cat` again: launches, blocks on stdin, never speaks UCI. By
+    /// the time `isRunning` reads true the handshake continuation is
+    /// already registered — no suspension point sits between the process
+    /// assignment and the registration on the actor — so the `shutdown()`
+    /// below always races nothing.
+    @Test func shutdownDuringThePendingHandshakeFailsStartPromptly() async throws {
+        let engine = StockfishEngine(binaryURL: URL(filePath: "/bin/cat"))
+
+        let start = Task {
+            try await engine.start(
+                handshakeTimeout: .seconds(60),
+                readyTimeout: .seconds(60)
+            )
+        }
+
+        var launched = false
+        for _ in 0..<400 where !launched {
+            launched = await engine.isRunning
+            if !launched { try await Task.sleep(for: .milliseconds(5)) }
+        }
+        try #require(launched, "cat never launched — nothing to shut down")
+
+        await engine.shutdown()
+
+        await #expect(throws: StockfishEngine.EngineError.startupFailed(
+            "The engine was shut down before completing the UCI handshake."
+        )) {
+            try await start.value
+        }
+        #expect(await engine.isRunning == false)
+    }
 }

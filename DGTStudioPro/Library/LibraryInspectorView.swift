@@ -247,8 +247,11 @@ private struct LoadedSection: View {
     /// say. Side effect worth having: a serializer defect is now visible in
     /// the sidebar instead of only in an exported file nobody re-reads.
     ///
-    /// Last, and collapsed by default: it is the longest section and the
-    /// least often wanted, so the inspector's first screenful is unchanged.
+    /// Last, and **open by default** — reversed 30 July from the M1
+    /// collapsed default by Bera's call: with the raw text a glance away,
+    /// having it visible beat protecting the first screenful. The
+    /// disclosure chevron keeps earning its place in the other direction
+    /// (hide the longest section when it's in the way).
     ///
     /// The collapse is a plain `if`, not `Section(isExpanded:)`. The platform
     /// control only appears on hover, and a section whose one affordance is

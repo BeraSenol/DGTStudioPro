@@ -93,3 +93,30 @@ internal struct RankingsGalleryView: View {
         }
     }
 }
+
+// MARK: Previews
+
+/// Nil selection deliberately: the gallery's documented first-player
+/// fallback (`selectedPlayer ?? players.first`) is exactly what a canvas
+/// should witness — this is the half of the galleries' empty-selection
+/// divergence this view owns (Library shows an empty board; see the
+/// known-open parity item).
+#Preview("Gallery") {
+    @Previewable @State var selection: PlayerStats.ID?
+
+    RankingsGalleryView(
+        players: PreviewFixtures.rankedPlayers(),
+        selectedKey: $selection,
+        onShowInLibrary: { _ in }
+    )
+    .frame(width: 820, height: 480)
+}
+
+/// No players at all: the preview pane's `ContentUnavailableView` arm and
+/// an empty filmstrip, both of which have to hold together.
+#Preview("Empty") {
+    @Previewable @State var selection: PlayerStats.ID?
+
+    RankingsGalleryView(players: [], selectedKey: $selection, onShowInLibrary: { _ in })
+        .frame(width: 820, height: 480)
+}
