@@ -1,5 +1,5 @@
 //
-//  InspectorEditButton.swift
+//  InspectorEditButtonView.swift
 //  DGTStudioPro
 //
 //  Created by Supreme Leader on 27/07/2026.
@@ -32,7 +32,7 @@ import SwiftUI
 /// The identifier takes no default (the `dgtConnectionToolbar` lesson): a
 /// shared fallback would hand two inspectors' pencils the same identifier,
 /// while a required parameter makes forgetting one a compile error.
-internal struct InspectorEditButton: View {
+internal struct InspectorEditButtonView: View {
     
     // MARK: Stored Properties
     internal let label: LocalizedStringKey
@@ -43,6 +43,7 @@ internal struct InspectorEditButton: View {
     internal var body: some View {
         Button(action: action) {
             Image(systemName: "pencil")
+                .padding(.trailing, 10)
         }
         .buttonStyle(.borderless)
         // Stated, not inherited: a sidebar section header sets a small
@@ -76,7 +77,7 @@ internal struct InspectorEditButton: View {
             ),
             headline: "Reviewing 7. Magnus Carlsen vs Ian Nepomniachtchi"
         ) {
-            InspectorEditButton(
+            InspectorEditButtonView(
                 label: "Edit Info",
                 identifier: AccessibilityID.boardEditInfoButton,
                 action: {}
@@ -104,7 +105,7 @@ internal struct InspectorEditButton: View {
             ),
             headline: "Recording 101. Bera Senol vs Lorenzo Reinaud"
         ) {
-            InspectorEditButton(
+            InspectorEditButtonView(
                 label: "Edit Details",
                 identifier: AccessibilityID.liveInspectorEditDetails,
                 action: {}

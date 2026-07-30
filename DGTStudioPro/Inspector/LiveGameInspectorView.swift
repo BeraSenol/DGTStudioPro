@@ -95,7 +95,7 @@ internal struct LiveGameInspectorView: View {
             roster: RosterSummary(game.roster, result: game.result),
             headline: headline
         ) {
-            InspectorEditButton(
+            InspectorEditButtonView(
                 label: "Edit Details",
                 identifier: AccessibilityID.liveInspectorEditDetails
             ) {

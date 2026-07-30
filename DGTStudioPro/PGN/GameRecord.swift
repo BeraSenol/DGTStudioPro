@@ -53,7 +53,16 @@ internal struct GameRecord: Sendable, Hashable {
     internal let plyCount: Int
     internal let hasAnalysis: Bool
     internal let isTimed: Bool
-    
+
+    // The M4 growth, on the same terms as the M-prs.5 one: `TagRule` reads
+    // both, and they land with the rules and tests that consume them. These
+    // carry the *stored* classification, never the moves it was derived
+    // from — a record is a projection of what the Library knows, and
+    // re-deriving a game's opening inside a fold would be a second
+    // classification door with no table injected.
+    internal let opening: ECOOpening?
+    internal let specialCheckmate: SpecialCheckmate?
+
     internal init(
         white: Side?,
         black: Side?,
@@ -68,7 +77,9 @@ internal struct GameRecord: Sendable, Hashable {
         round: Int? = nil,
         plyCount: Int = 0,
         hasAnalysis: Bool = false,
-        isTimed: Bool = false
+        isTimed: Bool = false,
+        opening: ECOOpening? = nil,
+        specialCheckmate: SpecialCheckmate? = nil
     ) {
         self.white = white
         self.black = black
@@ -84,6 +95,8 @@ internal struct GameRecord: Sendable, Hashable {
         self.plyCount = plyCount
         self.hasAnalysis = hasAnalysis
         self.isTimed = isTimed
+        self.opening = opening
+        self.specialCheckmate = specialCheckmate
     }
     
     // MARK: Chronology

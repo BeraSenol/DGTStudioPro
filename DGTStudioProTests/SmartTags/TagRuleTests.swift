@@ -37,7 +37,9 @@ struct TagRuleTests {
         round: Int? = nil,
         plyCount: Int = 40,
         hasAnalysis: Bool = false,
-        isTimed: Bool = false
+        isTimed: Bool = false,
+        opening: ECOOpening? = nil,
+        specialCheckmate: SpecialCheckmate? = nil
     ) -> GameRecord {
         GameRecord(
             white: white.map { .init(key: $0.lowercased(), name: $0) },
@@ -53,8 +55,114 @@ struct TagRuleTests {
             round: round,
             plyCount: plyCount,
             hasAnalysis: hasAnalysis,
-            isTimed: isTimed
+            isTimed: isTimed,
+            opening: opening,
+            specialCheckmate: specialCheckmate
         )
+    }
+
+    // MARK: Classification Fields (M4, D34′)
+
+    private static let winawer = ECOOpening(
+        code: "C15", name: "French Defense: Winawer Variation"
+    )
+
+    @Test("The opening field matches over the full name, not the family alone")
+    func openingMatchesFullName() {
+        let game = record(opening: Self.winawer)
+
+        #expect(TagRule(field: .opening, comparison: .contains, text: "winawer").matches(game))
+        #expect(TagRule(field: .opening, comparison: .beginsWith, text: "French Defense").matches(game))
+        #expect(
+            TagRule(field: .opening, comparison: .equals,
+                    text: "French Defense: Winawer Variation").matches(game)
+        )
+        // The documented consequence: the family alone is not the full name.
+        #expect(
+            TagRule(field: .opening, comparison: .equals, text: "French Defense")
+                .matches(game) == false
+        )
+    }
+
+    @Test("An unclassified game never matches an opening rule, negation included")
+    func unclassifiedOpeningNeverMatches() {
+        let game = record(opening: nil)
+
+        #expect(TagRule(field: .opening, comparison: .contains, text: "French").matches(game) == false)
+        // The D30′ guard: "opening is not X" needs a known opening to be true.
+        #expect(TagRule(field: .opening, comparison: .notEquals, text: "French").matches(game) == false)
+    }
+
+    @Test("A mate-pattern rule matches its motif and rejects the other")
+    func matePatternMatches() {
+        let smothered = record(specialCheckmate: .smothered)
+        let backRank = record(specialCheckmate: .backRank)
+
+        #expect(
+            TagRule(field: .matePattern, comparison: .equals, specialCheckmate: .smothered)
+                .matches(smothered)
+        )
+        #expect(
+            TagRule(field: .matePattern, comparison: .equals, specialCheckmate: .smothered)
+                .matches(backRank) == false
+        )
+        #expect(
+            TagRule(field: .matePattern, comparison: .notEquals, specialCheckmate: .smothered)
+                .matches(backRank)
+        )
+    }
+
+    /// The arm's whole argument: an ordinary mate and an unclassified game
+    /// are the same nil, so neither may satisfy a negated motif rule.
+    @Test("A game with no motif never matches a mate-pattern rule, negation included")
+    func absentMatePatternNeverMatches() {
+        let game = record(endedInMate: true, specialCheckmate: nil)
+
+        #expect(
+            TagRule(field: .matePattern, comparison: .equals, specialCheckmate: .smothered)
+                .matches(game) == false
+        )
+        #expect(
+            TagRule(field: .matePattern, comparison: .notEquals, specialCheckmate: .smothered)
+                .matches(game) == false
+        )
+    }
+
+    // MARK: Codable Migration
+
+    /// The pin for the defaulting decoder. A rule saved before M4 has no
+    /// `specialCheckmate` key; synthesized decoding would throw on it and
+    /// take every saved smart tag down with it, because the whole array is
+    /// one blob on the model.
+    @Test("A rule saved before the mate slot existed still decodes")
+    func preM4RuleDecodesWithDefaults() throws {
+        let legacy = """
+        {
+          "id": "5B4E1E9C-1F0B-4C3E-9E4E-7A2B9C0D1E2F",
+          "field": "white",
+          "comparison": "contains",
+          "text": "Bera",
+          "number": 1,
+          "date": 700000000,
+          "gameResult": "1-0"
+        }
+        """
+        let rule = try JSONDecoder().decode(TagRule.self, from: Data(legacy.utf8))
+
+        #expect(rule.field == .white)
+        #expect(rule.text == "Bera")
+        #expect(rule.specialCheckmate == .smothered)  // the default, not a throw
+    }
+
+    @Test("A rule round-trips through the encoder it will actually be stored by")
+    func ruleRoundTripsThroughCoding() throws {
+        let original = TagRule(
+            field: .matePattern, comparison: .notEquals, specialCheckmate: .backRank
+        )
+        let decoded = try JSONDecoder().decode(
+            TagRule.self, from: JSONEncoder().encode(original)
+        )
+        #expect(decoded == original)
     }
     
     // MARK: String Fields

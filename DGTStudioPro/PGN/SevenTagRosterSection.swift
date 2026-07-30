@@ -21,7 +21,7 @@ import SwiftUI
 /// The action renders **in the header**, trailing, not as a row beneath the
 /// tags: the rows are a fixed set of seven, so an eighth that is a verb reads
 /// as part of the roster, and the bottom of the section is the wrong end from
-/// the heading the action acts on. `InspectorEditButton` is the shape every
+/// the heading the action acts on. `InspectorEditButtonView` is the shape every
 /// host passes.
 ///
 /// The slot stays a `@ViewBuilder` rather than an `onEdit` closure so each
@@ -153,7 +153,7 @@ extension SevenTagRosterSection where Actions == EmptyView {
             ),
             headline: "Recording 101. Bera Senol vs Lorenzo Reinaud"
         ) {
-            InspectorEditButton(
+            InspectorEditButtonView(
                 label: "Edit Details",
                 identifier: AccessibilityID.liveInspectorEditDetails,
                 action: {}

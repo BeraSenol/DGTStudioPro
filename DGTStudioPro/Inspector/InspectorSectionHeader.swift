@@ -28,7 +28,7 @@ import SwiftUI
 /// costs nothing that isn't a glance away.
 ///
 /// The action is a `@ViewBuilder` slot rather than an `onEdit` closure so each
-/// host keeps its own identifier, wording and action — `InspectorEditButton`
+/// host keeps its own identifier, wording and action — `InspectorEditButtonView`
 /// is what every host currently passes, and a host with nothing to offer
 /// passes nothing and gets a plain heading.
 internal struct InspectorSectionHeader<Actions: View>: View {
@@ -83,7 +83,7 @@ extension InspectorSectionHeader where Actions == EmptyView {
                 .foregroundStyle(.secondary)
         } header: {
             InspectorSectionHeader("Bera Senol vs Lorenzo Baelus") {
-                InspectorEditButton(
+                InspectorEditButtonView(
                     label: "Rename",
                     identifier: AccessibilityID.libraryInspectorRename,
                     action: {}
@@ -97,7 +97,7 @@ extension InspectorSectionHeader where Actions == EmptyView {
             InspectorSectionHeader(
                 "Reviewing 7. Magnus Carlsen vs Ian Nepomniachtchi"
             ) {
-                InspectorEditButton(
+                InspectorEditButtonView(
                     label: "Edit Info",
                     identifier: AccessibilityID.boardEditInfoButton,
                     action: {}

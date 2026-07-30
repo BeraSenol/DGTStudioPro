@@ -32,6 +32,7 @@ internal struct BoardInspectorView: View {
     internal var body: some View {
         List {
             metadataSection
+            OpeningSection(opening: pgn?.opening)
             evaluationSection
             movesSection
         }
@@ -53,7 +54,7 @@ internal struct BoardInspectorView: View {
             headline: headline
         ) {
             if let onEditInfo {
-                InspectorEditButton(
+                InspectorEditButtonView(
                     label: "Edit Info",
                     identifier: AccessibilityID.boardEditInfoButton,
                     action: onEditInfo
@@ -107,7 +108,7 @@ internal struct BoardInspectorView: View {
                 Text("Moves")
                 Spacer(minLength: 0)
                 if let onEditMoves {
-                    InspectorEditButton(
+                    InspectorEditButtonView(
                         label: "Edit Moves",
                         identifier: AccessibilityID.boardEditMovesButton,
                         action: onEditMoves

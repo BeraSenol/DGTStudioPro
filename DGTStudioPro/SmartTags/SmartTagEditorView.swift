@@ -251,6 +251,17 @@ private struct TagRuleRow: View {
         case .boolean:
             // The comparison IS the value ("is true"/"is false").
             Spacer()
+        case .checkmatePattern:
+            // `allCases` here, unlike `.result` above: every motif the
+            // classifier can produce is a motif a game can carry, so none of
+            // them is a dead rule.
+            Picker("Mate Pattern", selection: $rule.specialCheckmate) {
+                ForEach(SpecialCheckmate.allCases, id: \.self) { pattern in
+                    Text(pattern.displayName).tag(pattern)
+                }
+            }
+            .labelsHidden()
+            .frame(width: 140)
         }
     }
 }
@@ -275,9 +286,11 @@ private struct TagRuleRow: View {
         .frame(width: 520, height: 420)
 }
 
-/// Every rule *kind* at once (string / result / number / date / boolean) —
-/// the row-editor switch renders a different control per kind, so this is
-/// the layout's real stress case.
+/// Every rule *kind* at once (string / result / number / date / boolean /
+/// checkmate-pattern) — the row-editor switch renders a different control per
+/// kind, so this is the layout's real stress case. It grows a row whenever
+/// `Field.Kind` grows a case; a kind missing here is a control nobody ever
+/// looked at.
 #Preview("All Rule Kinds") {
     var draft = TagDraft()
     draft.name = "Kitchen Sink"
@@ -285,10 +298,12 @@ private struct TagRuleRow: View {
     draft.matchAll = false
     draft.rules = [
         TagRule(field: .event, comparison: .beginsWith, text: "Club"),
+        TagRule(field: .opening, comparison: .contains, text: "Sicilian"),
         TagRule(field: .result, comparison: .equals, gameResult: .draw),
         TagRule(field: .moves, comparison: .greaterThan, number: 40),
         TagRule(field: .date, comparison: .after, date: .now),
-        TagRule(field: .checkmate, comparison: .isTrue)
+        TagRule(field: .checkmate, comparison: .isTrue),
+        TagRule(field: .matePattern, comparison: .equals, specialCheckmate: .backRank)
     ]
     return SmartTagEditorView(draft: draft, onSave: { _ in })
         .frame(width: 520, height: 520)

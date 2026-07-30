@@ -31,7 +31,26 @@
 internal enum SpecialCheckmate: String, Codable, Sendable, CaseIterable {
     case smothered
     case backRank
-    
+
+    // MARK: Display
+
+    /// The enum's one user-facing rendering. Consumed by the smart-tag
+    /// editor's motif picker — the seeded "Smothered Mates" tag carries a
+    /// literal name, so this is not what keeps the two in step and shouldn't
+    /// be documented as if it were.
+    ///
+    /// Deliberately unlocalized, matching the PGN tag labels' recorded
+    /// stance, and deliberately *not* `rawValue.capitalized`, which renders
+    /// `backRank` as "Backrank". That substitution looks like a
+    /// simplification and is the reason this has a pin.
+    internal var displayName: String {
+        switch self {
+        case .smothered: return "Smothered"
+        case .backRank:  return "Back rank"
+        }
+    }
+
+
     // MARK: Classification
     
     /// Recognises the mate pattern in `state`, or `nil` when the position is

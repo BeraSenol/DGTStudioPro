@@ -181,6 +181,22 @@ internal final class GameAnalysisDriver {
         // results entirely. (Sat in `analyze()` before the start attempt
         // until 29 July — see the note there, M1 item 9a.)
         pgn.evaluations = Array(repeating: nil, count: pgn.moves.count)
+
+        // Classification rides the pass but does not depend on it (D34′).
+        // Stamped up front and through the store's single write door, so a
+        // walk that stops at an unparseable ply still leaves the game with
+        // its opening — the half of "analysis" that never needed an engine
+        // shouldn't be hostage to the half that does. Save-free by the
+        // store's contract; the per-ply save below carries it, and the
+        // Library backfill is the net for a pass that dies before ply one.
+        //
+        // `warmed()`, not the synchronous default: this method is already
+        // async, and a batch started from a tab that never showed the
+        // Library would otherwise pay the table's parse on the main actor,
+        // right where the user is watching a progress bar.
+        PGNStore(modelContext: modelContext)
+            .classify(pgn, using: await ECOTable.warmed())
+
         status = .analyzing(progress: 0)
 
         var state = GameState.starting

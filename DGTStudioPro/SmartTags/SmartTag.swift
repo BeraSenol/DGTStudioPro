@@ -103,6 +103,23 @@ internal final class SmartTag: Identifiable {
                 colorName: .blue,
                 rules: [TagRule(field: .round, comparison: .equals, number: 1)]
             ),
+            // M4 (D34′). Note the seed is flag-guarded and fires once ever,
+            // so an install that already seeded will not grow this tag —
+            // deleting the defaults has to stick, and that rule outranks
+            // backfilling a new one. Its real jobs are the fresh install and
+            // the UI-test seed; an existing install adds it by hand in the
+            // editor, which is the same three fields.
+            SmartTag(
+                name: "Smothered Mates",
+                colorName: .purple,
+                rules: [
+                    TagRule(
+                        field: .matePattern,
+                        comparison: .equals,
+                        specialCheckmate: .smothered
+                    )
+                ]
+            ),
         ]
     }
     

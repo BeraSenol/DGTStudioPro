@@ -41,48 +41,70 @@ import Foundation
 ///   say can neither prove nor disprove it, same as `.player`. Positive
 ///   comparisons are deliberately untouched: "Event is ?" still finds
 ///   ?-event games — explicit is different from accidental.
+/// - The M4 pair (D34′) inherits both rules rather than inventing any:
+///   `opening` is an ordinary string field over the full opening name, so an
+///   unclassified game presents `""` and fails negation like any other
+///   unknown; `matePattern` is the first field whose subject is an optional
+///   *enum*, and it guards nil the same way — see the switch arm for why
+///   that is less obvious than it sounds.
 internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
     
     // MARK: Field
     
     internal enum Field: String, Codable, CaseIterable, Identifiable, Sendable {
         case white, black, player, event, site, name
+        /// The M4 addition (D34′). A string field over the *full* opening
+        /// name — `"French Defense: Winawer Variation"` — not the family
+        /// alone, so a rule can reach a variation. The consequence worth
+        /// knowing: `opening is French Defense` matches only games whose
+        /// line has no variation, while `opening begins with French Defense`
+        /// is the family-level query and `contains` (the string default)
+        /// does what most rules want. One subject for every comparison,
+        /// deliberately — switching subjects per comparison would be the
+        /// kind of cleverness that reads as a bug six months on.
+        case opening
         case result
         case round, moves
         case date
         case checkmate, analyzed, timed
-        
-        internal enum Kind { case string, result, number, date, boolean }
-        
+        /// Which recognised mate motif the game ended on — distinct from
+        /// `checkmate`, which only asks *whether* it ended in mate.
+        case matePattern
+
+        internal enum Kind { case string, result, number, date, boolean, checkmatePattern }
+
         internal var id: String { rawValue }
-        
+
         internal var kind: Kind {
             switch self {
-            case .white, .black, .player, .event, .site, .name: return .string
+            case .white, .black, .player, .event, .site, .name, .opening: return .string
             case .result: return .result
             case .round, .moves: return .number
             case .date: return .date
             case .checkmate, .analyzed, .timed: return .boolean
+            case .matePattern: return .checkmatePattern
             }
         }
-        
+
         internal var displayName: String {
             switch self {
-            case .player: return "Player (either)"
-            case .moves:  return "Moves (plies)"
-            default:      return rawValue.capitalized
+            case .player:      return "Player (either)"
+            case .moves:       return "Moves (plies)"
+            case .matePattern: return "Mate pattern"
+            default:           return rawValue.capitalized
             }
         }
-        
+
         /// The comparisons this field's kind admits; the first is the
         /// editor's default when the field changes.
         internal var comparisons: [Comparison] {
             switch kind {
-            case .string:  return [.contains, .equals, .notEquals, .beginsWith]
-            case .result:  return [.equals, .notEquals]
-            case .number:  return [.equals, .lessThan, .greaterThan]
-            case .date:    return [.before, .after]
-            case .boolean: return [.isTrue, .isFalse]
+            case .string:           return [.contains, .equals, .notEquals, .beginsWith]
+            case .result:           return [.equals, .notEquals]
+            case .number:           return [.equals, .lessThan, .greaterThan]
+            case .date:             return [.before, .after]
+            case .boolean:          return [.isTrue, .isFalse]
+            case .checkmatePattern: return [.equals, .notEquals]
             }
         }
     }
@@ -114,9 +136,10 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
     internal var number: Int
     internal var date: Date
     internal var gameResult: GameResult
-    
+    internal var specialCheckmate: SpecialCheckmate
+
     // MARK: Initializers
-    
+
     internal init(
         id: UUID = UUID(),
         field: Field = .white,
@@ -124,7 +147,8 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
         text: String = "",
         number: Int = 1,
         date: Date = .now,
-        gameResult: GameResult = .whiteWins
+        gameResult: GameResult = .whiteWins,
+        specialCheckmate: SpecialCheckmate = .smothered
     ) {
         self.id = id
         self.field = field
@@ -133,6 +157,52 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
         self.number = number
         self.date = date
         self.gameResult = gameResult
+        self.specialCheckmate = specialCheckmate
+    }
+
+    // MARK: Codable
+
+    /// A **defaulting** decoder, because `[TagRule]` is stored as one Codable
+    /// blob on `SmartTag` (D12′).
+    ///
+    /// Synthesized decoding requires every non-optional key to be present, so
+    /// the moment this type grew its eighth slot every previously-saved tag
+    /// would have failed to decode — the sidebar silently emptying, with the
+    /// rules the user wrote gone. That is the D28′ draft-schema stance
+    /// (additive fields are not breaking) owed to the *other* Codable-on-a-
+    /// model type, and paying it once here makes every future slot free.
+    ///
+    /// The fallbacks come from a default-constructed instance rather than
+    /// being spelled again per key: two lists of defaults that must agree is
+    /// the twin-read-site pattern this codebase keeps finding and fixing, and
+    /// the designated initializer is the one place they should live.
+    /// `encode(to:)` stays synthesized against these same keys.
+    ///
+    /// The keys are spelled out rather than left to synthesis. The compiler
+    /// would synthesize them here — it still synthesizes `encode(to:)`, which
+    /// brings `CodingKeys` along — but the on-disk key names of a type whose
+    /// blobs must survive a schema change are not something to leave to a
+    /// behaviour you'd have to look up. They match the property names, which
+    /// is what every already-saved tag was written with.
+    internal enum CodingKeys: String, CodingKey {
+        case id, field, comparison, text, number, date, gameResult, specialCheckmate
+    }
+
+    internal init(from decoder: any Decoder) throws {
+        let fallback = TagRule()
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? fallback.id
+        field = try container.decodeIfPresent(Field.self, forKey: .field) ?? fallback.field
+        comparison = try container.decodeIfPresent(Comparison.self, forKey: .comparison)
+            ?? fallback.comparison
+        text = try container.decodeIfPresent(String.self, forKey: .text) ?? fallback.text
+        number = try container.decodeIfPresent(Int.self, forKey: .number) ?? fallback.number
+        date = try container.decodeIfPresent(Date.self, forKey: .date) ?? fallback.date
+        gameResult = try container.decodeIfPresent(GameResult.self, forKey: .gameResult)
+            ?? fallback.gameResult
+        specialCheckmate = try container.decodeIfPresent(
+            SpecialCheckmate.self, forKey: .specialCheckmate
+        ) ?? fallback.specialCheckmate
     }
     
     // MARK: Matching
@@ -185,6 +255,20 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
         case .boolean:
             let subject = booleanSubject(of: record)
             return comparison == .isFalse ? !subject : subject
+
+        case .checkmatePattern:
+            // Unknowns never match, negation included — the D30′ rule, and
+            // the tension is worth naming rather than glossing: a nil motif
+            // means either "classified, and it's an ordinary mate" or "not
+            // classified yet", and the rule cannot tell them apart (the same
+            // conflation `backfillClassifications` makes with `ecoCode`).
+            // Reading nil as "not smothered" would make "mate pattern is not
+            // smothered" quietly true for every unclassified game in the
+            // Library — precisely the failure D30′ closed for "White is
+            // not X".
+            guard let subject = record.specialCheckmate else { return false }
+            let hit = subject == specialCheckmate
+            return comparison == .notEquals ? !hit : hit
         }
     }
     
@@ -228,6 +312,10 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
         case .event: return record.event
         case .site:  return record.site
         case .name:  return record.name
+        // The full name, so a rule can reach a variation. An unclassified
+        // game yields "", which the `.notEquals` guard above then treats as
+        // an unknown — the same reading `event` and `site` get.
+        case .opening: return record.opening?.fullName ?? ""
         default:     return ""
         }
     }

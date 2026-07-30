@@ -19,8 +19,17 @@ struct SpecialCheckmateTests {
         try GameState(FEN(parsing: fen))
     }
     
+    // MARK: Display
+
+    /// The tripwire for "simplify this to `rawValue.capitalized`", which
+    /// would quietly rename the motif to "Backrank" in the rule editor.
+    @Test func displayNamesAreWrittenOut() {
+        #expect(SpecialCheckmate.smothered.displayName == "Smothered")
+        #expect(SpecialCheckmate.backRank.displayName == "Back rank")
+    }
+
     // MARK: Smothered
-    
+
     @Test func cornerSmotheredMate() throws {
         // Kh8 boxed by Rg8, g7/h7 pawns; Nf7#. Two sides are board-edge walls.
         let state = try Self.state("6rk/5Npp/8/8/8/8/8/6K1 b - - 0 1")

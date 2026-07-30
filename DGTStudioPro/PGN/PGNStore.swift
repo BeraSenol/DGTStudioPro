@@ -224,9 +224,17 @@ internal struct PGNStore {
     /// re-resolution the transaction calls for on a *seat* edit is a no-op and
     /// omitted (metadata edits route through `applyEdit`, which re-resolves).
     /// A proposal that canonicalizes to the current game is a no-op —
-    /// evaluations, still valid by position, are preserved. The ECO /
-    /// SpecialCheckmate classification fields clear here too, riding this same
-    /// invalidation, once they exist on the model.
+    /// evaluations, still valid by position, are preserved.
+    ///
+    /// Correction (M4): this doc used to promise the classification fields
+    /// would *clear* here alongside the evaluations, "once they exist on the
+    /// model". They exist, and clearing turned out to be the wrong verb.
+    /// D34′ made classification engine-free, so the edited game can be
+    /// re-classified on the spot for the price of a dictionary probe — the
+    /// evaluations clear because recomputing them means a depth-18 search,
+    /// which is exactly the asymmetry that stopped applying once the opening
+    /// stopped needing an engine. A re-seated Ruy Lopez is a Ruy Lopez
+    /// before the transaction closes, not after the next Library visit.
     internal func applyMovetextEdit(
         to pgn: PGN,
         proposed: [String]
@@ -238,6 +246,7 @@ internal struct PGNStore {
             guard accepted.moves != pgn.moves else { return .success(pgn.moves) }
             pgn.moves = accepted.moves
             pgn.evaluations = []
+            classify(pgn)              // re-derived, not cleared — see the note above
             try refreshHash(of: pgn)   // recompute hash + save — one transaction
             Self.logger.info(
                 "Applied movetext edit to '\(pgn.name, privacy: .public)' plies=\(accepted.moves.count)"
@@ -380,8 +389,79 @@ internal struct PGNStore {
         return stamped
     }
     
+    // MARK: Classification (D19′, D34′)
+
+    /// Stamps a game's derived classification — opening and mate motif — from
+    /// its stored moves. Save-free by contract, the `resolvePlayers`
+    /// precedent: every caller either already ends in a save
+    /// (`applyMovetextEdit`, the analysis pass) or batches its own
+    /// (`backfillClassifications`).
+    ///
+    /// The one write site for all four columns, so they are written together
+    /// or not at all — which is the invariant `PGN.opening` checks when it
+    /// requires both a code and a family. Returns whether anything actually
+    /// changed, so the backfill's count contract can stay honest without
+    /// re-reading the row.
+    ///
+    /// The table is a parameter with a convenience default rather than a
+    /// reach for the global: callers already on an async path
+    /// (`backfillClassifications`, the analysis pass) pass a table warmed off
+    /// the main actor, and the default exists for the one caller that is
+    /// synchronous by nature — `applyMovetextEdit`, inside a sheet's save.
+    @discardableResult
+    internal func classify(_ pgn: PGN, using table: ECOClassifier = ECOTable.bundled) -> Bool {
+        let result = GameClassification.classify(moves: pgn.moves, using: table)
+        guard result.opening != pgn.opening
+                || result.specialCheckmate != pgn.specialCheckmate else { return false }
+        pgn.ecoCode = result.opening?.code
+        pgn.ecoFamily = result.opening?.family
+        pgn.ecoVariation = result.opening?.variation
+        pgn.specialCheckmate = result.specialCheckmate
+        return true
+    }
+
+    /// Classifies rows that carry no opening yet — the `backfillPlayerLinks`
+    /// precedent, and D34′'s reason for existing: an opening name is a table
+    /// lookup, so an archive full of already-analysed games should not have
+    /// to re-run Stockfish to learn one.
+    ///
+    /// The filter is `ecoCode == nil`, which deliberately conflates "not yet
+    /// classified" with "classified, and the table doesn't name this line".
+    /// The alternative is a third stored state — a flag or a timestamp saying
+    /// the question was already asked — and that state would have to be kept
+    /// true across every movetext edit and table update or it would lie.
+    ///
+    /// The cost of conflating turns out to be close to nothing, and the
+    /// reason is a property of the shipped dataset worth writing down: it
+    /// names all twenty legal first moves, so **any game with a move at all
+    /// classifies to something**. The residue that gets re-asked each sweep
+    /// is therefore just moveless rows. Pinned by
+    /// `everyPlayedGameGetsAName` — if a future table trim breaks that
+    /// property, the sweep quietly stops converging, and that test is what
+    /// says so.
+    ///
+    /// Called from the Library's `onAppear` only, not from all three
+    /// collection destinations the player backfills run at: Players and
+    /// Rankings read neither field, so running it there would triple the
+    /// scan to change nothing.
+    @discardableResult
+    internal func backfillClassifications(
+        using table: ECOClassifier = ECOTable.bundled
+    ) throws -> Int {
+        let games = try modelContext.fetch(FetchDescriptor<PGN>())
+        var classified = 0
+        for game in games where game.ecoCode == nil {
+            if classify(game, using: table) { classified += 1 }
+        }
+        if classified > 0 {
+            try modelContext.save()
+            Self.logger.info("Classified \(classified) game(s)")
+        }
+        return classified
+    }
+
     // MARK: Private Helpers
-    
+
     /// The shared tail of both doors. "One hash, two doors" is a rule about
     /// `contentHash`; this is the *rest* of the door, and it was duplicated
     /// line for line — including the ordering that carries weight, with

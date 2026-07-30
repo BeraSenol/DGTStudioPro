@@ -127,6 +127,12 @@ internal struct LibraryDestination: View {
                 backfillPlayerLinks()
                 if viewMode == .gallery { tabState.libraryInspectorPresented = true }
             }
+            // `.task`, not a fourth line in `onAppear`: this one has to await
+            // the ECO table, and awaiting it is the entire point — see
+            // `backfillClassifications()`.
+            .task {
+                await backfillClassifications()
+            }
             .onChange(of: viewMode) { _, mode in
                 if mode == .gallery { tabState.libraryInspectorPresented = true }
             }
@@ -651,7 +657,33 @@ internal struct LibraryDestination: View {
             Self.logger.error("Player-link backfill failed: \(error.localizedDescription, privacy: .public)")
         }
     }
-    
+
+    /// D34′'s eager half: an opening name costs a dictionary probe, so the
+    /// Library heals pre-M4 rows on appearance rather than making the user
+    /// re-run a depth-18 analysis to learn one.
+    ///
+    /// Its own method with its own error sink, deliberately not a third line
+    /// inside `backfillPlayerLinks()` — that sink logs "Player-link backfill
+    /// failed", which a classification failure would turn into a lie. Unique
+    /// to the Library among the three collection destinations: Players and
+    /// Rankings read neither field (see the store doc).
+    ///
+    /// Async, and riding `.task` rather than `onAppear`, because the first
+    /// call is what forces the ECO table's parse. Awaiting `warmed()` puts
+    /// that work on a background thread and *suspends* the main actor instead
+    /// of blocking it; the model work after the await resumes on the main
+    /// actor, where the context needs it. Doing this synchronously in
+    /// `onAppear` hung the first Library appearance long enough to break two
+    /// UITest suites — the `LibraryGamePreviewView` lesson, in a new place.
+    private func backfillClassifications() async {
+        let table = await ECOTable.warmed()
+        do {
+            try PGNStore(modelContext: modelContext).backfillClassifications(using: table)
+        } catch {
+            Self.logger.error("Classification backfill failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
     // MARK: Export (D24′)
     
     /// Single-game entry (a card's context menu). One game means a save

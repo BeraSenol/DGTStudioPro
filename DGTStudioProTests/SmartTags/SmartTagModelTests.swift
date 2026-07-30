@@ -52,8 +52,11 @@ struct SmartTagModelTests {
         #expect(fetched.matchAll)
     }
     
-    /// The three defaults, semantically: each must match what its enum
-    /// ancestor matched (the old suite's contract, carried forward).
+    /// Each default, semantically. The first three must match what their
+    /// enum ancestors matched (the old suite's contract, carried forward);
+    /// "Smothered Mates" has no ancestor and is pinned on its own terms — a
+    /// seeded tag whose rule was never exercised is a rule nobody has
+    /// checked, and this one is the only surface `SpecialCheckmate` has.
     @Test func defaultTagsMatchTheirAncestors() {
         let tags = Dictionary(
             uniqueKeysWithValues: SmartTag.defaultTags().map { ($0.name, $0) }
@@ -71,16 +74,41 @@ struct SmartTagModelTests {
             date: nil, importedAt: .now, contentHash: "r", round: 1
         )
         
+        let smothered = GameRecord(
+            white: nil, black: nil, result: .whiteWins, endedInMate: true,
+            date: nil, importedAt: .now, contentHash: "s",
+            specialCheckmate: .smothered
+        )
+        let backRank = GameRecord(
+            white: nil, black: nil, result: .whiteWins, endedInMate: true,
+            date: nil, importedAt: .now, contentHash: "b",
+            specialCheckmate: .backRank
+        )
+
         #expect(tags["Checkmate"]?.matches(mate) == true)
         #expect(tags["Checkmate"]?.matches(timed) == false)
         #expect(tags["Timed"]?.matches(timed) == true)
         #expect(tags["First Round"]?.matches(firstRound) == true)
         #expect(tags["First Round"]?.matches(timed) == false)
+        #expect(tags["Smothered Mates"]?.matches(smothered) == true)
+        #expect(tags["Smothered Mates"]?.matches(backRank) == false)
+        // An ordinary mate carries no motif, so it isn't a smothered one —
+        // and the Checkmate tag still catches it, which is the division of
+        // labour between the two seeds.
+        #expect(tags["Smothered Mates"]?.matches(mate) == false)
+        #expect(tags["Checkmate"]?.matches(smothered) == true)
     }
     
+    /// A deliberate change-detector: the factory feeds both the production
+    /// seed and the UI-test seed, and the seed fires **once ever** per
+    /// install, so a casual edit here silently changes what a fresh install
+    /// gets and what the UITests find. Growing this list is a decision;
+    /// having to come back and edit this test is the decision being noticed.
+    /// (M4 appended "Smothered Mates" — appended, so the three existing
+    /// positions are undisturbed.)
     @Test func defaultNamesAndColorsAreStable() {
         let tags = SmartTag.defaultTags()
-        #expect(tags.map(\.name) == ["Checkmate", "Timed", "First Round"])
-        #expect(tags.map(\.colorName) == [.red, .orange, .blue])
+        #expect(tags.map(\.name) == ["Checkmate", "Timed", "First Round", "Smothered Mates"])
+        #expect(tags.map(\.colorName) == [.red, .orange, .blue, .purple])
     }
 }

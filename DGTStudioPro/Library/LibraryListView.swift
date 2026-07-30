@@ -27,6 +27,16 @@ internal struct LibraryListView: View {
                 Text(game.result.rawValue).foregroundStyle(.secondary)
             }
             .width(60)
+            // Code only, not the name: at column width the family alone
+            // truncates to "French Defe…", and the inspector's Opening
+            // section is one click away with all three rows. An
+            // unclassified game shows nothing rather than the inspector's
+            // em dash — a table cell is already an empty-when-absent
+            // surface, and a column of dashes is noise.
+            TableColumn("ECO") { game in
+                Text(game.ecoCode ?? "").foregroundStyle(.secondary)
+            }
+            .width(min: 44, ideal: 52)
             TableColumn("Event") { Text($0.event).lineLimit(1) }
             TableColumn("Date") { game in
                 Text(game.displayDate).foregroundStyle(.secondary)

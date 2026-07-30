@@ -13,13 +13,17 @@ extension GameState {
     /// carrying the index (0-based), the offending string, and the
     /// underlying `SANParseError`.
     ///
-    /// No production caller today, and the reason is worth recording rather
-    /// than rediscovering: every walk the app actually performs needs the
-    /// per-ply state this method discards. `Game` scrubs history,
-    /// `LibraryGamePreviewState` stops at the first bad ply, and
-    /// `MovetextEdit.validate` needs each ply's canonical SAN — so all three
-    /// loop `parseSAN` + `applying` themselves. This stays as the "I just
-    /// want the final state" path, suited by `GameStateReplayTests`.
+    /// The "I just want the final state" path, and since M4 it has the
+    /// production caller it spent three months waiting for:
+    /// `GameClassification` replays to the final position to ask
+    /// `SpecialCheckmate` what pattern the game ended on, and that is the one
+    /// walk in the app with no use for the plies in between.
+    ///
+    /// Every *other* walk still needs the per-ply state this method discards,
+    /// which is why they don't call it and shouldn't be made to: `Game`
+    /// scrubs history, `LibraryGamePreviewState` stops at the first bad ply,
+    /// and `MovetextEdit.validate` needs each ply's canonical SAN — so all
+    /// three loop `parseSAN` + `applying` themselves.
     internal func replay(_ sanMoves: [String]) throws(ReplayError) -> GameState {
         var state = self
         for (index, san) in sanMoves.enumerated() {

@@ -36,7 +36,9 @@ extension PGN {
             round: round,
             plyCount: moves.count,
             hasAnalysis: !evaluations.isEmpty,
-            isTimed: timeControl != nil
+            isTimed: timeControl != nil,
+            opening: opening,
+            specialCheckmate: specialCheckmate
         )
     }
 }

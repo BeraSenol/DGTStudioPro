@@ -61,6 +61,43 @@ internal final class PGN: Identifiable {
     /// Use ``evaluation(atPly:)`` to read safely against both shapes.
     internal var evaluations: [Evaluation?] = []
     
+    // MARK: Classification (D19′, D34′, D35′)
+
+    /// The ECO volume code of the game's opening — `"C60"` — or nil for a
+    /// game whose line the bundled table doesn't name, and for every row
+    /// that predates M4 until the backfill reaches it.
+    ///
+    /// All four classification fields are **derived truth**, not interchange:
+    /// they are computed from `moves` by `GameClassification`, so they are
+    /// deliberately outside the content hash (a game and its re-classified
+    /// self are the same game) and deliberately **absent from `init`** — the
+    /// `whitePlayer`/`blackPlayer` precedent. A caller that could set them
+    /// directly would be a second classification door, and the first thing
+    /// it would do is disagree with the first door.
+    ///
+    /// Nil is a real answer here, not just an unmigrated state: an unplayed
+    /// game, an unnamed line, and a game that ended in an ordinary mate all
+    /// legitimately classify nil. Nothing may read nil as "needs work" except
+    /// `PGNStore.backfillClassifications()`, which accepts re-asking a game
+    /// that will answer nil again as the price of not storing a third state.
+    internal var ecoCode: String?
+
+    /// The opening family — `"Ruy Lopez"`, the short form the Library column
+    /// shows. Split from the source name at classification time (D35′).
+    internal var ecoFamily: String?
+
+    /// Everything after the family — `"Morphy Defense, Modern Steinitz
+    /// Defense"` — or nil for a bare family line. The roadmap called this
+    /// pair `ecoName`; it is spelled `ecoFamily`/`ecoVariation` so the model
+    /// and `ECOOpening` cannot drift about which half of the name is which.
+    internal var ecoVariation: String?
+
+    /// The recognised checkmate pattern the game ended on, or nil for an
+    /// ordinary mate, an unfinished game, or a movetext the replayer can't
+    /// walk. Surfaced only through smart-tag filtering by decision — the
+    /// seeded "Smothered mates" tag is its shop window.
+    internal var specialCheckmate: SpecialCheckmate?
+
     internal var name: String = ""
     internal var importedAt: Date
     internal var contentHash: String
@@ -93,6 +130,19 @@ internal final class PGN: Identifiable {
     
     internal var blackDisplayName: String {
         PlayerName.displayForm(of: black)
+    }
+
+    /// The stored classification rehydrated into the value the surfaces and
+    /// `TagRule` actually want.
+    ///
+    /// Requiring *both* code and family is an invariant check, not defensive
+    /// nil-handling: `PGNStore.classify` writes the three columns together
+    /// from one `ECOOpening`, so a row with one and not the other could only
+    /// come from a second writer — and this returning nil is how that shows
+    /// up as "unclassified" rather than as a half-built opening.
+    internal var opening: ECOOpening? {
+        guard let ecoCode, let ecoFamily else { return nil }
+        return ECOOpening(code: ecoCode, family: ecoFamily, variation: ecoVariation)
     }
     
     /// The one construction of a game's default name. `init`'s fallback and

@@ -95,7 +95,7 @@ private struct LoadedSection: View {
                 roster: RosterSummary(pgn),
                 headline: pgn.name
             ) {
-                InspectorEditButton(
+                InspectorEditButtonView(
                     label: "Rename",
                     identifier: AccessibilityID.libraryInspectorRename
                 ) {
@@ -104,6 +104,7 @@ private struct LoadedSection: View {
                 .padding(.trailing, 8)
             }
             
+            OpeningSection(opening: pgn.opening)
             evaluationSection
             pgnSection
         }
@@ -329,7 +330,7 @@ private struct LoadedSection: View {
                 .rotationEffect(.degrees(isShowingPGN ? 90 : 0))
         }
         .buttonStyle(.borderless)
-        // `InspectorEditButton`'s reason: a glyph at header font size is an
+        // `InspectorEditButtonView`'s reason: a glyph at header font size is an
         // ~11 pt mouse target.
         .font(.body)
         .help(isShowingPGN ? "Hide PGN" : "Show PGN")
@@ -345,7 +346,7 @@ private struct LoadedSection: View {
     /// `NSPasteboard` because SwiftUI has no pasteboard-write API a button
     /// action can call: `.copyable(_:)` routes through the system Copy
     /// command and needs the view focused, which a sidebar section header
-    /// cannot promise. Not an `InspectorEditButton` — that type hardcodes
+    /// cannot promise. Not an `InspectorEditButtonView` — that type hardcodes
     /// the pencil precisely so three inspectors' edit affordances cannot
     /// drift, and widening it to take a symbol would turn a named affordance
     /// into a generic icon button and lose exactly that guarantee. Extract
@@ -358,7 +359,7 @@ private struct LoadedSection: View {
             Image(systemName: "doc.on.doc")
         }
         .buttonStyle(.borderless)
-        // `InspectorEditButton`'s reason: a glyph at header font size is an
+        // `InspectorEditButtonView`'s reason: a glyph at header font size is an
         // ~11 pt mouse target.
         .font(.body)
         .help("Copy PGN")
