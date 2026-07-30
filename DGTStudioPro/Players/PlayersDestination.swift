@@ -42,6 +42,14 @@ internal struct PlayersDestination: View {
     @AppStorage(StorageKeys.playersViewMode) private var viewMode: CollectionViewMode = .list
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \PGN.importedAt, order: .reverse) private var games: [PGN]
+
+    /// The player registry, for the orphan sweep only (D40′) — the rows the
+    /// index cannot show. A second `@Query` rather than a fetch inside `body`
+    /// because the sweep deletes `Player` rows and nothing else: driven off
+    /// `games` alone, the toolbar's count would still name the rows it had just
+    /// removed. `MergePlayerSheet` queries the same way for the same reason.
+    @Query(sort: \Player.name) private var registry: [Player]
+
     @State private var selectedKey: PlayerStats.ID?
 
     // MARK: Player Editing (M5 — D37′, D38′, D39′)
@@ -54,6 +62,12 @@ internal struct PlayersDestination: View {
     /// D39′'s refusal, held for the alert. Nil is the normal state; a value
     /// means the last retag was refused whole and nothing was written.
     @State private var refusal: RetagRefusal?
+
+    /// D40′'s sweep, held between offer and confirmation — the same optional-
+    /// array shape as the Library's `pendingBatchDeletion`. It is a *snapshot*
+    /// of rows, which is why the store door re-checks each one before deleting:
+    /// a player listed here can pick up a link before the alert is answered.
+    @State private var sweep: [Player]?
 
     /// Which sheet is up, and for whom. Carries the stats key rather than a
     /// `Player`: the destination's currency is the pure key everywhere else
@@ -127,6 +141,9 @@ internal struct PlayersDestination: View {
         let selectedRating = selectedKey
             .flatMap { Glicko1.histories(from: records)[$0]?.last?.rating }
         
+        // The store owns the rule, the query owns the rows (D40′).
+        let orphans = registry.filter(PGNStore.isOrphaned)
+
         return coreContent(index: index)
             .navigationTitle("Players")
             .inspector(isPresented: $tabState.playersInspectorPresented) {
@@ -135,8 +152,7 @@ internal struct PlayersDestination: View {
                     rating: selectedRating,
                     recentGames: selectedGames,
                     onRename: { beginRename(stats: selectedStats) },
-                    onMerge: { beginMerge(stats: selectedStats) },
-                    onDelete: { deleteSelectedPlayer(stats: selectedStats) }
+                    onMerge: { beginMerge(stats: selectedStats) }
                 )
                 .inspectorColumnWidth(min: 325, ideal: 320, max: 430)
             }
@@ -163,7 +179,17 @@ internal struct PlayersDestination: View {
                 actions: { _ in Button("OK", role: .cancel) {} },
                 message: { refusal in Text(Self.refusalMessage(refusal.collisions)) }
             )
-            .toolbar { toolbarContent }
+            .alert(
+                sweepTitle,
+                isPresented: Binding(present: $sweep),
+                presenting: sweep,
+                actions: { players in
+                    Button("Delete", role: .destructive) { performSweep(players) }
+                    Button("Cancel", role: .cancel) {}
+                },
+                message: { players in Text(Self.sweepMessage(players)) }
+            )
+            .toolbar { toolbarContent(orphans: orphans) }
             .onAppear {
                 // Players must work even if Library was never visited this
                 // launch — the backfill is store-owned; this is just the
@@ -259,21 +285,16 @@ internal struct PlayersDestination: View {
         }
     }
 
-    /// The orphan-only delete (D38′). The menu item is already disabled for a
-    /// linked player, so a `false` here means the two disagreed — which is
-    /// worth a log line rather than a silent no-op.
-    private func deleteSelectedPlayer(stats: PlayerStats?) {
-        guard let stats, let player = resolvedPlayer(for: stats.key) else { return }
+    /// Deletes the confirmed snapshot. The door skips any row that gained a
+    /// link since the alert was raised, so this reports what actually went
+    /// rather than what was offered.
+    private func performSweep(_ players: [Player]) {
         do {
-            if try PGNStore(modelContext: modelContext).deleteOrphanedPlayer(player) {
-                selectedKey = nil
-            } else {
-                Self.logger.error(
-                    "Delete offered for linked player '\(player.name, privacy: .public)' — the menu's guard and the door's disagreed"
-                )
-            }
+            let deleted = try PGNStore(modelContext: modelContext)
+                .deleteOrphanedPlayers(players)
+            Self.logger.info("Swept \(deleted) unused player row(s)")
         } catch {
-            Self.logger.error("Delete player failed: \(error.localizedDescription, privacy: .public)")
+            Self.logger.error("Sweep failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -320,6 +341,25 @@ internal struct PlayersDestination: View {
         return lead + more + " Delete or edit one of each pair first — nothing has been changed."
     }
 
+    /// Singular and plural spelled out rather than an interpolated "s": the
+    /// count reaching 1 is the common case here, not the edge one.
+    private var sweepTitle: String {
+        let count = sweep?.count ?? 0
+        return count == 1 ? "Delete 1 Unused Player?" : "Delete \(count) Unused Players?"
+    }
+
+    /// Names them, because this alert is the **only** place an orphaned player
+    /// is ever rendered (D40′): they appear in no view mode, so a bare count
+    /// would ask the user to approve deleting things they have never seen.
+    /// Capped like the refusal's list, for the same reason.
+    private static func sweepMessage(_ players: [Player]) -> String {
+        let shown = players.prefix(5).map(\.name)
+        let more = players.count > shown.count ? " And \(players.count - shown.count) more." : ""
+        return "These players are in no games: " + shown.joined(separator: ", ") + "."
+             + more
+             + " Removing them changes no game and no export; they return by name if a game of theirs is ever imported again."
+    }
+
     @ViewBuilder
     private func coreContent(index: [PlayerStats]) -> some View {
         Group {
@@ -361,7 +401,7 @@ internal struct PlayersDestination: View {
     /// undivided and the inspector column tucked below it — see
     /// `InspectorToggleContent`.
     @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
+    private func toolbarContent(orphans: [Player]) -> some ToolbarContent {
         ToolbarItem {
             // Same macOS segmented-picker caveat as the Library's: the
             // identifier tags the container; UI tests address segments by
@@ -373,6 +413,28 @@ internal struct PlayersDestination: View {
             }
             .pickerStyle(.segmented)
             .accessibilityIdentifier(AccessibilityID.playersViewModePicker)
+        }
+        ToolbarItem {
+            // D40′'s surface, and the only affordance in the app that can reach
+            // an orphaned player. After the picker, before the spacer: it acts
+            // on content, so it belongs on the content side of the break.
+            //
+            // A menu rather than a bare button because the item opens a
+            // confirmation rather than acting, and because registry maintenance
+            // is a family with room to grow. Disabled rather than hidden, so
+            // "are there any?" is answerable without the control appearing and
+            // vanishing under the pointer.
+            Menu {
+                Button("Delete Unused Players…") { sweep = orphans }
+                    .disabled(orphans.isEmpty)
+                    .accessibilityIdentifier(AccessibilityID.playersSweepOrphansItem)
+            } label: {
+                Label("Maintenance", systemImage: "ellipsis.circle")
+            }
+            .help(orphans.isEmpty
+                  ? "No unused players"
+                  : "\(orphans.count) unused player row(s) can be removed")
+            .accessibilityIdentifier(AccessibilityID.playersMaintenanceMenu)
         }
         ToolbarSpacer()
         InspectorToggleContent(

@@ -18,6 +18,11 @@ input remains outstanding** — M4's ECO table source, the last one only Bera
 could supply, was picked and bundled. What remains scheduled is **M6, M7 and
 M8**, reorderable on appetite.*
 
+*Revised 30 July 2026 (later): the **M5 epilogue** moved to Landed — the
+Players editing UITest M5 recorded as its honest gap, plus **D40′**, the
+orphan sweep the test's own preparation turned up. Base `3f785a3`. M6, M7 and
+M8 remain, unchanged and still reorderable.*
+
 ---
 
 ## M6 — Live-mirror piece animation
@@ -154,6 +159,73 @@ GM).
 
 ## Landed
 
+### M5 epilogue — the orphan sweep *(landed 30 July 2026)*
+
+The witness gap M5 recorded as "the honest gap" — the Players editing flow is
+boardless, therefore UITestable, and simply wasn't tested — closed against
+`3f785a3` in two reviewed batches, ⌘U green after each. One decision minted:
+**D40′**. No files added; the source count stays 211.
+
+**Writing the test found a defect first, which is the entry's real content.**
+Before a line of UITest existed, reading the surfaces end to end showed that
+**Delete Player could never be enabled**. `GameRecord.Side` is built from the
+*resolved* `whitePlayer` / `blackPlayer` links, so `PlayerStats.index(of:)`
+only ever emits players holding at least one game; the list renders that index,
+so selection can only be a key the index emitted; and `canDelete` read
+`recentGames.isEmpty`, filtered on the same links. "Is in the list" and "is
+deletable" were exact complements — no player satisfied both, ever. M5's own
+manual-check step ("delete that player's only game, revisit Players, confirm
+the item is now enabled") was impossible: deleting the last game removes the
+player from the list rather than enabling anything.
+
+D9′ had the intent right — "a manual door for them, not a collector" — the
+door was just hung on a surface where orphans are structurally invisible. D40′
+moves it to the Players toolbar and makes the confirmation dialog the one place
+an orphan is ever rendered.
+
+**Gate evidence.**
+
+- **The unreachable affordance is gone, not documented:** `onDelete` and
+  `canDelete` leave `PlayersInspectorView`; `players.inspector.deleteItem`
+  leaves the registry — a breaking accessibility-contract change, recorded at
+  the symbol with why it gets no successor there.
+- **One spelling of the rule:** `PGNStore.isOrphaned` replaces three
+  independent ones — the old delete guard, `merge`'s post-retag assertion, and
+  the inspector's `canDelete`. The second predated this session and was the
+  twin-read-site pattern in behavioural clothes.
+- **Store door:** `deleteOrphanedPlayers(_:)` takes the confirmed snapshot,
+  re-checks each row, and sweeps in one transaction. `PGNStoreRetagTests` grows
+  17 → 18: a linked player is never *listed* (absence, not refusal), the orphan
+  is listed and swept, and a row that gains a link between listing and
+  confirming is skipped — the merge-survivor `isDeleted` lesson applied to a
+  snapshot held across a dialog.
+- **A reactivity bug caught inside the same change:** the destination first
+  read orphans through a store fetch in `body`, which re-renders on `PGN`
+  changes only — so the sweep, which deletes `Player` rows and nothing else,
+  would have left the toolbar naming rows it had just removed. It is a second
+  `@Query` filtered through `PGNStore.isOrphaned`: the store owns the rule, the
+  query owns the rows. The fetch-based door was deleted rather than left with
+  no app caller.
+- **The flow is witnessed:** four UITests —
+  `test_players_profileHeaderControls_areHittable` (its own test because both
+  controls are borderless inside a `List` section header, the exact shape M1
+  proved AX-invisible for the sidebar's + button),
+  `test_players_renameRewritesTheListedName` (whose load-bearing assertion is
+  that the field opens holding **tag** form, the trap D37′ names),
+  `test_players_mergeFoldsTheLoserAway`, and
+  `test_players_maintenanceSweep_reachesOrphansTheListCannotShow`, which drives
+  the complement end to end: delete the game two players share, watch both rows
+  leave the list, reach them through the toolbar.
+
+**The agreement this earned.** *A disabled affordance whose guard can never be
+true is a lie with a green build.* It costs nothing at runtime, breaks no test,
+and reads as a considered edge case — the same signature as the audit's
+comments that *assert* a guarantee. The grep is cheap: for each `disabled(...)`
+over a derived condition, ask what supplies the condition and whether that
+supply can produce the enabling value at all.
+
+---
+
 ### M5 — Player rename and merge *(landed 30 July 2026)*
 
 Executed in two reviewed batches from a Cowork session against `2187a37`,
@@ -176,6 +248,11 @@ The roadmap's delete proposal did not survive at all. "Merge-into-nobody
 Library's next `backfillPlayerLinks()` resolves them and recreates the row.
 Delete is now **orphan-only**, refusing linked players and returning `false`
 so the surface can say rename-or-merge instead of appearing to work.
+
+*(Superseded in its surface by D40′ — see the M5 epilogue above. Orphan-only
+was right; the per-player menu item it was attached to could never enable,
+because a player with no games appears in no view mode. The refusing singular
+door is now a sweep over the rows the list cannot show.)*
 
 **Gate evidence.**
 

@@ -63,6 +63,20 @@ struct PGNStoreRetagTests {
         PGNStore(modelContext: try makeContext())
     }
 
+    /// The sweep's two halves live on either side of the view/store line
+    /// (D40′) — `PGNStore.isOrphaned` is the rule, a `@Query` supplies the rows
+    /// — so its pins need the context too, and compose it exactly the way
+    /// `PlayersDestination` does rather than through a convenience the app
+    /// doesn't have.
+    private static func storeAndContext() throws -> (PGNStore, ModelContext) {
+        let context = try makeContext()
+        return (PGNStore(modelContext: context), context)
+    }
+
+    private static func orphans(in context: ModelContext) throws -> [Player] {
+        try context.fetch(FetchDescriptor<Player>()).filter(PGNStore.isOrphaned)
+    }
+
     private static func player(
         _ store: PGNStore,
         named tag: String
@@ -318,33 +332,54 @@ struct PGNStoreRetagTests {
         #expect(try store.player(withNormalizedKey: Self.key(forTag: "L. Reinaud")) != nil)
     }
 
-    // MARK: Delete — D38′'s orphan guard
+    // MARK: Delete — the orphan sweep (D38′'s guard, D40′'s surface)
 
-    /// The guard's reason: `.nullify` leaves the games' tags intact, and the
-    /// Library's next `backfillPlayerLinks()` resolves those same tags and
-    /// creates the row again. A delete the app undoes within one navigation is
-    /// worse than no delete, so the door refuses and the surface can explain.
-    @Test("Deleting a linked player is refused, not silently undone")
-    func deletingLinkedPlayerIsRefused() throws {
-        let store = try Self.store()
+    /// The guard's reason, now expressed as absence rather than refusal: a
+    /// linked player is never *offered*, because `.nullify` leaves the games'
+    /// tags intact and the Library's next `backfillPlayerLinks()` resolves
+    /// those same tags and creates the row again. A delete the app undoes
+    /// within one navigation is worse than no delete.
+    @Test("A linked player is never listed as an orphan")
+    func linkedPlayerIsNeverListed() throws {
+        let (store, context) = try Self.storeAndContext()
         _ = try store.importPGN(text: Self.pgnText())
-        let bera = try Self.player(store, named: "Senol, Bera")
 
-        #expect(try store.deleteOrphanedPlayer(bera) == false)
+        #expect(try Self.orphans(in: context).isEmpty)
         #expect(try store.player(withNormalizedKey: Self.key(forTag: "Senol, Bera")) != nil)
     }
 
-    /// And the case it exists for: the orphan a merge leaves behind, or the
-    /// row D9′ says lingers after a game is deleted.
-    @Test("An orphaned player deletes")
-    func orphanedPlayerDeletes() throws {
-        let store = try Self.store()
+    /// And the case the sweep exists for: the row D9′ says lingers once its
+    /// last game is deleted — invisible in the Players destination, which folds
+    /// records, and therefore reachable through nothing else.
+    @Test("Deleting a player's last game lists them, and the sweep removes them")
+    func orphanedPlayerIsListedAndSwept() throws {
+        let (store, context) = try Self.storeAndContext()
         let game = try store.importPGN(text: Self.pgnText())
-        let bera = try Self.player(store, named: "Senol, Bera")
         try store.delete(game)
 
-        #expect(try store.deleteOrphanedPlayer(bera) == true)
+        let orphans = try Self.orphans(in: context)
+        #expect(orphans.contains { $0.normalizedName == Self.key(forTag: "Senol, Bera") })
+        #expect(try store.deleteOrphanedPlayers(orphans) == orphans.count)
         #expect(try store.player(withNormalizedKey: Self.key(forTag: "Senol, Bera")) == nil)
+    }
+
+    /// The snapshot guard. The sweep acts on a list built for a confirmation
+    /// dialog, so between listing and deleting a row can pick up a link — here
+    /// by importing a second game under the same tag, which resolves onto the
+    /// existing orphan rather than minting a row. Deleting it then would
+    /// nullify live links, so the re-check must skip it.
+    @Test("A row that gained a link since it was listed is skipped")
+    func sweepSkipsARowRelinkedSinceListing() throws {
+        let (store, context) = try Self.storeAndContext()
+        let game = try store.importPGN(text: Self.pgnText())
+        try store.delete(game)
+        let stale = try Self.orphans(in: context)
+        #expect(!stale.isEmpty)
+
+        _ = try store.importPGN(text: Self.pgnText(round: 2))
+
+        #expect(try store.deleteOrphanedPlayers(stale) == 0)
+        #expect(try store.player(withNormalizedKey: Self.key(forTag: "Senol, Bera")) != nil)
     }
 
     // MARK: Invariants the retag must not break

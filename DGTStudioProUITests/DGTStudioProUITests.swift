@@ -265,7 +265,171 @@ final class DGTStudioProUITests: XCTestCase {
         XCTAssertTrue(waitFor(element(AccessibilityID.playersInspectorProfile)),
                       "Inspector should show the selected player's profile")
     }
-    
+
+    // MARK: Player Editing (M5 — D37′, D38′; the orphan sweep is D40′)
+
+    /// Selects a player and returns the profile header, inspector opened if
+    /// the default ever flips. Shared by the three editing tests so a change
+    /// to the selection route is made once.
+    @discardableResult
+    private func selectPlayer(_ name: String) -> XCUIElement {
+        element(AccessibilityID.sidebarDestination("players")).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.playerRow(name))),
+                      "Seeded player '\(name)' should be listed")
+        element(AccessibilityID.playerRow(name)).click()
+        if !element(AccessibilityID.playersInspectorProfile).waitForExistence(timeout: 2) {
+            element(AccessibilityID.playersInspectorToggle).click()
+        }
+        return element(AccessibilityID.playersInspectorProfile)
+    }
+
+    /// The precondition the two flow tests below lean on, pinned on its own so
+    /// a failure names the cause instead of the symptom.
+    ///
+    /// Both controls are borderless and live inside a `List` section header —
+    /// the exact shape M1 proved AX-invisible for the sidebar's + button, which
+    /// took two runs to diagnose and ended in a menu-bar command
+    /// (`SmartTagCommands`). These sit in an *inspector* header rather than a
+    /// sidebar one, so the finding may not transfer; if it does, this test says
+    /// so in one line and the remedy is already precedented.
+    func test_players_profileHeaderControls_areHittable() {
+        launch()
+        XCTAssertTrue(waitFor(selectPlayer("Anish Giri")))
+
+        XCTAssertTrue(element(AccessibilityID.playersRenameButton).isHittable,
+                      "The D26′ rename pencil must be reachable in the inspector header")
+        XCTAssertTrue(element(AccessibilityID.playersActionsMenu).isHittable,
+                      "The actions menu must be reachable in the inspector header")
+    }
+
+    /// D37′ end to end, and the assertion that matters most is the *seeding*:
+    /// the field must open holding **tag** form. Seeding it from `Player.name`
+    /// instead is one keystroke away and would write a display form into every
+    /// affected game's `[White]` on the first Save — the trap the decision
+    /// names explicitly. Everything after it is the flow.
+    func test_players_renameRewritesTheListedName() {
+        launch()
+        selectPlayer("Anish Giri")
+
+        element(AccessibilityID.playersRenameButton).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.playerRenameSheet)),
+                      "The rename pencil should present the sheet")
+
+        let field = element(AccessibilityID.playerRenameTagField)
+        XCTAssertTrue(waitFor(field))
+        XCTAssertEqual(field.value as? String, "Giri, Anish",
+                       "The field edits tag form (D37′), not the 'Anish Giri' the list shows")
+
+        field.click()
+        field.typeKey("a", modifierFlags: .command)
+        field.typeText("Giri, Anish Kumar")
+        XCTAssertEqual(field.value as? String, "Giri, Anish Kumar",
+                       "The new tag should have reached the field")
+
+        let save = element(AccessibilityID.playerRenameSave)
+        XCTAssertTrue(save.isEnabled, "Save enables once the tag differs from the current one")
+        save.click()
+
+        XCTAssertTrue(waitFor(element(AccessibilityID.playerRow("Anish Kumar Giri"))),
+                      "The list should re-key to the display form derived from the new tag")
+        XCTAssertFalse(element(AccessibilityID.playerRow("Anish Giri")).exists,
+                       "The old identity should be gone — a rename moves the games, not a label")
+        XCTAssertEqual(app.state, .runningForeground)
+    }
+
+    /// D38′'s flow: the opened player is the one that disappears. Two seed
+    /// players with unrelated games, so the merge is a clean relink rather than
+    /// a self-play row, and no rewritten hash can collide (D39′'s refusal has
+    /// its own store-level pins).
+    func test_players_mergeFoldsTheLoserAway() {
+        launch()
+        selectPlayer("Anish Giri")
+
+        element(AccessibilityID.playersActionsMenu).click()
+        // Menu items by title — the codebase's established pattern (see
+        // `AccessibilityID.contextShowInLibrary`).
+        let mergeItem = app.menuItems["Merge Into…"]
+        XCTAssertTrue(waitFor(mergeItem), "The actions menu should offer the merge")
+        mergeItem.click()
+
+        XCTAssertTrue(waitFor(element(AccessibilityID.playerMergeSheet)),
+                      "Merge Into… should present the sheet")
+        element(AccessibilityID.playerMergePicker).click()
+        let survivor = app.menuItems["Liren Ding"]
+        XCTAssertTrue(waitFor(survivor), "The picker should list the other seeded players")
+        survivor.click()
+
+        let confirm = element(AccessibilityID.playerMergeConfirm)
+        XCTAssertTrue(confirm.isEnabled, "Merge enables once a survivor is chosen")
+        confirm.click()
+
+        XCTAssertTrue(waitFor(element(AccessibilityID.playerRow("Liren Ding"))),
+                      "The survivor keeps its row")
+        XCTAssertFalse(element(AccessibilityID.playerRow("Anish Giri")).exists,
+                       "The player opened for merging is the one that goes (D38′)")
+        XCTAssertEqual(app.state, .runningForeground)
+    }
+
+    /// D40′, and the only test in the suite that exercises a surface built
+    /// *because* a UI test was written. M5 shipped a per-player Delete guarded
+    /// on the selected player having no games — a guard that could never be
+    /// true, since the list folds `GameRecord`s and an orphan appears in none.
+    ///
+    /// So this drives the complement: delete the one game two players share,
+    /// watch both rows leave the list entirely, and reach them through the
+    /// toolbar, which is the only affordance that can.
+    func test_players_maintenanceSweep_reachesOrphansTheListCannotShow() {
+        launch()
+        element(AccessibilityID.sidebarDestination("players")).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.playerRow("Liren Ding"))))
+
+        let sweepItem = element(AccessibilityID.playersSweepOrphansItem)
+        element(AccessibilityID.playersMaintenanceMenu).click()
+        XCTAssertTrue(waitFor(sweepItem), "The maintenance menu should carry the sweep")
+        XCTAssertFalse(sweepItem.isEnabled,
+                       "Every seeded player holds a game, so there is nothing to sweep")
+        app.typeKey(.escape, modifierFlags: [])
+
+        // Delete the only game Firouzja and Ding appear in.
+        element(AccessibilityID.sidebarDestination("library")).click()
+        let icons = segment(ModeSymbol.icons)
+        XCTAssertTrue(icons.waitForExistence(timeout: 5))
+        if !isPicked(icons) { icons.click() }
+        let card = element(AccessibilityID.gameCard(SeedGameName.blackWins))
+        XCTAssertTrue(waitFor(card), "The seeded game should be listed before deletion")
+        card.click()
+        element(AccessibilityID.libraryDeleteButton).click()
+        let confirmDelete = app.sheets.buttons["Delete"]
+        XCTAssertTrue(waitFor(confirmDelete), "Single-game delete should ask first")
+        confirmDelete.click()
+
+        // The finding itself: orphans leave the list rather than becoming
+        // deletable in it.
+        element(AccessibilityID.sidebarDestination("players")).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.playerRow("Anish Giri"))),
+                      "Players untouched by the deletion stay listed")
+        XCTAssertFalse(element(AccessibilityID.playerRow("Liren Ding")).exists,
+                       "An orphaned player leaves the list entirely — D40′'s whole finding")
+
+        element(AccessibilityID.playersMaintenanceMenu).click()
+        XCTAssertTrue(waitFor(sweepItem))
+        XCTAssertTrue(sweepItem.isEnabled, "Two players are orphaned now")
+        sweepItem.click()
+
+        let alert = app.sheets.firstMatch
+        XCTAssertTrue(waitFor(alert), "The sweep should confirm before deleting")
+        let shown = alert.staticTexts.allElementsBoundByIndex.map(\.label).joined(separator: " ")
+        XCTAssertTrue(shown.contains("Liren Ding"),
+                      "This alert is the only place an orphan is ever rendered, so it must name them")
+        alert.buttons["Delete"].click()
+
+        element(AccessibilityID.playersMaintenanceMenu).click()
+        XCTAssertTrue(waitFor(sweepItem))
+        XCTAssertFalse(sweepItem.isEnabled, "The sweep should have nothing left to offer")
+        app.typeKey(.escape, modifierFlags: [])
+        XCTAssertEqual(app.state, .runningForeground)
+    }
+
     // MARK: Rankings (M-prs.4)
     
     /// Pins the seeded ladder end to end: two 1-win players (both 100%,

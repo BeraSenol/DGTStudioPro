@@ -320,17 +320,30 @@ internal enum AccessibilityID {
     internal static let playersInspectorProfile = "players.inspector.profile"
     internal static let playersInspectorEmpty   = "players.inspector.empty"
 
-    // MARK: Player Editing (M5 — D37′, D38′)
+    // MARK: Player Editing (M5 — D37′, D38′; the orphan sweep is D40′)
 
-    /// The profile header's rename pencil, and the menu holding the two
-    /// operations that aren't a rename. Separate identifiers because they are
-    /// separate affordances: the pencil is D26′'s shared control with its
-    /// fixed meaning, and folding "merge" and "delete" into it would widen a
-    /// named affordance into a generic one.
+    /// The profile header's rename pencil, and the menu beside it holding the
+    /// selection-scoped operation that isn't a rename. Separate identifiers
+    /// because they are separate affordances: the pencil is D26′'s shared
+    /// control with its fixed meaning, and folding "merge" into it would widen
+    /// a named affordance into a generic one.
+    ///
+    /// `players.inspector.deleteItem` was **removed** with the per-player
+    /// Delete it named (D40′). A registry removal is a breaking
+    /// accessibility-contract change, so it is recorded here rather than done
+    /// quietly — and it gets no successor in this group, because an orphan has
+    /// no row to select and the replacement is destination-scoped (below).
     internal static let playersRenameButton   = "players.inspector.rename"
     internal static let playersActionsMenu    = "players.inspector.actionsMenu"
     internal static let playersMergeMenuItem  = "players.inspector.mergeItem"
-    internal static let playersDeleteMenuItem = "players.inspector.deleteItem"
+
+    /// The destination's maintenance menu and its one item (D40′), on the
+    /// toolbar rather than in the inspector: orphaned players contribute to no
+    /// `GameRecord`, so they appear in no view mode and can never be selected —
+    /// which is the finding the decision came from. A toolbar affordance is the
+    /// only kind that can reach them.
+    internal static let playersMaintenanceMenu  = "players.maintenanceMenu"
+    internal static let playersSweepOrphansItem = "players.maintenanceMenu.deleteUnused"
 
     internal static let playerRenameSheet     = "player.renameSheet"
     /// The **tag-form** field — "Senol, Bera". D37′: the tag is what games

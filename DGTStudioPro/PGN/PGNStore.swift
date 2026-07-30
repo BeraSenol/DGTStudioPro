@@ -619,7 +619,7 @@ internal struct PGNStore {
         // orphaned by construction — but assert it rather than assume it: a
         // still-linked loser means the target tag didn't fold onto the
         // survivor's key, and deleting it here would nullify live links.
-        guard loser.whiteGames.isEmpty, loser.blackGames.isEmpty else {
+        guard Self.isOrphaned(loser) else {
             Self.logger.error(
                 "Merge left '\(loser.name, privacy: .public)' still linked — not deleting"
             )
@@ -633,31 +633,62 @@ internal struct PGNStore {
         return moved
     }
 
-    /// Deletes a player row that nothing links to.
+    /// The one spelling of "nothing points at this row" (D40′).
     ///
-    /// **Only orphans, and the guard is the point.** `.nullify` means deleting
-    /// a linked player strands its games with their seat tags intact — and the
-    /// next Library visit runs `backfillPlayerLinks()`, which resolves those
-    /// same tags and creates the row again. A delete that the app itself undoes
-    /// within one navigation is worse than no delete at all. For a player who
-    /// has games, the operation the user actually wants is rename (change what
-    /// they're called) or merge (they're someone else); this door refuses so
-    /// the surface can say that instead of appearing to work.
+    /// Three sites asked this question independently before the sweep landed —
+    /// this file's delete guard, `merge`'s post-retag assertion, and the
+    /// inspector's `canDelete` — which is the twin-read-site pattern wearing
+    /// behavioural clothes. Two survive as callers of this; the third went with
+    /// the per-player menu item it guarded.
     ///
-    /// Returns `false` when it refused, so the caller can explain rather than
-    /// silently no-op.
+    /// Static and free of the context on purpose: `PlayersDestination` filters
+    /// its own `@Query` through it, so the *rule* is store-owned while the rows
+    /// stay reactive. A `func orphanedPlayers()` here was written first and
+    /// removed — it fetches, so the toolbar's count would not have refreshed
+    /// when the sweep itself deleted the rows.
+    ///
+    /// **Why a sweep rather than a per-player delete (D40′).** Orphans are
+    /// structurally invisible in the Players destination: its rows come from
+    /// `PlayerStats.index(of:)`, which folds `GameRecord`s whose sides are built
+    /// from the *resolved links* — so a linkless row contributes to no record,
+    /// appears in no view mode, and can never be selected. "Is in the list" and
+    /// "is deletable" were exact complements, which left M5's per-player Delete
+    /// disabled for every player it could ever be offered for. Deleting a
+    /// player's last game is what mints one; D9′ says they linger with no
+    /// collector, so the sweep stays strictly user-invoked.
+    internal static func isOrphaned(_ player: Player) -> Bool {
+        player.whiteGames.isEmpty && player.blackGames.isEmpty
+    }
+
+    /// Deletes the given rows, skipping any that gained a link since they were
+    /// listed. Returns how many actually went.
+    ///
+    /// **It takes the rows rather than re-querying**, so the sweep deletes
+    /// exactly what the dialog named — but re-checks each one, the merge
+    /// survivor's `isDeleted` lesson: a list built to be confirmed is a
+    /// snapshot, and acting on a stale one here would nullify live links. A
+    /// skip is logged rather than silent, because it means the snapshot and the
+    /// store disagreed, and that is worth seeing once.
+    ///
+    /// One transaction for the whole sweep: N saves for N rows would leave a
+    /// half-swept registry behind any mid-loop failure.
     @discardableResult
-    internal func deleteOrphanedPlayer(_ player: Player) throws -> Bool {
-        guard player.whiteGames.isEmpty, player.blackGames.isEmpty else {
-            Self.logger.info(
-                "Refused to delete linked player '\(player.name, privacy: .public)' — the link backfill would recreate it"
-            )
-            return false
+    internal func deleteOrphanedPlayers(_ players: [Player]) throws -> Int {
+        var deleted = 0
+        for player in players where !player.isDeleted {
+            guard Self.isOrphaned(player) else {
+                Self.logger.info(
+                    "Skipped '\(player.name, privacy: .public)' — it gained a link since the sweep was offered"
+                )
+                continue
+            }
+            Self.logger.info("Deleting orphaned player '\(player.name, privacy: .public)'")
+            modelContext.delete(player)
+            deleted += 1
         }
-        Self.logger.info("Deleting orphaned player '\(player.name, privacy: .public)'")
-        modelContext.delete(player)
+        guard deleted > 0 else { return 0 }
         try modelContext.save()
-        return true
+        return deleted
     }
 
     /// D39′'s pre-flight. Throws `.wouldCollide` naming every game whose

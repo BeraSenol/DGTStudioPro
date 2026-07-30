@@ -20,29 +20,30 @@ internal struct PlayersInspectorView: View {
     internal let rating: Glicko1.Rating?
     internal let recentGames: [PGN]
 
-    /// M5's three operations, as closures rather than store reach.
+    /// M5's two selection-scoped operations, as closures rather than store
+    /// reach.
     ///
     /// This view is pure-value by design — stats and rating arrive computed —
-    /// and rename/merge/delete all need a resolved `Player`, a `modelContext`
-    /// and somewhere to put a sheet. Handing it closures keeps that property
+    /// and both rename and merge need a resolved `Player`, a `modelContext` and
+    /// somewhere to put a sheet. Handing it closures keeps that property
     /// intact: the destination already owns the context and the key→row bridge
     /// (`showInLibrary`'s route), so it owns these too, and the inspector
     /// stays previewable without a container.
     ///
-    /// Defaulted so the three previews below and any future host can omit
-    /// them; the app always wires all three.
+    /// **Delete is deliberately not here (D40′).** M5 put a per-player "Delete
+    /// Player" in the menu below, guarded by `recentGames.isEmpty`, and that
+    /// guard could never be true: this view is only ever handed a `stats` that
+    /// `PlayerStats.index(of:)` emitted, the index folds `GameRecord`s, and a
+    /// record's sides are built from the resolved links — so every selectable
+    /// player has at least one game, and the item was disabled for every player
+    /// it could ever be shown for. Orphans, the only rows the store's delete
+    /// accepts, appear in no view mode at all. The operation moved to the
+    /// destination's toolbar, where it can reach them.
+    ///
+    /// Defaulted so the three previews below and any future host can omit them;
+    /// the app always wires both.
     internal var onRename: () -> Void = {}
     internal var onMerge: () -> Void = {}
-    internal var onDelete: () -> Void = {}
-
-    /// Whether Delete can do anything for this player (D38′'s orphan guard).
-    ///
-    /// The store door refuses a linked player because `.nullify` plus the next
-    /// `backfillPlayerLinks()` would recreate it; the menu says so up front
-    /// rather than offering an item that reports failure. Computed from
-    /// `recentGames` — the same games the section below lists, so the disabled
-    /// state and the visible reason can't disagree.
-    private var canDelete: Bool { recentGames.isEmpty }
 
     // MARK: Body
     internal var body: some View {
@@ -52,10 +53,8 @@ internal struct PlayersInspectorView: View {
                 ProfileSection(
                     stats: stats,
                     rating: rating,
-                    canDelete: canDelete,
                     onRename: onRename,
-                    onMerge: onMerge,
-                    onDelete: onDelete
+                    onMerge: onMerge
                 )
                 .id(stats.key)   // reset per-player, the Library-inspector idiom
                 RecentGamesSection(playerKey: stats.key, games: recentGames)
@@ -83,10 +82,8 @@ private struct ProfileSection: View {
 
     let stats: PlayerStats
     let rating: Glicko1.Rating?
-    let canDelete: Bool
     let onRename: () -> Void
     let onMerge: () -> Void
-    let onDelete: () -> Void
 
     var body: some View {
         Section {
@@ -107,9 +104,16 @@ private struct ProfileSection: View {
                 // Two controls, the Library inspector's PGN-header shape: the
                 // D26′ pencil keeps its one fixed meaning (edit *this* thing's
                 // name), and everything that isn't a rename lives in a menu
-                // beside it. Widening the pencil to also merge and delete
-                // would turn a named affordance into a generic icon button and
-                // lose the guarantee three inspectors' pencils currently give.
+                // beside it. Widening the pencil to also merge would turn a
+                // named affordance into a generic icon button and lose the
+                // guarantee three inspectors' pencils currently give.
+                //
+                // The menu holds one item since D40′ took Delete out of it, and
+                // stays a menu rather than becoming a second glyph button: a
+                // merge icon would have to be either a new parameter on the
+                // shared pencil or a locally open-coded button, and both are
+                // the drift D26′ exists to prevent. A menu is also where the
+                // next player-scoped verb goes without another decision.
                 HStack(spacing: 12) {
                     InspectorEditButtonView(
                         label: "Rename Player",
@@ -127,10 +131,6 @@ private struct ProfileSection: View {
         Menu {
             Button("Merge Into…", action: onMerge)
                 .accessibilityIdentifier(AccessibilityID.playersMergeMenuItem)
-            Divider()
-            Button("Delete Player", role: .destructive, action: onDelete)
-                .disabled(!canDelete)
-                .accessibilityIdentifier(AccessibilityID.playersDeleteMenuItem)
         } label: {
             Image(systemName: "ellipsis.circle")
         }
@@ -140,7 +140,7 @@ private struct ProfileSection: View {
         // `InspectorEditButtonView`'s reason: a glyph at header font size is
         // an ~11 pt mouse target.
         .font(.body)
-        .help(canDelete ? "Merge or delete this player" : "Merge this player")
+        .help("Merge this player into another")
         .accessibilityIdentifier(AccessibilityID.playersActionsMenu)
     }
 
