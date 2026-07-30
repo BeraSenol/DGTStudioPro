@@ -57,8 +57,15 @@ internal final class Player: Identifiable {
     /// fall back to `name`.
     internal var tagName: String?
 
-    internal var createdAt: Date
-    
+    // No creation timestamp, deliberately (D41′). One lived here, assigned in
+    // `init` and read by nothing in the app — `SmartTag` has one because
+    // `ContentView` sorts the sidebar by it, and this was that shape copied
+    // without the consumer. The question it looks like it answers — "since
+    // when have I played this person?" — belongs to `PlayerStats.firstPlayed`,
+    // which folds game dates: a row's mint time is when the game was
+    // *imported*, so for a back-filled archive it names the wrong day
+    // entirely. Re-adding it needs a reader first.
+
     // MARK: Relationships
     
     /// Inverses of `PGN.whitePlayer` / `PGN.blackPlayer`. `.nullify` so a
@@ -85,7 +92,6 @@ internal final class Player: Identifiable {
         self.name = name
         self.normalizedName = Self.normalizedKey(for: name)
         self.tagName = tagName
-        self.createdAt = .now
     }
     
     // MARK: Static Methods
