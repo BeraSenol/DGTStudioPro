@@ -23,6 +23,16 @@ Players editing UITest M5 recorded as its honest gap, plus **D40′**, the
 orphan sweep the test's own preparation turned up. Base `3f785a3`. M6, M7 and
 M8 remain, unchanged and still reorderable.*
 
+*Revised 31 July 2026 (second): **two more M7 items closed — one as a
+correction, one by landing it** (D43′). The warning triage had no population:
+a cold build of all three targets emits **zero** compiler diagnostics, and the
+"295" this file scheduled work against is unattributable. The item's real
+content was the bullet below it — the 230 diagnostics the project had never
+asked for. Measured, fixed in three annotations, and the project now builds in
+**Swift language mode 6**. Base `c93f54f`. **M6, M8, and M7's remaining two**
+(Instruments; the Xcode 27 GM re-read) are what is left — and only Instruments
+is actionable before September.*
+
 *Revised 31 July 2026: **M7's swift-format item closed by declining it**
 (D42′) — the first roadmap item retired as a decision rather than delivered
 as work, because the entry rested on a `.swift-format` that was never
@@ -82,9 +92,17 @@ deliberately instead of "while I'm here".**
   prefix re-join) and **M5 added one** (`retag`'s per-game rehash across a
   large linked set). The post-M4 audit *removed* one by predicating
   `backfillClassifications`, which is the shape of win to look for first.
-- **Warning triage**: count (last known 295), bucket, burn what's cheap,
-  waive what's deliberate — each waiver written. (`@diagnose` is the 6.4
-  tool for the residue; the triage itself doesn't wait for it.)
+- ~~**Warning triage**: count (last known 295), bucket, burn, waive.~~ —
+  **closed 31 July as a correction (D43′)**. There is no 295. A cold build
+  of all three targets under the project's own settings emits **zero**
+  compiler diagnostics; the only three `warning:` strings in 2001 lines are
+  one identical `appintentsmetadataprocessor` notice per target, which is
+  not the compiler. The number's provenance cannot be reconstructed, so it
+  is recorded as unattributed rather than superseded. **Second false-premise
+  bullet in two consecutive passes**, after swift-format below — and this
+  one was worse, because a stale *count* stays plausible forever where a
+  missing *file* is one command from being caught. What the item was really
+  worth turned out to be the bullet underneath it.
 - ~~**swift-format, one-time run**~~ — **closed 31 July by declining it
   (D42′)**, and closed as a *decision* rather than a task, because that is
   what it turned out to be: `.swift-format` was never committed, so this
@@ -100,24 +118,74 @@ deliberately instead of "while I'm here".**
   parenthetical was the tell**: "legal since M1's gate passed" is a claim
   about permission, which nobody doubted, standing in for the claim that
   mattered.
-- **Language-mode 6 evaluation** (D27′'s recorded fact): flip
-  `SWIFT_VERSION` to 6 on a branch, collect the diagnostics, and decide —
-  the codebase is written mode-6-shaped, so the gap is likely small, but it
-  is a decision with a diff, not an assumption. Re-run the `RosterSummary`
-  `@MainActor`-init deletion experiment in the same pass.
+- ~~**Language-mode 6 evaluation**~~ — **landed 31 July (D43′)**, and it
+  absorbed the triage bullet above, which is where the real population was.
+  `SWIFT_VERSION = 6.0` on all three targets.
+
+  **Gate evidence.** Three cold builds, each against a scratch derived-data
+  path so every source recompiles: **0** warnings as configured, **230**
+  (+165 notes) under `SWIFT_STRICT_CONCURRENCY=complete`, **1 error** under
+  `SWIFT_VERSION=6` — which stopped the build at 144 of 239 phases and was
+  the whole of the gap between "written as if mode 6" and mode 6. After the
+  fixes: mode 6 builds clean, 239 compile phases, exit 0, ⌘U green.
+
+  **Three annotations did it.** `@MainActor` on the UITest class took 226 —
+  one file, one cause, eight message shapes refracting the single fact that
+  the suite was nonisolated while every `XCUIElement` member it touches is
+  main-actor. `@MainActor` on `UITestSeed.scratchDefaults` took the error,
+  with `nonisolated(unsafe)` *rejected* rather than reached for: one keyword,
+  equally effective, and it would have been the first such opt-out in the app
+  target. And `setUpWithError`/`tearDownWithError` → the `async` spellings,
+  forced by a language rule worth keeping — a synchronous override cannot add
+  isolation its superclass lacks, an async one can.
+
+  **The negative result carries as much weight as the positive.** All 79
+  unit-test sources produced **zero** diagnostics under complete concurrency
+  before anything was touched. The suite-isolation agreement isn't just
+  written down, it's compiler-verified — which is why the app target had four
+  warnings rather than two hundred.
+
+  **Waived:** two, both `Binding(present:)`, written at the declaration with
+  a sunset condition — `Binding` isn't `Sendable` while its own initializer
+  demands `@Sendable` closures, and the 2027 SDK's `.alert(item:)` retires all
+  seven call sites and the helper with them.
+
+  *The `RosterSummary` `@MainActor`-init experiment stays open and is now
+  better posed: it's a one-line deletion against a compiler that actually
+  checks isolation, where a mode-5 run of it would have proved little.*
+
+  *The method note worth reusing: the endpoint was chosen by the compiler,
+  not in advance. "Fix, re-probe, land wherever it comes back clean" priced
+  a migration nobody had measured, and `xcodebuild SWIFT_VERSION=6` as a
+  per-run override made the branch this bullet asked for unnecessary.*
 - **Xcode 27 GM re-read** (when it ships, ~September): re-read D27′, promote
   or strike each forward note on evidence, run the toolchain-move manual
   checks (Liquid Glass screenshot pass, full UITest suite).
 
-**Gate.** Measurements written into the instructions; warning count and
-buckets recorded; ~~format landed alone~~ *(struck — D42′ declined the
-formatter, so there is no format commit to land; the item is closed, not
-waived)*; a mode-6 decision recorded with its evidence; D27′ re-read logged
-when GM actually arrives.
+**Gate.** Measurements written into the instructions *(outstanding — this is
+Instruments' half; the concurrency measurements are recorded)*; ~~warning
+count and buckets recorded~~ *(done, and the answer was zero — D43′)*;
+~~format landed alone~~ *(struck — D42′ declined the formatter, so there is
+no format commit to land; the item is closed, not waived)*; ~~a mode-6
+decision recorded with its evidence~~ *(done — D43′, landed rather than
+merely decided)*; D27′ re-read logged when GM actually arrives.
 
-**Status: one of four items closed.** The remaining three — Instruments,
-warning triage, language-mode 6 — each need a build or a board, so each
-needs Bera's hands rather than a diff. None has started.
+**Status: three of five items closed** — swift-format declined (D42′),
+warning triage corrected and language-mode 6 landed (D43′, which absorbed the
+triage). Two remain:
+
+- **Instruments** is the only one actionable now, and it is the item this
+  milestone was actually named for. It needs Bera's hands and a board.
+- **The Xcode 27 GM re-read** is calendar-gated, ~September.
+
+**What the three closures have in common, since it is now a pattern and not
+a coincidence.** Two of the four original bullets were false premises — a
+config file that never existed and a warning count nobody could source — and
+the third turned out to be one static property away from done. All three had
+been sitting here reading as substantial scheduled work. None of them cost
+more than a command to check. The M7 lesson is not about formatters or
+concurrency: **an unmeasured item accrues imagined weight**, and the longer
+it sits the heavier it reads, because nothing about it ever fails.
 
 ---
 
