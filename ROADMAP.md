@@ -23,6 +23,18 @@ Players editing UITest M5 recorded as its honest gap, plus **D40′**, the
 orphan sweep the test's own preparation turned up. Base `3f785a3`. M6, M7 and
 M8 remain, unchanged and still reorderable.*
 
+*Revised 31 July 2026 (third): **M7's `RosterSummary` experiment run and
+closed** (D44′) — the item D43′ explicitly left open, and the last of this
+milestone's non-gated work. The `@MainActor` on the live-projection init was
+unnecessary and its stated reason was false: a global actor isolates a type's
+members, not the types nested inside it. Deleted, and pinned from a
+nonisolated suite so restoring it is a compile error. Base `f64b8d4`, and the
+tree was **clean** on arrival — the first pass in four that did not open by
+finding its predecessor uncommitted. **What is left is M6, M8, and M7's two
+gated items** (Instruments, which needs Bera and a board; the Xcode 27 GM
+re-read, ~September). Every roadmap item that can be closed from a keyboard
+alone is now closed.*
+
 *Revised 31 July 2026 (second): **two more M7 items closed — one as a
 correction, one by landing it** (D43′). The warning triage had no population:
 a cold build of all three targets emits **zero** compiler diagnostics, and the
@@ -150,17 +162,93 @@ deliberately instead of "while I'm here".**
   demands `@Sendable` closures, and the 2027 SDK's `.alert(item:)` retires all
   seven call sites and the helper with them.
 
-  *The `RosterSummary` `@MainActor`-init experiment stays open and is now
-  better posed: it's a one-line deletion against a compiler that actually
-  checks isolation, where a mode-5 run of it would have proved little.*
+  *The `RosterSummary` `@MainActor`-init experiment stayed open out of this
+  bullet and is now closed — see D44′ below.*
 
   *The method note worth reusing: the endpoint was chosen by the compiler,
   not in advance. "Fix, re-probe, land wherever it comes back clean" priced
   a migration nobody had measured, and `xcodebuild SWIFT_VERSION=6` as a
   per-run override made the branch this bullet asked for unnecessary.*
+- ~~**The `RosterSummary` `@MainActor`-init experiment**~~ — **landed 31 July
+  (D44′)**, the rider D43′ left attached to the mode-6 flip.
+
+  **Gate evidence.** The attribute is gone; `RosterSummary.init(_:result:)` is
+  nonisolated; `theLiveProjectionIsReachableOffTheMainActor` builds a
+  `LiveGame.Roster` inside the nonisolated `RosterSummaryTests` and projects
+  it, so the deletion cannot be undone without a compile error. Expected
+  green — ⌘U is Bera's.
+
+  **The answer was not "it turned out to be removable".** The reason written
+  at the declaration was wrong: `@MainActor` was there "because `Roster` is
+  nested in a `@MainActor` class and inherits that isolation", and nested
+  types do not inherit global-actor isolation (SE-0449 shows this shape in
+  its own text). So the item was never the coin-flip it was filed as.
+
+  **Why a month of green builds missed it, which is the part worth keeping.**
+  Every other site constructing a `LiveGame.Roster` is `@MainActor` already,
+  correctly, for `LiveGame`'s sake — so no context existed from which the
+  claim could fail. D43′'s lesson was "a language claim in a comment is a
+  hypothesis until something compiles it"; D44′ sharpens it, because this one
+  *was* compiled, constantly. **Something has to compile it from the side
+  where it would break.** That is now a working agreement in its own right,
+  and it retro-fits three earlier findings: the `.disabled(…)` guard that
+  could never be true, the two guards agreeing on an impossible value, and
+  the measurement taken from a build that compiled nothing.
+
 - **Xcode 27 GM re-read** (when it ships, ~September): re-read D27′, promote
   or strike each forward note on evidence, run the toolchain-move manual
   checks (Liquid Glass screenshot pass, full UITest suite).
+
+### Instruments run sheet
+
+*Written 31 July with D44′, so the one remaining actionable item needs no
+planning on the day. Four scenarios, each naming the known-costs entries it
+is the only chance to see.*
+
+**Two rules for the whole pass, both learned the hard way here.**
+
+*Every scenario records a corroborating count* — plies played, games
+imported, info lines parsed, players folded — beside its numbers. D43′'s
+agreement in its profiling form: an idle app profiles beautifully, and a
+profile with no work in it is indistinguishable from a profile with no
+problem in it. If the count is absent the measurement did not happen.
+
+*Every super-linear cost is measured at two sizes, and the ratio is the
+finding.* Most of the list below is quadratic or fetch-all — `opening(for:)`
+re-joins prefixes, `backfillPlayerLinks` scans everything, `Glicko1.histories`
+builds every player's array to answer about one. A single point at today's
+Library cannot tell "fine" from "fine at this size", and this app's whole
+performance envelope is an assumption about size. Import a duplicate batch to
+double the Library, re-run, compare. **A 2× input that costs 4× is the result
+worth having**, and it is invisible to any single run.
+
+| # | Scenario | Instruments | Known costs it exercises | Record |
+|---|---|---|---|---|
+| 1 | **A full live game**, real board, to a natural finish | Time Profiler + Allocations; Leaks at teardown | `parseSAN` generating all legal moves per ply; `Position`'s `[Piece]` heap-allocating per `applying`; the draft sidecar's atomic write per committed ply; the New Game sheet's `games.map(\.gameRecord)` fold per seat edit | Plies played; main-thread time per settle; allocations per ply; whether any settle crosses the hang threshold |
+| 2 | **A depth-heavy analysis** on one long game | Allocations + Time Profiler; Leaks after Stop All | `UCIProtocol.parse`'s ~3 arrays per info line — by frequency the hottest allocation in the app; engine teardown (the strand-no-waiter contract) | Info lines parsed; allocation rate; Stockfish resident memory against configured Hash; zero leaked engine processes after Stop All |
+| 3 | **A large import**, then the first Library appearance | Time Profiler; SwiftUI (view body counts) | The ECO table's ~3,800-row parse, warmed off-actor but never measured; `ECOClassifier.opening(for:)`'s quadratic prefix re-join, bounded at 36 plies; `backfillPlayerLinks`'s fetch-all-and-scan; MD5 per game; `parseSAN` × plies × games | Games imported; wall-clock import; whether the ECO parse ever lands on the main actor; time to first Library paint; **then double the batch and re-run** |
+| 4 | **A Players → Rankings browse**, then a rename | Time Profiler; SwiftUI | `Glicko1.histories` building every player's full sample array per question; both destinations folding once per body; `backfillPlayerLinks` again at its three `onAppear`s; `retag`'s per-game re-resolve + MD5, O(linked games), **inside a modal save** | Players in the fold; body evaluations per navigation; rename wall-clock against the linked-game count — this is the one that blocks a sheet, so it is the one a user feels |
+
+**What the pass is allowed to change: nothing.** It produces numbers, and the
+numbers go into the instructions' known-costs list — each entry either gets a
+figure or is struck as negligible. Fixes are a separate decision with a
+separate D-number, because a performance change made in the same pass as its
+measurement has no before-and-after. The `backfillClassifications` predicate
+is the model: a win found by looking, taken deliberately, recorded on its own.
+
+**Do not add signposts first.** The temptation is to instrument before
+measuring; the app already has `os.Logger` categories that give coarse
+intervals for free, and adding `os_signpost` calls is production code riding
+a measurement pass. Profile raw, and only reach for signposts if a specific
+profile is genuinely unreadable — then it is a small named change with a
+reason, not scaffolding left behind.
+
+**Eligibility this unlocks.** D27′ gates the perft/ownership forward notes on
+this pass explicitly: no `~Copyable` or specialization work on the move
+generator until Instruments has run. Note the standing veto that survives the
+measurement — generated move order is what the perft counts were taken
+against, so perft is both the witness and the thing that can refuse the
+change.
 
 **Gate.** Measurements written into the instructions *(outstanding — this is
 Instruments' half; the concurrency measurements are recorded)*; ~~warning
@@ -168,24 +256,39 @@ count and buckets recorded~~ *(done, and the answer was zero — D43′)*;
 ~~format landed alone~~ *(struck — D42′ declined the formatter, so there is
 no format commit to land; the item is closed, not waived)*; ~~a mode-6
 decision recorded with its evidence~~ *(done — D43′, landed rather than
-merely decided)*; D27′ re-read logged when GM actually arrives.
+merely decided)*; ~~the `RosterSummary` experiment re-run in the same pass~~
+*(done one pass later — D44′, and it closed with a finding rather than a
+shrug)*; D27′ re-read logged when GM actually arrives.
 
-**Status: three of five items closed** — swift-format declined (D42′),
-warning triage corrected and language-mode 6 landed (D43′, which absorbed the
-triage). Two remain:
+**Status: four of six items closed** — swift-format declined (D42′), warning
+triage corrected and language-mode 6 landed (D43′, which absorbed the
+triage), the `RosterSummary` experiment run (D44′, promoted out of D43′'s
+rider to a bullet of its own since it closed with a finding). **Both
+survivors are gated on something other than appetite:**
 
-- **Instruments** is the only one actionable now, and it is the item this
-  milestone was actually named for. It needs Bera's hands and a board.
+- **Instruments** needs Bera's hands, a board and a real game. It is the item
+  this milestone was actually named for, and after three passes of closing
+  bullets that dissolved on contact, it is also the only one left that was
+  never in doubt. A run sheet is below.
 - **The Xcode 27 GM re-read** is calendar-gated, ~September.
 
-**What the three closures have in common, since it is now a pattern and not
-a coincidence.** Two of the four original bullets were false premises — a
-config file that never existed and a warning count nobody could source — and
-the third turned out to be one static property away from done. All three had
-been sitting here reading as substantial scheduled work. None of them cost
-more than a command to check. The M7 lesson is not about formatters or
-concurrency: **an unmeasured item accrues imagined weight**, and the longer
-it sits the heavier it reads, because nothing about it ever fails.
+**What the four closures have in common, since it is now a pattern and not a
+coincidence.** Three of the five original bullets rested on a claim nobody
+had checked — a config file that never existed, a warning count nobody could
+source, and a comment describing a language rule that isn't one — and the
+fourth turned out to be one static property away from done. All four had been
+sitting here reading as substantial scheduled work. None cost more than a
+command to settle. The M7 lesson is not about formatters or concurrency:
+**an unmeasured item accrues imagined weight**, and the longer it sits the
+heavier it reads, because nothing about it ever fails.
+
+**The corollary now that only Instruments is left.** Everything M7 has closed
+so far, it closed by *checking a claim*. Instruments is the opposite shape —
+there is no claim to falsify, only numbers that do not exist yet, and the
+known-costs list is honestly labelled as unmeasured rather than quietly
+wrong. That is why it survived three passes of demolition, and it is worth
+noticing that the one item nobody could dissolve is the one that was written
+down as an admission of ignorance rather than as an assertion.
 
 ---
 
