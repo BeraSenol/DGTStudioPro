@@ -134,7 +134,7 @@ internal struct LiveGameInspectorView: View {
             .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
             .listRowSeparator(.hidden)
         } header: {
-            Text("Moves")
+            InspectorSectionHeader("Moves")
         }
     }
     
@@ -157,7 +157,7 @@ internal struct LiveGameInspectorView: View {
             }
             .accessibilityIdentifier(AccessibilityID.liveInspectorDiscard)
         } header: {
-            Text("Game")
+            InspectorSectionHeader("Game")
         }
     }
 }

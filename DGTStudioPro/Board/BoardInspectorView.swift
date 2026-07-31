@@ -82,7 +82,7 @@ internal struct BoardInspectorView: View {
             )
             .frame(height: 160)
         } header: {
-            Text("Evaluation")
+            InspectorSectionHeader("Evaluation")
         }
     }
     
@@ -104,9 +104,13 @@ internal struct BoardInspectorView: View {
             .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
             .listRowSeparator(.hidden)
         } header: {
-            HStack {
-                Text("Moves")
-                Spacer(minLength: 0)
+            // Was a hand-rolled `HStack` reimplementing `InspectorSectionHeader`
+            // — and disagreeing with it on three counts: `Spacer(minLength: 0)`
+            // against 8, no `.textCase(nil)`, no `.lineLimit(1)`. It predated
+            // the shared type and was never migrated, so this file's roster
+            // header went through the type while its moves header quietly
+            // didn't. The two now differ only in what they say.
+            InspectorSectionHeader("Moves") {
                 if let onEditMoves {
                     InspectorEditButtonView(
                         label: "Edit Moves",

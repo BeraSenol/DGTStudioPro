@@ -170,7 +170,7 @@ private struct LoadedSection: View {
                 Spacer()
             }
         } header: {
-            Text("Evaluation")
+            InspectorSectionHeader("Evaluation")
         }
     }
     
@@ -283,11 +283,16 @@ private struct LoadedSection: View {
             InspectorSectionHeader("PGN") {
                 // `InspectorSectionHeader` stacks its actions at spacing 0 —
                 // right for a lone pencil, flush for two glyphs.
+                //
+                // The `.padding(.trailing, 8)` that used to close this stack is
+                // gone: it was a second statement of the trailing inset the
+                // header now owns, and it disagreed with the pencil's 10 by two
+                // points — invisible in one inspector, visible in this one,
+                // where it sat two sections below a roster header at 10.
                 HStack(spacing: 12) {
                     copyPGNButton
                     disclosureButton
                 }
-                .padding(.trailing, 8)
             }
         }
     }

@@ -117,7 +117,7 @@ private struct TrendSection: View {
                 }
             }
         } header: {
-            Text("Rating Trend")
+            InspectorSectionHeader("Rating Trend")
         }
     }
 }

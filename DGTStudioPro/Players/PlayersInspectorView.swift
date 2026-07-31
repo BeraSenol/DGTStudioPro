@@ -177,7 +177,7 @@ private struct RecentGamesSection: View {
                 }
             }
         } header: {
-            Text("Recent Games")
+            InspectorSectionHeader("Recent Games")
         }
     }
     

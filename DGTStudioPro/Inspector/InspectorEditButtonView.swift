@@ -43,26 +43,28 @@ internal struct InspectorEditButtonView: View {
     internal var body: some View {
         Button(action: action) {
             Image(systemName: "pencil")
-                // Trailing inset from the inspector's edge, stated here and
-                // nowhere else. It sits *inside* the label deliberately, so
-                // it widens the hit target rather than only pushing the glyph
-                // — the same reason `.font(.body)` is stated below.
+                // The label's own frame is the hit area under
+                // `.buttonStyle(.borderless)`, and an SF Symbol's frame is
+                // mostly transparent; `.contentShape` makes the whole box
+                // clickable rather than the drawn strokes.
                 //
-                // The Library inspector used to add its own `.padding(
-                // .trailing, 8)` on top of this, which put its Rename pencil
-                // at 18 pt while the other four sat at 10 — precisely the
-                // drift D26′ exists to prevent, and invisible until the two
-                // inspectors are opened side by side. A host that wants
-                // different spacing should change this number for everyone
-                // or make the case for a parameter; it should not quietly
-                // stack a second one.
-                .padding(.trailing, 10)
+                // Spelled `Rectangle()` rather than the shorter `.rect` to
+                // match the app's three existing sites. Both compile; two
+                // spellings of one shape is how a grep for a pattern starts
+                // missing half of it.
+                .contentShape(Rectangle())
         }
         .buttonStyle(.borderless)
         // Stated, not inherited: a sidebar section header sets a small
         // secondary font, and a glyph rendered at that size is an ~11 pt
         // mouse target. The heading stays header-sized; the control renders
         // at control size, which is what AppKit's own header accessories do.
+        //
+        // Load-bearing alone since the trailing padding left for
+        // `InspectorSectionHeader.actionsInset`: that padding widened the
+        // target as a side effect of insetting the edge, and this line is now
+        // the only thing sizing it. Shrinking the font here shrinks the hit
+        // box, with nothing else to make up the difference.
         .font(.body)
         .help(label)
         .accessibilityLabel(label)

@@ -43,6 +43,34 @@ internal struct InspectorSectionHeader<Actions: View>: View {
         self.actions = actions
     }
     
+    // MARK: Type Properties
+
+    /// How far the header's trailing edge sits from the inspector's, and so
+    /// how far the outermost control sits from it.
+    ///
+    /// It used to live on `InspectorEditButtonView` as `.padding(.trailing, 10)`
+    /// under a doc comment reading "stated here and nowhere else" — true of the
+    /// *number* and false of the *job*. That padding did two things at once:
+    /// inset the header's trailing control, and widen the pencil's hit target.
+    /// Those coincide only while the pencil is last, and M5's Players header put
+    /// a menu after it, at which point the edge inset silently transferred to a
+    /// control carrying none. Three distances from one edge resulted — 10 pt at
+    /// the four lone pencils, 8 pt at the Library's PGN glyph pair (which had
+    /// quietly added its own), and 0 pt at the actions menu.
+    ///
+    /// Owning it here is what makes a host unable to get it wrong: whatever goes
+    /// into the actions slot, and however much of it, the outermost control is
+    /// this far from the edge. `InspectorEditButtonView` keeps the hit target,
+    /// which was the half that genuinely belonged to it.
+    ///
+    /// Stated trade-off: it is applied to the whole row, not to `actions()`, so
+    /// a header with *no* actions also gives up these 10 pt — a title long
+    /// enough to truncate now truncates 10 pt earlier. Taken deliberately over
+    /// insetting the slot alone, because an `EmptyView` under a modifier is not
+    /// reliably absent from layout, and one unconditional statement is worth
+    /// more here than ten points of a name nobody reads to the end.
+    internal static let actionsInset: CGFloat = 10
+
     // MARK: Body
     internal var body: some View {
         HStack(spacing: 0) {
@@ -55,6 +83,7 @@ internal struct InspectorSectionHeader<Actions: View>: View {
             Spacer(minLength: 8)
             actions()
         }
+        .padding(.trailing, Self.actionsInset)
     }
 }
 
@@ -119,4 +148,87 @@ extension InspectorSectionHeader where Actions == EmptyView {
     }
     .listStyle(.sidebar)
     .frame(width: 300, height: 420)
+}
+
+/// Every arity of the actions slot the app actually passes, stacked so their
+/// trailing edges are readable against each other — one control, two glyphs,
+/// a control plus a menu, and none.
+///
+/// This is the preview the type should have had. `actionsInset` is a claim
+/// about *every* header's outermost control, and until now the only witness
+/// was four headers all passing a lone pencil — the one arity where the old
+/// arrangement happened to be right. The multi-control rows are the ones that
+/// were wrong for a month: the Players shape put its menu flush against the
+/// edge, and the Library shape sat two points inside everything else.
+///
+/// What to look at is a vertical line, not a row: if any one of the four
+/// trailing controls is out of column with the others, the inset has escaped
+/// its single statement again.
+#Preview("Actions — Every Arity") {
+    List {
+        Section {
+            Text("One control — four inspectors' pencils.")
+                .foregroundStyle(.secondary)
+        } header: {
+            InspectorSectionHeader("Lone Pencil") {
+                InspectorEditButtonView(
+                    label: "Edit Info",
+                    identifier: AccessibilityID.boardEditInfoButton,
+                    action: {}
+                )
+            }
+        }
+        Section {
+            Text("Two glyphs — the Library's PGN header.")
+                .foregroundStyle(.secondary)
+        } header: {
+            InspectorSectionHeader("Glyph Pair") {
+                HStack(spacing: 12) {
+                    Button { } label: { Image(systemName: "doc.on.doc") }
+                        .buttonStyle(.borderless)
+                        .font(.body)
+                    Button { } label: { Image(systemName: "chevron.right") }
+                        .buttonStyle(.borderless)
+                        .font(.body)
+                }
+            }
+        }
+        Section {
+            Text("Pencil plus menu — the Players profile header (M5).")
+                .foregroundStyle(.secondary)
+        } header: {
+            InspectorSectionHeader("Pencil and Menu") {
+                HStack(spacing: 12) {
+                    InspectorEditButtonView(
+                        label: "Rename Player",
+                        identifier: AccessibilityID.playersRenameButton,
+                        action: {}
+                    )
+                    Menu {
+                        Button("Merge Into…") { }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                    // `.menuIndicator(.hidden)` and `.fixedSize()` copied from
+                    // `PlayersInspectorView.actionsMenu` deliberately: without
+                    // them the menu reserves width for a disclosure arrow, and
+                    // this preview would show the trailing control in a column
+                    // the app never puts it in — a preview that agrees with
+                    // itself and not with the screen.
+                    .menuStyle(.borderlessButton)
+                    .menuIndicator(.hidden)
+                    .fixedSize()
+                    .font(.body)
+                }
+            }
+        }
+        Section {
+            Text("No actions — Opening, Evaluation, Moves, Recent Games…")
+                .foregroundStyle(.secondary)
+        } header: {
+            InspectorSectionHeader("Nothing To Act On")
+        }
+    }
+    .listStyle(.sidebar)
+    .frame(width: 300, height: 460)
 }

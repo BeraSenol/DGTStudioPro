@@ -226,7 +226,7 @@ private struct CurrentMoveScrollSync: ViewModifier {
             LabeledContent("Round", value: "7")
             LabeledContent("Result", value: "*")
         } header: {
-            Text("Game")
+            InspectorSectionHeader("Game")
         }
         
         Section {
@@ -244,7 +244,7 @@ private struct CurrentMoveScrollSync: ViewModifier {
             .frame(height: 110)
             .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
         } header: {
-            Text("Evaluation")
+            InspectorSectionHeader("Evaluation")
         }
         
         Section {
@@ -261,7 +261,7 @@ private struct CurrentMoveScrollSync: ViewModifier {
             .frame(height: 200)
             .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
         } header: {
-            Text("Moves")
+            InspectorSectionHeader("Moves")
         }
     }
     .listStyle(.sidebar)
