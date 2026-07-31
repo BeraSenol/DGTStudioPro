@@ -23,6 +23,14 @@ Players editing UITest M5 recorded as its honest gap, plus **D40′**, the
 orphan sweep the test's own preparation turned up. Base `3f785a3`. M6, M7 and
 M8 remain, unchanged and still reorderable.*
 
+*Revised 31 July 2026: **M7's swift-format item closed by declining it**
+(D42′) — the first roadmap item retired as a decision rather than delivered
+as work, because the entry rested on a `.swift-format` that was never
+committed. `.DS_Store` untracked in the same pass, so `git status` — the
+sweep's mandated first command — stops reading permanent noise. Base
+`abf9e0c`. **M6, M8 and M7's remaining three items** are what is left; M7's
+three each need a build or a board.*
+
 *Revised 30 July 2026 (last): the **between-milestone sweep** moved to Landed
 — the first standalone run of M5's own agreement, which found the epilogue
 uncommitted, minted **D41′**, folded the columns grids onto their shared
@@ -77,10 +85,21 @@ deliberately instead of "while I'm here".**
 - **Warning triage**: count (last known 295), bucket, burn what's cheap,
   waive what's deliberate — each waiver written. (`@diagnose` is the 6.4
   tool for the residue; the triage itself doesn't wait for it.)
-- **swift-format, one-time run** (legal since M1's gate passed):
-  pre-mark the aligned tables with `// swift-format-ignore`, run repo-wide
-  as a mechanical-only commit, adopt `swift format lint --strict` as a
-  habit.
+- ~~**swift-format, one-time run**~~ — **closed 31 July by declining it
+  (D42′)**, and closed as a *decision* rather than a task, because that is
+  what it turned out to be: `.swift-format` was never committed, so this
+  bullet and the instructions' open item both scheduled a run of a config
+  that did not exist. The reason for declining is 314 hand-aligned lines
+  across 37 files (215 app, 99 test) in five classes, which swift-format
+  cannot preserve — column padding is the pretty-printer's business, not a
+  maskable rule, and the one directive that suppresses pretty-printing
+  attaches to the enclosing declaration, so protecting six aligned enum
+  cases also stops formatting the type's methods. `lint --strict`, the half
+  worth having, would report those 314 lines forever. See D42′ for the
+  accepted counterargument and the sunset condition. **This bullet's own
+  parenthetical was the tell**: "legal since M1's gate passed" is a claim
+  about permission, which nobody doubted, standing in for the claim that
+  mattered.
 - **Language-mode 6 evaluation** (D27′'s recorded fact): flip
   `SWIFT_VERSION` to 6 on a branch, collect the diagnostics, and decide —
   the codebase is written mode-6-shaped, so the gap is likely small, but it
@@ -91,8 +110,14 @@ deliberately instead of "while I'm here".**
   checks (Liquid Glass screenshot pass, full UITest suite).
 
 **Gate.** Measurements written into the instructions; warning count and
-buckets recorded; format landed alone; a mode-6 decision recorded with its
-evidence; D27′ re-read logged when GM actually arrives.
+buckets recorded; ~~format landed alone~~ *(struck — D42′ declined the
+formatter, so there is no format commit to land; the item is closed, not
+waived)*; a mode-6 decision recorded with its evidence; D27′ re-read logged
+when GM actually arrives.
+
+**Status: one of four items closed.** The remaining three — Instruments,
+warning triage, language-mode 6 — each need a build or a board, so each
+needs Bera's hands rather than a diff. None has started.
 
 ---
 
@@ -536,5 +561,8 @@ macOS — the + stays as pointer furniture on the manual checklist.
 epilogue; both are closed — the Board load-error UITest witness landed
 30 July, and `RankingsGalleryView`'s preview with it.
 
-**Consequence now in force:** the one-time swift-format run is legal
-(still scheduled M7).
+**Consequence recorded at the time:** the one-time swift-format run became
+legal. *Superseded 31 July — D42′ declined the formatter outright, so the
+permission M1 unlocked was never used. Left here as provenance: this is
+where the run was first called "scheduled", which is the sentence the false
+open item grew out of.*
