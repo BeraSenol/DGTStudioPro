@@ -41,9 +41,8 @@ internal struct InspectorToggleContent: ToolbarContent {
 /// The identifier is deliberately **required**, with no default: a shared
 /// fallback would hand two destinations' toolbars the same identifier the
 /// moment a host forgot to pass one, and a parameter default is invisible to
-/// the registry's `grep accessibilityIdentifier("` enforcement (the
-/// `board.connectButton` lesson, second occurrence). Required means forgetting
-/// is a compile error.
+/// the registry's enforcement grep (the `board.connectButton` lesson, second
+/// occurrence). Required means forgetting is a compile error.
 ///
 /// The leading `ToolbarSpacer` is part of the contract, not decoration: the
 /// inspector toggle is the trailing-most control in every destination that

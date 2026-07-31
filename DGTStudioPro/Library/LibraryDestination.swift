@@ -741,9 +741,16 @@ extension Binding where Value == Bool {
     /// Telling detail: the diagnostic stays a *warning* under language mode
     /// 6 rather than becoming an error, so the compiler is treating it as
     /// framework-side friction rather than a defect here. The 2027 SDK's
-    /// `.alert(item:)` / `.confirmationDialog(item:)` retire all seven call
-    /// sites and this helper with them — at which point the waiver is not
-    /// lifted, it is deleted.
+    /// item-based `alert` and `confirmationDialog` overloads retire all seven
+    /// call sites and this helper with them — at which point the waiver is
+    /// not lifted, it is deleted.
+    ///
+    /// Those two are spelled around as well, for the reason the paragraph
+    /// above already gives about the concurrency tokens. The rule got applied
+    /// to the prohibition grep the author was thinking about and not to the
+    /// beta-surface grep in the next section of the same sweep, which is the
+    /// whole failure mode: writing a token verbatim to explain why you must
+    /// not is one keystroke away in every direction.
     internal init<T>(present source: Binding<T?>) {
         self.init(
             get: { source.wrappedValue != nil },

@@ -23,8 +23,12 @@
 //  `archive.*`, `dgt.*`, and `settings.*` families whose witness remains
 //  the manual hardware checklists rather than XCUITest (live play can't be
 //  XCUITest-driven without hardware injection). A raw identifier string in
-//  a view is a defect from here on; `grep accessibilityIdentifier("` over
-//  production sources is the enforcement.
+//  a view is a defect from here on, and a grep for the modifier followed by
+//  a quote, over production sources, is the enforcement.
+//
+//  Named rather than spelled, per D43′: writing that token verbatim here
+//  would make this file a permanent hit in the grep it is describing, and a
+//  check whose output always contains noise is a check being read past.
 //
 
 /// The accessibility-identifier contract shared by the app and the UI test
@@ -80,7 +84,7 @@ internal enum AccessibilityID {
     internal static let boardEvaluationBar   = "board.evaluationBar"
     /// The toolbar's connect control (`DGTConnectionToolbar`). Migrated
     /// late (M-ux.3): the value lived as a *parameter default*, which the
-    /// header's `accessibilityIdentifier("` enforcement grep cannot see —
+    /// enforcement grep described in this file's header cannot see —
     /// defaults and helper arguments need the same discipline as direct
     /// call sites.
     internal static let boardConnectButton = "board.connectButton"
