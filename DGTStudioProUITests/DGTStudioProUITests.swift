@@ -30,6 +30,26 @@
 
 import XCTest
 
+//  `@MainActor` on the class, not on 60-odd methods: every `XCUIElement`
+//  and `XCUIApplication` member this suite touches is main-actor-isolated,
+//  so a nonisolated suite produces 226 strict-concurrency diagnostics —
+//  98% of the whole codebase's population, all of them this one fact
+//  refracted through eight message shapes. Driving an app's UI *is* main-
+//  actor work; the annotation states what was already true.
+//
+//  Overrides do NOT inherit it, which is the part worth writing down
+//  because the first version of this comment claimed they did and the
+//  compiler disagreed in the next run: a *synchronous* override cannot
+//  add isolation its superclass declaration doesn't have — the superclass
+//  is free to call it from anywhere, so the hop has nowhere to happen.
+//  An *async* override can, because there is a suspension point to hop
+//  on. That is the whole reason `setUp`/`tearDown` below are the `async`
+//  spellings rather than the `WithError` ones they replaced.
+//
+//  If a future helper here must run off the main actor it takes
+//  `nonisolated` explicitly, rather than the suite dropping back to
+//  nonisolated and re-opening all 226.
+@MainActor
 final class DGTStudioProUITests: XCTestCase {
     
     private var app: XCUIApplication!
@@ -45,12 +65,12 @@ final class DGTStudioProUITests: XCTestCase {
         static let gallery = "squares.below.rectangle"
     }
     
-    override func setUpWithError() throws {
+    override func setUp() async throws {
         continueAfterFailure = false
         app = XCUIApplication()
     }
-    
-    override func tearDownWithError() throws {
+
+    override func tearDown() async throws {
         app = nil
     }
     

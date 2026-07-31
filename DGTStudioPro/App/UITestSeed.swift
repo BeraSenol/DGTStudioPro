@@ -34,7 +34,27 @@ internal enum UITestSeed {
     /// other domain on *reads*, so a test clicking a view-mode segment
     /// updated the control but the re-read snapped content back to the
     /// pin — two previously-green card tests went red the same day.
-    internal static let scratchDefaults: UserDefaults = {
+    ///
+    /// `@MainActor` because `UserDefaults` is not `Sendable`, which makes
+    /// this the app target's one static that strict concurrency rejects —
+    /// and, under language mode 6, its only hard error. Both readers are
+    /// `.defaultAppStorage(…)` inside `App.body`, already main-actor, so
+    /// the isolation costs nothing at the call sites.
+    ///
+    /// Rejected: the unsafe-`nonisolated` opt-out, which is one keyword and
+    /// silences it just as well. It would also be the first such opt-out in
+    /// the app target — a standing invariant the between-milestone sweep
+    /// greps for, spent here to avoid typing seven characters of isolation.
+    /// (Spelled around deliberately: writing the token verbatim would make
+    /// this comment a permanent false positive in that grep, which is the
+    /// `.DS_Store` lesson — a check whose output always contains noise is a
+    /// check being read past.) The trap
+    /// worth naming: do not "fix" this by making it a computed `var`. The
+    /// wipe is the initializer, so a computed form would re-wipe on every
+    /// read and reset mid-test writes the moment opening a game spawns a
+    /// second window — which is the failure the `static let` above exists
+    /// to prevent.
+    @MainActor internal static let scratchDefaults: UserDefaults = {
         let name = "BeraSenol.DGTStudioPro.uitest"
         // Never nil: the documented nil cases are passing the bundle ID
         // or the global domain, and this constant is neither.

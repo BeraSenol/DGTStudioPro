@@ -709,14 +709,41 @@ internal struct LibraryDestination: View {
 
 extension Binding where Value == Bool {
     /// A presentation flag over optional state: `true` while a value is
-    /// present, and a dismissal clears the source. Five `@State` optionals
-    /// open-coded the same getter/setter pair — four here, one in
-    /// `ContentView` that couldn't see this while it was `fileprivate`.
+    /// present, and a dismissal clears the source. **Seven** `@State`
+    /// optionals open-code the same getter/setter pair otherwise — four
+    /// here, one in `ContentView` that couldn't see this while it was
+    /// `fileprivate`, and two in `PlayersDestination` (M5's refusal alert
+    /// and D40′'s orphan sweep).
+    ///
+    /// That count has now been wrong twice, in opposite directions: this
+    /// comment said "five" until M5 and D40′ added a site each without
+    /// touching it, and the instructions' forward note said "six" because
+    /// it caught the first of those two and not the second. A caller count
+    /// written into a doc comment is a claim about seven other files that
+    /// nothing recompiles — which is the enumerated-caller-list anti-pattern
+    /// the working agreements already name, kept here only because the
+    /// forward note below needs to know how much disappears.
     ///
     /// `BoardDestination`'s offer bindings look identical and are deliberately
     /// **not** folded in: they ignore dismissal (`set: { _ in }` — D#3 is a
     /// fork, not a suggestion), and routing them through here would erase
     /// that. Same shape, different contract.
+    ///
+    /// **Waived, with a sunset condition.** These two captures are the app
+    /// target's only strict-concurrency residue: `Binding` is not `Sendable`
+    /// while `Binding.init(get:set:)` demands `@Sendable` closures, so the
+    /// helper cannot hold the source without tripping it. Constraining
+    /// `T: Sendable` would fix it and lock out the `@Model` call sites,
+    /// which are most of them; the alternatives are the unsafe-`nonisolated`
+    /// and unchecked-`Sendable` opt-outs this codebase has none of. (Both
+    /// spelled around on purpose — writing either token verbatim would put a
+    /// permanent false positive into the sweep's own prohibition grep.)
+    /// Telling detail: the diagnostic stays a *warning* under language mode
+    /// 6 rather than becoming an error, so the compiler is treating it as
+    /// framework-side friction rather than a defect here. The 2027 SDK's
+    /// `.alert(item:)` / `.confirmationDialog(item:)` retire all seven call
+    /// sites and this helper with them — at which point the waiver is not
+    /// lifted, it is deleted.
     internal init<T>(present source: Binding<T?>) {
         self.init(
             get: { source.wrappedValue != nil },
