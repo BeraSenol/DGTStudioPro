@@ -123,11 +123,17 @@ extension RosterSummary {
     /// the result lives on the game, because it changes while the roster
     /// doesn't (its own doc comment says so).
     ///
-    /// `@MainActor` because `Roster` is nested in a `@MainActor` class and
-    /// inherits that isolation; the only caller is a view, so it costs
-    /// nothing. If your build resolves `Roster` as nonisolated, dropping the
-    /// attribute is a safe simplification.
-    @MainActor
+    /// Deliberately **not** `@MainActor`, which it carried until D44′ on the
+    /// stated reason that `Roster` inherits `LiveGame`'s isolation by being
+    /// nested inside it. That reason was false: a global actor isolates a
+    /// type's *members*, never the types *nested* in it — SE-0449 spells out
+    /// this exact shape. `Roster` is nonisolated, so the attribute bought
+    /// nothing and cost this init the right to be called from anywhere.
+    ///
+    /// Worth knowing why it survived a month: every suite that builds a
+    /// `Roster` is `@MainActor` already, for `LiveGame`'s sake, so no test
+    /// ever had occasion to disprove it. A claim about the *language* is not
+    /// checked by a green build unless something in the tree exercises it.
     internal init(_ roster: LiveGame.Roster, result: GameResult) {
         self.init(
             event:  roster.event,

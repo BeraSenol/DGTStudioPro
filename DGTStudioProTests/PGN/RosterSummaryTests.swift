@@ -13,8 +13,10 @@ import Testing
 /// date/round formatting, which `PGN` has carried untested since April and
 /// the live inspector carried twice.
 ///
-/// Nonisolated: `RosterSummary` is a pure value; the two model projections
-/// are passive reads exercised by the inspectors.
+/// Nonisolated: `RosterSummary` is a pure value; the `PGN` projection is a
+/// passive read exercised by the inspectors. The *live* projection is pinned
+/// here as of D44′ — and the suite's isolation is what does the pinning, so
+/// this annotation is load-bearing rather than stylistic.
 @Suite("Roster Summary — Seven Tag Display")
 struct RosterSummaryTests {
     
@@ -80,5 +82,30 @@ struct RosterSummaryTests {
     @Test func resultRendersInPGNNotation() {
         #expect(summary(result: .whiteWins)[.result] == "1-0")
         #expect(summary(result: .ongoing)[.result] == "*")
+    }
+
+    /// The pin D44′ was missing. Building a `LiveGame.Roster` in a
+    /// nonisolated suite and projecting it only compiles while `Roster` and
+    /// the live init both stay off the main actor — so the deleted
+    /// `@MainActor` cannot come back without turning this red.
+    ///
+    /// It is a *compile* failure, not an assertion failure, which is the
+    /// whole point: the attribute's stated reason (that `Roster` inherits
+    /// `LiveGame`'s isolation by nesting) was wrong for a month because
+    /// every other `Roster` caller in the tree was already `@MainActor` for
+    /// `LiveGame`'s sake, and so had no way to contradict it.
+    @Test func theLiveProjectionIsReachableOffTheMainActor() {
+        let roster = LiveGame.Roster(
+            event: "Club Night",
+            site:  "Home",
+            round: 7,
+            white: "Carlsen, Magnus",
+            black: "Nepomniachtchi, Ian"
+        )
+        let projected = RosterSummary(roster, result: .whiteWins)
+        #expect(projected[.event]  == "Club Night")
+        #expect(projected[.round]  == "7")
+        #expect(projected[.white]  == "Magnus Carlsen")
+        #expect(projected[.result] == "1-0")
     }
 }
