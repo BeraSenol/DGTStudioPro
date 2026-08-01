@@ -65,7 +65,14 @@ internal struct InspectorSectionHeader<Actions: View>: View {
     /// here has checked, while `HStack(spacing: 12) { chevron; actions() }`
     /// rests only on the flattening. One unconditional statement beats ten
     /// points of a name nobody reads to the end.
-    internal static let actionsInset: CGFloat = 10
+    ///
+    /// Computed, not stored, because this type is generic and **generic types
+    /// cannot have stored static properties**. `SevenTagRosterSection` records
+    /// the same constraint at `noGamePlaceholder`, for the same reason, in a
+    /// file this milestone edited on its way here — so the lesson was one
+    /// scroll away and got re-learned from the compiler anyway. It joins the
+    /// standing roll of pre-recorded lessons re-learned in anger.
+    internal static var actionsInset: CGFloat { 10 }
 
     // MARK: Stored Properties
     internal let title: String
