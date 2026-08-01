@@ -32,17 +32,7 @@ import SwiftUI
 /// is what every host currently passes, and a host with nothing to offer
 /// passes nothing and gets a plain heading.
 internal struct InspectorSectionHeader<Actions: View>: View {
-    
-    // MARK: Stored Properties
-    internal let title: String
-    @ViewBuilder internal let actions: () -> Actions
-    
-    // MARK: Initializers
-    internal init(_ title: String, @ViewBuilder actions: @escaping () -> Actions) {
-        self.title = title
-        self.actions = actions
-    }
-    
+
     // MARK: Type Properties
 
     /// How far the header's trailing edge sits from the inspector's, and so
@@ -66,10 +56,41 @@ internal struct InspectorSectionHeader<Actions: View>: View {
     /// Stated trade-off: it is applied to the whole row, not to `actions()`, so
     /// a header with *no* actions also gives up these 10 pt — a title long
     /// enough to truncate now truncates 10 pt earlier. Taken deliberately over
-    /// insetting the slot alone, because an `EmptyView` under a modifier is not
-    /// reliably absent from layout, and one unconditional statement is worth
-    /// more here than ten points of a name nobody reads to the end.
+    /// insetting the slot alone, and the distinction is worth being precise
+    /// about because the trailing cluster below relies on its other half: a
+    /// **bare** `EmptyView` is flattened out of a `ViewBuilder` list and lays
+    /// nothing out, but an `EmptyView` **under a modifier** is a
+    /// `ModifiedContent` — a different type, and no longer the one SwiftUI
+    /// special-cases. So `actions().padding(…)` is a claim about layout nobody
+    /// here has checked, while `HStack(spacing: 12) { chevron; actions() }`
+    /// rests only on the flattening. One unconditional statement beats ten
+    /// points of a name nobody reads to the end.
     internal static let actionsInset: CGFloat = 10
+
+    // MARK: Stored Properties
+    internal let title: String
+
+    /// The section's stored identity, or `nil` for a header that does not
+    /// collapse. Optional rather than required because "collapsible" is a
+    /// property of the section, not of the header type — and because a
+    /// required parameter would force every future header to mint an
+    /// `InspectorSection` case before it could render at all.
+    internal let section: InspectorSection?
+
+    @ViewBuilder internal let actions: () -> Actions
+
+    @Environment(InspectorSectionCollapse.self) private var collapse
+
+    // MARK: Initializers
+    internal init(
+        _ title: String,
+        section: InspectorSection? = nil,
+        @ViewBuilder actions: @escaping () -> Actions
+    ) {
+        self.title = title
+        self.section = section
+        self.actions = actions
+    }
 
     // MARK: Body
     internal var body: some View {
@@ -81,20 +102,74 @@ internal struct InspectorSectionHeader<Actions: View>: View {
                 .textCase(nil)
                 .lineLimit(1)
             Spacer(minLength: 8)
-            actions()
+            // The chevron sits **leading** of the actions, so the action glyph
+            // stays rightmost — which is where the four lone pencils already
+            // are, and what the Library's bespoke disclosure said it did.
+            // It didn't: its doc read "Leading of the copy button, which keeps
+            // the action glyph rightmost" while the `HStack` listed copy first
+            // and the chevron second, putting the app's one disclosure in the
+            // one slot every other inspector reserves for a verb. The order
+            // here is that comment's intent, finally executed.
+            HStack(spacing: 12) {
+                if let section {
+                    disclosure(for: section)
+                }
+                actions()
+            }
         }
         .padding(.trailing, Self.actionsInset)
+    }
+
+    // MARK: Instance Methods
+
+    /// One chevron rotated rather than two symbols swapped, so the state change
+    /// is a continuous motion the eye tracks instead of a substitution it has
+    /// to re-read. Inherited wholesale from the Library's PGN disclosure, which
+    /// is the control this replaces.
+    private func disclosure(for section: InspectorSection) -> some View {
+        let isCollapsed = collapse.isCollapsed(section)
+        // Annotated `String` on purpose, and it is the inverse of the choice
+        // `InspectorEditButtonView` makes one file over. That type's `label`
+        // is a `LocalizedStringKey` because it carries *copy* ("Edit Info"),
+        // and a `String` there would silently pick the non-localizing
+        // overloads. Here the label interpolates `title`, which is **data** —
+        // a game's name, a player's name — so a `LocalizedStringKey` would
+        // send "Hide Bera Senol vs Lorenzo Reinaud" to the strings table
+        // looking for a translation. That is the exact trap this file's own
+        // header doc names as the reason `title` is not a `LocalizedStringKey`,
+        // and interpolating it into one would have re-opened it from the side.
+        let label: String = isCollapsed ? "Show \(title)" : "Hide \(title)"
+        return Button {
+            withAnimation(.snappy(duration: 0.2)) {
+                collapse.toggle(section)
+            }
+        } label: {
+            Image(systemName: "chevron.right")
+                .rotationEffect(.degrees(isCollapsed ? 0 : 90))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.borderless)
+        // `InspectorEditButtonView`'s reason: a glyph at header font size is
+        // an ~11 pt mouse target.
+        .font(.body)
+        .help(label)
+        .accessibilityLabel(label)
+        .accessibilityIdentifier(AccessibilityID.inspectorSectionDisclosure(section))
     }
 }
 
 // MARK: Convenience
 
 extension InspectorSectionHeader where Actions == EmptyView {
-    
+
     /// A header with nothing to act on — Players and Rankings today, and any
     /// section whose title is a label rather than a subject.
-    internal init(_ title: String) {
-        self.init(title, actions: { EmptyView() })
+    ///
+    /// It may still collapse: a chevron is not an action on the section's
+    /// subject, it is an action on the section, which is why it lives in the
+    /// header's own body rather than in the slot a host fills.
+    internal init(_ title: String, section: InspectorSection? = nil) {
+        self.init(title, section: section, actions: { EmptyView() })
     }
 }
 
@@ -148,6 +223,7 @@ extension InspectorSectionHeader where Actions == EmptyView {
     }
     .listStyle(.sidebar)
     .frame(width: 300, height: 420)
+    .environment(InspectorSectionCollapse.preview)
 }
 
 /// Every arity of the actions slot the app actually passes, stacked so their
@@ -179,18 +255,13 @@ extension InspectorSectionHeader where Actions == EmptyView {
             }
         }
         Section {
-            Text("Two glyphs — the Library's PGN header.")
+            Text("Chevron plus a glyph — the Library's PGN header, D45′ shape.")
                 .foregroundStyle(.secondary)
         } header: {
-            InspectorSectionHeader("Glyph Pair") {
-                HStack(spacing: 12) {
-                    Button { } label: { Image(systemName: "doc.on.doc") }
-                        .buttonStyle(.borderless)
-                        .font(.body)
-                    Button { } label: { Image(systemName: "chevron.right") }
-                        .buttonStyle(.borderless)
-                        .font(.body)
-                }
+            InspectorSectionHeader("Glyph Pair", section: .pgn) {
+                Button { } label: { Image(systemName: "doc.on.doc") }
+                    .buttonStyle(.borderless)
+                    .font(.body)
             }
         }
         Section {
@@ -228,7 +299,25 @@ extension InspectorSectionHeader where Actions == EmptyView {
         } header: {
             InspectorSectionHeader("Nothing To Act On")
         }
+        Section {
+            Text("A chevron and nothing else.")
+                .foregroundStyle(.secondary)
+        } header: {
+            // The arity worth looking hardest at, and the one thing in D45′
+            // written from reasoning rather than from a compiler. The trailing
+            // cluster is `HStack(spacing: 12) { chevron; actions() }`, and with
+            // no actions that slot resolves to `EmptyView` — which should
+            // contribute no subview and therefore no 12 pt of spacing, because
+            // spacing applies *between* subviews and there is only one.
+            //
+            // Should. This preview is where that stops being an argument: if
+            // this chevron sits 12 pt inside the one above it, `EmptyView` is
+            // being laid out and the gap needs to move onto the chevron under
+            // a condition instead.
+            InspectorSectionHeader("Collapsible, No Actions", section: .recentGames)
+        }
     }
     .listStyle(.sidebar)
-    .frame(width: 300, height: 460)
+    .frame(width: 300, height: 540)
+    .environment(InspectorSectionCollapse.preview)
 }

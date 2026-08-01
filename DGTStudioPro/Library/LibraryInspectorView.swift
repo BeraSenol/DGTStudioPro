@@ -74,12 +74,12 @@ private struct LoadedSection: View {
     // MARK: Private Properties
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
+    @Environment(InspectorSectionCollapse.self) private var collapse
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
     @FocusState private var isNameFieldFocused: Bool
     @State private var isEditingName: Bool = false
     @State private var draftName: String = ""
-    @State private var isShowingPGN: Bool = true
-    
+
     // MARK: Body
     var body: some View {
         Group {
@@ -96,9 +96,13 @@ private struct LoadedSection: View {
                 headline: pgn.name
             ) {
                 // No local padding: the trailing inset lives on
-                // `InspectorEditButtonView` for all five pencils. An 8 pt
-                // one here used to stack on top of the shared 10 and put
-                // this one alone at 18.
+                // `InspectorSectionHeader.actionsInset`, for every header
+                // control in the app rather than for the five pencils. An
+                // 8 pt one here used to stack on top of the pencil's own 10
+                // and put this one alone at 18 — and the fix for *that*
+                // still left the number on the pencil, where it silently
+                // stopped being an edge inset the moment a second control
+                // followed one. Two corrections, one line.
                 InspectorEditButtonView(
                     label: "Rename",
                     identifier: AccessibilityID.libraryInspectorRename
@@ -261,38 +265,42 @@ private struct LoadedSection: View {
     /// control only appears on hover, and a section whose one affordance is
     /// invisible until the pointer happens to cross it is a section that
     /// reads as a truncated line of text — which is exactly how this one
-    /// read. Every other section in this inspector is a plain `Section` with
-    /// no disclosure chrome, so dropping the binding leaves no native control
-    /// to collide with the one drawn here.
+    /// read. That argument is now the app's, not this section's:
+    /// `InspectorSectionHeader` draws the chevron for every collapsible
+    /// section, so the reason survives the move intact.
     ///
-    /// Expansion resets per game, because `LoadedSection` carries
-    /// `.id(pgn.id)` — the same reset the rename draft gets. Holding it open
-    /// across a selection change would mean lifting the flag above that
-    /// `.id` and threading a binding down, which is more machinery than the
-    /// affordance earns.
+    /// What did **not** survive is this paragraph's closing sentence, struck
+    /// here rather than quietly edited: it said "every other section in this
+    /// inspector is a plain `Section` with no disclosure chrome, so dropping
+    /// the binding leaves no native control to collide with the one drawn
+    /// here." That was a claim about the *neighbours*, and D45′ is in the
+    /// business of giving all of them the same control — so it was true when
+    /// written, load-bearing for the choice it justified, and false the moment
+    /// the milestone it survived into landed.
+    ///
+    /// Expansion **no longer resets per game** — that is D45′'s one behaviour
+    /// change here, and it is the price of there being one collapse mechanism
+    /// instead of two. The old flag was `@State` under `LoadedSection`'s
+    /// `.id(pgn.id)`, so it reset on every selection; the shared store is
+    /// app-wide and persisted, so a folded PGN section stays folded across
+    /// games and across launches. Recorded as a change rather than discovered
+    /// as a surprise: the earlier doc argued a reset was right because holding
+    /// it open "would mean lifting the flag above that `.id` and threading a
+    /// binding down, which is more machinery than the affordance earns". That
+    /// machinery now exists for nine other sections, so the argument that
+    /// justified the reset has been paid for elsewhere.
     private var pgnSection: some View {
         Section {
-            // The `if` *is* the collapse now, so it also does the gating the
-            // ternary used to: this view's body re-runs on every
-            // `queue.currentProgress` tick while *this* game is analyzing,
-            // and `pgnText` rebuilds the whole export string each pass.
-            if isShowingPGN {
+            // The `if` still does the gating the ternary used to: this view's
+            // body re-runs on every `queue.currentProgress` tick while *this*
+            // game is analyzing, and `pgnText` rebuilds the whole export
+            // string each pass.
+            if !collapse.isCollapsed(.pgn) {
                 rawPGNText
             }
         } header: {
-            InspectorSectionHeader("PGN") {
-                // `InspectorSectionHeader` stacks its actions at spacing 0 —
-                // right for a lone pencil, flush for two glyphs.
-                //
-                // The `.padding(.trailing, 8)` that used to close this stack is
-                // gone: it was a second statement of the trailing inset the
-                // header now owns, and it disagreed with the pencil's 10 by two
-                // points — invisible in one inspector, visible in this one,
-                // where it sat two sections below a roster header at 10.
-                HStack(spacing: 12) {
-                    copyPGNButton
-                    disclosureButton
-                }
+            InspectorSectionHeader("PGN", section: .pgn) {
+                copyPGNButton
             }
         }
     }
@@ -320,32 +328,17 @@ private struct LoadedSection: View {
             .accessibilityIdentifier(AccessibilityID.libraryInspectorPGN)
     }
     
-    /// The always-visible disclosure. One chevron rotated rather than two
-    /// symbols swapped, so the state change is a continuous motion the eye
-    /// tracks instead of a substitution it has to re-read — and so there is
-    /// one glyph to keep consistent if a second collapsible section ever
-    /// wants the same control.
-    ///
-    /// Leading of the copy button, which keeps the *action* glyph rightmost
-    /// where the roster header above puts its rename pencil.
-    private var disclosureButton: some View {
-        Button {
-            withAnimation(.snappy(duration: 0.2)) {
-                isShowingPGN.toggle()
-            }
-        } label: {
-            Image(systemName: "chevron.right")
-                .rotationEffect(.degrees(isShowingPGN ? 90 : 0))
-        }
-        .buttonStyle(.borderless)
-        // `InspectorEditButtonView`'s reason: a glyph at header font size is an
-        // ~11 pt mouse target.
-        .font(.body)
-        .help(isShowingPGN ? "Hide PGN" : "Show PGN")
-        .accessibilityLabel(isShowingPGN ? "Hide PGN" : "Show PGN")
-        .accessibilityIdentifier(AccessibilityID.libraryInspectorPGNDisclosure)
-    }
-    
+    // `disclosureButton` lived here until D45′ and is now
+    // `InspectorSectionHeader`'s own, along with its identifier. Its doc
+    // reserved the rotated-chevron glyph "to keep consistent if a second
+    // collapsible section ever wants the same control" — nine of them do, so
+    // the reservation was honoured by moving the control rather than copying
+    // it. The one thing that did not survive the move is its stated *order*:
+    // that doc claimed the chevron sat leading of the copy button, and the
+    // `HStack` put it trailing. The shared header implements what the comment
+    // said, which changes this section's pixels — the copy glyph and the
+    // chevron swap places.
+
     /// Puts the exported bytes on the pasteboard, so a game reaches a mail
     /// draft or an analysis site without a round trip through the
     /// filesystem. In the header rather than beside the text so it works
@@ -419,6 +412,7 @@ private struct LoadedSection: View {
         queue: AnalysisQueueController()
     )
     .frame(width: 300, height: 700)
+    .environment(InspectorSectionCollapse.preview)
 }
 
 #Preview("Custom Name") {
@@ -435,11 +429,13 @@ private struct LoadedSection: View {
         queue: AnalysisQueueController()
     )
     .frame(width: 300, height: 700)
+    .environment(InspectorSectionCollapse.preview)
 }
 
 #Preview("Empty") {
     LibraryInspectorView(queue: AnalysisQueueController())
         .frame(width: 300, height:700)
+        .environment(InspectorSectionCollapse.preview)
 }
 
 /// The raw-PGN section against a game that actually has movetext — the other
@@ -448,8 +444,16 @@ private struct LoadedSection: View {
 /// serializer's white-only final line (`4. Qxf7#`), with the mate suffix
 /// emitted verbatim.
 ///
-/// The section starts collapsed, as it does in the app; the canvas is live,
-/// so expanding it is a click.
+/// The section starts **open**, as it does in the app; the canvas is live, so
+/// folding it is a click.
+///
+/// This line said "starts collapsed" until D45′ — true when it was written and
+/// wrong from 30 July, when Bera reversed the M1 collapsed default. Nothing
+/// contradicted it, because a preview's prose is the least-read text in the
+/// project and the canvas beside it was showing the opposite the whole time.
+/// Note it is now *doubly* current-tense: the state is shared and persisted, so
+/// what this preview starts as depends on the `preview` suite rather than on a
+/// fresh `@State`.
 #Preview("Raw PGN") {
     LibraryInspectorView(
         pgn: PGN(
@@ -467,4 +471,5 @@ private struct LoadedSection: View {
         queue: AnalysisQueueController()
     )
     .frame(width: 320, height:700)
+    .environment(InspectorSectionCollapse.preview)
 }

@@ -213,6 +213,7 @@ private struct RecentGamesSection: View {
 #Preview("Empty") {
     PlayersInspectorView(stats: nil, rating: nil, recentGames: [])
         .frame(width: 300, height: 400)
+        .environment(InspectorSectionCollapse.preview)
 }
 
 /// The two rating display branches meeting the same layout: an established
@@ -226,6 +227,7 @@ private struct RecentGamesSection: View {
     )
     .frame(width: 260, height: 400)
     .modelContainer(for: PGN.self, inMemory: true)
+    .environment(InspectorSectionCollapse.preview)
 }
 
 /// Unrated: a resolved player whose games never produced a rated pairing.
@@ -238,4 +240,5 @@ private struct RecentGamesSection: View {
     )
     .frame(width: 300, height: 400)
     .modelContainer(for: PGN.self, inMemory: true)
+    .environment(InspectorSectionCollapse.preview)
 }

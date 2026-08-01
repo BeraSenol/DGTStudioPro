@@ -784,6 +784,7 @@ extension Binding where Value == Bool {
     }
     .modelContainer(container)
     .environment(OpenGamesRegistry())
+    .environment(InspectorSectionCollapse.preview)
 }
 
 #Preview("Empty") {
@@ -795,4 +796,5 @@ extension Binding where Value == Bool {
     }
     .modelContainer(for: PGN.self, inMemory: true)
     .environment(OpenGamesRegistry())
+    .environment(InspectorSectionCollapse.preview)
 }

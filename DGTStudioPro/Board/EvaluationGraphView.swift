@@ -236,4 +236,5 @@ internal struct EvaluationGraphView: View {
     }
     .listStyle(.sidebar)
     .frame(width: 580, height: 400)
+    .environment(InspectorSectionCollapse.preview)
 }

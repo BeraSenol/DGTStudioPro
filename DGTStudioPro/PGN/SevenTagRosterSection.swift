@@ -99,6 +99,7 @@ extension SevenTagRosterSection where Actions == EmptyView {
     }
     .listStyle(.sidebar)
     .frame(width: 340, height: 300)
+    .environment(InspectorSectionCollapse.preview)
 }
 
 /// D22′'s first placeholder: `?`, and `????.??.??` for the date, meaning
@@ -122,6 +123,7 @@ extension SevenTagRosterSection where Actions == EmptyView {
     }
     .listStyle(.sidebar)
     .frame(width: 340, height: 300)
+    .environment(InspectorSectionCollapse.preview)
 }
 
 /// D22′'s *second* placeholder, and the reason there are two: an em dash
@@ -134,6 +136,7 @@ extension SevenTagRosterSection where Actions == EmptyView {
     }
     .listStyle(.sidebar)
     .frame(width: 340, height: 300)
+    .environment(InspectorSectionCollapse.preview)
 }
 
 /// The `@ViewBuilder` action slot — the reason this type is generic rather
@@ -162,4 +165,5 @@ extension SevenTagRosterSection where Actions == EmptyView {
     }
     .listStyle(.sidebar)
     .frame(width: 340, height: 330)
+    .environment(InspectorSectionCollapse.preview)
 }

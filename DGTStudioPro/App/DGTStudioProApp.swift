@@ -76,6 +76,23 @@ internal struct DGTStudioProApp: App {
     /// the `WindowGroup` — no destination renders or reads it.
     @State private var sleepInhibitor: SleepInhibitor
 
+    /// M8 (D45′) — which inspector sections are folded shut. App-owned and
+    /// injected into the `WindowGroup`, unlike `sleepInhibitor` above: this
+    /// one *is* read by destinations, by every inspector in every tab, and
+    /// the state is deliberately shared across tabs. Collapsing Opening is a
+    /// statement about openings, not about the window it was made in.
+    ///
+    /// Constructed with the same scratch-suite redirection the `WindowGroup`
+    /// applies to `@AppStorage` below, and for the same reason — except this
+    /// one has to be spelled here, because `.defaultAppStorage(_:)` redirects
+    /// the property wrapper and has nothing to say about a `UserDefaults` an
+    /// object was handed at construction. A seeded UI run reading the
+    /// developer's own collapsed sections would fail on a section that is
+    /// present and correct and simply folded.
+    @State private var inspectorCollapse = InspectorSectionCollapse(
+        defaults: UITestSeed.isActive ? UITestSeed.scratchDefaults : .standard
+    )
+
     // The struct is `@MainActor` (above), so this init runs on the main actor
     // and may touch the `@MainActor` members of the DGT objects it wires. The
     // module's default actor isolation is `nonisolated`, so without that
@@ -211,6 +228,7 @@ internal struct DGTStudioProApp: App {
                 .environment(dgtConnection)
                 .environment(dgtSession)
                 .environment(sessionLog)
+                .environment(inspectorCollapse)
                 // Test hosts stay hermetic: a seeded launch points every
                 // `@AppStorage` in the tab at the once-wiped scratch suite
                 // (see `UITestSeed.scratchDefaults` for the full why,

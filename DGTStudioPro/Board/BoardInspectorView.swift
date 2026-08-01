@@ -154,6 +154,7 @@ internal struct BoardInspectorView: View {
         onEditMoves: {}
     )
     .frame(width: 300, height: 600)
+    .environment(InspectorSectionCollapse.preview)
 }
 
 #Preview("No Game Data") {
@@ -166,4 +167,5 @@ internal struct BoardInspectorView: View {
         onMoveTapped: nil
     )
     .frame(width: 300, height: 400)
+    .environment(InspectorSectionCollapse.preview)
 }

@@ -101,6 +101,7 @@ internal struct InspectorEditButtonView: View {
     }
     .listStyle(.sidebar)
     .frame(width: 300, height: 320)
+    .environment(InspectorSectionCollapse.preview)
 }
 
 /// The narrowest the column drags to, beside a header with no action at all —
@@ -130,4 +131,5 @@ internal struct InspectorEditButtonView: View {
     }
     .listStyle(.sidebar)
     .frame(width: 260, height: 560)
+    .environment(InspectorSectionCollapse.preview)
 }

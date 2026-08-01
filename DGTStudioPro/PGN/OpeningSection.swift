@@ -85,6 +85,7 @@ internal struct OpeningSection: View {
     }
     .listStyle(.sidebar)
     .frame(width: 340, height: 200)
+    .environment(InspectorSectionCollapse.preview)
 }
 
 /// A bare family drops its Variation row rather than inventing a placeholder
@@ -95,6 +96,7 @@ internal struct OpeningSection: View {
     }
     .listStyle(.sidebar)
     .frame(width: 340, height: 200)
+    .environment(InspectorSectionCollapse.preview)
 }
 
 /// The em dash: no classified opening. Worth opening beside "Bare Family" —
@@ -106,4 +108,5 @@ internal struct OpeningSection: View {
     }
     .listStyle(.sidebar)
     .frame(width: 340, height: 200)
+    .environment(InspectorSectionCollapse.preview)
 }

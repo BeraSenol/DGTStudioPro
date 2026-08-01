@@ -181,6 +181,7 @@ internal struct LiveGameInspectorView: View {
         onDiscard: {}
     )
     .frame(width: 300, height: 600)
+    .environment(InspectorSectionCollapse.preview)
 }
 
 #Preview("Finished") {
@@ -200,4 +201,5 @@ internal struct LiveGameInspectorView: View {
         onDiscard: {}
     )
     .frame(width: 300, height: 600)
+    .environment(InspectorSectionCollapse.preview)
 }

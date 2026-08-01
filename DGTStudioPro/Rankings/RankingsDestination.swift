@@ -216,4 +216,5 @@ internal struct RankingsDestination: View {
     RankingsDestination(tabState: TabState())
         .modelContainer(for: PGN.self, inMemory: true)
         .frame(width: 800, height: 500)
+        .environment(InspectorSectionCollapse.preview)
 }

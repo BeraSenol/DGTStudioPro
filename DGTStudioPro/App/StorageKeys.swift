@@ -50,6 +50,15 @@ internal enum StorageKeys {
     // step. That's the shape the other three should eventually take.
     internal static let preventSleepDuringPlay = "preventSleepDuringPlay"
 
+    // Inspector chrome (M8, D45′): the sections the user has folded shut,
+    // as an array of `InspectorSection` raw values. The *collapsed* ones are
+    // stored, not the expanded ones, which is what makes "sections default
+    // open" a property of the representation rather than a fourth `?? true`
+    // on this page — an absent key and an empty set are the same state. The
+    // value has an owning type (`InspectorSectionCollapse`), so like
+    // `preventSleepDuringPlay` above it has no twin read site.
+    internal static let collapsedInspectorSections = "collapsedInspectorSections"
+
     // Engine configuration (M11 review): the three Stockfish options the
     // app controls. Absent keys read as `EngineConfiguration.default`
     // (18 / 128 MB / 1 thread), clamped on every read — see that type for

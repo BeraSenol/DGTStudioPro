@@ -264,11 +264,30 @@ internal enum AccessibilityID {
     internal static let libraryInspectorPGN     = "library.inspector.pgn"
     internal static let libraryInspectorCopyPGN = "library.inspector.pgn.copy"
     
-    /// The section's own disclosure control. It exists because the platform
-    /// one doesn't: a `Section(isExpanded:)` in a sidebar `List` reveals its
-    /// chevron on hover, and a section nobody can see is collapsible is a
-    /// section nobody expands.
-    internal static let libraryInspectorPGNDisclosure = "library.inspector.pgn.disclosure"
+    /// `library.inspector.pgn.disclosure` was **removed** by D45′, and a
+    /// removal is as breaking as a rename (the `players.inspector.deleteItem`
+    /// precedent). Unlike that one it does get a successor: the PGN section's
+    /// bespoke chevron became the shared one every collapsible section now
+    /// carries, so the identifier moved from a constant naming one section to
+    /// the function below naming any of them.
+
+    /// Every collapsible section's disclosure chevron, keyed by the section's
+    /// own stored identity — `inspector.pgn.disclosure`,
+    /// `inspector.evaluation.disclosure`, and so on.
+    ///
+    /// A function rather than ten constants for the `boardSquare(_:)` reason:
+    /// the family is generated from a type that already exists and already
+    /// guarantees uniqueness, so ten hand-written entries would be ten chances
+    /// to typo a string the compiler cannot check. Passing the enum rather
+    /// than its raw value is what makes a caller unable to invent a section.
+    ///
+    /// It exists at all because the platform control doesn't: a
+    /// `Section(isExpanded:)` in a sidebar `List` reveals its chevron on
+    /// hover, and a section nobody can see is collapsible is a section nobody
+    /// expands.
+    internal static func inspectorSectionDisclosure(_ section: InspectorSection) -> String {
+        "inspector.\(section.rawValue).disclosure"
+    }
     
     /// Analysis-queue toolbar family (M-batch). `queue.status` has a
     /// UITest witness (asserted *absent* while the queue is idle); the

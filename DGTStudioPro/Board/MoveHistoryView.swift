@@ -266,4 +266,5 @@ private struct CurrentMoveScrollSync: ViewModifier {
     }
     .listStyle(.sidebar)
     .frame(width: 300, height: 600)
+    .environment(InspectorSectionCollapse.preview)
 }

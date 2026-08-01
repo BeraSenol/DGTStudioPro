@@ -127,6 +127,7 @@ private struct TrendSection: View {
 #Preview("Empty") {
     RankingsInspectorView(ranked: nil, history: [])
         .frame(width: 300, height: 440)
+        .environment(InspectorSectionCollapse.preview)
 }
 
 #Preview("Ranked — With Trend") {
@@ -135,6 +136,7 @@ private struct TrendSection: View {
     
     return RankingsInspectorView(ranked: ranked, history: history)
         .frame(width: 300, height: 440)
+        .environment(InspectorSectionCollapse.preview)
 }
 
 /// One sample: the Charts trend line has no segment to draw. Worth its own
@@ -147,6 +149,7 @@ private struct TrendSection: View {
         history: [Glicko1.Sample(date: .now, rating: .initial)]
     )
     .frame(width: 300, height: 440)
+    .environment(InspectorSectionCollapse.preview)
 }
 
 /// A long history with a visible swing — the trend line's real shape, and
@@ -165,4 +168,5 @@ private struct TrendSection: View {
     
     return RankingsInspectorView(ranked: ranked, history: samples)
         .frame(width: 300, height: 440)
+        .environment(InspectorSectionCollapse.preview)
 }
