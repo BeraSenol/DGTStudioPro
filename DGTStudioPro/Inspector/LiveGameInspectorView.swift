@@ -123,8 +123,11 @@ internal struct LiveGameInspectorView: View {
         )
     }
     
+    /// Shares `.moves` with the review inspector's move list — same section,
+    /// two states of the same game, and the review side is where a reader who
+    /// folded it away would expect it still folded.
     private var movesSection: some View {
-        Section {
+        CollapsibleSection(.moves, title: "Moves") {
             MoveHistoryView(
                 moves: game.sanMoves,
                 currentMoveIndex: currentMoveIndex,
@@ -133,31 +136,33 @@ internal struct LiveGameInspectorView: View {
             )
             .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
             .listRowSeparator(.hidden)
-        } header: {
-            InspectorSectionHeader("Moves")
         }
     }
-    
+
+    /// `.lifecycle`, **not** `.roster`, despite the title being "Game". This is
+    /// the section that made `InspectorSection` an enum rather than a key
+    /// derived from the header: Resign / Agree Draw / Discard is a set of verbs
+    /// on the game in progress, while the section actually *about* the game is
+    /// the roster above, titled with the game's name. Two sections called Game,
+    /// and identity by title would have merged them.
     private var lifecycleSection: some View {
-        Section {
+        CollapsibleSection(.lifecycle, title: "Game") {
             if !game.isFinished {
                 Button("Resign") {
                     isChoosingResign = true
                 }
                 .accessibilityIdentifier(AccessibilityID.liveInspectorResign)
-                
+
                 Button("Agree Draw") {
                     isConfirmingDraw = true
                 }
                 .accessibilityIdentifier(AccessibilityID.liveInspectorDraw)
             }
-            
+
             Button("Discard Game", role: .destructive) {
                 isConfirmingDiscard = true
             }
             .accessibilityIdentifier(AccessibilityID.liveInspectorDiscard)
-        } header: {
-            InspectorSectionHeader("Game")
         }
     }
 }

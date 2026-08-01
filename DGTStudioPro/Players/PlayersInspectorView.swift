@@ -85,45 +85,56 @@ private struct ProfileSection: View {
     let onRename: () -> Void
     let onMerge: () -> Void
 
+    /// `.playerProfile`, and deliberately not the same identity as Rankings'
+    /// profile section even though both are headed by a player's name: this one
+    /// folds games and win rate, that one folds rank and rating, and the two
+    /// grids share nothing but the name at the top. Identity follows what a
+    /// section *shows*.
+    ///
+    /// Three controls in the header now — chevron, pencil, menu — which the
+    /// milestone anticipated: the actions slot already had a two-control
+    /// precedent in two places, so a third was a layout question already
+    /// answered. The chevron leads, so the verbs stay rightmost.
     var body: some View {
-        Section {
+        CollapsibleSection(.playerProfile, title: stats.name) {
             LabeledContent("Games", value: "\(stats.games)")
             LabeledContent("Win Rate", value: stats.winRate.formatted(.percent.precision(.fractionLength(0))))
             LabeledContent("Mates Delivered", value: "\(stats.matesDelivered)")
             LabeledContent("First Played", value: RosterSummary.displayDate(stats.firstPlayed))
             LabeledContent("Last Played", value: RosterSummary.displayDate(stats.lastPlayed))
             LabeledContent("Rating", value: ratingDescription)
-        } header: {
-            // The player's name, not "Player Profile" — the destination
-            // already says what kind of thing this is, and the header is the
-            // one place that can say *which*. The monogram-and-name row this
-            // replaces was the same name twice once the header carried it;
-            // the monogram stays where it identifies something the reader is
-            // choosing between, on the cards and rows.
-            InspectorSectionHeader(stats.name) {
-                // Two controls, the Library inspector's PGN-header shape: the
-                // D26′ pencil keeps its one fixed meaning (edit *this* thing's
-                // name), and everything that isn't a rename lives in a menu
-                // beside it. Widening the pencil to also merge would turn a
-                // named affordance into a generic icon button and lose the
-                // guarantee three inspectors' pencils currently give.
-                //
-                // The menu holds one item since D40′ took Delete out of it, and
-                // stays a menu rather than becoming a second glyph button: a
-                // merge icon would have to be either a new parameter on the
-                // shared pencil or a locally open-coded button, and both are
-                // the drift D26′ exists to prevent. A menu is also where the
-                // next player-scoped verb goes without another decision.
-                HStack(spacing: 12) {
-                    InspectorEditButtonView(
-                        label: "Rename Player",
-                        identifier: AccessibilityID.playersRenameButton,
-                        action: onRename
-                    )
-                    actionsMenu
-                }
+        } actions: {
+            // The player's name is the title above — not "Player Profile" — for
+            // the reason it always was: the destination already says what kind
+            // of thing this is, and the header is the one place that can say
+            // *which*.
+            //
+            // Two controls, the Library inspector's PGN-header shape: the D26′
+            // pencil keeps its one fixed meaning (edit *this* thing's name),
+            // and everything that isn't a rename lives in a menu beside it.
+            // Widening the pencil to also merge would turn a named affordance
+            // into a generic icon button and lose the guarantee three
+            // inspectors' pencils currently give.
+            //
+            // The menu holds one item since D40′ took Delete out of it, and
+            // stays a menu rather than becoming a second glyph button: a merge
+            // icon would have to be either a new parameter on the shared pencil
+            // or a locally open-coded button, and both are the drift D26′
+            // exists to prevent. A menu is also where the next player-scoped
+            // verb goes without another decision.
+            HStack(spacing: 12) {
+                InspectorEditButtonView(
+                    label: "Rename Player",
+                    identifier: AccessibilityID.playersRenameButton,
+                    action: onRename
+                )
+                actionsMenu
             }
         }
+        // Stays on the section, not the header, so it keeps naming what the
+        // UITest expects it to name. Collapsing hides the rows and not this —
+        // the seeded run has an empty collapsed set, so the flow tests see the
+        // section open regardless.
         .accessibilityIdentifier(AccessibilityID.playersInspectorProfile)
     }
 
@@ -162,7 +173,7 @@ private struct RecentGamesSection: View {
     @Environment(\.openWindow) private var openWindow
     
     var body: some View {
-        Section {
+        CollapsibleSection(.recentGames, title: "Recent Games") {
             if games.isEmpty {
                 Text("No games")
                     .foregroundStyle(.secondary)
@@ -176,8 +187,6 @@ private struct RecentGamesSection: View {
                         .foregroundStyle(.tertiary)
                 }
             }
-        } header: {
-            InspectorSectionHeader("Recent Games")
         }
     }
     

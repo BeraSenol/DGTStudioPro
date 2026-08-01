@@ -54,8 +54,11 @@ internal struct OpeningSection: View {
 
     // MARK: Body
 
+    /// Collapses as `.opening` (D45′), shared between the Board and Library
+    /// inspectors for `SevenTagRosterSection`'s reason — one section rendered
+    /// twice, not two that look alike.
     internal var body: some View {
-        Section {
+        CollapsibleSection(.opening, title: "Opening") {
             if let opening {
                 LabeledContent("ECO", value: opening.code)
                 LabeledContent("Opening", value: opening.family)
@@ -65,8 +68,6 @@ internal struct OpeningSection: View {
             } else {
                 LabeledContent("Opening", value: Self.unclassifiedPlaceholder)
             }
-        } header: {
-            InspectorSectionHeader("Opening")
         }
     }
 }

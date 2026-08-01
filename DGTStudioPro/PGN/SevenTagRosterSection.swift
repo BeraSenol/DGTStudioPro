@@ -51,13 +51,17 @@ internal struct SevenTagRosterSection<Actions: View>: View {
     
     // MARK: Body
     
+    /// Collapses as `.roster` (D45′) — one identity across all three hosts,
+    /// because it is one section shown three times rather than three sections
+    /// that resemble each other. Folding the roster on the Board folds it in
+    /// the Library, which is the reading `InspectorSection` takes throughout.
     internal var body: some View {
-        Section {
+        CollapsibleSection(.roster, title: headline) {
             ForEach(SevenTagRoster.allCases, id: \.self) { tag in
                 LabeledContent(tag.rawValue, value: value(for: tag))
             }
-        } header: {
-            InspectorSectionHeader(headline, actions: actions)
+        } actions: {
+            actions()
         }
     }
     

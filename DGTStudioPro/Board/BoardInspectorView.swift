@@ -74,15 +74,13 @@ internal struct BoardInspectorView: View {
     }
     
     private var evaluationSection: some View {
-        Section {
+        CollapsibleSection(.evaluation, title: "Evaluation") {
             EvaluationGraphView(
                 evaluations: evaluations,
                 currentMoveIndex: currentMoveIndex,
                 style: style
             )
             .frame(height: 160)
-        } header: {
-            InspectorSectionHeader("Evaluation")
         }
     }
     
@@ -94,7 +92,12 @@ internal struct BoardInspectorView: View {
     /// which on a hundred-move game is an affordance the user has to go
     /// looking for.
     private var movesSection: some View {
-        Section {
+        // Was a hand-rolled `HStack` reimplementing `InspectorSectionHeader` —
+        // and disagreeing with it on three counts: `Spacer(minLength: 0)`
+        // against 8, no `.textCase(nil)`, no `.lineLimit(1)`. It predated the
+        // shared type and was never migrated, so this file's roster header went
+        // through the type while its moves header quietly didn't.
+        CollapsibleSection(.moves, title: "Moves") {
             MoveHistoryView(
                 moves: moves,
                 currentMoveIndex: currentMoveIndex,
@@ -103,21 +106,13 @@ internal struct BoardInspectorView: View {
             )
             .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
             .listRowSeparator(.hidden)
-        } header: {
-            // Was a hand-rolled `HStack` reimplementing `InspectorSectionHeader`
-            // — and disagreeing with it on three counts: `Spacer(minLength: 0)`
-            // against 8, no `.textCase(nil)`, no `.lineLimit(1)`. It predated
-            // the shared type and was never migrated, so this file's roster
-            // header went through the type while its moves header quietly
-            // didn't. The two now differ only in what they say.
-            InspectorSectionHeader("Moves") {
-                if let onEditMoves {
-                    InspectorEditButtonView(
-                        label: "Edit Moves",
-                        identifier: AccessibilityID.boardEditMovesButton,
-                        action: onEditMoves
-                    )
-                }
+        } actions: {
+            if let onEditMoves {
+                InspectorEditButtonView(
+                    label: "Edit Moves",
+                    identifier: AccessibilityID.boardEditMovesButton,
+                    action: onEditMoves
+                )
             }
         }
     }

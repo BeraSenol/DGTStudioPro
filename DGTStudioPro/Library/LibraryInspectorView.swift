@@ -74,7 +74,6 @@ private struct LoadedSection: View {
     // MARK: Private Properties
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
-    @Environment(InspectorSectionCollapse.self) private var collapse
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
     @FocusState private var isNameFieldFocused: Bool
     @State private var isEditingName: Bool = false
@@ -131,6 +130,13 @@ private struct LoadedSection: View {
     /// user label outside the content hash, which is why the rename needs no
     /// `refreshHash` and why the pencil is its own registry entry rather than
     /// a member of the Edit Info family.
+    ///
+    /// **The one section in the app that is not a `CollapsibleSection`**, and
+    /// the exception is structural rather than an oversight: it has no header,
+    /// because it has nothing to name — it is empty except while a rename is in
+    /// progress. A chevron here would be a control for hiding a section that is
+    /// already invisible, permanently attached to a header that would exist
+    /// only to carry it.
     private var identitySection: some View {
         Section {
             if isEditingName {
@@ -156,7 +162,13 @@ private struct LoadedSection: View {
     // MARK: Evaluation Section
     @ViewBuilder
     private var evaluationSection: some View {
-        Section {
+        // Collapsing this one also hides Review and Analyze, which live in its
+        // body rather than its header. Accepted rather than worked around: they
+        // are controls *about the analysis*, the section says so, and the
+        // alternative — promoting them to the header to keep them reachable —
+        // would put two more glyphs beside a chevron to protect against a state
+        // the reader chose and can undo with one click.
+        CollapsibleSection(.evaluation, title: "Evaluation") {
             EvaluationGraphView(
                 evaluations: pgn.evaluations.map {
                     $0?.whiteWinProbability ?? 0.5
@@ -166,15 +178,13 @@ private struct LoadedSection: View {
             )
             .frame(height: 100)
             .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
-            
+
             HStack {
                 Spacer()
                 reviewButton
                 analysisControlRow
                 Spacer()
             }
-        } header: {
-            InspectorSectionHeader("Evaluation")
         }
     }
     
@@ -290,18 +300,14 @@ private struct LoadedSection: View {
     /// machinery now exists for nine other sections, so the argument that
     /// justified the reset has been paid for elsewhere.
     private var pgnSection: some View {
-        Section {
-            // The `if` still does the gating the ternary used to: this view's
-            // body re-runs on every `queue.currentProgress` tick while *this*
-            // game is analyzing, and `pgnText` rebuilds the whole export
-            // string each pass.
-            if !collapse.isCollapsed(.pgn) {
-                rawPGNText
-            }
-        } header: {
-            InspectorSectionHeader("PGN", section: .pgn) {
-                copyPGNButton
-            }
+        // `CollapsibleSection` does the gating the ternary used to, which still
+        // matters for the reason it always did: this view's body re-runs on
+        // every `queue.currentProgress` tick while *this* game is analyzing,
+        // and `pgnText` rebuilds the whole export string each pass.
+        CollapsibleSection(.pgn, title: "PGN") {
+            rawPGNText
+        } actions: {
+            copyPGNButton
         }
     }
     

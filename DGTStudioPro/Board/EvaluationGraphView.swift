@@ -207,16 +207,14 @@ internal struct EvaluationGraphView: View {
 
 #Preview("Inspector Integration") {
     List {
-        Section {
+        CollapsibleSection(.roster, title: "Magnus Carlsen vs Ian Nepomniachtchi") {
             LabeledContent("White", value: "Carlsen")
             LabeledContent("Black", value: "Nepomniachtchi")
             LabeledContent("Round", value: "7")
             LabeledContent("Result", value: "*")
-        } header: {
-            InspectorSectionHeader("Game")
         }
         
-        Section {
+        CollapsibleSection(.evaluation, title: "Evaluation") {
             EvaluationGraphView(
                 evaluations: [
                     0.50, 0.52, 0.51, 0.49, 0.50, 0.52, 0.50, 0.48,
@@ -230,8 +228,6 @@ internal struct EvaluationGraphView: View {
             )
             .frame(height: 110)
             .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
-        } header: {
-            InspectorSectionHeader("Evaluation")
         }
     }
     .listStyle(.sidebar)

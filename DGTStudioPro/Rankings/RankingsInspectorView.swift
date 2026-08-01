@@ -56,8 +56,12 @@ private struct RankSection: View {
     let ranked: RankedPlayer
     let ratedGames: Int
     
+    /// `.rankingProfile` — its own identity, not `.playerProfile`. Both sections
+    /// are headed by a player's name and they are not the same section: this
+    /// one folds rank and rating, that one folds games and win rate. See
+    /// `ProfileSection` for the header argument, which they *do* share.
     var body: some View {
-        Section {
+        CollapsibleSection(.rankingProfile, title: ranked.stats.name) {
             // The rank was a caption under the name in the identity row this
             // replaces. It is a fact about the player exactly like Wins and
             // Rating, so it becomes a row like them rather than chrome — and
@@ -72,10 +76,6 @@ private struct RankSection: View {
                 LabeledContent("Uncertainty", value: "±\(Int(rating.deviation.rounded()))")
             }
             LabeledContent("Rated Games", value: "\(ratedGames)")
-        } header: {
-            // The player's name, matching Players and Library — see
-            // `ProfileSection`'s header for the argument.
-            InspectorSectionHeader(ranked.stats.name)
         }
         .accessibilityIdentifier(AccessibilityID.rankingsInspectorProfile)
     }
@@ -88,7 +88,7 @@ private struct TrendSection: View {
     let history: [Glicko1.Sample]
     
     var body: some View {
-        Section {
+        CollapsibleSection(.ratingTrend, title: "Rating Trend") {
             if history.isEmpty {
                 Text("No rated games yet — the rating starts once this player finishes a game against another named player.")
                     .font(.caption)
@@ -116,8 +116,6 @@ private struct TrendSection: View {
                         .foregroundStyle(.tertiary)
                 }
             }
-        } header: {
-            InspectorSectionHeader("Rating Trend")
         }
     }
 }
