@@ -28,9 +28,12 @@ import SwiftUI
 /// costs nothing that isn't a glance away.
 ///
 /// The action is a `@ViewBuilder` slot rather than an `onEdit` closure so each
-/// host keeps its own identifier, wording and action — `InspectorEditButtonView`
-/// is what every host currently passes, and a host with nothing to offer
-/// passes nothing and gets a plain heading.
+/// host keeps its own identifier, wording and action. No single control is
+/// "what hosts pass" any more — this doc said `InspectorEditButtonView` was,
+/// which M5's menu and M8's glyph pair each quietly outgrew — and the slot's
+/// real range is witnessed by the *Actions — Every Arity* preview below: a
+/// lone pencil, a glyph, a pencil plus a menu, and nothing at all, in which
+/// case the host gets a plain heading.
 internal struct InspectorSectionHeader<Actions: View>: View {
 
     // MARK: Type Properties
@@ -185,11 +188,12 @@ extension InspectorSectionHeader where Actions == EmptyView {
 
 // MARK: Previews
 
-/// All four inspectors' headers in one column, two with an action and two
-/// without. The type's claim is that a header carrying a control and one not
-/// carrying one are the same height and the same baseline; stacked is the
-/// only way to see that, and a name long enough to truncate is the case that
-/// breaks it.
+/// Four of the five inspectors' headers in one column, two with an action and
+/// two without — the live inspector's is the Board's shape with different
+/// words, so it earns no fifth row. The type's claim is that a header carrying
+/// a control and one not carrying one are the same height and the same
+/// baseline; stacked is the only way to see that, and a name long enough to
+/// truncate is the case that breaks it.
 #Preview("Every Inspector Header") {
     List {
         Section {

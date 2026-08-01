@@ -162,9 +162,13 @@ extension InspectorSectionCollapse {
     /// `InspectorSectionHeader` reads this from the environment, and a
     /// non-optional `@Environment` traps when read with nothing to find — the
     /// "No Observable object of type … found" the App's own comment describes.
-    /// So thirty-one previews across fourteen files need one, which is exactly
-    /// the recorded build lesson ("a new environment object breaks every
-    /// preview that doesn't inject it") arriving on schedule.
+    /// So every preview that renders an inspector section needs one, which is
+    /// exactly the recorded build lesson ("a new environment object breaks
+    /// every preview that doesn't inject it") arriving on schedule. Uncounted
+    /// on purpose: this sentence carried "thirty-one across fourteen files"
+    /// and was stale before the milestone that wrote it finished — the
+    /// enumerated-caller-list anti-pattern, decaying at exactly the rate a
+    /// preview census does.
     ///
     /// Named rather than spelled inline at each site — `SettingsView`'s
     /// `SleepInhibitor(defaults: UserDefaults(suiteName: "preview")!)` is the
@@ -173,12 +177,27 @@ extension InspectorSectionCollapse {
     /// the developer's own settings from a canvas.
     ///
     /// Computed, not stored: a `static let` on a `@MainActor` type needs its
-    /// initializer isolated, and a fresh instance per access is the *right*
+    /// initializer isolated, and a fresh start per access is the *right*
     /// behaviour here anyway — a preview that toggles a chevron should not
     /// leave that state behind for the next canvas to inherit.
+    ///
+    /// The `removePersistentDomain` is what makes that sentence true — not
+    /// the freshness of the instance, which is what this doc claimed until
+    /// the 1 Aug review. A named suite is a real plist and `persist()` writes
+    /// every toggle into it, so a fresh instance alone reads the last
+    /// canvas's toggles straight back. `UITestSeed.scratchDefaults` wipes for
+    /// the same reason at the same kind of boundary, and was one file away
+    /// the whole time.
     internal static var preview: InspectorSectionCollapse {
-        InspectorSectionCollapse(
-            defaults: UserDefaults(suiteName: "preview") ?? .standard
-        )
+        let name = "preview"
+        // `!` over a `?? .standard` fallback, `SettingsView`'s sibling
+        // spelling: the init only fails for a nil or system-reserved suite
+        // name, and the fallback's failure mode was worse than the crash —
+        // a canvas silently editing the developer's own defaults, which is
+        // the ambient-`UserDefaults` leak M1 exists to prevent. A preview
+        // that crashes points at itself; one that leaks points at nothing.
+        let defaults = UserDefaults(suiteName: name)!
+        defaults.removePersistentDomain(forName: name)
+        return InspectorSectionCollapse(defaults: defaults)
     }
 }

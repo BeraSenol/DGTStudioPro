@@ -24,10 +24,12 @@ import SwiftUI
 /// structural version: **one argument, used twice, by a type the host cannot
 /// route around.**
 ///
-/// It also keeps the environment read in one place. Without it, seven inspector
-/// hosts would each need `@Environment(InspectorSectionCollapse.self)` for no
-/// reason other than to write the same `if` — and a host holding the store is a
-/// host that can be tempted to write to it.
+/// It also keeps the environment read out of the hosts: two files hold it —
+/// this one gating the body, `InspectorSectionHeader` drawing the chevron —
+/// instead of nine. Without it, seven inspector hosts would each need
+/// `@Environment(InspectorSectionCollapse.self)` for no reason other than to
+/// write the same `if` — and a host holding the store is a host that can be
+/// tempted to write to it.
 ///
 /// `InspectorSectionHeader.section` is the parameter this drives, and it has no
 /// other intended caller. A header constructed with a `section:` outside this
