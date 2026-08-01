@@ -19,7 +19,14 @@ internal enum StorageKeys {
     internal static let didSeedDefaultSmartTags = "didSeedDefaultSmartTags"
     internal static let libraryViewMode = "libraryViewMode"
     internal static let playersViewMode = "playersViewMode"
-    internal static let rankingsViewMode = "rankingsViewMode"
+    // `rankingsViewMode` retired with its destination (D48′). The stored
+    // value lingers in existing defaults, unread — accepted rather than
+    // migrated, the D45′ retired-section stance: a leftover key costs
+    // nothing, a cleanup pass is machinery the leftover doesn't earn.
+    /// D48′ — the merged Players destination's ordering. Stored as
+    /// `PlayersSortOrder.rawValue`; absent reads as `.rank` at the one
+    /// `@AppStorage` site, which is the destination's default read.
+    internal static let playersSortOrder = "playersSortOrder"
 
     // New-game dialog persisted defaults (M3.4): pre-filled on open,
     // written back on Start. Deliberately just the recurring tags.

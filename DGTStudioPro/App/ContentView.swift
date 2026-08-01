@@ -167,11 +167,6 @@ internal struct ContentView: View {
                     tabState: tabState,
                     onShowInLibrary: { selection = .player($0) }
                 )
-            case .destination(.rankings):
-                RankingsDestination(
-                    tabState: tabState,
-                    onShowInLibrary: { selection = .player($0) }
-                )
             case .tag(let id):
                 // A deleted tag's stale selection degrades to the full
                 // Library (nil filter) instead of trapping on a lookup.
@@ -289,20 +284,22 @@ internal enum Destination: String, CaseIterable, Identifiable, Hashable {
     case board
     case library
     case players
-    case rankings
-    
+    // `rankings` was retired by D48′ — the ladder lives inside Players as its
+    // default sort order. A stale `sidebarDestination("rankings")` cannot
+    // linger anywhere programmatic: `SidebarSelection` stores the enum, not
+    // the raw value, so the case's deletion is total at compile time.
+
     internal var id: String { rawValue }
-    
+
     internal var title: String {
         rawValue.capitalized
     }
-    
+
     internal var systemImage: String {
         switch self {
         case .board:    "checkerboard.rectangle"
         case .library:  "books.vertical"
         case .players:  "person.2"
-        case .rankings: "list.number"
         }
     }
 }

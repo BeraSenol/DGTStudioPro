@@ -43,7 +43,10 @@ internal enum InspectorSection: String, CaseIterable, Sendable {
     case lifecycle      = "lifecycle"
     case playerProfile  = "playerProfile"
     case recentGames    = "recentGames"
-    case rankingProfile = "rankingProfile"
+    // `rankingProfile` retired by D48′ — the merged Players profile is one
+    // grid under `.playerProfile`, so two cases would be two names for one
+    // section. A stored collapse under the old raw value drops on read and
+    // evicts on the next write, the retirement path this type designed for.
     case ratingTrend    = "ratingTrend"
 }
 

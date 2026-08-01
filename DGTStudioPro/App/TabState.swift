@@ -97,8 +97,9 @@ internal final class TabState {
     /// lives on `AnalysisQueueController`.
     internal let analysisQueue = AnalysisQueueController()
     
-    // MARK: Players / Rankings Destinations
-    
+    // MARK: Players Destination
+
     internal var playersInspectorPresented: Bool = true
-    internal var rankingsInspectorPresented: Bool = true
+    // `rankingsInspectorPresented` left with the Rankings destination (D48′)
+    // — the merged Players inspector answers to the flag above.
 }

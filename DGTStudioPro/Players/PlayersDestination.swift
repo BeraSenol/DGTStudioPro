@@ -9,10 +9,43 @@ import os
 import SwiftData
 import SwiftUI
 
-/// The Players destination (M-prs.3): the four `CollectionViewMode`s over
-/// `PlayerStats.index`, mirroring the Library's seam — same picker, same
-/// per-destination `@AppStorage` key, same gallery-auto-opens-inspector
-/// behavior — so the two destinations feel like one app.
+/// One ladder row: a player's rank under `PlayerStats.rankingOrder`
+/// (D11′ — wins ↓, win rate ↓, key ↑; ranks are dense and distinct
+/// because the comparator is total), with the Glicko rating riding along.
+/// Moved here from the retired `RankingsDestination` (D48′) — since the
+/// merge this is every mode view's row currency, in *both* orderings:
+/// rank is a fact about the player, not a position in the current sort,
+/// so an alphabetical list still shows #14 beside the name.
+internal struct RankedPlayer: Identifiable, Hashable {
+    internal let rank: Int
+    internal let stats: PlayerStats
+    internal let rating: Glicko1.Rating?
+
+    internal var id: PlayerStats.ID { stats.id }
+}
+
+/// The merged destination's two orderings (D48′). Raw values are the stored
+/// form (an `@AppStorage` key), so they are spelled out — the
+/// `InspectorSection` rule: a rename that reads as a refactor must not
+/// silently reset the user's choice.
+internal enum PlayersSortOrder: String, CaseIterable, Identifiable, Sendable {
+    case rank = "rank"
+    case name = "name"
+
+    internal var id: String { rawValue }
+
+    internal var displayName: String {
+        switch self {
+        case .rank: "By Rank"
+        case .name: "By Name"
+        }
+    }
+}
+
+/// The Players destination (M-prs.3; absorbed Rankings in D48′): the four
+/// `CollectionViewMode`s over the ranked ladder, in rank order by default
+/// with a persisted toggle to alphabetical — one destination that knows
+/// everything about a player, rather than two that each knew half.
 ///
 /// All data is computed per body from the `@Query`: records project via
 /// `\.gameRecord`, stats and ratings fold pure (D10′). Recomputing
@@ -21,7 +54,8 @@ import SwiftUI
 ///
 /// Selection is a `PlayerStats.ID` (the resolved key), `@State` like the
 /// Library's — deliberately not on `TabState`: neither destination
-/// promises selection survival across sidebar switches.
+/// promises selection survival across sidebar switches. It *does* survive
+/// a sort toggle, because both orderings speak the same keys.
 internal struct PlayersDestination: View {
     
     // MARK: Static Constants
@@ -40,6 +74,7 @@ internal struct PlayersDestination: View {
     
     // MARK: Private Properties
     @AppStorage(StorageKeys.playersViewMode) private var viewMode: CollectionViewMode = .list
+    @AppStorage(StorageKeys.playersSortOrder) private var sortOrder: PlayersSortOrder = .rank
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \PGN.importedAt, order: .reverse) private var games: [PGN]
 
@@ -132,27 +167,54 @@ internal struct PlayersDestination: View {
             .sorted { $0.effectiveDate > $1.effectiveDate }
     }
     
+    // MARK: Derived Data (D48′)
+
+    /// Builds the ranked ladder from an already-computed projection and
+    /// rating-history map — `RankingsDestination.ranked`'s exact shape,
+    /// moved with the merge. Pure and `static` so it can't reach for
+    /// instance state and silently re-derive: `body` folds once and threads.
+    private static func ranked(
+        from records: [GameRecord],
+        histories: [String: [Glicko1.Sample]]
+    ) -> [RankedPlayer] {
+        PlayerStats.index(of: records)
+            .sorted(by: PlayerStats.rankingOrder)
+            .enumerated()
+            .map { offset, stats in
+                RankedPlayer(
+                    rank: offset + 1,
+                    stats: stats,
+                    rating: histories[stats.key]?.last?.rating
+                )
+            }
+    }
+
     // MARK: Body
     internal var body: some View {
         // Fold once per render, then thread down (see the Derived Data note).
         let records = games.map(\.gameRecord)
-        let index = PlayerStats.index(of: records)
-        let selectedStats = selectedKey.flatMap { key in index.first { $0.key == key } }
-        let selectedRating = selectedKey
-            .flatMap { Glicko1.histories(from: records)[$0]?.last?.rating }
-        
+        let histories = Glicko1.histories(from: records)
+        let ranked = Self.ranked(from: records, histories: histories)
+        // Rank is computed under D11′ regardless of display order — the sort
+        // only decides sequence, never the number on the badge.
+        let displayed = sortOrder == .rank
+            ? ranked
+            : ranked.sorted { $0.stats.name < $1.stats.name }
+        let selected = selectedKey.flatMap { key in ranked.first { $0.id == key } }
+        let history = selectedKey.flatMap { histories[$0] } ?? []
+
         // The store owns the rule, the query owns the rows (D40′).
         let orphans = registry.filter(PGNStore.isOrphaned)
 
-        return coreContent(index: index)
+        return coreContent(players: displayed)
             .navigationTitle("Players")
             .inspector(isPresented: $tabState.playersInspectorPresented) {
                 PlayersInspectorView(
-                    stats: selectedStats,
-                    rating: selectedRating,
+                    ranked: selected,
+                    history: history,
                     recentGames: selectedGames,
-                    onRename: { beginRename(stats: selectedStats) },
-                    onMerge: { beginMerge(stats: selectedStats) }
+                    onRename: { beginRename(stats: selected?.stats) },
+                    onMerge: { beginMerge(stats: selected?.stats) }
                 )
                 .inspectorColumnWidth(min: 325, ideal: 320, max: 430)
             }
@@ -361,23 +423,29 @@ internal struct PlayersDestination: View {
     }
 
     @ViewBuilder
-    private func coreContent(index: [PlayerStats]) -> some View {
+    private func coreContent(players: [RankedPlayer]) -> some View {
         Group {
-            if index.isEmpty {
+            if players.isEmpty {
                 emptyState
             } else {
                 switch viewMode {
                 case .icons:
-                    PlayersIconsView(players: index, selectedKey: $selectedKey,
+                    PlayersIconsView(players: players, selectedKey: $selectedKey,
                                      onShowInLibrary: showInLibrary)
                 case .list:
-                    PlayersListView(players: index, selectedKey: $selectedKey,
+                    PlayersListView(players: players, selectedKey: $selectedKey,
                                     onShowInLibrary: showInLibrary)
                 case .columns:
-                    PlayersColumnsView(players: index, selectedKey: $selectedKey,
+                    // The grouping dimension follows the ordering (D48′):
+                    // letters group a name list, win bands group a ladder —
+                    // the retired Rankings view's own argument ("a ranked
+                    // list grouped alphabetically would fight its own
+                    // sort"), now applied in both directions.
+                    PlayersColumnsView(players: players, grouping: sortOrder,
+                                       selectedKey: $selectedKey,
                                        onShowInLibrary: showInLibrary)
                 case .gallery:
-                    PlayersGalleryView(players: index, selectedKey: $selectedKey,
+                    PlayersGalleryView(players: players, selectedKey: $selectedKey,
                                        onShowInLibrary: showInLibrary)
                 }
             }
@@ -413,6 +481,20 @@ internal struct PlayersDestination: View {
             }
             .pickerStyle(.segmented)
             .accessibilityIdentifier(AccessibilityID.playersViewModePicker)
+        }
+        ToolbarItem {
+            // D48′'s one new control: rank order is the default read, name
+            // order is for finding someone. A menu picker rather than a
+            // second segmented pair — two segmented controls side by side
+            // read as one broken one.
+            Picker("Sort", selection: $sortOrder) {
+                ForEach(PlayersSortOrder.allCases) { order in
+                    Text(order.displayName).tag(order)
+                }
+            }
+            .pickerStyle(.menu)
+            .help("Order players by rank or by name")
+            .accessibilityIdentifier(AccessibilityID.playersSortPicker)
         }
         ToolbarItem {
             // D40′'s surface, and the only affordance in the app that can reach

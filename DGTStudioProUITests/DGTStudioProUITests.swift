@@ -175,10 +175,6 @@ final class DGTStudioProUITests: XCTestCase {
         XCTAssertTrue(waitFor(element(AccessibilityID.playersContent)),
                       "Players destination should appear")
         
-        element(AccessibilityID.sidebarDestination("rankings")).click()
-        XCTAssertTrue(waitFor(element(AccessibilityID.rankingsContent)),
-                      "Rankings destination should appear")
-        
         element(AccessibilityID.sidebarDestination("library")).click()
         XCTAssertTrue(waitFor(element(AccessibilityID.libraryContent)),
                       "Library should reappear when reselected")
@@ -456,61 +452,19 @@ final class DGTStudioProUITests: XCTestCase {
     /// so the key tiebreak decides 1 vs 2), then the zero-win group led
     /// alphabetically. Seeds are undated, so chronology and the ladder
     /// derive purely from seed insertion — deterministic by construction.
-    func test_rankings_ladderOrderMatchesComparator() {
+    func test_players_ladderOrderMatchesComparator() {
+        // D48′: the ladder lives in Players now, as its default sort — the
+        // order pin rides the merged table's rank cells.
         launch()
-        element(AccessibilityID.sidebarDestination("rankings")).click()
-        XCTAssertTrue(waitFor(element(AccessibilityID.rankingsContent)),
-                      "Rankings destination should appear")
+        element(AccessibilityID.sidebarDestination("players")).click()
+        XCTAssertTrue(waitFor(element(AccessibilityID.playersContent)),
+                      "Players destination should appear")
         
         XCTAssertTrue(waitFor(element(AccessibilityID.rankingRow(1, "Liren Ding"))),
                       "Key tiebreak: 'liren ding' < 'player black' at equal wins and win rate")
         XCTAssertTrue(element(AccessibilityID.rankingRow(2, "Player Black")).exists)
         XCTAssertTrue(element(AccessibilityID.rankingRow(3, "Alireza Firouzja")).exists,
                       "Zero-win group starts at rank 3, key-ascending")
-    }
-    
-    /// The parity promise, third destination: same four modes, same
-    /// symbol-keyed segments.
-    func test_rankings_viewModes_switchAcrossAllFour() {
-        launch()
-        element(AccessibilityID.sidebarDestination("rankings")).click()
-        XCTAssertTrue(waitFor(element(AccessibilityID.rankingsContent)))
-        
-        let icons   = segment(ModeSymbol.icons)
-        let list    = segment(ModeSymbol.list)
-        let columns = segment(ModeSymbol.columns)
-        let gallery = segment(ModeSymbol.gallery)
-        
-        XCTAssertTrue(list.waitForExistence(timeout: 5),
-                      "Rankings view-mode picker should be present")
-        
-        icons.click()
-        assertPicked(icons,   "Icons segment should be selected")
-        
-        columns.click()
-        assertPicked(columns, "Columns segment should be selected")
-        
-        gallery.click()
-        assertPicked(gallery, "Gallery segment should be selected")
-        
-        list.click()
-        assertPicked(list,    "List segment should be selected")
-    }
-    
-    /// Same open-by-default contract as the Players twin: toggle only
-    /// if the profile isn't already presenting (see that test's doc).
-    func test_rankings_selection_populatesInspectorProfile() {
-        launch()
-        element(AccessibilityID.sidebarDestination("rankings")).click()
-        XCTAssertTrue(waitFor(element(AccessibilityID.rankingRow(1, "Liren Ding"))))
-
-        element(AccessibilityID.rankingRow(1, "Liren Ding")).click()
-        if !element(AccessibilityID.rankingsInspectorProfile).waitForExistence(timeout: 2) {
-            element(AccessibilityID.rankingsInspectorToggle).click()
-        }
-
-        XCTAssertTrue(waitFor(element(AccessibilityID.rankingsInspectorProfile)),
-                      "Inspector should show the selected player's ranking")
     }
     
     // MARK: Smart Tags (M-prs.5)

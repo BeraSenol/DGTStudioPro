@@ -5,19 +5,20 @@
 //  Created by Supreme Leader on 12/04/2026.
 //
 
+import Charts
 import SwiftData
 import SwiftUI
 
-/// The player profile (M-prs.3): pure-value inputs — stats and rating
-/// arrive computed; only the recent-games list carries models, for the
-/// `openWindow` handle. The rating row is D11′'s secondary stat in its
-/// per-player home; the trend chart is the Rankings inspector's job
-/// (M-prs.4).
+/// The player profile (M-prs.3; absorbed the Rankings inspector in D48′):
+/// pure-value inputs — the ranked row and rating history arrive computed;
+/// only the recent-games list carries models, for the `openWindow` handle.
+/// One profile grid with each fact stated once (the old pair said Wins three
+/// ways between them), then the rating trend, then recent games.
 internal struct PlayersInspectorView: View {
 
     // MARK: Stored Properties
-    internal let stats: PlayerStats?
-    internal let rating: Glicko1.Rating?
+    internal let ranked: RankedPlayer?
+    internal let history: [Glicko1.Sample]
     internal let recentGames: [PGN]
 
     /// M5's two selection-scoped operations, as closures rather than store
@@ -32,15 +33,14 @@ internal struct PlayersInspectorView: View {
     ///
     /// **Delete is deliberately not here (D40′).** M5 put a per-player "Delete
     /// Player" in the menu below, guarded by `recentGames.isEmpty`, and that
-    /// guard could never be true: this view is only ever handed a `stats` that
-    /// `PlayerStats.index(of:)` emitted, the index folds `GameRecord`s, and a
-    /// record's sides are built from the resolved links — so every selectable
-    /// player has at least one game, and the item was disabled for every player
-    /// it could ever be shown for. Orphans, the only rows the store's delete
-    /// accepts, appear in no view mode at all. The operation moved to the
+    /// guard could never be true: this view is only ever handed a row the
+    /// stats index emitted, the index folds `GameRecord`s, and a record's
+    /// sides are built from the resolved links — so every selectable player
+    /// has at least one game. Orphans, the only rows the store's delete
+    /// accepts, appear in no view mode at all. The operation lives on the
     /// destination's toolbar, where it can reach them.
     ///
-    /// Defaulted so the three previews below and any future host can omit them;
+    /// Defaulted so the previews below and any future host can omit them;
     /// the app always wires both.
     internal var onRename: () -> Void = {}
     internal var onMerge: () -> Void = {}
@@ -48,29 +48,30 @@ internal struct PlayersInspectorView: View {
     // MARK: Body
     internal var body: some View {
         // D26′ — empty renders outside the `List`; see `InspectorEmptyState`.
-        if let stats {
+        if let ranked {
             List {
                 ProfileSection(
-                    stats: stats,
-                    rating: rating,
+                    ranked: ranked,
+                    ratedGames: history.count,
                     onRename: onRename,
                     onMerge: onMerge
                 )
-                .id(stats.key)   // reset per-player, the Library-inspector idiom
-                RecentGamesSection(playerKey: stats.key, games: recentGames)
+                .id(ranked.id)   // reset per-player, the Library-inspector idiom
+                TrendSection(history: history)
+                RecentGamesSection(playerKey: ranked.stats.key, games: recentGames)
             }
             .listStyle(.sidebar)
         } else {
             emptyState
         }
     }
-    
+
     // MARK: Instance Methods
     private var emptyState: some View {
         InspectorEmptyState(
             title: "No Player Selected",
             systemImage: "person.fill",
-            message: "Select a player to view their profile and recent games.",
+            message: "Select a player to see their profile, rating trend and recent games.",
             identifier: AccessibilityID.playersInspectorEmpty
         )
     }
@@ -80,29 +81,40 @@ internal struct PlayersInspectorView: View {
 
 private struct ProfileSection: View {
 
-    let stats: PlayerStats
-    let rating: Glicko1.Rating?
+    let ranked: RankedPlayer
+    let ratedGames: Int
     let onRename: () -> Void
     let onMerge: () -> Void
 
-    /// `.playerProfile`, and deliberately not the same identity as Rankings'
-    /// profile section even though both are headed by a player's name: this one
-    /// folds games and win rate, that one folds rank and rating, and the two
-    /// grids share nothing but the name at the top. Identity follows what a
-    /// section *shows*.
+    /// `.playerProfile` — the surviving identity of the D48′ merge.
+    /// `.rankingProfile` is retired from `InspectorSection` with the
+    /// destination that owned it: the two grids stopped being different
+    /// content the moment they became one grid, so keeping both cases would
+    /// have minted two names for one section. A stored collapse under the
+    /// retired raw value evicts on the next write, per D45′'s designed cost.
     ///
-    /// Three controls in the header now — chevron, pencil, menu — which the
-    /// milestone anticipated: the actions slot already had a two-control
-    /// precedent in two places, so a third was a layout question already
-    /// answered. The chevron leads, so the verbs stay rightmost.
+    /// Three controls in the header — chevron, pencil, menu. The chevron
+    /// leads, so the verbs stay rightmost.
     var body: some View {
-        CollapsibleSection(.playerProfile, title: stats.name) {
-            LabeledContent("Games", value: "\(stats.games)")
-            LabeledContent("Win Rate", value: stats.winRate.formatted(.percent.precision(.fractionLength(0))))
-            LabeledContent("Mates Delivered", value: "\(stats.matesDelivered)")
-            LabeledContent("First Played", value: RosterSummary.displayDate(stats.firstPlayed))
-            LabeledContent("Last Played", value: RosterSummary.displayDate(stats.lastPlayed))
-            LabeledContent("Rating", value: ratingDescription)
+        CollapsibleSection(.playerProfile, title: ranked.stats.name) {
+            // Rank leads because it is what the destination sorts by
+            // (D11′); Record absorbs the old separate Wins row — the
+            // RankingsInspectorView Wins-twice open item, closed by
+            // deleting the duplication rather than the row.
+            LabeledContent("Rank", value: "#\(ranked.rank)")
+            LabeledContent("Games", value: "\(ranked.stats.games)")
+            LabeledContent("Record", value: "\(ranked.stats.wins)–\(ranked.stats.draws)–\(ranked.stats.losses)")
+            LabeledContent("Win Rate", value: ranked.stats.winRate.formatted(.percent.precision(.fractionLength(0))))
+            LabeledContent("Rating", value: ranked.rating?.displaySummary ?? "Unrated")
+            if let rating = ranked.rating {
+                // The deviation IS the honesty of the number above —
+                // surface it instead of hiding it in the provisional flag.
+                LabeledContent("Uncertainty", value: "±\(Int(rating.deviation.rounded()))")
+            }
+            LabeledContent("Rated Games", value: "\(ratedGames)")
+            LabeledContent("Mates Delivered", value: "\(ranked.stats.matesDelivered)")
+            LabeledContent("First Played", value: RosterSummary.displayDate(ranked.stats.firstPlayed))
+            LabeledContent("Last Played", value: RosterSummary.displayDate(ranked.stats.lastPlayed))
         } actions: {
             // The player's name is the title above — not "Player Profile" — for
             // the reason it always was: the destination already says what kind
@@ -164,24 +176,59 @@ private struct ProfileSection: View {
         .help("Merge this player into another")
         .accessibilityIdentifier(AccessibilityID.playersActionsMenu)
     }
+}
 
-    /// "Unrated" until the player has a rated game (decided, both sides
-    /// resolved — the `Glicko1.histories` rule); the number itself
-    /// formats through the one shared rule.
-    private var ratingDescription: String {
-        rating?.displaySummary ?? "Unrated"
+// MARK: Trend
+
+/// Moved whole from the retired `RankingsInspectorView` (D48′) — same
+/// `.ratingTrend` identity, because the section shows the same thing from a
+/// new host, and D45′ says identity follows content, not address.
+private struct TrendSection: View {
+
+    let history: [Glicko1.Sample]
+
+    var body: some View {
+        CollapsibleSection(.ratingTrend, title: "Rating Trend") {
+            if history.isEmpty {
+                Text("No rated games yet — the rating starts once this player finishes a game against another named player.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                // Indexed identity: two rated games can share an effective
+                // date (undated same-day imports), so `\.date` can't be
+                // the id.
+                Chart(Array(history.enumerated()), id: \.offset) { _, sample in
+                    LineMark(
+                        x: .value("Date", sample.date),
+                        y: .value("Rating", sample.rating.mean)
+                    )
+                    PointMark(
+                        x: .value("Date", sample.date),
+                        y: .value("Rating", sample.rating.mean)
+                    )
+                }
+                .frame(height: 160)
+                .padding(.vertical, 4)
+
+                if history.last?.rating.isProvisional == true {
+                    Text("Provisional — the rating settles as more games are played.")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
     }
 }
 
 // MARK: Recent Games
 
 private struct RecentGamesSection: View {
-    
+
     let playerKey: String
     let games: [PGN]
-    
+
     @Environment(\.openWindow) private var openWindow
-    
+
     var body: some View {
         CollapsibleSection(.recentGames, title: "Recent Games") {
             if games.isEmpty {
@@ -199,7 +246,7 @@ private struct RecentGamesSection: View {
             }
         }
     }
-    
+
     /// Row tap opens the game — the inspector's open affordance, same
     /// `openWindow(value:)` route as the Library inspector (macOS dedups
     /// and tabs the windows).
@@ -230,34 +277,62 @@ private struct RecentGamesSection: View {
 // MARK: Previews
 
 #Preview("Empty") {
-    PlayersInspectorView(stats: nil, rating: nil, recentGames: [])
+    PlayersInspectorView(ranked: nil, history: [], recentGames: [])
         .frame(width: 300, height: 400)
         .environment(InspectorSectionCollapse.preview)
 }
 
-/// The two rating display branches meeting the same layout: an established
-/// rating renders bare, a provisional one carries its qualifier and is the
-/// longer string — the one that can wrap in a 260 pt inspector.
+/// A provisional rating meeting the merged grid: the qualifier string is the
+/// longest value in the section — the one that can wrap in a 260 pt
+/// inspector — and Uncertainty renders beneath it. The single-sample trend
+/// rides along: a one-point domain is where chart axes misbehave.
 #Preview("Provisional Rating") {
     PlayersInspectorView(
-        stats: PreviewFixtures.playerStats().last!,
-        rating: Glicko1.Rating(mean: 1487.0, deviation: 218.6),
+        ranked: RankedPlayer(
+            rank: 4,
+            stats: PreviewFixtures.playerStats().last!,
+            rating: Glicko1.Rating(mean: 1487.0, deviation: 218.6)
+        ),
+        history: [Glicko1.Sample(date: .now, rating: .initial)],
         recentGames: []
     )
-    .frame(width: 260, height: 400)
+    .frame(width: 260, height: 560)
     .modelContainer(for: PGN.self, inMemory: true)
     .environment(InspectorSectionCollapse.preview)
 }
 
-/// Unrated: a resolved player whose games never produced a rated pairing.
-/// The nil branch is the call site's own "Unrated" copy, per `Rating`'s doc.
+/// Unrated: a resolved player whose games never produced a rated pairing —
+/// the Rating row's nil branch, no Uncertainty row, an empty trend.
 #Preview("Unrated") {
     PlayersInspectorView(
-        stats: PreviewFixtures.topStats(),
-        rating: nil,
+        ranked: RankedPlayer(rank: 1, stats: PreviewFixtures.topStats(), rating: nil),
+        history: [],
         recentGames: []
     )
-    .frame(width: 300, height: 400)
+    .frame(width: 300, height: 560)
+    .modelContainer(for: PGN.self, inMemory: true)
+    .environment(InspectorSectionCollapse.preview)
+}
+
+/// A long history with a visible swing — the trend line's real shape, and
+/// the y-domain's stress case.
+#Preview("Long History") {
+    let samples = (0..<24).map { step in
+        Glicko1.Sample(
+            date: Date(timeIntervalSince1970: 1_720_000_000 + Double(step) * 86_400),
+            rating: Glicko1.Rating(
+                mean: 1500 + Double(step) * 9 - (step.isMultiple(of: 3) ? 55 : 0),
+                deviation: max(45, 350 - Double(step) * 12)
+            )
+        )
+    }
+
+    return PlayersInspectorView(
+        ranked: PreviewFixtures.rankedPlayers()[0],
+        history: samples,
+        recentGames: []
+    )
+    .frame(width: 300, height: 620)
     .modelContainer(for: PGN.self, inMemory: true)
     .environment(InspectorSectionCollapse.preview)
 }

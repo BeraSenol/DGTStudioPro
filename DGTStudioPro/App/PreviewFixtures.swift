@@ -78,7 +78,7 @@ internal enum PreviewFixtures {
     }
     
     /// A larger set that reaches the upper win bands. `records()` only ever
-    /// produces two of `RankingsColumnsView`'s four brackets, so a boundary
+    /// produces two of `PlayersColumnsView`'s four win brackets (D48′), so a boundary
     /// could be wrong in both directions unseen; this adds a dominant player
     /// on twelve wins and a mid-tier one on six, giving 10+ / 5–9 / 1–4 /
     /// none all at once. Built by appending *games*, not by hand-writing

@@ -421,19 +421,19 @@ internal enum AccessibilityID {
         "playerCard.\(name)"
     }
     
-    // MARK: Rankings
-    
-    internal static let rankingsContent          = "rankings.content"
-    internal static let rankingsEmptyState       = "rankings.emptyState"
-    internal static let rankingsViewModePicker   = "rankings.viewModePicker"
-    internal static let rankingsTable            = "rankings.table"
-    internal static let rankingsInspectorToggle  = "rankings.inspectorToggle"
-    internal static let rankingsInspectorProfile = "rankings.inspector.profile"
-    internal static let rankingsInspectorEmpty   = "rankings.inspector.empty"
-    
+    /// D48′ — the merged destination's rank/name ordering picker.
+    internal static let playersSortPicker = "players.sortPicker"
+
+    // The `rankings.*` group — seven constants — was **removed** with its
+    // destination (D48′): removals are as breaking as renames, recorded here
+    // at the group's old anchor per the `players.inspector.deleteItem`
+    // precedent. `rankingRow` below is the group's one survivor, re-homed.
+
     /// `rankingRow.1.Liren Ding`, … — rank *and* name, so asserting a
     /// row's existence pins the ladder's computed order without geometry
-    /// queries.
+    /// queries. Since D48′ it rides the merged Players table's **Rank cell**
+    /// (the Player cell keeps `playerRow(name)` for the rename/merge flows —
+    /// one element cannot carry both currencies).
     internal static func rankingRow(_ rank: Int, _ name: String) -> String {
         "rankingRow.\(rank).\(name)"
     }

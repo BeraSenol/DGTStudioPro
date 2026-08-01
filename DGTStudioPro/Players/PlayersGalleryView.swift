@@ -9,13 +9,13 @@ import SwiftUI
 
 internal struct PlayersGalleryView: View {
     
-    let players: [PlayerStats]
+    let players: [RankedPlayer]
     @Binding var selectedKey: PlayerStats.ID?
     let onShowInLibrary: (PlayerStats.ID) -> Void
-    
-    private var selectedPlayer: PlayerStats? {
+
+    private var selectedPlayer: RankedPlayer? {
         guard let selectedKey else { return nil }
-        return players.first { $0.key == selectedKey }
+        return players.first { $0.id == selectedKey }
     }
     
     var body: some View {
@@ -30,18 +30,31 @@ internal struct PlayersGalleryView: View {
     private var preview: some View {
         if let player = selectedPlayer ?? players.first {
             VStack(spacing: 12) {
-                PlayerMonogram(name: player.name, diameter: 96)
-                Text(player.name)
-                    .font(.title2.weight(.semibold))
-                
+                PlayerMonogram(name: player.stats.name, diameter: 96)
+                HStack(spacing: 8) {
+                    // The retired Rankings gallery's identity row, kept: the
+                    // rank is the destination's default sort and earns the
+                    // medal styling beside the name.
+                    Text("#\(player.rank)")
+                        .font(.title2.weight(.bold).monospacedDigit())
+                        .foregroundStyle(RankMedal.style(forRank: player.rank))
+                    Text(player.stats.name)
+                        .font(.title2.weight(.semibold))
+                }
+
+                // One grid, each fact once (D48′): the two retired galleries
+                // disagreed on spacing (24 vs 0) and both said Wins twice —
+                // Record's first component absorbs it here as it does in the
+                // inspector.
                 Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 6) {
                     GridRow {
-                        PlayerStatCell("Games", "\(player.games)")
-                        PlayerStatCell("Record", "\(player.wins)–\(player.draws)–\(player.losses)")
-                        PlayerStatCell("Win Rate", player.winRate.formatted(.percent.precision(.fractionLength(0))))
+                        PlayerStatCell("Games", "\(player.stats.games)")
+                        PlayerStatCell("Record", "\(player.stats.wins)–\(player.stats.draws)–\(player.stats.losses)")
+                        PlayerStatCell("Win Rate", player.stats.winRate.formatted(.percent.precision(.fractionLength(0))))
                     }
                     GridRow {
-                        PlayerStatCell("Mates", "\(player.matesDelivered)")
+                        PlayerStatCell("Rating", player.rating?.displaySummary ?? "—")
+                        PlayerStatCell("Mates", "\(player.stats.matesDelivered)")
                     }
                 }
                 .padding(.top, 4)
@@ -55,20 +68,21 @@ internal struct PlayersGalleryView: View {
             )
         }
     }
-    
+
     private var filmstrip: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     ForEach(players) { player in
                         PlayerCardView(
-                            stats: player,
-                            isSelected: selectedKey == player.key,
-                            onSelect: { selectedKey = player.key },
-                            onShowInLibrary: { onShowInLibrary(player.key) }
+                            stats: player.stats,
+                            isSelected: selectedKey == player.id,
+                            onSelect: { selectedKey = player.id },
+                            rank: player.rank,
+                            onShowInLibrary: { onShowInLibrary(player.id) }
                         )
                         .frame(width: 160)
-                        .id(player.key)
+                        .id(player.id)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -92,7 +106,7 @@ internal struct PlayersGalleryView: View {
     @Previewable @State var selection: PlayerStats.ID?
     
     PlayersGalleryView(
-        players: PreviewFixtures.playerStats(),
+        players: PreviewFixtures.rankedPlayers(),
         selectedKey: $selection,
         onShowInLibrary: { _ in }
     )
@@ -110,7 +124,7 @@ internal struct PlayersGalleryView: View {
     @Previewable @State var selection: PlayerStats.ID? = PreviewFixtures.topStats().id
     
     PlayersGalleryView(
-        players: PreviewFixtures.playerStats(),
+        players: PreviewFixtures.rankedPlayers(),
         selectedKey: $selection,
         onShowInLibrary: { _ in }
     )

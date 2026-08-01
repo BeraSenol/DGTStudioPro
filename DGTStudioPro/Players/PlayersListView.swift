@@ -8,31 +8,54 @@
 import SwiftUI
 
 internal struct PlayersListView: View {
-    
-    let players: [PlayerStats]
+
+    let players: [RankedPlayer]
     @Binding var selectedKey: PlayerStats.ID?
     let onShowInLibrary: (PlayerStats.ID) -> Void
-    
+
     var body: some View {
         Table(players, selection: $selectedKey) {
+            TableColumn("Rank") { player in
+                // The rank cell carries the order-pinning identifier
+                // (`rankingRow.1.Liren Ding`) so the ladder UITest asserts
+                // the computed order without geometry queries; the Player
+                // cell keeps `playerRow(name)` for the rename/merge flows.
+                // Two cells, two currencies — one element can't serve both.
+                Group {
+                    if RankMedal(rank: player.rank) != nil {
+                        RankBadge(rank: player.rank)
+                    } else {
+                        Text("\(player.rank)").monospacedDigit().foregroundStyle(.secondary)
+                    }
+                }
+                .accessibilityIdentifier(
+                    AccessibilityID.rankingRow(player.rank, player.stats.name)
+                )
+            }
+            .width(52)
             TableColumn("Player") { player in
-                Text(player.name)
-                    .accessibilityIdentifier(AccessibilityID.playerRow(player.name))
+                Text(player.stats.name)
+                    .accessibilityIdentifier(AccessibilityID.playerRow(player.stats.name))
             }
             TableColumn("Games") { player in
-                Text("\(player.games)").foregroundStyle(.secondary)
+                Text("\(player.stats.games)").foregroundStyle(.secondary)
             }
             .width(60)
-            TableColumn("W") { Text("\($0.wins)") }.width(40)
-            TableColumn("D") { Text("\($0.draws)").foregroundStyle(.secondary) }.width(40)
-            TableColumn("L") { Text("\($0.losses)").foregroundStyle(.secondary) }.width(40)
+            TableColumn("W") { Text("\($0.stats.wins)") }.width(40)
+            TableColumn("D") { Text("\($0.stats.draws)").foregroundStyle(.secondary) }.width(40)
+            TableColumn("L") { Text("\($0.stats.losses)").foregroundStyle(.secondary) }.width(40)
             TableColumn("Win %") { player in
-                Text(player.winRate.formatted(.percent.precision(.fractionLength(0))))
+                Text(player.stats.winRate.formatted(.percent.precision(.fractionLength(0))))
                     .foregroundStyle(.secondary)
             }
             .width(60)
+            TableColumn("Rating") { player in
+                Text(player.rating?.displaySummary ?? "—")
+                    .foregroundStyle(.secondary)
+            }
+            .width(120)
             TableColumn("Last Played") { player in
-                Text(RosterSummary.displayDate(player.lastPlayed))
+                Text(RosterSummary.displayDate(player.stats.lastPlayed))
                     .foregroundStyle(.secondary)
             }
             .width(100)
@@ -57,7 +80,7 @@ internal struct PlayersListView: View {
     @Previewable @State var selection: PlayerStats.ID?
     
     PlayersListView(
-        players: PreviewFixtures.playerStats(),
+        players: PreviewFixtures.rankedPlayers(),
         selectedKey: $selection,
         onShowInLibrary: { _ in }
     )
@@ -68,7 +91,7 @@ internal struct PlayersListView: View {
     @Previewable @State var selection: PlayerStats.ID? = PreviewFixtures.topStats().id
     
     PlayersListView(
-        players: PreviewFixtures.playerStats(),
+        players: PreviewFixtures.rankedPlayers(),
         selectedKey: $selection,
         onShowInLibrary: { _ in }
     )

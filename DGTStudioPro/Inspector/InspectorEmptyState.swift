@@ -94,11 +94,14 @@ internal struct InspectorEmptyState: View {
             identifier: AccessibilityID.playersInspectorEmpty
         )
         Divider()
+        // The fourth column was the Rankings inspector's until D48′ merged
+        // it into Players; the graph window's empty state keeps the preview
+        // at its stated four-abreast width.
         InspectorEmptyState(
-            title: "No Player Selected",
-            systemImage: "list.number",
-            message: "Select a player to see their rank and rating trend.",
-            identifier: AccessibilityID.rankingsInspectorEmpty
+            title: "No Analysis",
+            systemImage: "chart.line.uptrend.xyaxis",
+            message: "This game has no recorded evaluations, or it is no longer in the library.",
+            identifier: AccessibilityID.evaluationWindowEmpty
         )
     }
     .frame(width: 4 * 325, height: 420)
