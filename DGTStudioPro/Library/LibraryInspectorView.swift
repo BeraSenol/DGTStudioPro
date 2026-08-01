@@ -185,6 +185,8 @@ private struct LoadedSection: View {
                 analysisControlRow
                 Spacer()
             }
+        } actions: {
+            EvaluationMagnifierButton(gameID: pgn.persistentModelID)
         }
     }
     

@@ -73,6 +73,12 @@ internal struct BoardInspectorView: View {
         )
     }
     
+    /// The magnifier renders only over a game the Library knows about, and it
+    /// simply doesn't exist otherwise — `onEditInfo`'s rule (an affordance that
+    /// can't act now shouldn't sit there greyed out), applied to the same
+    /// condition. A live game has no `PGN` until it archives, so there is
+    /// nothing for the window to resolve; the bar and the inspector graph are
+    /// still there, which is what a live game's evaluation surface was anyway.
     private var evaluationSection: some View {
         CollapsibleSection(.evaluation, title: "Evaluation") {
             EvaluationGraphView(
@@ -81,6 +87,10 @@ internal struct BoardInspectorView: View {
                 style: style
             )
             .frame(height: 160)
+        } actions: {
+            if let pgn {
+                EvaluationMagnifierButton(gameID: pgn.persistentModelID)
+            }
         }
     }
     

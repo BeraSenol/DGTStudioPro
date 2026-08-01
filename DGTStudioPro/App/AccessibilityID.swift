@@ -82,6 +82,21 @@ internal enum AccessibilityID {
     /// over an analysed game, so tests asserting absence on live/unanalysed
     /// boards have a stable handle too.
     internal static let boardEvaluationBar   = "board.evaluationBar"
+
+    // MARK: Evaluation Magnifier (M8, D46′)
+
+    /// The magnifying glass in both Evaluation section headers, and the three
+    /// parts of the window it opens.
+    ///
+    /// One identifier for the button across two inspectors, unlike the Edit
+    /// Info / Edit Details pair which deliberately have their own: those are
+    /// two buttons doing the same *kind* of thing to two different subjects,
+    /// while these two open literally the same window onto the same game. A
+    /// second identifier would be asserting a difference that isn't there.
+    internal static let evaluationMagnifier     = "evaluation.magnifier"
+    internal static let evaluationWindowGraph   = "evaluation.window.graph"
+    internal static let evaluationWindowReadout = "evaluation.window.readout"
+    internal static let evaluationWindowEmpty   = "evaluation.window.empty"
     /// The toolbar's connect control (`DGTConnectionToolbar`). Migrated
     /// late (M-ux.3): the value lived as a *parameter default*, which the
     /// enforcement grep described in this file's header cannot see —

@@ -91,12 +91,18 @@ internal struct EvaluationGraphView: View {
     }
     
     // MARK: Instance Methods
+    /// Horizontal placement comes from `EvaluationGraphGeometry` since D46′,
+    /// which gave the same arithmetic a second consumer: the magnifier window
+    /// inverts it to answer what sits under the pointer. Vertical placement
+    /// stays here — nothing else asks about it.
     private func evaluationPoints(in rect: CGRect) -> [CGPoint] {
-        let count = evaluations.count
-        let step = rect.width / CGFloat(count - 1)
-        
+        let geometry = EvaluationGraphGeometry(
+            width: rect.width,
+            plyCount: evaluations.count
+        )
+
         return evaluations.enumerated().map { index, probability in
-            let x = rect.minX + CGFloat(index) * step
+            let x = rect.minX + (geometry.x(forPly: index) ?? 0)
             let y = rect.maxY - CGFloat(probability) * rect.height
             return CGPoint(x: x, y: y)
         }

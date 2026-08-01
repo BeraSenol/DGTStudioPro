@@ -24,6 +24,14 @@ import SwiftUI
 /// Hosts must render this **outside** their `List`. Inside one it is a row
 /// again and the divergence returns.
 ///
+/// D46′ gave it its first host that is not an inspector — the evaluation
+/// magnifier's window, whose empty state is the same shape and the same
+/// question. Left here rather than renamed: the contract this type enforces is
+/// about *layout* (centred, filling, outside the `List`), which is as true of a
+/// window as of a sidebar, and a rename would be a breaking change to five call
+/// sites to relabel a thing that hasn't changed. Noted so the name is read as
+/// where it came from rather than as where it may be used.
+///
 /// Copy is `LocalizedStringKey`, not `String`: the call sites pass literals,
 /// and a `String` parameter would silently resolve to
 /// `ContentUnavailableView`'s non-localizing overload instead — an opt-out

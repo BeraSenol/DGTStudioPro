@@ -255,6 +255,24 @@ internal struct DGTStudioProApp: App {
             SmartTagCommands()
         }
         
+        // M8 (D46′) — the enlarged evaluation graph. A separate group so it can
+        // sit beside the board while the reader steps through the game; macOS
+        // only tabs windows from the same group, which is exactly what this one
+        // must *not* do with the game windows above.
+        //
+        // Keyed on `EvaluationGraphRequest` and not on `PersistentIdentifier`:
+        // `openWindow(value:)` routes by value type, the group above already
+        // claims that type, and three call sites depend on it. See the request
+        // type for the full reason — the short version is that the routing is
+        // now a fact about the type system rather than about which scene was
+        // declared first.
+        WindowGroup("Evaluation", for: EvaluationGraphRequest.self) { $request in
+            EvaluationGraphWindow(request: request)
+                .defaultAppStorage(UITestSeed.isActive ? UITestSeed.scratchDefaults : .standard)
+        }
+        .modelContainer(sharedContainer)
+        .defaultSize(width: 720, height: 420)
+
         Settings {
             SettingsView()
                 .environment(sleepInhibitor)
