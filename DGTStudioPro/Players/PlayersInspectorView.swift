@@ -135,6 +135,16 @@ private struct ProfileSection: View {
         // UITest expects it to name. Collapsing hides the rows and not this —
         // the seeded run has an empty collapsed set, so the flow tests see the
         // section open regardless.
+        //
+        // UNVERIFIED as of 1 August, and flagged rather than left reading as
+        // settled: `test_players_profileHeaderControls_areHittable`,
+        // `…renameRewritesTheListedName` and `…mergeFoldsTheLoserAway` all fail
+        // here, with the pencil and the menu not resolving by identifier while
+        // this identifier resolves fine. `.accessibilityElement(children:
+        // .contain)` ahead of this line was tried and changed nothing, so the
+        // shadowing explanation is disproved rather than merely unconfirmed.
+        // Cause still unknown; see AUDIT-2026-08-01.md § Zero for what has been
+        // ruled out and the instrument that would settle it.
         .accessibilityIdentifier(AccessibilityID.playersInspectorProfile)
     }
 
