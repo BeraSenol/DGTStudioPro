@@ -342,9 +342,10 @@ scripted line through `LibraryGamePreviewState.compute`; `PieceIdentityTests`
 (12, nonisolated) pin the occupancy-verbatim property across every fixture,
 the mis-key guard, the origin-identity glide, promotion's pawn-ID reuse,
 both castle placements, the correctable en-passant, and commit-stability of
-the proven key. ⌘U expected green, not claimed; the board-side half of the
-gate (real settle cadence, no hitching, dump fades in) is on the M6 manual
-list and stays open until Bera runs it.
+the proven key. ⌘U green — reported by Bera, 2 August, unit plan, the twelve
+new pins included. The board-side half of the gate (real settle cadence, no
+hitching, dump fades in) is on the M6 manual list and stays open until the
+board is on the desk.
 
 ---
 
