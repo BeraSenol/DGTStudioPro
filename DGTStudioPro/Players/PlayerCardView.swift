@@ -164,12 +164,15 @@ internal struct PlayerCardView: View {
             
             Text(stats.name)
                 .font(.callout)
-            // Reserved, not merely capped: a one-line name otherwise
-            // makes a shorter card, so a grid's rows ragged themselves
-            // off whichever names happened to land in them — and the two
-            // destinations sort differently, so the same player got two
-            // heights. Two lines, always.
-                .lineLimit(2, reservesSpace: true)
+            // Capped, no longer reserved (Bera, 1 Aug — reversing the
+            // earlier call this comment used to justify). The reservation
+            // bought uniform card heights across the two differently-sorted
+            // destinations, at the price of a blank line under every
+            // one-line name — which is most of them — and the empty band
+            // read worse than the ragged rows it prevented. Accepted: the
+            // same player can be two heights in two grids; the grid's own
+            // row alignment absorbs it.
+                .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .padding(.vertical, 2)
                 .frame(width: 94)
