@@ -6,6 +6,17 @@ dates, sequence only. Updates to this file arrive as a complete `.md`, same as
 the instructions. When a milestone lands, it moves to the Landed section at the
 bottom with its gate evidence — the roadmap is also the record of what shipped.*
 
+*Revised 2 August 2026: **M6 moved to Landed** — the animation mechanism
+decided and built as **D47′**, `SquareView.pieceID` retired with its story
+resolved, and the milestone's own goal sentence corrected by its own
+constraint line: the mirror glides only what is *proven* (see the entry's
+gate evidence for the reasoning, which is the milestone's real finding).
+Base `7bf733f` — the four commits of the same day's audit/review pass — and
+the tree was **clean** on arrival at M6 itself, the audits having been
+committed first. **What is left is M7's two gated items** (Instruments,
+which needs Bera and a board; the Xcode 27 GM re-read, ~September). The
+roadmap's schedulable half is now empty.*
+
 *Revised 29 July 2026 (evening): **M8 added** (two inspector-chrome features
 requested by Bera); **M1 moved to Landed** with its gate evidence.*
 
@@ -71,34 +82,6 @@ uncommitted, minted **D41′**, folded the columns grids onto their shared
 metrics, and closed the inspector-header AX question with a passing test.
 Base `3f785a3`. **M6, M7 and M8 remain** — still reorderable on appetite, and
 now the only things left on this roadmap.*
-
----
-
-## M6 — Live-mirror piece animation
-
-**Goal: the `PieceTracker` payoff — pieces glide on the mirror, keyed on the
-stable `PieceID` that has been threaded, unread, into `SquareView` since the
-tracker landed.**
-
-Decision inside: mechanism — `matchedGeometryEffect` across squares vs an
-animated overlay layer above the grid (the board renders squares, not
-pieces-with-positions today, and the overlay approach avoids restructuring
-the 64-square grid). Constraints from the invariants: the mirror renders the
-*physical* board — animation is presentation between settles, never
-speculation; ghosts and recovery attention/target overlays must not animate;
-castling animates two pieces, en-passant animates a capture from the odd
-square, promotion morphs identity-preserving (the tracker already reuses the
-pawn's ID — by design, this is where that pays off).
-
-Work: the mechanism decision + implementation; `SquareView.pieceID` finally
-read (or retired in favour of the overlay's own keying — either way the
-"intended consumer" comment resolves); previews for the four move shapes;
-manual checks on the real board at real settle cadence.
-
-**Gate.** e4, O-O, exd5 (en passant), and a promotion all animate correctly
-on the mirror; recovery and ghost overlays are visually unaffected; no
-hitching at settle cadence (eyeball now, Instruments in M7); the `pieceID`
-story is resolved in code and doc.
 
 ---
 
@@ -321,6 +304,49 @@ GM).
 ---
 
 ## Landed
+
+### M6 — Live-mirror piece animation *(landed 2 August 2026)*
+
+**Delivered as D47′.** One identity-keyed piece layer above the square grid
+(`BoardPieceLayer` + `PieceGlyph`), fed by a pure resolver
+(`PieceIdentity` / `ResolvedPiece`) whose keys carry the whole animation
+contract: a persisting key glides, a churned key fades. Identity is proven
+or absent, never guessed — per-square parity against the live game's last
+committed position, plus the *same* `DGTReconstructor.reconstruct` the
+session settles with, run presentation-side, so a slid or quickly played
+move glides under its real `PieceID` before the commit and re-keys nothing
+at it. `SquareView.pieceID` retired (the open item closes): a square that
+knows its piece's identity still can't glide anything — gliding is a
+relationship between two squares, and only a layer sees both.
+
+**The milestone's real finding: its goal sentence and its constraint line
+disagreed, and the constraint won.** "Pieces glide on the mirror" as written
+would need either a piece rendered where the physical board has none
+(violating "the mirror renders the physical board, always") or an identity
+guessed before anything proved it (violating "never speculation") — a
+lift-then-place move renders as two truthful states with the piece honestly
+in a hand between them, and there is no jump to glide. What the mirror does
+instead: proven moves glide, everything else fades honestly, and a fade *is*
+the correct rendering of a piece leaving for a hand. The gate's "e4, O-O,
+exd5, promotion all animate correctly on the mirror" is met in that reading
+— correctly ≠ always-glides — and all four shapes glide unconditionally on
+the review board, where parity is total. Fifth species averted rather than
+collected: the quantified sentence got checked against its set before the
+set was assumed.
+
+**Gate evidence.** Mechanism decided and recorded (`matchedGeometryEffect`
+rejected in D47′ with reasons); ghosts and recovery overlays untouched by
+construction (they never left the square layer, which doesn't animate); the
+four shapes watchable in the *Four Shapes — Interactive* preview stepping a
+scripted line through `LibraryGamePreviewState.compute`; `PieceIdentityTests`
+(12, nonisolated) pin the occupancy-verbatim property across every fixture,
+the mis-key guard, the origin-identity glide, promotion's pawn-ID reuse,
+both castle placements, the correctable en-passant, and commit-stability of
+the proven key. ⌘U expected green, not claimed; the board-side half of the
+gate (real settle cadence, no hitching, dump fades in) is on the M6 manual
+list and stays open until Bera runs it.
+
+---
 
 ### M8 — Inspector chrome, second pass *(landed 1 August 2026)*
 
