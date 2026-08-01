@@ -6,6 +6,13 @@ dates, sequence only. Updates to this file arrive as a complete `.md`, same as
 the instructions. When a milestone lands, it moves to the Landed section at the
 bottom with its gate evidence — the roadmap is also the record of what shipped.*
 
+*Revised 2 August 2026 (second): **M9 added by request and moved to Landed in
+the same pass** — Players and Rankings merged into one destination (D48′): the
+ladder becomes Players' default sort with a persisted name toggle, rank and
+rating render in every mode, one profile grid states each fact once, and the
+Rankings folder's six files retire along with three open items. The
+schedulable half is empty again; **M7's two gated items remain**.*
+
 *Revised 2 August 2026: **M6 moved to Landed** — the animation mechanism
 decided and built as **D47′**, `SquareView.pieceID` retired with its story
 resolved, and the milestone's own goal sentence corrected by its own
@@ -304,6 +311,39 @@ GM).
 ---
 
 ## Landed
+
+### M9 — One Players destination *(landed 2 August 2026)*
+
+**Requested by Bera, delivered as D48′.** Players absorbs Rankings:
+`RankedPlayer` is every mode view's row currency in both orderings, the D11′
+ladder is the default sort with a persisted toggle to name order
+(`PlayersSortOrder`, one new `StorageKeys` entry), rank badges and ratings
+render everywhere, and columns mode's grouping follows the ordering — letters
+under name sort, win bands under rank sort, one view where two files
+disagreed. The merged inspector states each fact once (Rank, Games, Record,
+Win Rate, Rating, Uncertainty, Rated Games, Mates, First/Last Played), then
+the rating trend and recent games; `.rankingProfile` retires from
+`InspectorSection`, `.ratingTrend` survives its move. Product decisions —
+rank-default ordering, ladder chrome everywhere, the full-merge grid — were
+Bera's, asked and answered before the build.
+
+**Closed with it:** the RankingsInspectorView Wins-twice item and both
+P-vs-R parity residues (stat grids, gallery spacing) — each by deleting the
+duplication rather than reconciling it. The galleries' empty-selection
+divergence narrows to Library-vs-Players and stays open.
+
+**Gate evidence.** Six files deleted, no stray references (repo-wide grep
+finds "Rankings" only in comments); the `rankings.*` registry group removed
+with the removal recorded at its anchor, `rankingRow` re-homed on the merged
+table's rank cell beside `playerRow`'s name cell — two currencies, two
+elements; the ladder-order UITest retargeted to Players with its assertions
+unchanged (the seeded expectations pin the same comparator through the new
+surface); the M5 editing flows untouched. ⌘U expected green, not claimed —
+the merged suite includes the retargeted ladder pin, and the Players editing
+tests' standing § Zero failures remain that investigation's, not this
+milestone's.
+
+---
 
 ### M6 — Live-mirror piece animation *(landed 2 August 2026)*
 
