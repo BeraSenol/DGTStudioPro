@@ -11,7 +11,14 @@ internal struct BoardView: View {
     
     // MARK: Stored Properties
     internal let position: Position
-    internal let pieceTracker: PieceTracker
+    /// What the piece layer renders and animates under — resolved by the
+    /// caller through `PieceIdentity`, because only the caller knows which
+    /// arm applies: the review board's position *is* its game's position
+    /// (total parity), while the mirror renders the physical board against a
+    /// live game that may lag it. `BoardView` stays dumb either way; it
+    /// draws what it is handed at the squares `position` says are occupied,
+    /// and `PieceIdentity` guarantees those two agree.
+    internal let pieces: [ResolvedPiece]
     internal let style: BoardStyle
     internal let perspective: PieceColor
     internal let lastMove: LastMove?
@@ -179,7 +186,6 @@ internal struct BoardView: View {
                         let square = square(visualRow: visualRow, visualColumn: visualColumn)
                         SquareView(
                             piece: position[square],
-                            pieceID: pieceTracker[square],
                             isLightSquare: (square.file + square.rank) % 2 != 0,
                             highlight: squareHighlight(for: square),
                             squareSize: layout.innerSquareSize,
@@ -194,6 +200,16 @@ internal struct BoardView: View {
                     }
                 }
             }
+        }
+        // The piece layer sits between the squares and the wood grain, so
+        // pieces keep the grain texture they always rendered under — and
+        // inside the `.clipped()`, so a glide never escapes the grid.
+        .overlay {
+            BoardPieceLayer(
+                pieces: pieces,
+                squareSize: layout.innerSquareSize,
+                perspective: perspective
+            )
         }
         .overlay {
             if style != .leather {
@@ -287,7 +303,7 @@ private struct Layout {
 #Preview("Leather") {
     BoardView(
         position: .starting,
-        pieceTracker: .empty,
+        pieces: PieceIdentity.resolved(position: .starting, tracker: .starting),
         style: .leather,
         perspective: .white,
         lastMove: nil,
@@ -299,7 +315,7 @@ private struct Layout {
 #Preview("Rosewood") {
     BoardView(
         position: .starting,
-        pieceTracker: .empty,
+        pieces: PieceIdentity.resolved(position: .starting, tracker: .starting),
         style: .rosewood,
         perspective: .white,
         lastMove: nil,
@@ -311,7 +327,7 @@ private struct Layout {
 #Preview("Walnut") {
     BoardView(
         position: .starting,
-        pieceTracker: .empty,
+        pieces: PieceIdentity.resolved(position: .starting, tracker: .starting),
         style: .walnut,
         perspective: .white,
         lastMove: nil,
@@ -323,7 +339,7 @@ private struct Layout {
 #Preview("Wenge") {
     BoardView(
         position: .starting,
-        pieceTracker: .empty,
+        pieces: PieceIdentity.resolved(position: .starting, tracker: .starting),
         style: .wenge,
         perspective: .white,
         lastMove: nil,
@@ -344,7 +360,7 @@ private struct Layout {
     
     return BoardView(
         position: position,
-        pieceTracker: .empty,
+        pieces: PieceIdentity.resolved(position: position, tracker: .empty),
         style: .walnut,
         perspective: .white,
         lastMove: LastMove(from: Squares.e1, to: Squares.g1),
@@ -366,7 +382,7 @@ private struct Layout {
     
     return BoardView(
         position: position,
-        pieceTracker: .empty,
+        pieces: PieceIdentity.resolved(position: position, tracker: .empty),
         style: .rosewood,
         perspective: .black,
         lastMove: LastMove(from: Squares.e8, to: Squares.c8),

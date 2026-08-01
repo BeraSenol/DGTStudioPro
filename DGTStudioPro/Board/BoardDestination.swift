@@ -263,7 +263,7 @@ internal struct BoardDestination: View {
     /// side, which only this computation knows.
     private func boardSurface(
         position: Position,
-        tracker: PieceTracker,
+        pieces: [ResolvedPiece],
         lastMove: LastMove?,
         checkSquare: Square?,
         ghostSquare: Square?,
@@ -274,7 +274,7 @@ internal struct BoardDestination: View {
     ) -> some View {
         let board = BoardView(
             position:         position,
-            pieceTracker:     tracker,
+            pieces:           pieces,
             style:            boardStyle,
             perspective:      tabState.boardPerspective,
             lastMove:         lastMove,
@@ -323,7 +323,14 @@ internal struct BoardDestination: View {
         // live physical board.
         boardSurface(
             position:    game.currentState.position,
-            tracker:     game.currentTracker,
+            // Review arm: the rendered position is the game's position, so
+            // parity is total and every piece glides under its per-ply
+            // tracker identity — stepping, jumping, and the perspective flip
+            // all animate from the same resolution.
+            pieces:      PieceIdentity.resolved(
+                position: game.currentState.position,
+                tracker:  game.currentTracker
+            ),
             lastMove:    game.lastMove,
             checkSquare: game.checkSquare,
             ghostSquare: nil,
@@ -591,18 +598,30 @@ internal struct BoardDestination: View {
     
     /// The board shown whenever no game is loaded. The *position* always
     /// renders the DGT connection's live `physicalBoard` (empty when nothing
-    /// is connected) with an empty `PieceTracker` — mid-move, the physical
-    /// and legal positions diverge, so identity-keyed animation against the
-    /// physical board could mis-key (tracker parity stays a v1.x item). Only
-    /// the *overlays* come from the live game (M3.2): last-move and check
-    /// highlights, plus the mid-castle ghost rook from the session. The
-    /// check highlight keys off the legal game state, so mid-move it can sit
-    /// on a square the king has physically just left — same accepted
-    /// tradeoff, resolved at the next settle.
+    /// is connected). Identity comes from `PieceIdentity`'s mirror arm —
+    /// M6's tracker-parity work, which this doc spent M3 through M5 calling
+    /// "a v1.x item": per-square parity against the live game's last
+    /// committed position keeps settled pieces under their real identities,
+    /// the reconstructor's own verification proves the in-flight move's, and
+    /// anything neither can vouch for renders anonymous — present, correct,
+    /// and unable to glide. The feared mis-key is structurally out: a square
+    /// whose physical piece disagrees with the game's never inherits the
+    /// stale identity. Occupancy stays the physical board, verbatim, always;
+    /// with no live game every piece is anonymous and the mirror behaves
+    /// exactly as it did before M6. Only the *overlays* come from the live
+    /// game (M3.2): last-move and check highlights, plus the mid-castle
+    /// ghost rook from the session. The check highlight keys off the legal
+    /// game state, so mid-move it can sit on a square the king has
+    /// physically just left — same accepted tradeoff, resolved at the next
+    /// settle.
     private var mirrorBoard: some View {
         boardSurface(
             position:         connection.physicalBoard,
-            tracker:          .empty,
+            pieces:           PieceIdentity.resolved(
+                physical: connection.physicalBoard,
+                game:     session.liveGame?.currentState,
+                tracker:  session.liveGame?.currentTracker
+            ),
             lastMove:         session.liveGame?.lastMove,
             checkSquare:      session.liveGame?.checkSquare,
             ghostSquare:      session.castlingGhostSquare,

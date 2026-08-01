@@ -10,8 +10,19 @@ import SwiftUI
 internal struct SquareView: View {
     
     // MARK: Stored Properties
+
+    /// The square's physical occupant — retained for *gating*, not drawing,
+    /// since M6: the piece itself renders in `BoardPieceLayer` above this
+    /// grid, and the square's one remaining occupancy question is whether
+    /// the ghost below may show.
+    ///
+    /// `pieceID` was retired here in the same change. It had been threaded,
+    /// unread, since the tracker landed — the "intended consumer" was
+    /// identity-keyed animation, and when that arrived (M6) it keyed the
+    /// layer's `ForEach` on `ResolvedPiece.key` instead, because a square
+    /// that knows its piece's identity still can't glide anything: gliding
+    /// is a relationship between two squares, and only a layer sees both.
     internal let piece: Piece
-    internal let pieceID: PieceID?
     internal let isLightSquare: Bool
     internal let highlight: SquareHighlight
     internal let squareSize: CGFloat
@@ -48,11 +59,13 @@ internal struct SquareView: View {
                 Rectangle().fill(.red.opacity(0.22))
             }
             
-            if let imageName = piece.imageName {
-                pieceImage(imageName)
-            } else if let imageName = ghostPiece?.imageName {
-                // Ghost only draws on an empty square — the real piece occludes it once landed.
-                pieceImage(imageName).opacity(0.5)
+            if !piece.isOccupied, let ghostPiece {
+                // Ghost only draws on an empty square — once the real piece
+                // lands, `BoardPieceLayer` renders it above this square and
+                // the ghost yields. `PieceGlyph` keeps the ghost
+                // pixel-identical to the piece it foreshadows.
+                PieceGlyph(piece: ghostPiece, squareSize: squareSize)
+                    .opacity(0.5)
             }
             
             if highlight.contains(.selected) {
@@ -82,129 +95,73 @@ internal struct SquareView: View {
         }
         .frame(width: squareSize, height: squareSize)
     }
-    
-    private func pieceImage(_ name: String) -> some View {
-        Image(name)
-            .resizable()
-            .renderingMode(.original)
-            .aspectRatio(contentMode: .fit)
-            .padding(squareSize * 0.06)
-    }
 }
 
 // MARK: Previews
-#Preview("Basic Squares") {
-    HStack(spacing: 0) {
-        VStack(spacing: 0) {
-            SquareView(
-                piece: .empty,
-                pieceID: nil,
-                isLightSquare: true,
-                highlight: SquareHighlight(),
-                squareSize: 80,
-                style: .walnut
-            )
-            SquareView(
-                piece: .whiteRook,
-                pieceID: PieceID(rawValue: 0),
-                isLightSquare: false,
-                highlight: SquareHighlight(),
-                squareSize: 80,
-                style: .walnut
-            )
-        }
-        VStack(spacing: 0) {
-            SquareView(
-                piece: .blackKnight,
-                pieceID: PieceID(rawValue: 18),
-                isLightSquare: false,
-                highlight: SquareHighlight(),
-                squareSize: 80,
-                style: .walnut
-            )
-            SquareView(
-                piece: .empty,
-                pieceID: nil,
-                isLightSquare: true,
-                highlight: SquareHighlight(),
-                squareSize: 80,
-                style: .walnut
-            )
-        }
-    }
-}
 
-// Highlight permutations on the same square — including the M6 recovery
-// styles (.attention solid red, .target dashed green).
+// The square's remaining subjects since piece drawing moved to
+// `BoardPieceLayer` (M6): fills and highlight chrome. The glyph set and its
+// size scaling preview with the layer, where the drawing code now lives.
 #Preview("Highlight States") {
     HStack(spacing: 4) {
         SquareView(
-            piece: .whiteKing, pieceID: PieceID(rawValue: 4),
-            isLightSquare: true, highlight: SquareHighlight(),
-            squareSize: 80, style: .walnut
+            piece: .empty, isLightSquare: true,
+            highlight: SquareHighlight(), squareSize: 80, style: .walnut
         )
         SquareView(
-            piece: .whiteKing, pieceID: PieceID(rawValue: 4),
-            isLightSquare: true, highlight: .lastMove,
-            squareSize: 80, style: .walnut
+            piece: .empty, isLightSquare: false,
+            highlight: SquareHighlight(), squareSize: 80, style: .walnut
         )
         SquareView(
-            piece: .whiteKing, pieceID: PieceID(rawValue: 4),
-            isLightSquare: true, highlight: .check,
-            squareSize: 80, style: .walnut
+            piece: .empty, isLightSquare: true,
+            highlight: .lastMove, squareSize: 80, style: .walnut
         )
         SquareView(
-            piece: .whiteKing, pieceID: PieceID(rawValue: 4),
-            isLightSquare: true, highlight: .selected,
-            squareSize: 80, style: .walnut
+            piece: .empty, isLightSquare: true,
+            highlight: .check, squareSize: 80, style: .walnut
         )
         SquareView(
-            piece: .whiteKing, pieceID: PieceID(rawValue: 4),
-            isLightSquare: true, highlight: [.check, .lastMove],
-            squareSize: 80, style: .walnut
+            piece: .empty, isLightSquare: true,
+            highlight: .selected, squareSize: 80, style: .walnut
         )
         SquareView(
-            piece: .blackPawn, pieceID: PieceID(rawValue: 18),
-            isLightSquare: true, highlight: .attention,
-            squareSize: 80, style: .walnut
+            piece: .empty, isLightSquare: true,
+            highlight: [.check, .lastMove], squareSize: 80, style: .walnut
         )
         SquareView(
-            piece: .empty, pieceID: nil,
-            isLightSquare: true, highlight: .target,
-            squareSize: 80, style: .walnut
+            piece: .empty, isLightSquare: true,
+            highlight: .attention, squareSize: 80, style: .walnut
+        )
+        SquareView(
+            piece: .empty, isLightSquare: true,
+            highlight: .target, squareSize: 80, style: .walnut
         )
     }
     .padding()
 }
 
-// Ghost rook in the four board styles — left square shows the ghost
-// (empty square + ghostPiece), right shows what it looks like once the
-// real rook lands (ghost is occluded by the real piece).
+// Ghost across the four styles, plus the gating case: the occupied middle
+// square draws no ghost. In the app the real piece renders above it in the
+// layer — what this bare square shows is the absence that makes room.
 #Preview("Castling Ghost") {
     VStack(spacing: 0) {
         ForEach(BoardStyle.allCases, id: \.self) { style in
             HStack(spacing: 0) {
                 SquareView(
-                    piece: .empty, pieceID: nil,
-                    isLightSquare: true, highlight: SquareHighlight(),
+                    piece: .empty, isLightSquare: true,
+                    highlight: SquareHighlight(),
                     squareSize: 80, style: style,
                     ghostPiece: .whiteRook
                 )
                 SquareView(
-                    piece: .whiteRook, pieceID: PieceID(rawValue: 7),
-                    isLightSquare: false, highlight: SquareHighlight(),
+                    piece: .whiteRook, isLightSquare: false,
+                    highlight: SquareHighlight(),
                     squareSize: 80, style: style,
                     ghostPiece: .whiteRook
                 )
                 SquareView(
-                    piece: .empty, pieceID: nil,
-                    isLightSquare: false, highlight: SquareHighlight(),
-                    squareSize: 80, style: style,
-                    ghostPiece: .blackRook
-                )
-                SquareView(
-                    piece: .blackRook, pieceID: PieceID(rawValue: 23),
-                    isLightSquare: true, highlight: SquareHighlight(),
+                    piece: .empty, isLightSquare: false,
+                    highlight: SquareHighlight(),
                     squareSize: 80, style: style,
                     ghostPiece: .blackRook
                 )
@@ -214,71 +171,18 @@ internal struct SquareView: View {
     .padding()
 }
 
-// Same square rendered in each board style.
+// The four styles' fills, light and dark.
 #Preview("All Styles") {
     HStack(spacing: 4) {
         ForEach(BoardStyle.allCases, id: \.self) { style in
             VStack(spacing: 0) {
                 SquareView(
-                    piece: .blackQueen, pieceID: PieceID(rawValue: 28),
-                    isLightSquare: true, highlight: SquareHighlight(),
-                    squareSize: 80, style: style
+                    piece: .empty, isLightSquare: true,
+                    highlight: SquareHighlight(), squareSize: 80, style: style
                 )
                 SquareView(
-                    piece: .whitePawn, pieceID: PieceID(rawValue: 8),
-                    isLightSquare: false, highlight: SquareHighlight(),
-                    squareSize: 80, style: style
-                )
-            }
-        }
-    }
-    .padding()
-}
-
-#Preview("Size Scaling") {
-    HStack(alignment: .bottom, spacing: 8) {
-        SquareView(
-            piece: .whiteQueen, pieceID: PieceID(rawValue: 3),
-            isLightSquare: false, highlight: SquareHighlight(),
-            squareSize: 40, style: .rosewood
-        )
-        SquareView(
-            piece: .whiteQueen, pieceID: PieceID(rawValue: 3),
-            isLightSquare: false, highlight: SquareHighlight(),
-            squareSize: 80, style: .rosewood
-        )
-        SquareView(
-            piece: .whiteQueen, pieceID: PieceID(rawValue: 3),
-            isLightSquare: false, highlight: SquareHighlight(),
-            squareSize: 120, style: .rosewood
-        )
-    }
-    .padding()
-}
-
-#Preview("All Pieces") {
-    VStack(spacing: 0) {
-        HStack(spacing: 0) {
-            ForEach(Array([
-                Piece.whitePawn, .whiteKnight, .whiteBishop,
-                .whiteRook, .whiteQueen, .whiteKing
-            ].enumerated()), id: \.offset) { index, piece in
-                SquareView(
-                    piece: piece, pieceID: PieceID(rawValue: UInt8(index)),
-                    isLightSquare: index % 2 == 0, highlight: SquareHighlight(),
-                    squareSize: 70, style: .wenge
-                )
-            }
-        }
-        HStack(spacing: 0) {
-            ForEach(Array([
-                Piece.blackPawn, .blackKnight, .blackBishop,
-                .blackRook, .blackQueen, .blackKing
-            ].enumerated()), id: \.offset) { index, piece in
-                SquareView(
-                    piece: piece, pieceID: PieceID(rawValue: UInt8(index + 16)),
-                    isLightSquare: index % 2 != 0, highlight: SquareHighlight(),
-                    squareSize: 70, style: .wenge
+                    piece: .empty, isLightSquare: false,
+                    highlight: SquareHighlight(), squareSize: 80, style: style
                 )
             }
         }

@@ -81,7 +81,9 @@ internal struct LibraryGamePreviewView: View {
     private var board: some View {
         BoardView(
             position: preview?.position ?? .empty,
-            pieceTracker: preview?.pieceTracker ?? .empty,
+            pieces: preview.map {
+                PieceIdentity.resolved(position: $0.position, tracker: $0.pieceTracker)
+            } ?? [],
             style: boardStyle,
             perspective: .white,
             lastMove: preview?.lastMove,
