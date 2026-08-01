@@ -161,7 +161,10 @@ internal struct InspectorSectionHeader<Actions: View>: View {
         .font(.body)
         .help(label)
         .accessibilityLabel(label)
-        .accessibilityIdentifier(AccessibilityID.inspectorSectionDisclosure(section))
+        // The registry takes the raw value because it compiles into the UI test
+        // target too, which has no `InspectorSection`. This is the only caller,
+        // and it holds the real thing — see the registry entry for the trade.
+        .accessibilityIdentifier(AccessibilityID.inspectorSectionDisclosure(section.rawValue))
     }
 }
 

@@ -293,15 +293,29 @@ internal enum AccessibilityID {
     /// A function rather than ten constants for the `boardSquare(_:)` reason:
     /// the family is generated from a type that already exists and already
     /// guarantees uniqueness, so ten hand-written entries would be ten chances
-    /// to typo a string the compiler cannot check. Passing the enum rather
-    /// than its raw value is what makes a caller unable to invent a section.
+    /// to typo a string the compiler cannot check.
+    ///
+    /// **It takes the raw value, not `InspectorSection`, and that is not a
+    /// weakening — it is this file's actual constraint.** This registry is
+    /// compiled into the UI test target as well as the app, which is the whole
+    /// point of it (F8's "separate module — keep in sync" drift, killed). The
+    /// test target has none of the app's types, so *every* function here takes
+    /// a `String`: `boardSquare` takes algebraic notation rather than a
+    /// `Square`, `sidebarDestination` a raw value rather than a `Destination`.
+    /// Typing this one to the enum compiled beautifully in the app and broke
+    /// the moment the other target reached the same line.
+    ///
+    /// What is lost is a caller's inability to invent a section, and it is
+    /// bought back at the call site instead: `InspectorSectionHeader`'s private
+    /// `disclosure(for:)` is the only app-side caller and it holds a real
+    /// `InspectorSection` when it calls. One caller, holding the type.
     ///
     /// It exists at all because the platform control doesn't: a
     /// `Section(isExpanded:)` in a sidebar `List` reveals its chevron on
     /// hover, and a section nobody can see is collapsible is a section nobody
     /// expands.
-    internal static func inspectorSectionDisclosure(_ section: InspectorSection) -> String {
-        "inspector.\(section.rawValue).disclosure"
+    internal static func inspectorSectionDisclosure(_ sectionRawValue: String) -> String {
+        "inspector.\(sectionRawValue).disclosure"
     }
     
     /// Analysis-queue toolbar family (M-batch). `queue.status` has a
