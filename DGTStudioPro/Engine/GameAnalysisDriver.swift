@@ -201,7 +201,18 @@ internal final class GameAnalysisDriver {
 
         var state = GameState.starting
         let total = pgn.moves.count
-        
+
+        // How many per-ply saves in a row may fail before the pass stops
+        // pretending. One failed save is recoverable — the next save
+        // persists the whole context, so a transient miss costs nothing,
+        // which is why a single failure must *not* end the pass. Three in a
+        // row is systemic (full disk, wedged store), and riding that out
+        // used to land the pass on `.done` with a graph the in-memory model
+        // renders and nothing persisted — a green result that vanished at
+        // relaunch, with Console the only witness (1 Aug review, E1).
+        let saveFailureTolerance = 3
+        var consecutiveSaveFailures = 0
+
         for (index, san) in pgn.moves.enumerated() {
             if Task.isCancelled { break }
             
@@ -264,10 +275,26 @@ internal final class GameAnalysisDriver {
             )
             do {
                 try modelContext.save()
+                consecutiveSaveFailures = 0
             } catch {
+                consecutiveSaveFailures += 1
                 Self.logger.error(
-                    "modelContext.save() failed at ply \(index + 1): \(error.localizedDescription, privacy: .public)"
+                    "modelContext.save() failed at ply \(index + 1) (\(consecutiveSaveFailures) in a row): \(error.localizedDescription, privacy: .public)"
                 )
+                if consecutiveSaveFailures >= saveFailureTolerance {
+                    // The message follows the walk's other exits: name where
+                    // it stopped, say what was kept. "Up to the last
+                    // successful save", not "up to here" — evaluations since
+                    // that save exist only in memory, which is the whole
+                    // reason this exit exists.
+                    status = .failed(
+                        message: "The library stopped accepting saves at "
+                        + "\(Self.moveLabel(plyIndex: index, san: san)) "
+                        + "(\(error.localizedDescription)); evaluations up to "
+                        + "the last successful save were kept."
+                    )
+                    return
+                }
             }
         }
         
