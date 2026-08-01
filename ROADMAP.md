@@ -23,6 +23,18 @@ Players editing UITest M5 recorded as its honest gap, plus **D40′**, the
 orphan sweep the test's own preparation turned up. Base `3f785a3`. M6, M7 and
 M8 remain, unchanged and still reorderable.*
 
+*Revised 1 August 2026: **M8 moved to Landed — both items, in one pass**, the
+first milestone to be delivered whole in a single session. Two decisions,
+**D45′** (collapsible sections) and **D46′** (the magnifier window), plus a
+prerequisite neither item declared: **eight of the app's fifteen inspector
+section headers went through `InspectorSectionHeader` and seven did not**, so
+"every `InspectorSectionHeader` grows a chevron" would have reached barely half
+the app. Base `f64b8d4`, and the tree was **not** clean — D44′ was sitting in it
+uncommitted, the sixth such find in seven passes. Seven commits, 211 → 217
+sources, ⌘U green at both review points. **What is left is M6, and M7's two
+gated items** (Instruments, which needs Bera and a board; the Xcode 27 GM
+re-read, ~September).*
+
 *Revised 31 July 2026 (third): **M7's `RosterSummary` experiment run and
 closed** (D44′) — the item D43′ explicitly left open, and the last of this
 milestone's non-gated work. The `@MainActor` on the live-projection init was
@@ -292,58 +304,6 @@ down as an admission of ignorance rather than as an assertion.
 
 ---
 
-## M8 — Inspector chrome, second pass
-
-*(Added 29 July 2026 at Bera's request, mid-M1. Two quality-of-life
-features on the D26′ chrome family. No dependency on the rest — ride on
-appetite any time.)*
-
-**Goal: the inspectors' sections earn richer furniture — a zoomable
-evaluation graph and collapsible sections everywhere — without breaking the
-D26′ contract that any divergence between inspectors is a compile-visible
-choice.**
-
-1. **Evaluation-graph magnifier.** A magnifying-glass button in the
-   evaluation graph's section header — the `InspectorEditButtonView` slot
-   pattern (one `LocalizedStringKey` label feeding `.help` and
-   `.accessibilityLabel`, identifier required, registered in
-   `AccessibilityID`) — opening an enlarged reading of the analysis graph.
-   Decisions inside: what it opens (popover anchored to the header vs a
-   sheet — a popover keeps the inspector context visible and matches
-   "glance bigger, dismiss fast"); whether the enlarged graph gains hover
-   read-outs (ply + eval under the cursor) that the small one can't afford;
-   and whether the Board-review and Library inspectors share one enlarged
-   view — they should: one view, two presenters, the D18′ Edit Info
-   precedent. *(Recorded from Bera's 29 July ask; if the intent was zoom
-   controls on the graph itself rather than a header-launched enlarged
-   view, edit this entry before building.)*
-2. **Collapsible sections across all inspectors.** Every
-   `InspectorSectionHeader` grows a show/hide chevron — generalizing the
-   Library inspector's bespoke PGN-section disclosure, whose own doc
-   reserved the glyph "to keep consistent if a second collapsible section
-   ever wants the same control". That section migrates to the shared
-   mechanism in the same pass: one collapse control in the app, not two.
-   Decisions inside: where collapsed state lives (per-tab `TabState`, the
-   inspector-visibility precedent, vs persisted `@AppStorage` per section —
-   persistence matches the view-mode keys but mints a lot of `StorageKeys`;
-   decide and record); whether D26′'s "empty state renders outside the
-   `List`" contract needs a collapsed-state sibling rule; and the animation
-   (the PGN section's `.snappy(duration: 0.2)` is the precedent).
-
-**Constraints from standing contracts:** sections default **open** — the
-UITest suite pins inspector-profile presence immediately after selection,
-so a collapsed-by-default section is a UITest change in the same commit
-(the accessibility-contract rule). *The M1-era "one deliberate exception"
-clause is gone: the PGN section's collapsed default was reversed on 30 July,
-so every section in the app now defaults open and the shared mechanism
-inherits that uniformly.* New header buttons take required identifiers
-through `AccessibilityID` — the D26′ no-default lesson. The header's actions
-slot now has a two-control precedent in **two** places (the Library's PGN
-header, and M5's rename-pencil-plus-menu), so a third control is a layout
-question already answered.
-
----
-
 ## Horizon — known, wanted, unscheduled
 
 File-menu Export via `.focusedSceneValue` (the pattern has three worked
@@ -361,6 +321,91 @@ GM).
 ---
 
 ## Landed
+
+### M8 — Inspector chrome, second pass *(landed 1 August 2026)*
+
+Both items, one pass, against `f64b8d4` — seven commits, ⌘U green at both
+review points. Decisions **D45′** and **D46′**. Six files added
+(`InspectorSectionCollapse`, `CollapsibleSection`, `EvaluationGraphReading`,
+`EvaluationGraphWindow`, and two suites), 211 → 217 sources.
+
+**The milestone had a prerequisite it did not know about, and finding it is the
+entry's real content.** Item 2 read "every `InspectorSectionHeader` grows a
+show/hide chevron", which is a complete-sounding instruction over an incomplete
+set: **eight of the app's fifteen inspector section headers used that type and
+seven did not.** Built as written, 8 of 15 sections would have become
+collapsible with no rule a reader could perceive — Board's Game and Opening
+folding while its Evaluation and Moves could not — which is exactly the
+divergence D26′ exists to prevent, minted by the milestone whose stated
+constraint was not breaking D26′. Item 1 shared the blocker: the Evaluation
+header it wanted to hang a magnifier on was a raw `Text` in both inspectors.
+
+The sentence was **true**, which is what makes this a new species of the
+project's favourite failure. D42′ found a claim about a file that did not
+exist, D43′ a number nobody could source, D44′ a rule the language does not
+have — all false. This one quantified correctly over a smaller set than its
+reader assumed, and nothing about a true statement ever fails. The check was
+one grep.
+
+**Gate evidence.**
+
+- **Every section header goes through the shared type** (`0d0dcc3`), all
+  fifteen, plus the two previews that simulate an inspector. Board's Moves
+  header was the sharpest case: a hand-rolled `HStack` reimplementing
+  `InspectorSectionHeader` and disagreeing with it on three counts, sitting in
+  the same file whose roster header used the type.
+- **The trailing inset has one owner.** `InspectorEditButtonView`'s
+  `.padding(.trailing, 10)` was doing two jobs — insetting the header's
+  trailing control and widening the pencil's hit target — which coincide only
+  while the pencil is last. M5's Players header put a menu after it, so the
+  edge inset transferred to a control carrying none: **three distances from one
+  edge**, 10 pt at the four lone pencils, 8 pt at the PGN glyph pair, 0 pt at
+  the actions menu. Now `InspectorSectionHeader.actionsInset`, applied to the
+  whole row so a host cannot get it wrong. The post-M4 audit had fixed the
+  *stacking* form of this defect and left the number where it was.
+- **Collapse is one argument, not two** (`a1289c2`, `4daaefe`).
+  `CollapsibleSection` takes one `InspectorSection` and drives both the chevron
+  and the body gate, making "header toggles X, body checks Y" unrepresentable
+  — M5's two-guards agreement in structural form. Ten tests on the store: the
+  empty default, that construction writes nothing, the round trip through a
+  *reload* rather than through memory, and both halves of the retired-section
+  rule.
+- **The magnifier opens in its own window** (`1931583`) with hover read-outs,
+  and `EvaluationGraphRequest` keeps `openWindow(value:)` unambiguous — that
+  call routes by value *type*, the main group already claims
+  `PersistentIdentifier`, and three call sites depend on it. Thirteen tests on
+  the two pure mappings, including the ply↔x round trip across a whole 63-ply
+  curve and the evaluation label asserted against `EvaluationBarReading` rather
+  than a literal.
+- **Four stale claims corrected in code this touched**, all found by reading
+  rather than by any check: the Library disclosure's doc said the chevron led
+  the copy button and the `HStack` had it trailing; the paragraph above it
+  justified a choice on "every other section has no disclosure chrome", true
+  when written and false the moment this milestone landed; the "Raw PGN"
+  preview said the section starts collapsed, reversed on 30 July; and the
+  roster pencil's call site still named `InspectorEditButtonView` as the
+  inset's owner.
+- **Two build lessons, both pre-recorded** (`81a29ec`, `caae1d7`): generic
+  types have no stored static properties, which `SevenTagRosterSection` records
+  at `noGamePlaceholder` in a file this milestone had open; and
+  `AccessibilityID.swift` compiles into the UI test target, so every function
+  there takes a `String` — a constraint obeyed by every entry and stated by
+  none, which reads as taste until you break it.
+- **Verified clean:** standing prohibitions zero, beta surface (D27′) zero, no
+  raw identifier strings, 144 registry entries all referenced, mode 6 still at
+  two waived warnings with six new files added under complete concurrency.
+
+**The agreement this earned.** *A sentence that says "every" is a claim about a
+set, and the set has a size.* When a plan quantifies over a category, count the
+category before believing the plan's scope — especially when the plan's author
+could see the category and chose not to enumerate it.
+
+**Not done, deliberately, and on the manual-check list instead:** the chevron's
+12 pt gap to the actions slot rests on a bare `EmptyView` not being laid out.
+It compiles either way, so ⌘U cannot answer it; the *Actions — Every Arity*
+preview's collapsible-with-no-actions row is where it becomes visible.
+
+---
 
 ### Between-milestone sweep *(landed 30 July 2026)*
 
