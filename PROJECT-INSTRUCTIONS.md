@@ -704,7 +704,7 @@ Rejected: **a periodic dump every few seconds** (the audit's optional extra — 
 - Engine teardown must complete even when the surrounding work is cancelled — and must strand no waiter.
 - [%eval …] parsing rejects what it cannot represent. The bundled ECO table is *trusted* content by contrast, so its parser skips malformed rows and logs rather than hardening against hostility.
 - DGTSessionLog discipline. record buffers and Console-mirrors; capture buffers only; recordDesync for irreconcilable boards. Ring-bounded.
-- Test hosts stay hermetic.
+- Test hosts stay hermetic — **windows included since 2 Aug**: the UITest `launch()` passes the persistence-ignore argument, because a crashed prior run otherwise turns the next launch into a restoration launch that restores zero windows and defeats `.defaultLaunchBehavior(.presented)` (observed in a run log; the File ▸ New Window fallback was carrying every post-crash launch, eight seconds late).
 
 ## Toolchain forward notes (Xcode 27 / Swift 6.4 / 2027 SDKs — all beta)
 

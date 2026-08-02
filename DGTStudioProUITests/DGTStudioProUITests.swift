@@ -87,7 +87,20 @@ final class DGTStudioProUITests: XCTestCase {
         // domain outranks *writes*, so clicking a view-mode segment
         // changed the control but never the content (two previously
         // green card tests went red).
-        app.launchArguments = ["-uiTestSeed", "YES"]
+        // Windows included in the hermetic contract (2 Aug, from a run log):
+        // after any crashed or timed-out run, macOS treats the next launch as
+        // a *restoration* launch — saved application state supersedes
+        // default-scene creation, restores zero windows, and the main
+        // group's `.defaultLaunchBehavior(.presented)` never fires. The run
+        // then rides the File ▸ New Window fallback below, eight seconds
+        // late, in a window the launch path never made. Ignoring persisted
+        // state makes every seeded launch a true clean launch, which is the
+        // only kind `.presented` is defined over. `UITestSeed` wipes the
+        // scratch defaults; this is the same wipe for the window layer.
+        app.launchArguments = [
+            "-uiTestSeed", "YES",
+            "-ApplePersistenceIgnoreState", "YES",
+        ]
         app.launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10),
                       "App should reach the foreground")
