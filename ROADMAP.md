@@ -338,8 +338,8 @@ with the removal recorded at its anchor, `rankingRow` re-homed on the merged
 table's rank cell beside `playerRow`'s name cell — two currencies, two
 elements; the ladder-order UITest retargeted to Players with its assertions
 unchanged (the seeded expectations pin the same comparator through the new
-surface); the M5 editing flows untouched. ⌘U expected green, not claimed —
-the merged suite includes the retargeted ladder pin, and the Players editing
+surface); the M5 editing flows untouched. ⌘U green — reported by Bera,
+2 August, unit plan, the retargeted ladder pin included; the Players editing
 tests' standing § Zero failures remain that investigation's, not this
 milestone's.
 
