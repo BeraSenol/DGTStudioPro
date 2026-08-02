@@ -14,6 +14,17 @@ internal enum StorageKeys {
     // `@AppStorage` initial and `BoardView`'s own) must agree on that default.
     internal static let showBoardCoordinates = "showBoardCoordinates"
 
+    // Board presentation (2 Aug 2026): the piece glide duration, in
+    // seconds. Absent reads as `BoardPieceLayer.defaultDuration` at all
+    // three read sites (the layer's own, SettingsView's slider, and
+    // `GameNavigationCommands`' step throttle — review stepping is paced
+    // to the glide), each spelled off the owning static so the number
+    // lives exactly once — the `EngineConfiguration` arrangement. The
+    // layer and the throttle clamp every read to
+    // `BoardPieceLayer.durationRange` (0.1…1 s), so a hand-edited default
+    // can't push the board into absurd motion.
+    internal static let pieceAnimationDuration = "pieceAnimationDuration"
+
     // First-run seed guard for the default smart tags (M-prs.5): the flag
     // — not tag count — decides, so deleting all defaults sticks.
     internal static let didSeedDefaultSmartTags = "didSeedDefaultSmartTags"
@@ -40,14 +51,14 @@ internal enum StorageKeys {
     internal static let defaultSite        = "defaultSite"
     internal static let defaultWhitePlayer = "defaultWhitePlayer"
 
-    // DGT board connection (M7): the last successfully connected device —
-    // path is the stable identity, the name rides along for logs/UI — plus
-    // the launch auto-connect preference. Written by `DGTConnection` on the
-    // `.connected` transition; read by `autoConnectAtLaunch()`. An absent
-    // `autoConnectOnLaunch` reads as true everywhere (the roadmap default).
-    internal static let rememberedDevicePath = "rememberedDevicePath"
-    internal static let rememberedDeviceName = "rememberedDeviceName"
-    internal static let autoConnectOnLaunch  = "autoConnectOnLaunch"
+    // DGT board connection (M7): the launch auto-connect preference. An
+    // absent `autoConnectOnLaunch` reads as true everywhere (the roadmap
+    // default). `rememberedDevicePath` / `rememberedDeviceName` retired
+    // 2 Aug 2026 with the device picker — the board is
+    // `DGTConnection.onlyBoardPath`, a constant, and a constant needs no
+    // memory; the stored values linger in existing defaults, unread (the
+    // `rankingsViewMode` stance).
+    internal static let autoConnectOnLaunch = "autoConnectOnLaunch"
 
     // Live play (M-ux.1, D13′): the illegal-move alert sound. An absent key
     // reads as true everywhere — the `autoConnectOnLaunch` semantics; the

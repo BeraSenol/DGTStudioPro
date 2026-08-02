@@ -101,6 +101,15 @@ internal final class DGTConnection {
     
     // MARK: Observable State
     
+    /// The one board this app will ever open (user decree, 2 Aug 2026):
+    /// the literal callout path, matched exactly — "never ever anything
+    /// else". Enumeration-number drift is an accepted failure mode by
+    /// choice: if macOS ever renames the port, Connect shows the error
+    /// window until the board is back on this path. This constant retired
+    /// the remembered-device machinery (M7.1) — a hardcoded identity needs
+    /// no memory — and the connect dialog's device picker with it.
+    internal static let onlyBoardPath = "/dev/cu.usbmodem01"
+
     private(set) internal var status: Status = .disconnected
     private(set) internal var availableDevices: [DGTSerialDevice] = []
     private(set) internal var boardInfo = BoardInfo()
@@ -204,10 +213,11 @@ internal final class DGTConnection {
         DGTDeviceDiscovery.availableDevices()
     }
     
-    /// UserDefaults seam (F9): tests inject a throwaway suite so the
-    /// remembered-device write after a first dump and the launch
-    /// auto-connect read never touch the developer's real preferences from
-    /// the ⌘U host. Production never writes it.
+    /// UserDefaults seam (F9): tests inject a throwaway suite so the launch
+    /// auto-connect's enabled-flag read never touches the developer's real
+    /// preferences from the ⌘U host. (The remembered-device *write* this
+    /// seam also isolated retired with the picker — the flag read is what
+    /// remains.) Production never writes it.
     @ObservationIgnored internal var defaults: UserDefaults = .standard
     
     @ObservationIgnored private var readTask: Task<Void, Never>?
@@ -276,35 +286,35 @@ internal final class DGTConnection {
         await connect(to: device, failureStyle: .announced)
     }
     
-    /// M7.2 — the launch path: if the feature is enabled and the remembered
-    /// device is currently attached, connect to it silently. Failures here
-    /// are `.quiet` — straight to `.disconnected` with a Console line, no
-    /// five-second red linger for a board that simply isn't plugged in. (A
-    /// remembered board that isn't even enumerated never opens anything at
-    /// all — see `DGTAutoConnectPolicy.launchTarget`.)
+    /// M7.2 — the launch path, in its one-board form (2 Aug 2026): if the
+    /// feature is enabled and `onlyBoardPath` is currently attached,
+    /// connect to it silently. Failures here are `.quiet` — straight to
+    /// `.disconnected` with a Console line, no five-second red linger for
+    /// a board that simply isn't plugged in. (A board that isn't even
+    /// enumerated never opens anything at all — see
+    /// `DGTAutoConnectPolicy.launchTarget`.)
     ///
-    /// This respects the dialog's confirm-before-connect contract: the
-    /// remembered device was explicitly user-confirmed once, then proved
-    /// itself with a board dump. `isLikelyBoard` remains sort-only and is
-    /// never auto-connect criteria — that rejection lives in the policy's
-    /// doc comment and its tests.
+    /// The old confirm-before-connect contract is discharged by the decree
+    /// itself: with exactly one lawful path, the constant *is* the standing
+    /// confirmation, and `isLikelyBoard` remains never consulted — the
+    /// policy's tests pin that a likely-looking stranger never wins.
     internal func autoConnectAtLaunch() async {
         // Absent reads as true — matches the `@AppStorage` default in
         // Settings ("Connect to board automatically", default on).
         let enabled = defaults.object(forKey: StorageKeys.autoConnectOnLaunch) as? Bool ?? true
-        
+
         guard let target = DGTAutoConnectPolicy.launchTarget(
             enabled: enabled,
-            rememberedPath: defaults.string(forKey: StorageKeys.rememberedDevicePath),
+            boardPath: Self.onlyBoardPath,
             among: enumerateDevices()
         ) else {
-            Self.logger.info("Auto-connect at launch: no eligible remembered device")
+            Self.logger.info("Auto-connect at launch: the board is not attached")
             return
         }
         // Paranoia more than necessity — nothing else connects this early.
         guard case .disconnected = status else { return }
-        
-        Self.logger.info("Auto-connecting to remembered device \(target.path, privacy: .public)")
+
+        Self.logger.info("Auto-connecting to the board at \(target.path, privacy: .public)")
         sessionLog?.capture(.info, "Auto-connecting to \(target.name) [\(target.path)]")
         await connect(to: target, failureStyle: .quiet)
     }
@@ -435,13 +445,12 @@ internal final class DGTConnection {
             physicalBoard = position
             publishBoardChange()
             // First dump confirms a live, talking board — whether this was a
-            // dialog connect or an M7.3 reconnect lap. Only now is the device
-            // worth remembering (M7.1): an attempt that never produced a dump
-            // proved nothing.
+            // window connect or an M7.3 reconnect lap. (This transition used
+            // to also persist the device for launch auto-connect; the
+            // remembered-device machinery retired with `onlyBoardPath`.)
             switch status {
             case .connecting(let device), .reconnecting(let device):
                 status = .connected(device)
-                rememberDevice(device)
                 Self.logger.info("Connected: first board dump received")
                 sessionLog?.capture(.info, "Connected: first board dump received from \(device.name)")
             default:
@@ -531,9 +540,8 @@ internal final class DGTConnection {
     // MARK: Auto-Reconnect (M7.3)
     
     /// Enters `.reconnecting` and starts the timed retry loop. The target is
-    /// the device we were just connected to — by construction the same one
-    /// `rememberDevice` persisted, but read from `status` so the loop can
-    /// never chase a stale default.
+    /// the device we were just connected to, read from `status` — which is
+    /// `onlyBoardPath` by construction, since nothing else can ever connect.
     private func beginReconnect(to device: DGTSerialDevice) {
         Self.logger.error("Board vanished mid-game — auto-reconnecting to \(device.path, privacy: .public)")
         sessionLog?.capture(.error, "Board vanished mid-game — auto-reconnecting to \(device.name)")
@@ -622,17 +630,12 @@ internal final class DGTConnection {
         reconnectTask = nil
     }
     
-    // MARK: Remembered Device (M7.1)
-    
-    /// Persists the successfully connected device so launch auto-connect
-    /// (M7.2) knows what to reach for. Written only on the `.connected`
-    /// transition — see `handle(_:)`. `path` is the stable identity
-    /// (`DGTSerialDevice.id`); the name rides along for logs and UI.
-    private func rememberDevice(_ device: DGTSerialDevice) {
-        defaults.set(device.path, forKey: StorageKeys.rememberedDevicePath)
-        defaults.set(device.name, forKey: StorageKeys.rememberedDeviceName)
-    }
-    
+    // (The Remembered Device section (M7.1) lived here until 2 Aug 2026 —
+    // `rememberDevice(_:)`, written on the `.connected` transition, read by
+    // launch auto-connect. Retired with the device picker: `onlyBoardPath`
+    // is a constant, and a constant needs no memory. The stored defaults
+    // linger unread, the `rankingsViewMode` stance.)
+
     // MARK: Session Recording
     
     /// Begins capturing every physical-board change into a `DGTSessionRecording`

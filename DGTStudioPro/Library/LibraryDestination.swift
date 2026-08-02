@@ -49,6 +49,20 @@ internal struct LibraryDestination: View {
     @State private var importProgress: ImportProgress?
     @State private var isQueuePopoverPresented = false
     
+    // MARK: Search & Filters (2 Aug 2026 — native `.searchable`, restored
+    // the same day after a custom toolbar field was tried and reverted: the
+    // system field claims the toolbar's trailing edge and that isn't
+    // negotiable, but native search behavior won over field placement.)
+    @State private var searchText = ""
+    /// The two toolbar-menu filters; nil means "any". They are filters and
+    /// not search scopes deliberately: they answer in the field's own
+    /// vocabulary rather than free text, they stay useful with no query
+    /// typed, and their active state is visible on the toolbar (the filled
+    /// filter glyph) — a scope bar exists only while searching, which would
+    /// make an empty-query filter invisible after the field closes.
+    @State private var resultFilter: GameResult?
+    @State private var analysisFilter: Bool?
+    
     // MARK: Initializers
     internal init(
         filter: LibraryFilter? = nil,
@@ -61,13 +75,67 @@ internal struct LibraryDestination: View {
     }
     
     // MARK: Computed Properties
+    
+    /// Sidebar filter → search → menu filters, in that order — narrowing
+    /// only, so the stages compose without caring about each other. Every
+    /// downstream consumer (`selectedPGN`, `gamesInDisplayOrder`, and
+    /// therefore batch analyze/export/delete) reads the same narrowed list,
+    /// which is exactly how the tag filter already behaved: a hidden game
+    /// is out of every bulk action, never silently included.
     private var filteredGames: [PGN] {
-        guard let filter else { return games }
-        return games.filter { filter.matches($0) }
+        var result = games
+        if let filter {
+            result = result.filter { filter.matches($0) }
+        }
+        // The emptiness guard only skips the walk — an empty query matches
+        // everything by the matcher's own contract.
+        if !searchText.isEmpty {
+            result = result.filter {
+                SearchMatch.matches(query: searchText, fields: searchFields(of: $0))
+            }
+        }
+        if let resultFilter {
+            result = result.filter { $0.result == resultFilter }
+        }
+        if let analysisFilter {
+            // `AnalysisGlyph.isAnalyzed`, not a bare `isEmpty` check: the
+            // filter and the gear glyphs must answer "analyzed?" the same
+            // way, and that type is the one spelling.
+            result = result.filter { AnalysisGlyph.isAnalyzed($0) == analysisFilter }
+        }
+        return result
     }
     
+    /// The model side of the `LibraryFilter` split: the pure matcher takes
+    /// strings, this maps a game into its searchable ones. Every field,
+    /// always — the scope picker that once narrowed this set
+    /// (`LibrarySearchScope`) was retired 2 Aug 2026, because a query
+    /// already names its field: "1-0" is a result, "C60" is an opening, a
+    /// surname is a player. The result's raw value is included on purpose
+    /// for exactly that reason.
+    private func searchFields(of game: PGN) -> [String] {
+        [game.name, game.whiteDisplayName, game.blackDisplayName,
+         game.event, game.site, game.result.rawValue,
+         game.opening?.code, game.opening?.fullName].compactMap { $0 }
+    }
+    
+    /// Whether the empty gate should read as "no matches" rather than
+    /// "no games".
+    private var isNarrowedBySearchOrFilters: Bool {
+        !searchText.isEmpty || resultFilter != nil || analysisFilter != nil
+    }
+    
+    private var hasActiveMenuFilters: Bool {
+        resultFilter != nil || analysisFilter != nil
+    }
+    
+    /// The single selected game, nil for empty *and* multiple — the columns
+    /// detail's rule (2 Aug 2026): the inspector details one thing, and
+    /// with a rubber-band or ⌘-click selection "the first of the set" is an
+    /// arbitrary game wearing a specific game's face. The inspector gets
+    /// the count instead and names it.
     private var selectedPGN: PGN? {
-        guard let id = selectedPGNs.first else { return nil }
+        guard selectedPGNs.count == 1, let id = selectedPGNs.first else { return nil }
         return filteredGames.first(where: { $0.id == id })
     }
     
@@ -130,9 +198,9 @@ internal struct LibraryDestination: View {
                 backfillPlayerLinks()
                 if viewMode == .gallery { tabState.libraryInspectorPresented = true }
             }
-            // `.task`, not a fourth line in `onAppear`: this one has to await
-            // the ECO table, and awaiting it is the entire point — see
-            // `backfillClassifications()`.
+        // `.task`, not a fourth line in `onAppear`: this one has to await
+        // the ECO table, and awaiting it is the entire point — see
+        // `backfillClassifications()`.
             .task {
                 await backfillClassifications()
             }
@@ -155,8 +223,21 @@ internal struct LibraryDestination: View {
             }
             Group {
                 if filteredGames.isEmpty {
-                    emptyState
-                        .accessibilityIdentifier(AccessibilityID.libraryEmptyState)
+                    // Two vocabularies for one gate: an empty *library*
+                    // invites importing; an empty *result set* names the
+                    // narrowing that caused it. The identifier stays on the
+                    // true empty state — the UITests' seeded runs never
+                    // search.
+                    if isNarrowedBySearchOrFilters {
+                        ContentUnavailableView(
+                            "No Matches",
+                            systemImage: "magnifyingglass",
+                            description: Text("No games match the current search or filters.")
+                        )
+                    } else {
+                        emptyState
+                            .accessibilityIdentifier(AccessibilityID.libraryEmptyState)
+                    }
                 } else {
                     modeView
                 }
@@ -173,11 +254,17 @@ internal struct LibraryDestination: View {
         .inspector(isPresented: $tabState.libraryInspectorPresented) {
             LibraryInspectorView(
                 pgn: selectedPGN,
+                selectionCount: selectedPGNs.count,
                 queue: tabState.analysisQueue
             )
-            .inspectorColumnWidth(min: 320, ideal: 325, max: 430)
+            .inspectorColumnWidth(min: 310, ideal: 310, max: 430)
         }
         .toolbar { toolbarContent }
+        .searchable(
+            text: $searchText,
+            placement: .toolbarPrincipal,
+            prompt: "Search Games"
+        )
         .sheet(isPresented: Binding(present: $importProgress)) {
             if let importProgress {
                 ImportStatusView(progress: importProgress) {
@@ -324,11 +411,63 @@ internal struct LibraryDestination: View {
     /// alert blew the type-check budget.
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        transferToolbarItems
-        ToolbarSpacer()
+        filterToolbarItem
+        ToolbarSpacer(.flexible)
         analysisToolbarItems
-        ToolbarSpacer()
+        ToolbarSpacer(.fixed)
+        transferToolbarItems
+        ToolbarSpacer(.fixed)
         trailingToolbarItems
+    }
+    
+    /// The search-independent half of the 2 Aug 2026 search feature — see
+    /// the `resultFilter` declaration for why these are a menu and not
+    /// scopes. Content side of the break, the Maintenance-menu argument:
+    /// it acts on what the list shows.
+    @ToolbarContentBuilder
+    private var filterToolbarItem: some ToolbarContent {
+        ToolbarItem {
+            Menu {
+                Picker("Result", selection: $resultFilter) {
+                    Text("Any Result").tag(GameResult?.none)
+                    ForEach(GameResult.allCases, id: \.self) { result in
+                        Text(Self.filterLabel(for: result)).tag(GameResult?.some(result))
+                    }
+                }
+                Picker("Analysis", selection: $analysisFilter) {
+                    Text("Any Analysis").tag(Bool?.none)
+                    Text("Analyzed").tag(Bool?.some(true))
+                    Text("Not Analyzed").tag(Bool?.some(false))
+                }
+                if hasActiveMenuFilters {
+                    Divider()
+                    Button("Clear Filters") {
+                        resultFilter = nil
+                        analysisFilter = nil
+                    }
+                }
+            } label: {
+                Label("Filter", systemImage: hasActiveMenuFilters
+                      ? "line.3.horizontal.decrease.circle.fill"
+                      : "line.3.horizontal.decrease.circle")
+            }
+            .menuIndicator(.hidden)
+            .help(hasActiveMenuFilters
+                  ? "Filters are narrowing the list"
+                  : "Filter by result or analysis state")
+        }
+    }
+    
+    /// Menu copy pairs the word with PGN's own vocabulary — the raw value
+    /// stays the app's one rendering of a result (RosterSummary shows it
+    /// verbatim); this label only introduces it.
+    private static func filterLabel(for result: GameResult) -> String {
+        switch result {
+        case .whiteWins: "White Wins (1-0)"
+        case .blackWins: "Black Wins (0-1)"
+        case .draw:      "Draw (1/2-1/2)"
+        case .ongoing:   "Ongoing (*)"
+        }
     }
     
     /// The Library's two file doors, in and out — one toolbar cell, with a
@@ -341,35 +480,34 @@ internal struct LibraryDestination: View {
     @ToolbarContentBuilder
     private var transferToolbarItems: some ToolbarContent {
         ToolbarItem {
-            HStack {
-                // Restored in M-batch. The button had been lost in an earlier
-                // toolbar edit, leaving three fossils: `presentOpenPanel()`
-                // orphaned, this identifier copy-pasted onto the view-mode
-                // picker's chain (where the outer of two chained identifiers
-                // won, mislabeling the picker), and the import-button UITest
-                // green against that mislabeled picker. Drag-and-drop had
-                // silently become the only import route.
-                Button {
-                    presentOpenPanel()
-                } label: {
-                    Label("Import", systemImage: "square.and.arrow.down")
-                }
-                .help("Import PGN files")
-                .accessibilityIdentifier(AccessibilityID.libraryImportButton)
-                Divider()
-                Button {
-                    requestExport(ids: selectedPGNs)
-                } label: {
-                    Label("Export", systemImage: "square.and.arrow.up")
-                }
-                .disabled(selectedPGNs.isEmpty)
-                .help(
-                    selectedPGNs.count > 1
-                    ? "Export \(selectedPGNs.count) selected games as PGN files"
-                    : "Export the selected game as a PGN file"
-                )
-                .accessibilityIdentifier(AccessibilityID.libraryExportButton)
+            // Restored in M-batch. The button had been lost in an earlier
+            // toolbar edit, leaving three fossils: `presentOpenPanel()`
+            // orphaned, this identifier copy-pasted onto the view-mode
+            // picker's chain (where the outer of two chained identifiers
+            // won, mislabeling the picker), and the import-button UITest
+            // green against that mislabeled picker. Drag-and-drop had
+            // silently become the only import route.
+            Button {
+                presentOpenPanel()
+            } label: {
+                Label("Import", systemImage: "square.and.arrow.down")
             }
+            .help("Import PGN files")
+            .accessibilityIdentifier(AccessibilityID.libraryImportButton)
+        }
+        ToolbarItem {
+            Button {
+                requestExport(ids: selectedPGNs)
+            } label: {
+                Label("Export", systemImage: "square.and.arrow.up")
+            }
+            .disabled(selectedPGNs.isEmpty)
+            .help(
+                selectedPGNs.count > 1
+                ? "Export \(selectedPGNs.count) selected games as PGN files"
+                : "Export the selected game as a PGN file"
+            )
+            .accessibilityIdentifier(AccessibilityID.libraryExportButton)
         }
     }
     
@@ -399,7 +537,16 @@ internal struct LibraryDestination: View {
             Button {
                 requestAnalysis(ids: selectedPGNs)
             } label: {
-                Label("Analyze", systemImage: "wand.and.stars")
+                // Aggregate glyph: the checkmark only once *every* selected
+                // game is analyzed — until then the button has work left,
+                // which is what the xmark says. An empty (disabled)
+                // selection reads as work too, harmlessly.
+                Label("Analyze", systemImage: AnalysisGlyph.name(
+                    analyzed: {
+                        let games = gamesInDisplayOrder(selectedPGNs)
+                        return !games.isEmpty && games.allSatisfy(AnalysisGlyph.isAnalyzed)
+                    }()
+                ))
             }
             // Queue-of-N since M-batch: any non-empty selection enqueues
             // in display order (see `requestAnalysis(ids:)`). The old
@@ -412,6 +559,16 @@ internal struct LibraryDestination: View {
                 : "Analyze the selected game with Stockfish"
             )
             .accessibilityIdentifier(AccessibilityID.libraryAnalyzeButton)
+        }
+        ToolbarItem {
+            Button(role: .destructive) {
+                requestDeleteSelection()
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+            .disabled(selectedPGNs.isEmpty)
+            .help(selectedPGNs.count > 1 ? "Delete \(selectedPGNs.count) selected games" : "Delete selected game")
+            .accessibilityIdentifier(AccessibilityID.libraryDeleteButton)
         }
         // Visible only while a batch runs or a drained batch left
         // failures behind — see `queueStatusLabel` for the full rule.
@@ -444,17 +601,6 @@ internal struct LibraryDestination: View {
     /// window, the picker on the destination's content).
     @ToolbarContentBuilder
     private var trailingToolbarItems: some ToolbarContent {
-        ToolbarItem {
-            Button(role: .destructive) {
-                requestDeleteSelection()
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
-            .disabled(selectedPGNs.isEmpty)
-            .help(selectedPGNs.count > 1 ? "Delete \(selectedPGNs.count) selected games" : "Delete selected game")
-            .accessibilityIdentifier(AccessibilityID.libraryDeleteButton)
-        }
-        ToolbarSpacer()
         viewModeToolbarItem
         ToolbarSpacer(.fixed)
         ToolbarItem {
@@ -675,7 +821,7 @@ internal struct LibraryDestination: View {
             Self.logger.error("Player-link backfill failed: \(error.localizedDescription, privacy: .public)")
         }
     }
-
+    
     /// D34′'s eager half: an opening name costs a dictionary probe, so the
     /// Library heals pre-M4 rows on appearance rather than making the user
     /// re-run a depth-18 analysis to learn one.
@@ -701,7 +847,7 @@ internal struct LibraryDestination: View {
             Self.logger.error("Classification backfill failed: \(error.localizedDescription, privacy: .public)")
         }
     }
-
+    
     // MARK: Export (D24′)
     
     /// Single-game entry (a card's context menu). One game means a save

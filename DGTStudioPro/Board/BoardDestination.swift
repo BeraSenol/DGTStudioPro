@@ -358,7 +358,7 @@ internal struct BoardDestination: View {
                 onEditInfo:   { activeEditor = .info },
                 onEditMoves:  { activeEditor = .movetext }
             )
-            .inspectorColumnWidth(min: 320, ideal: 325, max: 430)
+            .inspectorColumnWidth(min: 340, ideal: 340, max: 430)
         }
     }
     
@@ -374,7 +374,7 @@ internal struct BoardDestination: View {
         mirrorBoard
             .inspector(isPresented: $tabState.boardInspectorPresented) {
                 liveInspector
-                    .inspectorColumnWidth(min: 320, ideal: 325, max: 430)
+                    .inspectorColumnWidth(min: 340, ideal: 340, max: 430)
             }
         // M4.3 — the resume offer. A modal fork, not a HUD banner,
         // because Decision #3 makes this a genuine either/or the player

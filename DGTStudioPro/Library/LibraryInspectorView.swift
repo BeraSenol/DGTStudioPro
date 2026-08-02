@@ -14,6 +14,14 @@ internal struct LibraryInspectorView: View {
     // MARK: Stored Properties
     internal let pgn: PGN?
     
+    /// How many games the destination's selection holds (2 Aug 2026).
+    /// `pgn` arrives nil for empty *and* multiple selections — the
+    /// destination's rule — so without the count this view could not tell
+    /// "select something" from "you selected twelve things". Defaulted to
+    /// zero so the previews and the empty state read unchanged; the
+    /// destination always passes it.
+    internal let selectionCount: Int
+    
     /// The tab's analysis queue. The inspector renders the queue's view
     /// of the displayed game and routes every control through it — it
     /// owns no driver of its own since M-batch (see
@@ -27,9 +35,11 @@ internal struct LibraryInspectorView: View {
     // MARK: Initializers
     internal init(
         pgn: PGN? = nil,
+        selectionCount: Int = 0,
         queue: AnalysisQueueController
     ) {
         self.pgn = pgn
+        self.selectionCount = selectionCount
         self.queue = queue
     }
     
@@ -49,6 +59,8 @@ internal struct LibraryInspectorView: View {
                     .id(pgn.id)
             }
             .listStyle(.sidebar)
+        } else if selectionCount > 1 {
+            multiSelectionState
         } else {
             emptyState
         }
@@ -61,6 +73,18 @@ internal struct LibraryInspectorView: View {
             systemImage: "document.fill",
             message: "Select a game from the library to view its details and analysis.",
             identifier: AccessibilityID.libraryInspectorEmpty
+        )
+    }
+    
+    /// The counting variant: same D26′ chrome, same outside-the-`List`
+    /// contract, and the symbol the columns detail pane uses for the same
+    /// state — two surfaces, one vocabulary for "you selected many".
+    private var multiSelectionState: some View {
+        InspectorEmptyState(
+            title: "\(selectionCount) Games Selected",
+            systemImage: "document.on.document.fill",
+            message: "The toolbar's Analyze, Export and Delete act on the whole selection.",
+            identifier: AccessibilityID.libraryInspectorMulti
         )
     }
 }
@@ -78,7 +102,7 @@ private struct LoadedSection: View {
     @FocusState private var isNameFieldFocused: Bool
     @State private var isEditingName: Bool = false
     @State private var draftName: String = ""
-
+    
     // MARK: Body
     var body: some View {
         Group {
@@ -178,7 +202,7 @@ private struct LoadedSection: View {
             )
             .frame(height: 100)
             .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
-
+            
             HStack {
                 Spacer()
                 reviewButton
@@ -245,16 +269,18 @@ private struct LoadedSection: View {
             } label: {
                 Label(
                     hasRecordedAnalysis ? "Re-analyze" : "Analyze",
-                    systemImage: "wand.and.stars"
+                    systemImage: AnalysisGlyph.name(analyzed: hasRecordedAnalysis)
                 )
             }
         }
     }
     
     /// Whether any ply of this game carries a recorded evaluation —
-    /// what "Re-analyze" keys off (see `analysisControlRow`).
+    /// what "Re-analyze" and the gear glyph key off. Delegated to
+    /// `AnalysisGlyph` since the glyph unified this spelling with the
+    /// search filter's.
     private var hasRecordedAnalysis: Bool {
-        pgn.evaluations.contains { $0 != nil }
+        AnalysisGlyph.isAnalyzed(pgn)
     }
     
     // MARK: PGN Section
@@ -346,7 +372,7 @@ private struct LoadedSection: View {
     // `HStack` put it trailing. The shared header implements what the comment
     // said, which changes this section's pixels — the copy glyph and the
     // chevron swap places.
-
+    
     /// Puts the exported bytes on the pasteboard, so a game reaches a mail
     /// draft or an analysis site without a round trip through the
     /// filesystem. In the header rather than beside the text so it works
@@ -443,6 +469,15 @@ private struct LoadedSection: View {
 #Preview("Empty") {
     LibraryInspectorView(queue: AnalysisQueueController())
         .frame(width: 300, height:700)
+        .environment(InspectorSectionCollapse.preview)
+}
+
+/// The counting branch: nil `pgn` with a plural count — what a rubber-band
+/// or ⌘-click selection shows. No fixture reaches this by accident, which
+/// is the reason it has a preview.
+#Preview("Multi-Selection") {
+    LibraryInspectorView(selectionCount: 12, queue: AnalysisQueueController())
+        .frame(width: 300, height: 700)
         .environment(InspectorSectionCollapse.preview)
 }
 

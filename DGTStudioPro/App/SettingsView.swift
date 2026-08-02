@@ -52,6 +52,14 @@ internal struct SettingsView: View {
     /// the two toggles above; `StorageKeys` documents it.
     @AppStorage(StorageKeys.showBoardCoordinates) private var showsBoardCoordinates = true
 
+    /// 2 Aug 2026 — the piece glide duration. The `EngineConfiguration`
+    /// arrangement: initial value and bounds come from the owning type
+    /// (`BoardPieceLayer`), so the numbers live exactly once. The slider's
+    /// range makes an out-of-bounds write unrepresentable from here; the
+    /// layer additionally clamps its own read against a hand-edited default.
+    @AppStorage(StorageKeys.pieceAnimationDuration) private var pieceAnimationDuration
+    = BoardPieceLayer.defaultDuration
+
     @Environment(\.modelContext) private var modelContext
     @Environment(SleepInhibitor.self) private var sleepInhibitor
     @Query private var allGames: [PGN]
@@ -99,9 +107,8 @@ internal struct SettingsView: View {
                 Text("DGT Board")
             } footer: {
                 Text(
-                    "At launch, silently reconnects to the last board you "
-                    + "used, if it's attached. Mid-game reconnection is "
-                    + "always on."
+                    "At launch, silently connects to your board, if it's "
+                    + "attached. Mid-game reconnection is always on."
                 )
             }
 
@@ -187,6 +194,32 @@ internal struct SettingsView: View {
                 Text(
                     "Applies everywhere a board is drawn — the live mirror "
                     + "and game replays."
+                )
+            }
+
+            Section {
+                Slider(
+                    value: $pieceAnimationDuration,
+                    in: BoardPieceLayer.durationRange
+                ) {
+                    LabeledContent(
+                        "Piece Glide",
+                        value: pieceAnimationDuration
+                            .formatted(.number.precision(.fractionLength(2))) + " s"
+                    )
+                } minimumValueLabel: {
+                    Text("Fast")
+                } maximumValueLabel: {
+                    Text("Slow")
+                }
+                .accessibilityIdentifier(AccessibilityID.settingsPieceAnimationSlider)
+            } header: {
+                Text("Animation")
+            } footer: {
+                Text(
+                    "How long a piece takes to glide to its square, in the "
+                    + "live mirror and in replays. Reduce Motion disables "
+                    + "the glide entirely."
                 )
             }
 

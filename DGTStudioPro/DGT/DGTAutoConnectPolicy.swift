@@ -13,29 +13,28 @@
 /// territory.
 internal enum DGTAutoConnectPolicy {
     
-    // MARK: Launch (M7.2)
-    
-    /// The launch decision: which device, if any, to connect to silently.
-    /// Requires the feature enabled *and* the remembered device currently
-    /// attached, matched by `path` — the stable identity
-    /// (`DGTSerialDevice.id`); names can drift between driver versions.
+    // MARK: Launch (M7.2; one-board form since 2 Aug 2026)
+
+    /// The launch decision: connect silently iff the feature is enabled and
+    /// **the** board is attached — `boardPath` is
+    /// `DGTConnection.onlyBoardPath` at every production call site, passed
+    /// as a parameter so this stays a pure function of its inputs. Matched
+    /// by `path`, the stable identity (`DGTSerialDevice.id`); names can
+    /// drift between driver versions.
     ///
-    /// `isLikelyBoard` is deliberately never consulted: it is sort-only for
-    /// the connect dialog, never auto-connect criteria. Silently connecting
-    /// to the remembered device still respects the dialog's
-    /// confirm-before-connect contract, because that device was explicitly
-    /// user-confirmed once — and then proved itself by answering with a
-    /// board dump (remembering happens only on the `.connected` transition).
-    /// A likely-*looking* stranger has earned neither.
+    /// This replaced the remembered-device form when the device picker was
+    /// deleted: with exactly one lawful board, "remembered" was a variable
+    /// holding a constant. `isLikelyBoard` remains deliberately never
+    /// consulted — a likely-*looking* stranger on another path never wins,
+    /// which is now the entire point of the feature rather than a nuance
+    /// of it.
     internal static func launchTarget(
         enabled: Bool,
-        rememberedPath: String?,
+        boardPath: String,
         among devices: [DGTSerialDevice]
     ) -> DGTSerialDevice? {
-        guard enabled, let rememberedPath, !rememberedPath.isEmpty else {
-            return nil
-        }
-        return devices.first { $0.path == rememberedPath }
+        guard enabled else { return nil }
+        return devices.first { $0.path == boardPath }
     }
     
     // MARK: Reconnect Lap (M7.3)

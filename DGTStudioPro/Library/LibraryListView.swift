@@ -72,12 +72,16 @@ internal struct LibraryListView: View {
                 }
             }
             if !ids.isEmpty {
+                // The toolbar's aggregate rule: checkmark only when the
+                // whole set is analyzed.
+                let selection = games.filter { ids.contains($0.id) }
+                let analyzed = !selection.isEmpty && selection.allSatisfy(AnalysisGlyph.isAnalyzed)
                 Button {
                     onAnalyzeIDs(ids)
                 } label: {
                     Label(
                         ids.count > 1 ? "Analyze \(ids.count) Games" : "Analyze",
-                        systemImage: "wand.and.stars"
+                        systemImage: AnalysisGlyph.name(analyzed: analyzed)
                     )
                 }
                 Button {

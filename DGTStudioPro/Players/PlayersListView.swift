@@ -10,11 +10,14 @@ import SwiftUI
 internal struct PlayersListView: View {
 
     let players: [RankedPlayer]
-    @Binding var selectedKey: PlayerStats.ID?
+    /// A set since 2 Aug 2026 (the Library's selection model, adopted):
+    /// `Table` gives ⌘/⇧-click multi-select for free once the binding
+    /// allows it.
+    @Binding var selectedKeys: Set<PlayerStats.ID>
     let onShowInLibrary: (PlayerStats.ID) -> Void
 
     var body: some View {
-        Table(players, selection: $selectedKey) {
+        Table(players, selection: $selectedKeys) {
             TableColumn("Rank") { player in
                 // The rank cell carries the order-pinning identifier
                 // (`rankingRow.1.Liren Ding`) so the ladder UITest asserts
@@ -77,30 +80,30 @@ internal struct PlayersListView: View {
 // MARK: Previews
 
 #Preview("With Players") {
-    @Previewable @State var selection: PlayerStats.ID?
-    
+    @Previewable @State var selection: Set<PlayerStats.ID> = []
+
     PlayersListView(
         players: PreviewFixtures.rankedPlayers(),
-        selectedKey: $selection,
+        selectedKeys: $selection,
         onShowInLibrary: { _ in }
     )
     .frame(width: 720, height: 320)
 }
 
 #Preview("Selected Row") {
-    @Previewable @State var selection: PlayerStats.ID? = PreviewFixtures.topStats().id
-    
+    @Previewable @State var selection: Set<PlayerStats.ID> = [PreviewFixtures.topStats().id]
+
     PlayersListView(
         players: PreviewFixtures.rankedPlayers(),
-        selectedKey: $selection,
+        selectedKeys: $selection,
         onShowInLibrary: { _ in }
     )
     .frame(width: 720, height: 320)
 }
 
 #Preview("Empty") {
-    @Previewable @State var selection: PlayerStats.ID?
-    
-    PlayersListView(players: [], selectedKey: $selection, onShowInLibrary: { _ in })
+    @Previewable @State var selection: Set<PlayerStats.ID> = []
+
+    PlayersListView(players: [], selectedKeys: $selection, onShowInLibrary: { _ in })
         .frame(width: 720, height: 320)
 }

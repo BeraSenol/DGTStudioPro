@@ -21,6 +21,14 @@ internal struct PlayersInspectorView: View {
     internal let history: [Glicko1.Sample]
     internal let recentGames: [PGN]
 
+    /// How many players the destination's selection holds (2 Aug 2026 —
+    /// the selection went multi with the Library's model). `ranked`
+    /// arrives nil for empty *and* plural selections, so without the count
+    /// this view could not tell "select someone" from "you selected five
+    /// people". Defaulted so previews and the empty state read unchanged;
+    /// the destination always passes it.
+    internal var selectionCount: Int = 0
+
     /// M5's two selection-scoped operations, as closures rather than store
     /// reach.
     ///
@@ -61,6 +69,8 @@ internal struct PlayersInspectorView: View {
                 RecentGamesSection(playerKey: ranked.stats.key, games: recentGames)
             }
             .listStyle(.sidebar)
+        } else if selectionCount > 1 {
+            multiSelectionState
         } else {
             emptyState
         }
@@ -73,6 +83,17 @@ internal struct PlayersInspectorView: View {
             systemImage: "person.fill",
             message: "Select a player to see their profile, rating trend and recent games.",
             identifier: AccessibilityID.playersInspectorEmpty
+        )
+    }
+
+    /// The counting variant — the Library inspector's shape and symbol, so
+    /// every "you selected many" surface speaks one vocabulary.
+    private var multiSelectionState: some View {
+        InspectorEmptyState(
+            title: "\(selectionCount) Players Selected",
+            systemImage: "person.2.fill",
+            message: "Select a single player to see their profile, or use Show in Library from a card's menu.",
+            identifier: AccessibilityID.playersInspectorMulti
         )
     }
 }
@@ -278,6 +299,14 @@ private struct RecentGamesSection: View {
 
 #Preview("Empty") {
     PlayersInspectorView(ranked: nil, history: [], recentGames: [])
+        .frame(width: 300, height: 400)
+        .environment(InspectorSectionCollapse.preview)
+}
+
+/// The counting branch: nil `ranked` with a plural count — a rubber-band
+/// or ⌘-click selection. No fixture reaches it by accident.
+#Preview("Multi-Selection") {
+    PlayersInspectorView(ranked: nil, history: [], recentGames: [], selectionCount: 5)
         .frame(width: 300, height: 400)
         .environment(InspectorSectionCollapse.preview)
 }

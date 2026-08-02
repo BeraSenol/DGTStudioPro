@@ -35,9 +35,9 @@ import SwiftUI
 /// lone pencil, a glyph, a pencil plus a menu, and nothing at all, in which
 /// case the host gets a plain heading.
 internal struct InspectorSectionHeader<Actions: View>: View {
-
+    
     // MARK: Type Properties
-
+    
     /// How far the header's trailing edge sits from the inspector's, and so
     /// how far the outermost control sits from it.
     ///
@@ -75,22 +75,22 @@ internal struct InspectorSectionHeader<Actions: View>: View {
     /// file this milestone edited on its way here — so the lesson was one
     /// scroll away and got re-learned from the compiler anyway. It joins the
     /// standing roll of pre-recorded lessons re-learned in anger.
-    internal static var actionsInset: CGFloat { 10 }
-
+    internal static var actionsInset: CGFloat { 12 }
+    
     // MARK: Stored Properties
     internal let title: String
-
+    
     /// The section's stored identity, or `nil` for a header that does not
     /// collapse. Optional rather than required because "collapsible" is a
     /// property of the section, not of the header type — and because a
     /// required parameter would force every future header to mint an
     /// `InspectorSection` case before it could render at all.
     internal let section: InspectorSection?
-
+    
     @ViewBuilder internal let actions: () -> Actions
-
+    
     @Environment(InspectorSectionCollapse.self) private var collapse
-
+    
     // MARK: Initializers
     internal init(
         _ title: String,
@@ -101,7 +101,7 @@ internal struct InspectorSectionHeader<Actions: View>: View {
         self.section = section
         self.actions = actions
     }
-
+    
     // MARK: Body
     internal var body: some View {
         HStack(spacing: 0) {
@@ -121,17 +121,17 @@ internal struct InspectorSectionHeader<Actions: View>: View {
             // one slot every other inspector reserves for a verb. The order
             // here is that comment's intent, finally executed.
             HStack(spacing: 12) {
+                actions()
                 if let section {
                     disclosure(for: section)
                 }
-                actions()
             }
         }
         .padding(.trailing, Self.actionsInset)
     }
-
+    
     // MARK: Instance Methods
-
+    
     /// One chevron rotated rather than two symbols swapped, so the state change
     /// is a continuous motion the eye tracks instead of a substitution it has
     /// to re-read. Inherited wholesale from the Library's PGN disclosure, which
@@ -174,7 +174,7 @@ internal struct InspectorSectionHeader<Actions: View>: View {
 // MARK: Convenience
 
 extension InspectorSectionHeader where Actions == EmptyView {
-
+    
     /// A header with nothing to act on — Players and Rankings today, and any
     /// section whose title is a label rather than a subject.
     ///

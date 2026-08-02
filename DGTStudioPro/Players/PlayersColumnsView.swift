@@ -29,7 +29,10 @@ internal struct PlayersColumnsView: View {
 
     // MARK: Stored Properties
     let players: [RankedPlayer]
-    @Binding var selectedKey: PlayerStats.ID?
+    /// A set since 2 Aug 2026 (the shared selection model); the list
+    /// multi-selects, and the detail pane counts a plural selection the
+    /// way `LibraryColumnsView`'s does.
+    @Binding var selectedKeys: Set<PlayerStats.ID>
     /// The selected player's games, newest first — the destination's
     /// `selectedGames`, threaded exactly as `PlayersInspectorView` gets it.
     let recentGames: [PGN]
@@ -38,9 +41,12 @@ internal struct PlayersColumnsView: View {
     @Environment(\.openWindow) private var openWindow
 
     // MARK: Computed Properties
+
+    /// Single or nothing — the detail pane details one thing (the
+    /// `LibraryColumnsView` rule).
     private var selectedPlayer: RankedPlayer? {
-        guard let selectedKey else { return nil }
-        return players.first { $0.id == selectedKey }
+        guard selectedKeys.count == 1, let key = selectedKeys.first else { return nil }
+        return players.first { $0.id == key }
     }
 
     // MARK: Body
@@ -74,7 +80,7 @@ internal struct PlayersColumnsView: View {
             }
             .frame(maxWidth: .infinity)
         } else {
-            List(selection: $selectedKey) {
+            List(selection: $selectedKeys) {
                 ForEach(players) { player in
                     row(for: player)
                         .tag(player.id)
@@ -114,6 +120,14 @@ internal struct PlayersColumnsView: View {
     private var detail: some View {
         if let player = selectedPlayer {
             playerDetail(player)
+        } else if selectedKeys.count > 1 {
+            // The multi-selection vocabulary every counting surface shares
+            // (the Library columns pane, both inspectors' multi states).
+            ContentUnavailableView(
+                "\(selectedKeys.count) Players Selected",
+                systemImage: "person.2.fill",
+                description: Text("Select a single player to see their profile.")
+            )
         } else {
             ContentUnavailableView(
                 "No Player Selected",
@@ -217,11 +231,11 @@ internal struct PlayersColumnsView: View {
 // MARK: Previews
 
 #Preview("Selected") {
-    @Previewable @State var selection: PlayerStats.ID? = PreviewFixtures.topStats().id
+    @Previewable @State var selection: Set<PlayerStats.ID> = [PreviewFixtures.topStats().id]
 
     PlayersColumnsView(
         players: PreviewFixtures.rankedPlayers(),
-        selectedKey: $selection,
+        selectedKeys: $selection,
         recentGames: [
             PGN(event: "Test Open", site: "Memory", round: 1,
                 white: "Carlsen, Magnus", black: "Nepomniachtchi, Ian", result: .whiteWins),
@@ -237,11 +251,28 @@ internal struct PlayersColumnsView: View {
 /// The no-games branch of the detail — a selected player whose recent list
 /// is empty renders "No games", not a collapsed void.
 #Preview("Selected — No Games") {
-    @Previewable @State var selection: PlayerStats.ID? = PreviewFixtures.topStats().id
+    @Previewable @State var selection: Set<PlayerStats.ID> = [PreviewFixtures.topStats().id]
 
     PlayersColumnsView(
         players: PreviewFixtures.rankedPlayers(),
-        selectedKey: $selection,
+        selectedKeys: $selection,
+        recentGames: [],
+        onShowInLibrary: { _ in }
+    )
+    .frame(width: 860, height: 520)
+    .modelContainer(for: PGN.self, inMemory: true)
+}
+
+/// The counting branch — a plural selection in the list, the state the
+/// single-select columns could never render.
+#Preview("Multi-Selection") {
+    @Previewable @State var selection: Set<PlayerStats.ID> = Set(
+        PreviewFixtures.rankedPlayers().prefix(2).map(\.id)
+    )
+
+    PlayersColumnsView(
+        players: PreviewFixtures.rankedPlayers(),
+        selectedKeys: $selection,
         recentGames: [],
         onShowInLibrary: { _ in }
     )
@@ -250,11 +281,11 @@ internal struct PlayersColumnsView: View {
 }
 
 #Preview("No Selection") {
-    @Previewable @State var selection: PlayerStats.ID?
+    @Previewable @State var selection: Set<PlayerStats.ID> = []
 
     PlayersColumnsView(
         players: PreviewFixtures.rankedPlayers(),
-        selectedKey: $selection,
+        selectedKeys: $selection,
         recentGames: [],
         onShowInLibrary: { _ in }
     )
@@ -263,11 +294,11 @@ internal struct PlayersColumnsView: View {
 }
 
 #Preview("Empty") {
-    @Previewable @State var selection: PlayerStats.ID?
+    @Previewable @State var selection: Set<PlayerStats.ID> = []
 
     PlayersColumnsView(
         players: [],
-        selectedKey: $selection,
+        selectedKeys: $selection,
         recentGames: [],
         onShowInLibrary: { _ in }
     )

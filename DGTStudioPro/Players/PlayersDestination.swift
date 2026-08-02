@@ -57,21 +57,21 @@ internal enum PlayersSortOrder: String, CaseIterable, Identifiable, Sendable {
 /// promises selection survival across sidebar switches. It *does* survive
 /// a sort toggle, because both orderings speak the same keys.
 internal struct PlayersDestination: View {
-    
+
     // MARK: Static Constants
     private static let logger = Logger(
         subsystem: "com.berasenol.dgtstudiopro",
         category: "players"
     )
-    
+
     // MARK: Tab State (lives on enclosing `ContentView`)
     @Bindable internal var tabState: TabState
-    
+
     /// The M-prs.6 hop: hands the resolved player's identifier up to
     /// `ContentView`, which owns the sidebar selection. The app always
     /// wires it; the initializer's default keeps previews valid.
     internal let onShowInLibrary: (PersistentIdentifier) -> Void
-    
+
     // MARK: Private Properties
     // Shared with the Library (see `StorageKeys.collectionViewMode`): the
     // last view mode used in either collection destination is what both
@@ -88,7 +88,17 @@ internal struct PlayersDestination: View {
     /// removed. `MergePlayerSheet` queries the same way for the same reason.
     @Query(sort: \Player.name) private var registry: [Player]
 
-    @State private var selectedKey: PlayerStats.ID?
+    /// A set since 2 Aug 2026, adopting the Library's selection model so
+    /// the icons grid can rubber-band and the table can ⌘-click. Every
+    /// single-player consumer (inspector profile, recent games, rename /
+    /// merge) reads through the count-of-one guard, so a plural selection
+    /// is a counted state, never "the first of the set wearing one
+    /// player's face".
+    @State private var selectedKeys: Set<PlayerStats.ID> = []
+
+    // MARK: Search (2 Aug 2026)
+    @State private var searchText = ""
+    @State private var searchScope: PlayersSearchScope = .all
 
     // MARK: Player Editing (M5 — D37′, D38′, D39′)
 
@@ -133,9 +143,9 @@ internal struct PlayersDestination: View {
         let collisions: [PGNStore.HashCollision]
         var id: PersistentIdentifier { collisions[0].gameID }
     }
-    
+
     // MARK: Initializers
-    
+
     /// Explicit for the same reason `LibraryDestination`'s is: the
     /// memberwise initializer's shape and visibility shift with the
     /// wrapped/private property details, and the call-site contract
@@ -148,20 +158,21 @@ internal struct PlayersDestination: View {
         self.tabState = tabState
         self.onShowInLibrary = onShowInLibrary
     }
-    
+
     // MARK: Derived Data
-    
+
     // `records` / `index` / `histories` are now folded once in `body` and
     // threaded down, replacing the prior per-computed-property
     // recomputation: `index` was re-derived three times a render — each
     // re-projecting the whole library — plus a fourth `histories` fold for
     // the inspector's rating. `selectedGames` stays a computed property: it
     // reads the selected player's games only, not the shared folds.
-    
+
     /// The selected player's games, newest first by the one effective-date
     /// rule. Matching goes through the resolved link — never raw tags.
+    /// Single-selection only: a plural selection has no "the player".
     private var selectedGames: [PGN] {
-        guard let selectedKey else { return [] }
+        guard selectedKeys.count == 1, let selectedKey = selectedKeys.first else { return [] }
         return games
             .filter {
                 $0.whitePlayer?.normalizedName == selectedKey
@@ -169,7 +180,7 @@ internal struct PlayersDestination: View {
             }
             .sorted { $0.effectiveDate > $1.effectiveDate }
     }
-    
+
     // MARK: Derived Data (D48′)
 
     /// Builds the ranked ladder from an already-computed projection and
@@ -201,25 +212,43 @@ internal struct PlayersDestination: View {
         // Rank is computed under D11′ regardless of display order — the sort
         // only decides sequence, never the number on the badge.
         let displayed = sortOrder == .rank
-            ? ranked
-            : ranked.sorted { $0.stats.name < $1.stats.name }
-        let selected = selectedKey.flatMap { key in ranked.first { $0.id == key } }
-        let history = selectedKey.flatMap { histories[$0] } ?? []
+        ? ranked
+        : ranked.sorted { $0.stats.name < $1.stats.name }
+        // Search narrows the *list only*, and only while a query is typed:
+        // the system scope bar exists only during a search, so a
+        // text-independent scope would keep filtering invisibly after the
+        // field closes. (A custom always-visible field briefly lifted that
+        // gate; reverting to native `.searchable` restored it.) `selected`
+        // / `history` below read the full ladder, so a selected player
+        // filtered out of view keeps their inspector profile — searching
+        // is about finding, not deselecting.
+        let searched = searchText.isEmpty
+        ? displayed
+        : displayed.filter {
+            searchScope.admits($0.rating)
+            && SearchMatch.matches(query: searchText, fields: [$0.stats.name])
+        }
+        // One player or none: the profile inputs resolve only for a
+        // count-of-one selection; plural renders the counting state.
+        let soleKey = selectedKeys.count == 1 ? selectedKeys.first : nil
+        let selected = soleKey.flatMap { key in ranked.first { $0.id == key } }
+        let history = soleKey.flatMap { histories[$0] } ?? []
 
         // The store owns the rule, the query owns the rows (D40′).
         let orphans = registry.filter(PGNStore.isOrphaned)
 
-        return coreContent(players: displayed)
+        return coreContent(players: searched)
             .navigationTitle("Players")
             .inspector(isPresented: $tabState.playersInspectorPresented) {
                 PlayersInspectorView(
                     ranked: selected,
                     history: history,
                     recentGames: selectedGames,
+                    selectionCount: selectedKeys.count,
                     onRename: { beginRename(stats: selected?.stats) },
                     onMerge: { beginMerge(stats: selected?.stats) }
                 )
-                .inspectorColumnWidth(min: 320, ideal: 325, max: 430)
+                .inspectorColumnWidth(min: 320, ideal: 320, max: 430)
             }
             .sheet(item: $editor) { editor in
                 switch editor {
@@ -255,6 +284,16 @@ internal struct PlayersDestination: View {
                 message: { players in Text(Self.sweepMessage(players)) }
             )
             .toolbar { toolbarContent(orphans: orphans) }
+            .searchable(
+                text: $searchText,
+                placement: .toolbarPrincipal,
+                prompt: "Search Players"
+            )
+            .searchScopes($searchScope) {
+                ForEach(PlayersSearchScope.allCases) { scope in
+                    Text(scope.displayName).tag(scope)
+                }
+            }
             .onAppear {
                 // Players must work even if Library was never visited this
                 // launch — the backfill is store-owned; this is just the
@@ -266,9 +305,9 @@ internal struct PlayersDestination: View {
                 if mode == .gallery { tabState.playersInspectorPresented = true }
             }
     }
-    
+
     // MARK: Instance Methods
-    
+
     /// Resolves the pure stats key to its `Player` row and hops the
     /// sidebar into the programmatic player filter. Store-owned lookup,
     /// never creates (D9′ — the single creation door; D13′ is the
@@ -286,7 +325,7 @@ internal struct PlayersDestination: View {
             Self.logger.error("Show in Library lookup failed: \(error.localizedDescription, privacy: .public)")
         }
     }
-    
+
     // MARK: Player Editing (M5)
 
     /// Opens the rename sheet seeded with the player's stored **tag** form —
@@ -323,7 +362,7 @@ internal struct PlayersDestination: View {
             try PGNStore(modelContext: modelContext).retag(player, to: newTag)
             // The stats key is derived from the name, so the old selection now
             // points at a player that no longer exists under that key.
-            selectedKey = Player.normalizedKey(for: PlayerName.displayForm(of: newTag))
+            selectedKeys = [Player.normalizedKey(for: PlayerName.displayForm(of: newTag))]
         } catch let rejection as PGNStore.RetagRejection {
             present(rejection)
         } catch {
@@ -342,7 +381,7 @@ internal struct PlayersDestination: View {
               !survivor.isDeleted else { return }
         do {
             try PGNStore(modelContext: modelContext).merge(loser, into: survivor)
-            selectedKey = survivor.normalizedName
+            selectedKeys = [survivor.normalizedName]
         } catch let rejection as PGNStore.RetagRejection {
             present(rejection)
         } catch {
@@ -401,8 +440,8 @@ internal struct PlayersDestination: View {
         let shown = collisions.prefix(3).map { "“\($0.gameName)” and “\($0.existingName)”" }
         let lead = "This would make these games identical: " + shown.joined(separator: "; ") + "."
         let more = collisions.count > shown.count
-            ? " And \(collisions.count - shown.count) more."
-            : ""
+        ? " And \(collisions.count - shown.count) more."
+        : ""
         return lead + more + " Delete or edit one of each pair first — nothing has been changed."
     }
 
@@ -421,22 +460,34 @@ internal struct PlayersDestination: View {
         let shown = players.prefix(5).map(\.name)
         let more = players.count > shown.count ? " And \(players.count - shown.count) more." : ""
         return "These players are in no games: " + shown.joined(separator: ", ") + "."
-             + more
-             + " Removing them changes no game and no export; they return by name if a game of theirs is ever imported again."
+        + more
+        + " Removing them changes no game and no export; they return by name if a game of theirs is ever imported again."
     }
 
     @ViewBuilder
     private func coreContent(players: [RankedPlayer]) -> some View {
         Group {
             if players.isEmpty {
-                emptyState
+                // The Library's two-vocabulary gate: a search that matched
+                // nobody is not an empty registry. Narrowing requires text
+                // (the scope is text-gated above), so the query is the
+                // whole test. The identifier stays on the true empty state.
+                if searchText.isEmpty {
+                    emptyState
+                } else {
+                    ContentUnavailableView(
+                        "No Matches",
+                        systemImage: "magnifyingglass",
+                        description: Text("No players match the current search.")
+                    )
+                }
             } else {
                 switch viewMode {
                 case .icons:
-                    PlayersIconsView(players: players, selectedKey: $selectedKey,
+                    PlayersIconsView(players: players, selectedKeys: $selectedKeys,
                                      onShowInLibrary: showInLibrary)
                 case .list:
-                    PlayersListView(players: players, selectedKey: $selectedKey,
+                    PlayersListView(players: players, selectedKeys: $selectedKeys,
                                     onShowInLibrary: showInLibrary)
                 case .columns:
                     // Flat list + detail since the Finder-column redesign
@@ -446,11 +497,11 @@ internal struct PlayersDestination: View {
                     // grid it navigated. The detail feeds on the same
                     // `selectedGames` the inspector receives.
                     PlayersColumnsView(players: players,
-                                       selectedKey: $selectedKey,
+                                       selectedKeys: $selectedKeys,
                                        recentGames: selectedGames,
                                        onShowInLibrary: showInLibrary)
                 case .gallery:
-                    PlayersGalleryView(players: players, selectedKey: $selectedKey,
+                    PlayersGalleryView(players: players, selectedKeys: $selectedKeys,
                                        onShowInLibrary: showInLibrary)
                 }
             }
@@ -458,7 +509,7 @@ internal struct PlayersDestination: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier(AccessibilityID.playersContent)
     }
-    
+
     private var emptyState: some View {
         ContentUnavailableView(
             "No Players",
@@ -467,7 +518,7 @@ internal struct PlayersDestination: View {
         )
         .accessibilityIdentifier(AccessibilityID.playersEmptyState)
     }
-    
+
     /// One stream, the Library's shape: every item in a single builder with
     /// `ToolbarSpacer` marking the break before the trailing pair. Stacking
     /// `.inspectorToggle` as a second `.toolbar` modifier left the toolbar
@@ -538,7 +589,7 @@ internal struct PlayersDestination: View {
             identifier: AccessibilityID.playersInspectorToggle
         )
     }
-    
+
     private func backfillPlayerLinks() {
         do {
             let store = PGNStore(modelContext: modelContext)

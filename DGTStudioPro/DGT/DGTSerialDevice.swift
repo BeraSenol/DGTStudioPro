@@ -12,8 +12,12 @@
 /// node: opening a `tty.` device blocks until carrier/DCD is asserted, which a
 /// DGT board does not drive, so it would hang. `cu.` opens immediately.
 ///
-/// `isLikelyBoard` is a soft heuristic for ordering the connect dialog — the
-/// user always confirms the final choice, so a wrong guess is harmless.
+/// `isLikelyBoard` is a soft heuristic that once ordered the connect
+/// dialog's device list; the dialog died with the one-board decree
+/// (2 Aug 2026 — `DGTConnection.onlyBoardPath`), so the heuristic now only
+/// stabilizes `DGTDeviceDiscovery`'s log-visible ordering. Kept because it
+/// costs two lines and Diagnostics still enumerates strangers; it remains
+/// never, ever connect criteria.
 internal struct DGTSerialDevice: Identifiable, Equatable, Sendable {
     /// The `/dev/cu.*` callout path — also serves as the stable identity.
     internal let path: String

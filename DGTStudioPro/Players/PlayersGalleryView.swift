@@ -10,12 +10,16 @@ import SwiftUI
 internal struct PlayersGalleryView: View {
     
     let players: [RankedPlayer]
-    @Binding var selectedKey: PlayerStats.ID?
+    /// A set since 2 Aug 2026 (the shared selection model). The gallery
+    /// remains a one-at-a-time surface by gesture — thumbnails select
+    /// singly — and previews the *first* of a plural selection, its own
+    /// long-standing fallback rule.
+    @Binding var selectedKeys: Set<PlayerStats.ID>
     let onShowInLibrary: (PlayerStats.ID) -> Void
 
     private var selectedPlayer: RankedPlayer? {
-        guard let selectedKey else { return nil }
-        return players.first { $0.id == selectedKey }
+        guard let key = selectedKeys.first else { return nil }
+        return players.first { $0.id == key }
     }
     
     var body: some View {
@@ -65,8 +69,8 @@ internal struct PlayersGalleryView: View {
                     ForEach(players) { player in
                         PlayerCardView(
                             stats: player.stats,
-                            isSelected: selectedKey == player.id,
-                            onSelect: { selectedKey = player.id },
+                            isSelected: selectedKeys.contains(player.id),
+                            onSelect: { selectedKeys = [player.id] },
                             rank: player.rank,
                             onShowInLibrary: { onShowInLibrary(player.id) }
                         )
@@ -79,10 +83,10 @@ internal struct PlayersGalleryView: View {
             }
             .frame(height: 170)
             .background(.thinMaterial)
-            .onChange(of: selectedKey) { _, newKey in
-                guard let newKey else { return }
+            .onChange(of: selectedKeys) { _, newKeys in
+                guard let key = newKeys.first else { return }
                 withAnimation(.easeInOut(duration: 0.25)) {
-                    proxy.scrollTo(newKey, anchor: .center)
+                    proxy.scrollTo(key, anchor: .center)
                 }
             }
         }
@@ -92,29 +96,29 @@ internal struct PlayersGalleryView: View {
 // MARK: Previews
 
 #Preview("With Players") {
-    @Previewable @State var selection: PlayerStats.ID?
-    
+    @Previewable @State var selection: Set<PlayerStats.ID> = []
+
     PlayersGalleryView(
         players: PreviewFixtures.rankedPlayers(),
-        selectedKey: $selection,
+        selectedKeys: $selection,
         onShowInLibrary: { _ in }
     )
     .frame(width: 720, height: 420)
 }
 
 #Preview("Empty") {
-    @Previewable @State var selection: PlayerStats.ID?
-    
-    PlayersGalleryView(players: [], selectedKey: $selection, onShowInLibrary: { _ in })
+    @Previewable @State var selection: Set<PlayerStats.ID> = []
+
+    PlayersGalleryView(players: [], selectedKeys: $selection, onShowInLibrary: { _ in })
         .frame(width: 720, height: 420)
 }
 
 #Preview("Gallery — Preselected") {
-    @Previewable @State var selection: PlayerStats.ID? = PreviewFixtures.topStats().id
-    
+    @Previewable @State var selection: Set<PlayerStats.ID> = [PreviewFixtures.topStats().id]
+
     PlayersGalleryView(
         players: PreviewFixtures.rankedPlayers(),
-        selectedKey: $selection,
+        selectedKeys: $selection,
         onShowInLibrary: { _ in }
     )
     .frame(width: 720, height: 420)

@@ -280,6 +280,12 @@ internal struct DGTStudioProApp: App {
         }
         .modelContainer(sharedContainer)
         .defaultSize(width: 720, height: 420)
+        // D46′ delta (2 Aug 2026, Bera's call): the graph hovers in front
+        // of the game windows rather than stacking with them. Floating
+        // level, not a popover — a popover dismisses on the first board
+        // click, which is exactly the companion-while-scrubbing use D46′
+        // chose a window to protect.
+        .windowLevel(.floating)
 
         Settings {
             SettingsView()

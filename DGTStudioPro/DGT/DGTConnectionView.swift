@@ -7,119 +7,122 @@
 
 import SwiftUI
 
-/// The connect dialog for the DGT e-Board, presented as a sheet from the Board
-/// toolbar (see `DGTConnectionToolbar`).
+/// The board connection window — a confirmation/error surface since
+/// 2 Aug 2026, when the device picker was deleted whole (user decree: the
+/// app connects to `DGTConnection.onlyBoardPath`, never ever anything
+/// else). What was a five-panel dialog over a discovered-device list is now
+/// four resting states over one hardcoded identity:
 ///
-/// It is a thin view over the app-global `DGTConnection`: it never opens a port
-/// or talks to IOKit itself, it just drives `search()` / `connect(to:)` /
-/// `disconnect()` and renders `connection.status`. The five resting states map
-/// to five panels:
+/// - opening the sheet **attempts the connection immediately** — there is
+///   nothing to pick, so there is nothing to confirm beforehand; the old
+///   confirm-before-connect contract is discharged by the decree itself
+///   (the one path is the standing confirmation)
+/// - `.connecting`   → the handshake progress indicator
+/// - `.connected`    → the board's reported identity, plus Disconnect
+/// - `.reconnecting` → the M7.3 retry loop's face, and its stand-down door
+///   ("Stop Trying" — the per-incident choice the Settings footer points
+///   at, so it must survive the picker it used to share a window with)
+/// - `.failed` / board absent → the error, with Try Again
 ///
-/// - `.disconnected` / `.searching` → pick a device from the discovered list
-/// - `.connecting`  → the handshake progress indicator (open + init sequence,
-///   resolving once the board's first dump arrives)
-/// - `.connected`   → the board's reported identity, plus Disconnect
-/// - `.reconnecting` → the M7.3 retry loop: keep waiting, or stand it down
-/// - `.failed`      → the error, with Try Again
-///
-/// The user confirms the device explicitly (the Connect button) before the
-/// port is opened — the "confirm before finalizing" half of the locked UX.
+/// Still a thin view over the app-global `DGTConnection`: it never opens a
+/// port or talks to IOKit itself.
 internal struct DGTConnectionView: View {
-    
+
     @Environment(DGTConnection.self) private var connection
     @Environment(\.dismiss) private var dismiss
-    
-    @State private var selectedDeviceID: DGTSerialDevice.ID?
-    
+
     /// D15′(b): the dialog's spacing, named and HIG-derived instead of ad
-    /// hoc. Values follow macOS layout conventions (HIG Layout; the AppKit
-    /// standard-dialog metrics the HIG encodes): 20 pt content margins at
-    /// sheet edges, 12 pt between sibling controls and grouped elements,
-    /// 4 pt between a text line and its subordinate caption (the system
-    /// alert's title/informative rhythm). The panels previously mixed 14,
-    /// 12, and the 16 pt `.padding()` default — visually near these values,
-    /// which is exactly why they drifted unnoticed. Two nonconforming
-    /// numbers survive by design: the fixed 420 × 380 sheet frame and the
-    /// 260 pt info table are *sizing*, not spacing (the table is wide
-    /// enough for a long serial, narrow enough to read as a table).
-    /// `DeviceRow`'s internals are deliberately out of scope: a list row's
-    /// rhythm belongs to its list style, not the dialog chrome.
+    /// hoc — 20 pt content margins at sheet edges, 12 pt between sibling
+    /// controls, 4 pt between a text line and its caption. Survives the
+    /// picker's deletion untouched because `RenamePlayerSheet` and
+    /// `MergePlayerSheet` cite these three numbers by name and reason; the
+    /// 420 × 320 frame and 260 pt info table are *sizing*, not spacing
+    /// (320, down from 380 — the height the device list earned went with
+    /// it).
     private enum Metrics {
         /// Sheet edge margin (the standard 20 pt dialog content margin).
         static let margin: CGFloat = 20
-        /// Sibling controls and grouped elements (panel stacks, footer
-        /// buttons — 12 pt is the Aqua push-button spacing).
+        /// Sibling controls and grouped elements (12 pt Aqua spacing).
         static let groupSpacing: CGFloat = 12
         /// A text line and its caption.
         static let captionSpacing: CGFloat = 4
         /// The connected panel's info table width — sizing, see above.
         static let infoTableWidth: CGFloat = 260
     }
-    
+
     internal var body: some View {
         VStack(spacing: 0) {
             header
             Divider()
-            
+
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            
+
             Divider()
             footer
         }
-        .frame(width: 420, height: 380)
+        .frame(width: 420, height: 320)
         .onAppear {
-            // Scan as soon as the dialog opens — unless we're already live,
-            // or the M7.3 reconnect loop is mid-flight: `search()` tears the
-            // loop down, and a player opening this sheet mid-reconnect wants
-            // to see (or stop) the retry, not a device list.
-            if connection.isReconnecting { return }
-            if !connection.isConnected { connection.search() }
+            // Attempt on sight — unless we're already live, or the M7.3
+            // loop is mid-flight: a player opening this mid-reconnect
+            // wants to see (or stop) the retry, not restart it.
+            if connection.isReconnecting || connection.isConnected { return }
+            attemptConnect()
         }
         .accessibilityIdentifier(AccessibilityID.dgtConnectSheet)
     }
-    
+
+    // MARK: The One Attempt
+
+    /// The board, if attached right now. `search()` refreshes the
+    /// enumeration synchronously; the view still never touches IOKit.
+    private var board: DGTSerialDevice? {
+        connection.availableDevices.first { $0.path == DGTConnection.onlyBoardPath }
+    }
+
+    private func attemptConnect() {
+        connection.search()
+        guard let board else { return }  // the not-found panel renders
+        Task { await connection.connect(to: board) }
+    }
+
     // MARK: Header
-    
+
     private var header: some View {
         VStack(alignment: .leading, spacing: Metrics.captionSpacing) {
             Text(title).font(.headline)
-            if let subtitle {
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Metrics.margin)
     }
-    
+
     private var title: String {
         switch connection.status {
-        case .disconnected, .searching: "Connect to Board"
-        case .connecting:               "Connecting…"
-        case .reconnecting:             "Reconnecting…"
-        case .connected:                "Board Connected"
-        case .failed:                   "Connection Failed"
-        }
-    }
-    
-    private var subtitle: String? {
-        switch connection.status {
         case .disconnected, .searching:
-            "Select the serial port your DGT e-Board is connected to."
-        case .connecting, .reconnecting, .connected, .failed:
-            nil
+            board == nil ? "Board Not Found" : "Connecting…"
+        case .connecting:   "Connecting…"
+        case .reconnecting: "Reconnecting…"
+        case .connected:    "Board Connected"
+        case .failed:       "Connection Failed"
         }
     }
-    
+
     // MARK: Content
-    
+
     @ViewBuilder
     private var content: some View {
         switch connection.status {
         case .disconnected, .searching:
-            deviceList
+            if board == nil {
+                notFoundPanel
+            } else {
+                // An attempt is in flight (or one click away after a
+                // stand-down); the status flips to `.connecting` the
+                // moment the port opens.
+                ProgressView()
+                    .controlSize(.large)
+                    .padding(Metrics.margin)
+            }
         case .connecting(let device):
             connectingPanel(device)
         case .reconnecting(let device):
@@ -130,26 +133,18 @@ internal struct DGTConnectionView: View {
             failedPanel(message)
         }
     }
-    
-    private var deviceList: some View {
-        Group {
-            if connection.availableDevices.isEmpty {
-                ContentUnavailableView {
-                    Label("No Serial Devices", systemImage: "antenna.radiowaves.left.and.right.slash")
-                } description: {
-                    Text("Plug in your DGT e-Board, then rescan.")
-                }
-            } else {
-                List(connection.availableDevices, selection: $selectedDeviceID) { device in
-                    DeviceRow(device: device)
-                        .tag(device.id)
-                }
-                .listStyle(.sidebar)
-                .accessibilityIdentifier(AccessibilityID.dgtDeviceList)
-            }
+
+    /// The one absence the window can name precisely: the path is a
+    /// constant, so "not found" always means the same cable.
+    private var notFoundPanel: some View {
+        ContentUnavailableView {
+            Label("Board Not Found", systemImage: "antenna.radiowaves.left.and.right.slash")
+        } description: {
+            Text("Nothing is attached at \(DGTConnection.onlyBoardPath). Plug the board in, then try again.")
         }
+        .accessibilityIdentifier(AccessibilityID.dgtNotFoundPanel)
     }
-    
+
     private func connectingPanel(_ device: DGTSerialDevice) -> some View {
         VStack(spacing: Metrics.groupSpacing) {
             ProgressView()
@@ -164,10 +159,10 @@ internal struct DGTConnectionView: View {
         .padding(Metrics.margin)
         .accessibilityIdentifier(AccessibilityID.dgtConnectingPanel)
     }
-    
-    /// M7.3 — the retry loop's face in the dialog: what happened, that the
-    /// app is handling it, and how to stand it down. The loop itself lives
-    /// in `DGTConnection`; this panel is pure status.
+
+    /// M7.3 — the retry loop's face: what happened, that the app is
+    /// handling it, and how to stand it down. The loop itself lives in
+    /// `DGTConnection`; this panel is pure status.
     private func reconnectingPanel(_ device: DGTSerialDevice) -> some View {
         VStack(spacing: Metrics.groupSpacing) {
             ProgressView()
@@ -185,16 +180,16 @@ internal struct DGTConnectionView: View {
         .padding(Metrics.margin)
         .accessibilityIdentifier(AccessibilityID.dgtReconnectingPanel)
     }
-    
+
     private func connectedPanel(_ device: DGTSerialDevice) -> some View {
         VStack(spacing: Metrics.groupSpacing) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 40))
                 .foregroundStyle(.green)
-            
+
             Text(device.name)
                 .font(.headline)
-            
+
             VStack(alignment: .leading, spacing: Metrics.captionSpacing) {
                 infoRow("Serial", connection.boardInfo.serialNumber)
                 infoRow("Version", connection.boardInfo.version)
@@ -207,7 +202,7 @@ internal struct DGTConnectionView: View {
         .padding(Metrics.margin)
         .accessibilityIdentifier(AccessibilityID.dgtConnectedPanel)
     }
-    
+
     @ViewBuilder
     private func infoRow(_ label: String, _ value: String?) -> some View {
         if let value, !value.isEmpty {
@@ -218,7 +213,7 @@ internal struct DGTConnectionView: View {
             }
         }
     }
-    
+
     private func failedPanel(_ message: String) -> some View {
         ContentUnavailableView {
             Label("Couldn't Connect", systemImage: "exclamationmark.triangle")
@@ -227,37 +222,38 @@ internal struct DGTConnectionView: View {
         }
         .accessibilityIdentifier(AccessibilityID.dgtFailedPanel)
     }
-    
+
     // MARK: Footer
-    
+
     private var footer: some View {
         HStack(spacing: Metrics.groupSpacing) {
             switch connection.status {
             case .disconnected, .searching:
-                Button("Rescan") { connection.search() }
-                    .accessibilityIdentifier(AccessibilityID.dgtRescanButton)
                 Spacer()
                 Button("Cancel") { dismiss() }
-                Button("Connect") {
-                    guard let device = selectedDevice else { return }
-                    Task { await connection.connect(to: device) }
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(selectedDevice == nil)
-                .accessibilityIdentifier(AccessibilityID.dgtConnectButton)
-                
+                Button("Try Again") { attemptConnect() }
+                    .keyboardShortcut(.defaultAction)
+                    .accessibilityIdentifier(AccessibilityID.dgtRetryButton)
+
             case .connecting:
                 Spacer()
+                // Dismisses too: a cancelled attempt leaves `.disconnected`
+                // with the board still enumerated, and the resting panel
+                // would read as an attempt that isn't happening.
                 Button("Cancel") {
-                    Task { await connection.disconnect() }
+                    Task {
+                        await connection.disconnect()
+                        dismiss()
+                    }
                 }
                 .accessibilityIdentifier(AccessibilityID.dgtCancelButton)
-                
+
             case .reconnecting:
                 // Standing the loop down is deliberate but not destructive —
                 // nothing is lost; the game stays right there on screen.
-                // Ends in `.disconnected`, then `search()` swaps this panel
-                // for the device list in place.
+                // The `search()` refreshes the enumeration so the panel
+                // this resolves to tells the truth about the (almost
+                // certainly absent) board.
                 Button("Stop Trying") {
                     Task {
                         await connection.stopReconnecting()
@@ -268,95 +264,42 @@ internal struct DGTConnectionView: View {
                 Spacer()
                 Button("Close") { dismiss() }
                     .keyboardShortcut(.defaultAction)
-                
+
             case .connected:
+                // Dismisses for the Cancel reason: a deliberate disconnect
+                // shouldn't resolve to a panel that looks like a stalled
+                // connect.
                 Button("Disconnect", role: .destructive) {
-                    Task { await connection.disconnect() }
+                    Task {
+                        await connection.disconnect()
+                        dismiss()
+                    }
                 }
                 .accessibilityIdentifier(AccessibilityID.dgtDisconnectButton)
                 Spacer()
                 Button("Done") { dismiss() }
                     .keyboardShortcut(.defaultAction)
-                
+
             case .failed:
                 Spacer()
                 Button("Cancel") { dismiss() }
-                Button("Try Again") { connection.search() }
+                Button("Try Again") { attemptConnect() }
                     .keyboardShortcut(.defaultAction)
                     .accessibilityIdentifier(AccessibilityID.dgtRetryButton)
             }
         }
         .padding(Metrics.margin)
     }
-    
-    // MARK: Helpers
-    
-    private var selectedDevice: DGTSerialDevice? {
-        connection.availableDevices.first { $0.id == selectedDeviceID }
-    }
-}
-
-// MARK: Device Row
-
-private struct DeviceRow: View {
-    let device: DGTSerialDevice
-    
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: device.isLikelyBoard ? "cable.connector" : "point.3.connected.trianglepath.dotted")
-                .foregroundStyle(device.isLikelyBoard ? Color.accentColor : .secondary)
-                .frame(width: 22)
-                .font(.title2)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(device.name)
-                    .font(.callout)
-                Text(device.path)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            
-            if device.isLikelyBoard {
-                Spacer()
-                Text("Likely board")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.vertical, 8)
-    }
 }
 
 // MARK: Previews
 
-/// `DeviceRow` is the previewable half: `DGTConnection.status` is
-/// `private(set)`, so the dialog itself can't be driven past its empty
-/// state from a preview. The row carries the visual logic worth seeing —
-/// `isLikelyBoard` picks the icon and tint (sort-only for this dialog,
-/// never auto-connect criteria).
-#Preview("Device Rows") {
-    VStack(alignment: .leading, spacing: 0) {
-        DeviceRow(device: DGTSerialDevice(path: "/dev/cu.usbmodem01", name: "DGT Board"))
-        Divider()
-        DeviceRow(device: DGTSerialDevice(path: "/dev/cu.usbserial-A1B2", name: "FTDI USB Serial"))
-        Divider()
-        DeviceRow(device: DGTSerialDevice(path: "/dev/cu.Bluetooth-Incoming-Port",
-                                          name: "Bluetooth-Incoming-Port"))
-        Divider()
-        DeviceRow(device: DGTSerialDevice(path: "/dev/cu.debug-console", name: "debug-console"))
-    }
-    .padding()
-    .frame(width: 380)
-}
-
-/// Long name and long path — the truncation case for a 380 pt sheet.
-#Preview("Overflowing Row") {
-    DeviceRow(
-        device: DGTSerialDevice(
-            path: "/dev/cu.usbmodem-DGT-Revelation-II-0000000000001",
-            name: "DGT Revelation II Electronic Chessboard (rev 4.02)"
-        )
-    )
-    .padding()
-    .frame(width: 380)
+/// `DGTConnection.status` is `private(set)`, so the window can't be driven
+/// past its resting state from a preview — the standing waiver. What a
+/// boardless canvas honestly shows is the not-found panel, which is also
+/// the one state a boardless *manual* run can verify; the other panels are
+/// connect-flow manual-check territory, as they always were.
+#Preview("Board Not Found") {
+    DGTConnectionView()
+        .environment(DGTConnection())
 }

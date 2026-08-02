@@ -14,9 +14,10 @@ import os
 ///
 /// This is the "device discovery" half of D2. It matches all BSD serial
 /// services (`IOSerialBSDClient`), reads each one's callout path and TTY name
-/// from the IORegistry, and hands back value-type `DGTSerialDevice`s. The
-/// connect dialog presents these (likely-board candidates first) and the user
-/// confirms one before `DGTSerialPort` opens it.
+/// from the IORegistry, and hands back value-type `DGTSerialDevice`s. Since
+/// the one-board decree (2 Aug 2026) the only consumers are presence checks —
+/// is `DGTConnection.onlyBoardPath` among these? — for launch auto-connect,
+/// the reconnect loop, and the connect window's not-found panel.
 ///
 /// Pure enumeration — no device is opened here. Under the App Sandbox this
 /// still requires the serial entitlement to return results (see the D2

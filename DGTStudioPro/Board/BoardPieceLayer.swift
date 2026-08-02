@@ -67,10 +67,39 @@ internal struct BoardPieceLayer: View {
 
     // MARK: Static Constants
 
-    /// Quick enough to feel like the piece landing, slow enough to read as
-    /// motion — and shorter than the session's 300 ms quiescence, so a glide
-    /// has always finished before the settle that confirms it commits.
-    internal static let glide: Animation = .snappy(duration: 0.22)
+    /// The glide duration's guardrails and default — a user preference
+    /// since 2 Aug 2026, replacing the fixed `glide` constant. 0.22 s is
+    /// the shipped feel: quick enough to read as the piece landing, slow
+    /// enough to read as motion. The range is the chosen envelope
+    /// (0.1–1 s), clamped on every read — the `EngineConfiguration`
+    /// stance: the slider can't leave the range, and a hand-edited
+    /// default gets repaired rather than obeyed.
+    ///
+    /// One sentence the old constant's doc carried no longer always
+    /// holds: above 0.3 s a glide can still be in flight when the
+    /// session's 300 ms quiescence settles the move. That is visual only
+    /// — the animation retargets mid-flight, and nothing about commit
+    /// timing reads the animation — and it is the accepted price of
+    /// making the speed a preference.
+    /// All three are `nonisolated`: `View` conformance infers `@MainActor`
+    /// onto a type's statics, and `BoardPieceLayerTests` is deliberately
+    /// nonisolated — the suite is the compile-time witness (the D44′
+    /// shape) that plain value arithmetic stays callable from anywhere,
+    /// and it caught exactly this. Deeply immutable values and a pure
+    /// function need no isolation; `glide(duration:)` stays isolated
+    /// because its only consumer is `body`.
+    internal nonisolated static let durationRange: ClosedRange<Double> = 0.1...1.0
+    internal nonisolated static let defaultDuration: Double = 0.22
+
+    internal nonisolated static func clampedDuration(_ raw: Double) -> Double {
+        min(max(raw, durationRange.lowerBound), durationRange.upperBound)
+    }
+
+    /// The glide at an already-clamped duration — `.snappy` stays the
+    /// curve; only the duration is the user's.
+    internal static func glide(duration: Double) -> Animation {
+        .snappy(duration: duration)
+    }
 
     // MARK: Stored Properties
     internal let pieces: [ResolvedPiece]
@@ -78,6 +107,14 @@ internal struct BoardPieceLayer: View {
     internal let perspective: PieceColor
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// D21′'s shape: read here because the layer is the duration's one
+    /// consumer. Settings binds the same key, and both initial values are
+    /// spelled `BoardPieceLayer.defaultDuration`, so the number lives
+    /// once (the `EngineConfiguration` arrangement, documented at
+    /// `StorageKeys`).
+    @AppStorage(StorageKeys.pieceAnimationDuration)
+    private var animationDuration = BoardPieceLayer.defaultDuration
 
     // MARK: Body
     internal var body: some View {
@@ -89,7 +126,10 @@ internal struct BoardPieceLayer: View {
             }
         }
         .frame(width: squareSize * 8, height: squareSize * 8)
-        .animation(reduceMotion ? nil : Self.glide, value: pieces)
+        .animation(
+            reduceMotion ? nil : Self.glide(duration: Self.clampedDuration(animationDuration)),
+            value: pieces
+        )
         .allowsHitTesting(false)
     }
 

@@ -181,7 +181,7 @@ internal struct LibraryColumnsView: View {
                 Button {
                     onAnalyze(game)
                 } label: {
-                    Label("Analyze", systemImage: "wand.and.stars")
+                    Label("Analyze", systemImage: AnalysisGlyph.name(for: game))
                 }
                 .help("Analyze this game with Stockfish")
             }

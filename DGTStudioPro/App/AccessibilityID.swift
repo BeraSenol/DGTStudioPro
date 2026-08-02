@@ -223,14 +223,17 @@ internal enum AccessibilityID {
     
     // MARK: DGT Connection
     
+    // `dgt.deviceList`, `dgt.rescanButton` and `dgt.connectButton` were
+    // **removed** 2 Aug 2026 with the device picker (removals are as
+    // breaking as renames — the D40′ precedent): the window connects to the
+    // one hardcoded board or explains why it can't, so there is nothing to
+    // list, rescan, or confirm. `dgt.notFoundPanel` is the successor state.
     internal static let dgtConnectSheet           = "dgt.connectSheet"
-    internal static let dgtDeviceList             = "dgt.deviceList"
     internal static let dgtConnectingPanel        = "dgt.connectingPanel"
     internal static let dgtReconnectingPanel      = "dgt.reconnectingPanel"
     internal static let dgtConnectedPanel         = "dgt.connectedPanel"
     internal static let dgtFailedPanel            = "dgt.failedPanel"
-    internal static let dgtRescanButton           = "dgt.rescanButton"
-    internal static let dgtConnectButton          = "dgt.connectButton"
+    internal static let dgtNotFoundPanel          = "dgt.notFoundPanel"
     internal static let dgtCancelButton           = "dgt.cancelButton"
     internal static let dgtStopReconnectingButton = "dgt.stopReconnectingButton"
     internal static let dgtDisconnectButton       = "dgt.disconnectButton"
@@ -246,6 +249,7 @@ internal enum AccessibilityID {
     internal static let settingsEngineDepthStepper     = "settings.engineDepthStepper"
     internal static let settingsEngineHashPicker       = "settings.engineHashPicker"
     internal static let settingsEngineThreadsStepper   = "settings.engineThreadsStepper"
+    internal static let settingsPieceAnimationSlider   = "settings.pieceAnimationSlider"
     
     // MARK: Library
     
@@ -264,6 +268,10 @@ internal enum AccessibilityID {
     /// D26′ — the shared `InspectorEmptyState`. Distinct from
     /// `libraryEmptyState`, which is the *content area* with no games at all.
     internal static let libraryInspectorEmpty  = "library.inspector.empty"
+    /// The multi-selection variant of the above (2 Aug 2026): 2+ games
+    /// selected, the inspector names the count instead of detailing an
+    /// arbitrary member.
+    internal static let libraryInspectorMulti  = "library.inspector.multi"
     
     /// The rename pencil, which moved onto the roster section header when the
     /// header became the game's own name. It edits `PGN.name` — a user label
@@ -371,6 +379,10 @@ internal enum AccessibilityID {
     internal static let playersInspectorToggle  = "players.inspectorToggle"
     internal static let playersInspectorProfile = "players.inspector.profile"
     internal static let playersInspectorEmpty   = "players.inspector.empty"
+    /// The multi-selection variant of the above (2 Aug 2026): 2+ players
+    /// selected, the inspector names the count instead of profiling an
+    /// arbitrary member.
+    internal static let playersInspectorMulti   = "players.inspector.multi"
 
     // MARK: Player Editing (M5 — D37′, D38′; the orphan sweep is D40′)
 
