@@ -216,7 +216,7 @@ internal struct PlayersDestination: View {
                     onRename: { beginRename(stats: selected?.stats) },
                     onMerge: { beginMerge(stats: selected?.stats) }
                 )
-                .inspectorColumnWidth(min: 325, ideal: 320, max: 430)
+                .inspectorColumnWidth(min: 320, ideal: 325, max: 430)
             }
             .sheet(item: $editor) { editor in
                 switch editor {

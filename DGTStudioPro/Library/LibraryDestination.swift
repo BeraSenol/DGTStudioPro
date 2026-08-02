@@ -172,7 +172,7 @@ internal struct LibraryDestination: View {
                 pgn: selectedPGN,
                 queue: tabState.analysisQueue
             )
-            .inspectorColumnWidth(min: 325, ideal: 320, max: 430)
+            .inspectorColumnWidth(min: 320, ideal: 325, max: 430)
         }
         .toolbar { toolbarContent }
         .sheet(isPresented: Binding(present: $importProgress)) {
