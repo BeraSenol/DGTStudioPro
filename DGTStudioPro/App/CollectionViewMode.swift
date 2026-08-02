@@ -26,25 +26,21 @@ internal enum CollectionViewMode: String, CaseIterable, Identifiable {
     }
 }
 
-/// The icons grid's geometry, shared by Library, Players and Rankings — and,
-/// since the between-milestone sweep, the gutters and inset of the Players and
-/// Rankings *columns* detail grids too.
+/// The icons grid's geometry, shared by the Library and Players icons views.
 ///
-/// Those two are a narrower claim than the icons grids: they read `spacing`
-/// and `inset` only, and keep their own `.adaptive(minimum: 160, maximum: 200)`
-/// sizing, because a detail pane beside a group list is not as wide as a whole
-/// destination. The sweep found them restating both numbers as literals while
-/// `LibraryColumnsView`'s equivalent card grid already read them here — one
-/// sibling reading the constant and two agreeing with it by coincidence, which
-/// is the twin-read-site shape and would have drifted on the first inset edit.
+/// The columns views stopped reading it with the 2 Aug 2026 Finder-column
+/// redesign — their card grids (which borrowed `spacing`/`inset`) were
+/// replaced by list-plus-detail panes with no grid in them, so the icons
+/// grids are the constants' whole audience again.
 ///
-/// Collection-destination parity is an invariant, and it was being held by
+/// Collection-destination parity is an invariant, and it was once held by
 /// three private copies of the same two constants plus three *different*
 /// insets — `.padding(.horizontal, 16)`, none, and `.padding(16)`. The inset
 /// is not decoration: it comes off the width the six flexible columns divide,
-/// so an identically-built card rendered ~5pt narrower in Rankings than in
-/// Players at the same window width. One copy makes the parity structural — a
-/// sibling can no longer drift without editing what every sibling reads.
+/// so an identically-built card rendered ~5pt narrower in one destination
+/// than another at the same window width. One copy makes the parity
+/// structural — a sibling can no longer drift without editing what every
+/// sibling reads.
 ///
 /// The inset is uniform rather than horizontal-only so the first row clears
 /// the toolbar divider and the last clears the window edge; horizontal-only

@@ -90,4 +90,15 @@ struct PieceTests {
         #expect(String(black) == "pnbrqk")
         #expect(Piece.empty.fenCharacter == ".")
     }
+
+    /// The SAN letter table. The exhaustive switch is compiler-witnessed for
+    /// *coverage*; the values themselves were pinned only incidentally,
+    /// through whichever pieces the SAN serializer fixtures happened to move.
+    /// The pawn's empty string is the load-bearing case — every pawn move's
+    /// SAN starts with the target or the file letter precisely because this
+    /// returns "".
+    @Test func notationIsTheSANLetterAndPawnIsEmpty() {
+        let letters = PieceType.allCases.map(\.notation)
+        #expect(letters == ["", "N", "B", "R", "Q", "K"])
+    }
 }

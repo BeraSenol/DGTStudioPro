@@ -114,6 +114,13 @@ enum Chess {
     "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -"
     static let position4 =
     "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq -"
+    /// Position 4's published colour-mirror, with **identical** reference
+    /// counts at every depth. Running both is the free colour-asymmetry
+    /// localizer: a mismatch *between them* points straight at a
+    /// colour-flip bug (pawn direction, EP rank, castling-right indices)
+    /// without any divide work.
+    static let position4Mirror =
+    "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1"
     static let position5 =
     "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ -"
     static let position6 =

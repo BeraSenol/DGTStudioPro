@@ -205,6 +205,35 @@ struct SANParserTests {
         #expect(move.to == Squares.c3)
     }
 
+    @Test func pinnedSiblingMakesBareKnightMoveUnambiguous() throws {
+        // The parser's twin of the serializer's legality pin: knights on g1
+        // and e5 both pseudo-legally reach f3, the e5 knight is absolutely
+        // pinned by the e8 rook — so bare `Nf3` matches exactly one *legal*
+        // move and must resolve to g1, not throw `.ambiguous`. A matcher
+        // filtering pseudo-legal moves fails here and only here.
+        let pos = Position.make {
+            $0[Squares.e1] = .whiteKing
+            $0[Squares.a8] = .blackKing
+            $0[Squares.e8] = .blackRook
+            $0[Squares.e5] = .whiteKnight
+            $0[Squares.g1] = .whiteKnight
+        }
+        let move = try GameState.test(pos).parseSAN("Nf3")
+        #expect(move.from == Squares.g1)
+    }
+
+    @Test func redundantDisambiguatorIsAcceptedOnRead() throws {
+        // `Ngf3` from the start position over-disambiguates — only the g1
+        // knight reaches f3. Read-side leniency is deliberate (real PGN
+        // over-disambiguates constantly; the disambiguator is a filter,
+        // not a checksum), while the serializer never emits the redundant
+        // form. Pinned as documentation so tightening the parser is a
+        // visible decision, not a drive-by.
+        let move = try GameState.starting.parseSAN("Ngf3")
+        #expect(move.from == Squares.g1)
+        #expect(move.to == Squares.f3)
+    }
+
     // MARK: Sliding Pieces
 
     @Test func bishopMove() throws {

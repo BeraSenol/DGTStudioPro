@@ -17,12 +17,18 @@ internal enum StorageKeys {
     // First-run seed guard for the default smart tags (M-prs.5): the flag
     // — not tag count — decides, so deleting all defaults sticks.
     internal static let didSeedDefaultSmartTags = "didSeedDefaultSmartTags"
-    internal static let libraryViewMode = "libraryViewMode"
-    internal static let playersViewMode = "playersViewMode"
-    // `rankingsViewMode` retired with its destination (D48′). The stored
-    // value lingers in existing defaults, unread — accepted rather than
-    // migrated, the D45′ retired-section stance: a leftover key costs
-    // nothing, a cleanup pass is machinery the leftover doesn't earn.
+    // One view mode for both collection destinations: the last mode used
+    // anywhere is the mode everywhere — switch the Library to icons and
+    // Players opens in icons. A view mode is a preference about *browsing*,
+    // not about a destination, which is the same argument that kept D45′'s
+    // collapse state out of `TabState`. Replaces the per-destination
+    // `libraryViewMode` / `playersViewMode` pair; both stored values join
+    // `rankingsViewMode` (retired with its destination, D48′) in existing
+    // defaults, unread — accepted rather than migrated: a leftover key
+    // costs nothing, a cleanup pass is machinery the leftover doesn't earn.
+    // Absent reads as `.list`; the two `@AppStorage` read sites (Library's
+    // and Players') must agree on that default — the documented twin.
+    internal static let collectionViewMode = "collectionViewMode"
     /// D48′ — the merged Players destination's ordering. Stored as
     /// `PlayersSortOrder.rawValue`; absent reads as `.rank` at the one
     /// `@AppStorage` site, which is the destination's default read.

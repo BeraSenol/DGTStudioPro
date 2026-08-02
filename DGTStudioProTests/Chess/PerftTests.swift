@@ -44,6 +44,7 @@ struct PerftTests {
             ("Kiwipete",   Chess.kiwipete,     48),
             ("Position 3", Chess.position3,    14),
             ("Position 4", Chess.position4,     6),
+            ("Position 4M", Chess.position4Mirror, 6),
             ("Position 5", Chess.position5,    44),
             ("Position 6", Chess.position6,    46),
         ]
@@ -94,6 +95,16 @@ struct PerftTests {
         #expect(Chess.perft(state, depth: 4) == 422_333)
     }
     
+    /// Position 4's colour-mirror, same reference count by construction.
+    /// A depth-4 mismatch between this and `position4Depth4` — while the
+    /// canonical number still passes for one of them — localizes a
+    /// colour-asymmetry bug (pawn direction, EP rank, castling-right
+    /// indices) with no divide work at all.
+    @Test func position4MirrorDepth4() throws {
+        let state = try GameState.parsing(Chess.position4Mirror)
+        #expect(Chess.perft(state, depth: 4) == 422_333)
+    }
+
     /// Position 5 — white pawn on d7 ready to promote with capture
     /// possibilities to c8 or e8, plus a black knight on f2 creating
     /// discovered-attack threats against the white king's home square.

@@ -9,263 +9,199 @@ import Foundation
 import SwiftData
 import SwiftUI
 
-// MARK: Grouping Dimension
-internal enum LibraryGroupingDimension: String, CaseIterable, Identifiable {
-    case event
-    case player
-    case year
-    
-    internal var id: String { rawValue }
-    
-    internal var displayName: String {
-        switch self {
-        case .event:  return "Event"
-        case .player: return "Player"
-        case .year:   return "Year"
-        }
-    }
-    
-    internal var systemImage: String {
-        switch self {
-        case .event:  return "trophy"
-        case .player: return "person"
-        case .year:   return "calendar"
-        }
-    }
-}
-
-// MARK: Group
-internal struct LibraryGroup: Identifiable, Hashable {
-    internal let id: String
-    internal let displayName: String
-    internal let games: [PGN]
-    
-    internal var gameCount: Int { games.count }
-    
-    internal static func == (lhs: LibraryGroup, rhs: LibraryGroup) -> Bool {
-        lhs.id == rhs.id
-    }
-    
-    internal func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-    }
-}
-
-// MARK: Columns View
+/// The Finder-column shape (2 Aug 2026 redesign): a flat list of games in
+/// the first column, and the rest of the pane filled by the selected game's
+/// detail — preview board on top, a Finder-style facts block beneath it.
+///
+/// This replaces the grouped browser (Event / Player / Year buckets driving
+/// a card grid). The grouping was a second filtering surface in a
+/// destination that already has one — smart tags own "show me a slice of
+/// the Library" — so the columns mode's job is now inspection density, not
+/// bucketing. `LibraryGroupingDimension`, `LibraryGroup` and the three
+/// grouping folds were deleted with it; re-adding grouping means finding a
+/// question the tags can't answer, not reverting this file.
+///
+/// The facts block renders the Seven Tag Roster through `RosterSummary`'s
+/// subscript — the single place the display rules live (D22′) — and is
+/// driven from `SevenTagRoster.allCases`, so this pane can't quietly lose a
+/// tag any more than the inspectors' section can. `SevenTagRosterSection`
+/// stays the *inspectors'* renderer; what is shared here is the formatting,
+/// which is the half that must not fork.
 internal struct LibraryColumnsView: View {
-    
+
     // MARK: Stored Properties
-    @Binding internal var selectedPGNs: Set<PGN.ID>
     internal let games: [PGN]
+    @Binding internal var selectedPGNs: Set<PGN.ID>
+    internal let boardStyle: BoardStyle
     internal let onOpen: (PGN) -> Void
     internal let onAnalyze: (PGN) -> Void
     internal let onExport: (PGN) -> Void
     internal let onDelete: (PGN) -> Void
-    
-    // MARK: Private Properties
-    @State private var dimension: LibraryGroupingDimension = .event
-    @State private var selectedGroupID: String?
-    
+
+    /// "No value to show" for the derived rows — the meaning
+    /// `OpeningSection`'s em-dash carries, deliberately restated per surface
+    /// (its own comment makes the same call beside `SevenTagRosterSection`'s).
+    /// The roster rows never need it: `RosterSummary` speaks PGN's own `?`.
+    private static let noValue = "—"
+
     // MARK: Computed Properties
-    
-    /// Grouping is a pure function of the current games + dimension. It's
-    /// recomputed on each body run, which is what SwiftUI is built for: a
-    /// `Dictionary(grouping:)` over the library is cheap, and computing it
-    /// directly avoids both the one-frame empty flash and the stale-cache
-    /// hazard of caching it keyed on game *identity* (the contents that drive
-    /// the grouping — event / players / year — can change without the ID set
-    /// changing, which matters once games become editable).
-    private var groups: [LibraryGroup] {
-        Self.makeGroups(from: games, dimension: dimension)
+
+    /// The single selected game, or nil when the selection is empty *or*
+    /// multiple. The detail pane details one thing; multi-selection gets a
+    /// counting placeholder rather than arbitrarily previewing `first` —
+    /// the gallery's no-fallback rationale: never preview a game the user
+    /// didn't pick.
+    private var selectedGame: PGN? {
+        guard selectedPGNs.count == 1, let id = selectedPGNs.first else { return nil }
+        return games.first { $0.id == id }
     }
-    
-    private var selectedGroup: LibraryGroup? {
-        guard let id = selectedGroupID else { return nil }
-        return groups.first(where: { $0.id == id })
-    }
-    
+
     // MARK: Body
     internal var body: some View {
         HSplitView {
-            sidebar
-                .frame(minWidth: 200, idealWidth: 250, maxWidth: 300, maxHeight: .infinity)
-            
+            gameList
+                .frame(minWidth: 220, idealWidth: 260, maxWidth: 340, maxHeight: .infinity)
+
             detail
                 .frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onChange(of: dimension) { _, _ in
-            // Group IDs are dimension-scoped; clear stale selection when
-            // the user switches dimensions.
-            selectedGroupID = nil
-            selectedPGNs.removeAll()
-        }
     }
-    
+
     // MARK: Instance Methods
-    private var sidebar: some View {
-        VStack(spacing: 0) {
-            dimensionPicker
-            Divider()
-            groupList
-        }
-    }
-    
-    private var dimensionPicker: some View {
-        Picker("Group By", selection: $dimension) {
-            ForEach(LibraryGroupingDimension.allCases) { dim in
-                Label(dim.displayName, systemImage: dim.systemImage).tag(dim)
-            }
-        }
-        .pickerStyle(.segmented)
-        .labelsHidden()
-        .padding(8)
-    }
-    
+
+    /// The empty arm is unreachable in production — `LibraryDestination`
+    /// gates on `filteredGames.isEmpty` before the mode views are built —
+    /// but previews construct this view directly, and an empty `List` with
+    /// a selection binding renders as a bare void (the
+    /// `PlayersColumnsView` precedent: both empty states have to hold).
     @ViewBuilder
-    private var groupList: some View {
-        if groups.isEmpty {
+    private var gameList: some View {
+        if games.isEmpty {
             VStack {
                 Spacer()
-                Text("No \(dimension.displayName.lowercased())s")
+                Text("No games")
                     .font(.callout)
                     .foregroundStyle(.tertiary)
                 Spacer()
             }
             .frame(maxWidth: .infinity)
         } else {
-            List(selection: $selectedGroupID) {
-                ForEach(groups) { group in
-                    HStack {
-                        Label(group.displayName, systemImage: dimension.systemImage)
-                            .lineLimit(1)
-                        Spacer()
-                        Text("\(group.gameCount)")
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.tertiary)
-                    }
-                    .tag(group.id)
+            List(selection: $selectedPGNs) {
+                ForEach(games) { game in
+                    row(for: game)
+                        .tag(game.id)
                 }
             }
-            .listStyle(.sidebar)
+            .listStyle(.plain)
         }
     }
-    
+
+    /// Two lines, the inspector's recent-games grammar: name above, date
+    /// and result below. The context menu mirrors the card's affordances so
+    /// switching view modes never loses a verb.
+    private func row(for game: PGN) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(game.name)
+                .lineLimit(1)
+            HStack {
+                Text(game.displayDate)
+                Spacer()
+                Text(game.result.rawValue)
+                    .monospaced()
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 2)
+        .contextMenu {
+            Button("Open") { onOpen(game) }
+            Button("Analyze") { onAnalyze(game) }
+            Button("Export…") { onExport(game) }
+            Divider()
+            Button("Delete", role: .destructive) { onDelete(game) }
+        }
+    }
+
     @ViewBuilder
     private var detail: some View {
-        Group {
-            if let group = selectedGroup {
-                groupGames(group)
-            } else {
-                ContentUnavailableView(
-                    "No \(dimension.displayName) Selected",
-                    systemImage: "square.dashed",
-                    description: Text("Select a \(dimension.displayName.lowercased()) on the left to see its games.")
-                )
-            }
+        if let game = selectedGame {
+            gameDetail(game)
+        } else if selectedPGNs.count > 1 {
+            ContentUnavailableView(
+                "\(selectedPGNs.count) Games Selected",
+                systemImage: "square.on.square",
+                description: Text("The toolbar's Analyze, Export and Delete act on the whole selection.")
+            )
+        } else {
+            ContentUnavailableView(
+                "No Game Selected",
+                systemImage: "square.dashed",
+                description: Text("Select a game in the list to see its details.")
+            )
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
-    private func groupGames(_ group: LibraryGroup) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                groupHeader(group)
-                LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 16)],
-                    spacing: 16
-                ) {
-                    ForEach(group.games) { game in
-                        LibraryGameCardView(
-                            game: game,
-                            isSelected: selectedPGNs.contains(game.id),
-                            onSelect:  { selectedPGNs = [game.id] },
-                            onOpen:    { onOpen(game) },
-                            onAnalyze: { onAnalyze(game) },
-                            onExport:  { onExport(game) },
-                            onDelete:  { onDelete(game) }
-                        )
-                    }
+
+    /// Preview above, facts below. The preview reuses the gallery's
+    /// `LibraryGamePreviewView` whole — header, board, async replay — and
+    /// takes the flexible space; the facts block keeps its natural height,
+    /// so a short window squeezes the board, never the text (Finder's own
+    /// trade).
+    private func gameDetail(_ game: PGN) -> some View {
+        VStack(spacing: 0) {
+            LibraryGamePreviewView(game: game, boardStyle: boardStyle)
+            Divider()
+            factsAndActions(game)
+        }
+    }
+
+    private func factsAndActions(_ game: PGN) -> some View {
+        let roster = RosterSummary(game)
+        return VStack(spacing: 16) {
+            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 4) {
+                ForEach(SevenTagRoster.allCases, id: \.self) { tag in
+                    factRow(tag.rawValue, roster[tag])
                 }
+                factRow("Opening", game.opening.map { "\($0.code) · \($0.fullName)" } ?? Self.noValue)
+                factRow("Moves", game.moves.isEmpty ? Self.noValue : "\((game.moves.count + 1) / 2)")
+                factRow("Time Control", game.timeControl ?? Self.noValue)
+                factRow("Board", game.board ?? Self.noValue)
             }
-            .padding(CollectionGridMetrics.inset)
+            .frame(maxWidth: 420)
+
+            HStack(spacing: 12) {
+                Button {
+                    onOpen(game)
+                } label: {
+                    Label("Open", systemImage: "arrow.up.forward.square")
+                }
+                .buttonStyle(.borderedProminent)
+                .help("Open this game in its own window")
+
+                Button {
+                    onAnalyze(game)
+                } label: {
+                    Label("Analyze", systemImage: "wand.and.stars")
+                }
+                .help("Analyze this game with Stockfish")
+            }
         }
+        .padding(20)
     }
-    
-    private func groupHeader(_ group: LibraryGroup) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(group.displayName)
-                .font(.title2)
-                .fontWeight(.semibold)
-            Text("\(group.gameCount) game\(group.gameCount == 1 ? "" : "s")")
-                .font(.callout)
+
+    /// Finder's info-row shape: the label column right-aligned against the
+    /// values. Values truncate in the middle — the long ones are serials
+    /// and site names, whose ends carry the information.
+    private func factRow(_ label: String, _ value: String) -> some View {
+        GridRow {
+            Text(label)
                 .foregroundStyle(.secondary)
+                .gridColumnAlignment(.trailing)
+            Text(value)
+                .lineLimit(1)
+                .truncationMode(.middle)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-    
-    // MARK: Static Methods
-    private static func makeGroups(
-        from games: [PGN],
-        dimension: LibraryGroupingDimension
-    ) -> [LibraryGroup] {
-        switch dimension {
-        case .event:  return groupByEvent(games)
-        case .player: return groupByPlayer(games)
-        case .year:   return groupByYear(games)
-        }
-    }
-    
-    private static func groupByEvent(_ games: [PGN]) -> [LibraryGroup] {
-        let buckets = Dictionary(grouping: games, by: \.event)
-        return buckets
-            .map { LibraryGroup(id: "event:\($0.key)", displayName: $0.key, games: $0.value) }
-            .sorted { $0.displayName < $1.displayName }
-    }
-    
-    private static func groupByPlayer(_ games: [PGN]) -> [LibraryGroup] {
-        var buckets: [String: [PGN]] = [:]
-        for game in games {
-            let whiteKey = game.whiteDisplayName
-            let blackKey = game.blackDisplayName
-            buckets[whiteKey, default: []].append(game)
-            if blackKey != whiteKey {
-                buckets[blackKey, default: []].append(game)
-            }
-        }
-        return buckets
-            .map { LibraryGroup(id: "player:\($0.key)", displayName: $0.key, games: $0.value) }
-            .sorted { $0.displayName < $1.displayName }
-    }
-    
-    private static func groupByYear(_ games: [PGN]) -> [LibraryGroup] {
-        let calendar = Calendar.current
-        var buckets: [Int?: [PGN]] = [:]
-        for game in games {
-            let year = game.date.map { calendar.component(.year, from: $0) }
-            buckets[year, default: []].append(game)
-        }
-        // Sort on the year, then render. Sorting the *rendered* names and
-        // re-testing for the literal "Undated" made the ordering rule depend
-        // on display copy — rewording the placeholder would silently send
-        // undated games to the top — and string `>` only agrees with numeric
-        // order while every year has the same digit count.
-        return buckets
-            .sorted { lhs, rhs in
-                switch (lhs.key, rhs.key) {
-                case let (left?, right?): return left > right
-                case (_?, nil):           return true     // dated before undated
-                case (nil, _?):           return false
-                case (nil, nil):          return false
-                }
-            }
-            .map { year, games in
-                LibraryGroup(
-                    id: year.map { "year:\($0)" } ?? "year:undated",
-                    displayName: year.map(String.init) ?? "Undated",
-                    games: games
-                )
-            }
+        .font(.callout)
     }
 }
 
@@ -274,16 +210,17 @@ private func columnsPreviewGames() -> [PGN] {
     let formatter = DateFormatter()
     formatter.dateFormat = "yyyy.MM.dd"
     formatter.locale = Locale(identifier: "en_US_POSIX")
-    
+
     return [
+        // Carries moves, a time control and a board so every derived facts
+        // row has a value — the fully-populated branch.
         PGN(event: "World Championship", site: "Dubai",
             date: formatter.date(from: "2021.12.10"),
             round: 11,
-            white: "Carlsen, Magnus", black: "Nepomniachtchi, Ian", result: .whiteWins),
-        PGN(event: "World Championship", site: "Dubai",
-            date: formatter.date(from: "2021.12.07"),
-            round: 9,
-            white: "Carlsen, Magnus", black: "Nepomniachtchi, Ian", result: .draw),
+            white: "Carlsen, Magnus", black: "Nepomniachtchi, Ian",
+            moves: ["e4", "e5", "Bc4", "Nc6", "Qh5", "Nf6", "Qxf7#"],
+            result: .whiteWins,
+            timeControl: "40/7200"),
         PGN(event: "Tata Steel Masters", site: "Wijk aan Zee",
             date: formatter.date(from: "2024.01.20"),
             round: 7,
@@ -292,10 +229,8 @@ private func columnsPreviewGames() -> [PGN] {
             date: formatter.date(from: "2023.06.03"),
             round: 3,
             white: "Firouzja, Alireza", black: "Ding, Liren", result: .blackWins),
-        PGN(event: "Candidates Tournament", site: "Madrid",
-            date: formatter.date(from: "2022.07.04"),
-            round: 14,
-            white: "Nepomniachtchi, Ian", black: "Ding, Liren", result: .ongoing),
+        // Undated and moveless: the date placeholder in the row, and the
+        // em-dash branch of every derived facts row at once.
         PGN(event: "Norway Chess", site: "Stavanger",
             date: nil,
             round: 5,
@@ -303,32 +238,76 @@ private func columnsPreviewGames() -> [PGN] {
     ]
 }
 
-#Preview("With Games") {
+#Preview("Detail") {
     @Previewable @State var selection: Set<PGN.ID> = []
-    
+
+    let games = columnsPreviewGames()
+
     LibraryColumnsView(
+        games: games,
         selectedPGNs: $selection,
-        games: columnsPreviewGames(),
+        boardStyle: .walnut,
         onOpen: { _ in },
         onAnalyze: { _ in },
         onExport: { _ in },
         onDelete: { _ in }
     )
-    .frame(width: 900, height: 600)
+    .frame(width: 900, height: 620)
+    .onAppear {
+        if let id = games.first?.id { selection = [id] }
+    }
+    .modelContainer(for: PGN.self, inMemory: true)
+}
+
+#Preview("Multi-Selection") {
+    @Previewable @State var selection: Set<PGN.ID> = []
+
+    let games = columnsPreviewGames()
+
+    LibraryColumnsView(
+        games: games,
+        selectedPGNs: $selection,
+        boardStyle: .walnut,
+        onOpen: { _ in },
+        onAnalyze: { _ in },
+        onExport: { _ in },
+        onDelete: { _ in }
+    )
+    .frame(width: 900, height: 620)
+    .onAppear {
+        selection = Set(games.prefix(2).map(\.id))
+    }
+    .modelContainer(for: PGN.self, inMemory: true)
+}
+
+#Preview("No Selection") {
+    @Previewable @State var selection: Set<PGN.ID> = []
+
+    LibraryColumnsView(
+        games: columnsPreviewGames(),
+        selectedPGNs: $selection,
+        boardStyle: .rosewood,
+        onOpen: { _ in },
+        onAnalyze: { _ in },
+        onExport: { _ in },
+        onDelete: { _ in }
+    )
+    .frame(width: 900, height: 620)
     .modelContainer(for: PGN.self, inMemory: true)
 }
 
 #Preview("Empty") {
     @Previewable @State var selection: Set<PGN.ID> = []
-    
+
     LibraryColumnsView(
-        selectedPGNs: $selection,
         games: [],
+        selectedPGNs: $selection,
+        boardStyle: .walnut,
         onOpen: { _ in },
         onAnalyze: { _ in },
         onExport: { _ in },
         onDelete: { _ in }
     )
-    .frame(width: 900, height: 600)
+    .frame(width: 900, height: 620)
     .modelContainer(for: PGN.self, inMemory: true)
 }

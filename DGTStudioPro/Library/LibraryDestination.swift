@@ -33,7 +33,10 @@ internal struct LibraryDestination: View {
     
     // MARK: Private Properties
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
-    @AppStorage(StorageKeys.libraryViewMode) private var viewMode: CollectionViewMode = .list
+    // Shared with Players (see `StorageKeys.collectionViewMode`): the last
+    // view mode used in either collection destination is what both show.
+    // The `.list` default is the documented twin of PlayersDestination's.
+    @AppStorage(StorageKeys.collectionViewMode) private var viewMode: CollectionViewMode = .list
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
@@ -249,8 +252,9 @@ internal struct LibraryDestination: View {
             .accessibilityIdentifier(AccessibilityID.libraryModeList)
         case .columns:
             LibraryColumnsView(
-                selectedPGNs: $selectedPGNs,
                 games: filteredGames,
+                selectedPGNs: $selectedPGNs,
+                boardStyle: boardStyle,
                 onOpen:    openGame,
                 onAnalyze: requestAnalysis,
                 onExport:  requestExport,
@@ -322,46 +326,50 @@ internal struct LibraryDestination: View {
     private var toolbarContent: some ToolbarContent {
         transferToolbarItems
         ToolbarSpacer()
-        viewModeToolbarItem
-        ToolbarSpacer()
         analysisToolbarItems
         ToolbarSpacer()
         trailingToolbarItems
     }
     
-    /// The Library's two file doors, in and out.
+    /// The Library's two file doors, in and out — one toolbar cell, with a
+    /// vertical divider between them. A single `ToolbarItem` (not two split
+    /// by a `ToolbarSpacer`) so the pair shares one capsule: they are the
+    /// two directions of the same job, and the explicit `Divider` marks the
+    /// direction change inside it. Identifiers, helps and the disabled
+    /// state stay on the individual buttons, so the UITest lookups and the
+    /// per-button affordances are unmoved by the shared container.
     @ToolbarContentBuilder
     private var transferToolbarItems: some ToolbarContent {
         ToolbarItem {
-            // Restored in M-batch. The button had been lost in an earlier
-            // toolbar edit, leaving three fossils: `presentOpenPanel()`
-            // orphaned, this identifier copy-pasted onto the view-mode
-            // picker's chain (where the outer of two chained identifiers
-            // won, mislabeling the picker), and the import-button UITest
-            // green against that mislabeled picker. Drag-and-drop had
-            // silently become the only import route.
-            Button {
-                presentOpenPanel()
-            } label: {
-                Label("Import", systemImage: "square.and.arrow.down")
+            HStack {
+                // Restored in M-batch. The button had been lost in an earlier
+                // toolbar edit, leaving three fossils: `presentOpenPanel()`
+                // orphaned, this identifier copy-pasted onto the view-mode
+                // picker's chain (where the outer of two chained identifiers
+                // won, mislabeling the picker), and the import-button UITest
+                // green against that mislabeled picker. Drag-and-drop had
+                // silently become the only import route.
+                Button {
+                    presentOpenPanel()
+                } label: {
+                    Label("Import", systemImage: "square.and.arrow.down")
+                }
+                .help("Import PGN files")
+                .accessibilityIdentifier(AccessibilityID.libraryImportButton)
+                Divider()
+                Button {
+                    requestExport(ids: selectedPGNs)
+                } label: {
+                    Label("Export", systemImage: "square.and.arrow.up")
+                }
+                .disabled(selectedPGNs.isEmpty)
+                .help(
+                    selectedPGNs.count > 1
+                    ? "Export \(selectedPGNs.count) selected games as PGN files"
+                    : "Export the selected game as a PGN file"
+                )
+                .accessibilityIdentifier(AccessibilityID.libraryExportButton)
             }
-            .help("Import PGN files")
-            .accessibilityIdentifier(AccessibilityID.libraryImportButton)
-        }
-        ToolbarSpacer()
-        ToolbarItem {
-            Button {
-                requestExport(ids: selectedPGNs)
-            } label: {
-                Label("Export", systemImage: "square.and.arrow.up")
-            }
-            .disabled(selectedPGNs.isEmpty)
-            .help(
-                selectedPGNs.count > 1
-                ? "Export \(selectedPGNs.count) selected games as PGN files"
-                : "Export the selected game as a PGN file"
-            )
-            .accessibilityIdentifier(AccessibilityID.libraryExportButton)
         }
     }
     
@@ -426,6 +434,14 @@ internal struct LibraryDestination: View {
         }
     }
     
+    /// The pinned tail, shared with Players by arrangement: the inspector
+    /// toggle is always the trailing-most item, and the view-mode picker
+    /// always sits immediately to its left — the same two controls in the
+    /// same two places whichever collection destination is showing. The
+    /// spacer between them is `.fixed`, not flexible: adjacent, but the
+    /// toggle keeps its own group rather than sharing a pill with content
+    /// controls (the `InspectorToggleContent` contract — it acts on the
+    /// window, the picker on the destination's content).
     @ToolbarContentBuilder
     private var trailingToolbarItems: some ToolbarContent {
         ToolbarItem {
@@ -439,6 +455,8 @@ internal struct LibraryDestination: View {
             .accessibilityIdentifier(AccessibilityID.libraryDeleteButton)
         }
         ToolbarSpacer()
+        viewModeToolbarItem
+        ToolbarSpacer(.fixed)
         ToolbarItem {
             Button {
                 tabState.libraryInspectorPresented.toggle()

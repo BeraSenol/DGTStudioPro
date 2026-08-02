@@ -42,22 +42,11 @@ internal struct PlayersGalleryView: View {
                         .font(.title2.weight(.semibold))
                 }
 
-                // One grid, each fact once (D48′): the two retired galleries
-                // disagreed on spacing (24 vs 0) and both said Wins twice —
-                // Record's first component absorbs it here as it does in the
-                // inspector.
-                Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 6) {
-                    GridRow {
-                        PlayerStatCell("Games", "\(player.stats.games)")
-                        PlayerStatCell("Record", "\(player.stats.wins)–\(player.stats.draws)–\(player.stats.losses)")
-                        PlayerStatCell("Win Rate", player.stats.winRate.formatted(.percent.precision(.fractionLength(0))))
-                    }
-                    GridRow {
-                        PlayerStatCell("Rating", player.rating?.displaySummary ?? "—")
-                        PlayerStatCell("Mates", "\(player.stats.matesDelivered)")
-                    }
-                }
-                .padding(.top, 4)
+                // One grid, each fact once (D48′), shared since the columns
+                // redesign made a second host — see `PlayerStatsGrid` for
+                // the history this extraction closes.
+                PlayerStatsGrid(stats: player.stats, rating: player.rating)
+                    .padding(.top, 4)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {

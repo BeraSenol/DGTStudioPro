@@ -58,6 +58,33 @@ internal struct PlayerStatCell: View {
     }
 }
 
+/// The five-fact stat grid of a player preview — Games / Record / Win Rate,
+/// then Rating / Mates. Extracted from `PlayersGalleryView` when the columns
+/// detail pane became its second host (the 2 Aug 2026 Finder-column
+/// redesign): the D48′ note this grid carried records the two retired
+/// galleries disagreeing on spacing and saying Wins twice, which is exactly
+/// the drift two private copies would reopen. Record's first component
+/// absorbs Wins here as it does in the inspector.
+internal struct PlayerStatsGrid: View {
+
+    internal let stats: PlayerStats
+    internal let rating: Glicko1.Rating?
+
+    internal var body: some View {
+        Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 6) {
+            GridRow {
+                PlayerStatCell("Games", "\(stats.games)")
+                PlayerStatCell("Record", "\(stats.wins)–\(stats.draws)–\(stats.losses)")
+                PlayerStatCell("Win Rate", stats.winRate.formatted(.percent.precision(.fractionLength(0))))
+            }
+            GridRow {
+                PlayerStatCell("Rating", rating?.displaySummary ?? "—")
+                PlayerStatCell("Mates", "\(stats.matesDelivered)")
+            }
+        }
+    }
+}
+
 /// The podium tint for a ladder position: gold, silver, bronze, and nothing
 /// below third. `init?(rank:)` is the single statement of the podium's depth,
 /// so no surface can decide the top four are special.

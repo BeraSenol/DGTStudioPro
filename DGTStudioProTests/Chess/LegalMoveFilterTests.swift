@@ -101,6 +101,28 @@ struct LegalMoveFilterTests {
         #expect(queenMoves.first?.capturedPieceType == .rook)
     }
 
+    @Test func doubleCheckForcesKingMovesOnly() {
+        // Black rook e8 and black knight f3 check the e1 king at once. No
+        // single block or capture answers two checkers, so every legal move
+        // must be a king move — the white a1 rook, which could block or
+        // capture either checker *alone*, must generate nothing. The classic
+        // filter bug (answering checks one at a time) passes every
+        // single-check test above and fails only here.
+        let pos = Position.make {
+            $0[Squares.e1] = .whiteKing
+            $0[Squares.h8] = .blackKing
+            $0[Squares.e8] = .blackRook
+            $0[Squares.f3] = .blackKnight
+            $0[Squares.a1] = .whiteRook
+        }
+        let state = GameState.test(pos)
+
+        let moves = state.legalMoves()
+        #expect(state.isInCheck)
+        #expect(!moves.isEmpty)
+        #expect(moves.allSatisfy { $0.pieceType == .king })
+    }
+
     // MARK: King Safety
     @Test func kingCannotMoveIntoCheck() {
         // White king e1, black rook d8 — king cannot step to d1 or d2.

@@ -116,6 +116,45 @@ struct SANSerializerTests {
         #expect(GameState.test(pos).san(for: move) == "Nb1c3")
     }
 
+    // MARK: Legality-Based Disambiguation
+
+    @Test func pinnedSiblingRequiresNoDisambiguator() {
+        // Knights on g1 and e5 both *pseudo-legally* reach f3, but the e5
+        // knight is absolutely pinned by the e8 rook against the e1 king —
+        // so exactly one legal move reaches f3, and SAN disambiguation
+        // (legality-based, per the standard) emits bare `Nf3`.
+        //
+        // The could-have-failed shape: a disambiguator computed over
+        // pseudo-legal reach emits `Ngf3` here, ships silently (readers
+        // still accept it), and surfaces only against a reference PGN.
+        let pos = Position.make {
+            $0[Squares.e1] = .whiteKing
+            $0[Squares.a8] = .blackKing
+            $0[Squares.e8] = .blackRook
+            $0[Squares.e5] = .whiteKnight
+            $0[Squares.g1] = .whiteKnight
+        }
+        let move = Move.make(
+            from: Squares.g1, to: Squares.f3,
+            pieceType: .knight, pieceColor: .white
+        )
+        #expect(GameState.test(pos).san(for: move) == "Nf3")
+    }
+
+    @Test func fileDisambiguatorPreferredWhenFileAndRankBothDiffer() {
+        // Knights on b1 and d5 both reach c3, differing in file *and* rank.
+        // FIDE preference order: file first — `Nbc3`, never `N1c3`.
+        let pos = Position.minimal {
+            $0[Squares.b1] = .whiteKnight
+            $0[Squares.d5] = .whiteKnight
+        }
+        let move = Move.make(
+            from: Squares.b1, to: Squares.c3,
+            pieceType: .knight, pieceColor: .white
+        )
+        #expect(GameState.test(pos).san(for: move) == "Nbc3")
+    }
+
     // MARK: Sliding Pieces
 
     @Test func bishopMove() {
@@ -215,6 +254,24 @@ struct SANSerializerTests {
         // just verify the body of the SAN is correct.
         let san = GameState.test(pos).san(for: move)
         #expect(san.hasPrefix("exf8=Q"))
+    }
+
+    @Test func promotionMateCombinesPromoAndMateSuffix() {
+        // The promotion tests above assert with `hasPrefix` to stay agnostic
+        // about the suffix; this one pins the combined grammar — `=Q` and
+        // `#` composing in that order. Kd6 covers every flight square the
+        // new b8 queen doesn't (c7/d7/e7), and rank 8 belongs to the queen.
+        let pos = Position.make {
+            $0[Squares.d6] = .whiteKing
+            $0[Squares.d8] = .blackKing
+            $0[Squares.b7] = .whitePawn
+        }
+        let move = Move.make(
+            from: Squares.b7, to: Squares.b8,
+            pieceType: .pawn, pieceColor: .white,
+            promotionType: .queen
+        )
+        #expect(GameState.test(pos).san(for: move) == "b8=Q#")
     }
 
     // MARK: Check / Mate Suffix

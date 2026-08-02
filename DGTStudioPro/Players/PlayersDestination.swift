@@ -73,7 +73,10 @@ internal struct PlayersDestination: View {
     internal let onShowInLibrary: (PersistentIdentifier) -> Void
     
     // MARK: Private Properties
-    @AppStorage(StorageKeys.playersViewMode) private var viewMode: CollectionViewMode = .list
+    // Shared with the Library (see `StorageKeys.collectionViewMode`): the
+    // last view mode used in either collection destination is what both
+    // show. The `.list` default is the documented twin of the Library's.
+    @AppStorage(StorageKeys.collectionViewMode) private var viewMode: CollectionViewMode = .list
     @AppStorage(StorageKeys.playersSortOrder) private var sortOrder: PlayersSortOrder = .rank
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \PGN.importedAt, order: .reverse) private var games: [PGN]
@@ -436,13 +439,15 @@ internal struct PlayersDestination: View {
                     PlayersListView(players: players, selectedKey: $selectedKey,
                                     onShowInLibrary: showInLibrary)
                 case .columns:
-                    // The grouping dimension follows the ordering (D48′):
-                    // letters group a name list, win bands group a ladder —
-                    // the retired Rankings view's own argument ("a ranked
-                    // list grouped alphabetically would fight its own
-                    // sort"), now applied in both directions.
-                    PlayersColumnsView(players: players, grouping: sortOrder,
+                    // Flat list + detail since the Finder-column redesign
+                    // (2 Aug 2026): the list follows `players`' display
+                    // order, so the Sort picker drives it directly and the
+                    // grouping vocabulary D48′ chose here went with the
+                    // grid it navigated. The detail feeds on the same
+                    // `selectedGames` the inspector receives.
+                    PlayersColumnsView(players: players,
                                        selectedKey: $selectedKey,
+                                       recentGames: selectedGames,
                                        onShowInLibrary: showInLibrary)
                 case .gallery:
                     PlayersGalleryView(players: players, selectedKey: $selectedKey,
@@ -464,24 +469,20 @@ internal struct PlayersDestination: View {
     }
     
     /// One stream, the Library's shape: every item in a single builder with
-    /// `ToolbarSpacer` marking the break before the inspector toggle. Stacking
+    /// `ToolbarSpacer` marking the break before the trailing pair. Stacking
     /// `.inspectorToggle` as a second `.toolbar` modifier left the toolbar
     /// undivided and the inspector column tucked below it — see
     /// `InspectorToggleContent`.
+    ///
+    /// The tail is pinned, shared with the Library by arrangement: the
+    /// inspector toggle is always the trailing-most item and the view-mode
+    /// picker always sits immediately to its left — the same two controls
+    /// in the same two places whichever collection destination is showing.
+    /// The spacer between them is `.fixed`: adjacent, but the toggle keeps
+    /// its own group rather than sharing a pill with content controls (the
+    /// `InspectorToggleContent` contract).
     @ToolbarContentBuilder
     private func toolbarContent(orphans: [Player]) -> some ToolbarContent {
-        ToolbarItem {
-            // Same macOS segmented-picker caveat as the Library's: the
-            // identifier tags the container; UI tests address segments by
-            // SF Symbol name. See DGTStudioProUITests.
-            Picker("View Mode", selection: $viewMode) {
-                ForEach(CollectionViewMode.allCases) { mode in
-                    Label(mode.displayName, systemImage: mode.systemImage).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
-            .accessibilityIdentifier(AccessibilityID.playersViewModePicker)
-        }
         ToolbarItem {
             // D48′'s one new control: rank order is the default read, name
             // order is for finding someone. A menu picker rather than a
@@ -498,8 +499,8 @@ internal struct PlayersDestination: View {
         }
         ToolbarItem {
             // D40′'s surface, and the only affordance in the app that can reach
-            // an orphaned player. After the picker, before the spacer: it acts
-            // on content, so it belongs on the content side of the break.
+            // an orphaned player. Before the spacer: it acts on content, so it
+            // belongs on the content side of the break.
             //
             // A menu rather than a bare button because the item opens a
             // confirmation rather than acting, and because registry maintenance
@@ -519,6 +520,19 @@ internal struct PlayersDestination: View {
             .accessibilityIdentifier(AccessibilityID.playersMaintenanceMenu)
         }
         ToolbarSpacer()
+        ToolbarItem {
+            // Same macOS segmented-picker caveat as the Library's: the
+            // identifier tags the container; UI tests address segments by
+            // SF Symbol name. See DGTStudioProUITests.
+            Picker("View Mode", selection: $viewMode) {
+                ForEach(CollectionViewMode.allCases) { mode in
+                    Label(mode.displayName, systemImage: mode.systemImage).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier(AccessibilityID.playersViewModePicker)
+        }
+        ToolbarSpacer(.fixed)
         InspectorToggleContent(
             isPresented: $tabState.playersInspectorPresented,
             identifier: AccessibilityID.playersInspectorToggle

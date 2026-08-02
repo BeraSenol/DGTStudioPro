@@ -94,4 +94,29 @@ struct PGNStoreMovetextEditTests {
         #expect(outcome == .success(["e4", "e5"]))
         #expect(game.evaluations.count == 2)
     }
+
+    /// D18′'s quiet clause, pinned from the side that breaks: the movetext
+    /// door deliberately does **not** re-resolve seats — a movetext edit
+    /// cannot touch players, so it has no business rewriting relationships.
+    /// `applyEdit` re-resolves unconditionally (its own documented contract,
+    /// the one D38′'s merge had to survive); if this door ever grows the
+    /// same reflex, a drifted tag would re-link or mint a player as a side
+    /// effect of editing *moves*. The drifted-tag fixture is exactly the
+    /// state a rename-in-flight or hand-edited row can leave behind.
+    @Test func movetextEditNeverReResolvesSeats() throws {
+        let (store, context) = try Self.makeStore()
+        let game = try store.importPGN(text: Self.sample())
+        let linkedBefore = game.whitePlayer
+        #expect(linkedBefore != nil)
+
+        // Simulate registry drift: the stored tag no longer folds onto the
+        // linked row's key.
+        game.white = "Carol"
+
+        _ = try store.applyMovetextEdit(to: game, proposed: ["d4", "d5"])
+
+        #expect(game.whitePlayer === linkedBefore)
+        let players = try context.fetch(FetchDescriptor<Player>())
+        #expect(!players.contains { $0.name == "Carol" })
+    }
 }

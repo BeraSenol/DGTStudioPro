@@ -5,90 +5,51 @@
 //  Created by Supreme Leader on 20/07/2026.
 //
 
+import SwiftData
 import SwiftUI
 
-/// The Players columns mode (absorbed Rankings' in D48′): the
-/// `LibraryColumnsView` shape, with the grouping dimension following the
-/// destination's sort order. Letters group a name list (the contact-list
-/// classic; non-letters bucket under "#"), win bands group a ladder — the
-/// retired Rankings view's own argument, "a ranked list grouped
-/// alphabetically would fight its own sort", now honoured in both
-/// directions by one view instead of two files.
+/// The Finder-column shape (2 Aug 2026 redesign, with `LibraryColumnsView`):
+/// a flat list of players in the first column, the selected player's detail
+/// filling the rest. The list follows `players`' own display order, so the
+/// toolbar's Sort picker is what it obeys — rank order and name order both
+/// arrive already sequenced, and the rank badge stays honest either way
+/// because rank is computed under D11′ regardless of display order.
+///
+/// Replaces the grouped browser (letter / win-band buckets): the groups were
+/// a navigation aid for a card grid, and the grid is gone. The win-band
+/// table and the "a ranked list grouped alphabetically would fight its own
+/// sort" argument went with it — that argument was about which grouping
+/// vocabulary to use, and a flat list uses none.
+///
+/// The detail pane is the gallery's identity block plus what the extra room
+/// buys: the shared `PlayerStatsGrid`, the Show in Library hop, and the
+/// player's recent games — the same `recentGames` input the inspector
+/// receives, so the two surfaces can't disagree about what "recent" means.
 internal struct PlayersColumnsView: View {
-
-    // MARK: Group
-    private struct PlayerGroup: Identifiable, Hashable {
-        let id: String
-        let players: [RankedPlayer]
-        var count: Int { players.count }
-
-        static func == (lhs: PlayerGroup, rhs: PlayerGroup) -> Bool { lhs.id == rhs.id }
-        func hash(into hasher: inout Hasher) { hasher.combine(id) }
-    }
 
     // MARK: Stored Properties
     let players: [RankedPlayer]
-    /// Which grouping vocabulary applies — the destination passes its sort
-    /// order, so the left column always speaks the list's own language.
-    let grouping: PlayersSortOrder
     @Binding var selectedKey: PlayerStats.ID?
+    /// The selected player's games, newest first — the destination's
+    /// `selectedGames`, threaded exactly as `PlayersInspectorView` gets it.
+    let recentGames: [PGN]
     let onShowInLibrary: (PlayerStats.ID) -> Void
 
-    // MARK: Private Properties
-    @State private var selectedGroupID: String?
+    @Environment(\.openWindow) private var openWindow
 
     // MARK: Computed Properties
-
-    /// The fixed win brackets, descending. Ranges rather than closures, which
-    /// is what lets the table be a `Sendable` constant built once instead of
-    /// four closures allocated per read — and the boundaries read as data.
-    private static let brackets: [(id: String, wins: ClosedRange<Int>)] = [
-        ("10+ wins", 10...Int.max),
-        ("5–9 wins", 5...9),
-        ("1–4 wins", 1...4),
-        ("No wins",  0...0),
-    ]
-
-    /// Recomputed per body, the `LibraryColumnsView` rationale: cheap at
-    /// personal scale, and immune to contents changing under a cache.
-    /// `players` arrives in display order, so grouping preserves it inside
-    /// each group either way.
-    private var groups: [PlayerGroup] {
-        switch grouping {
-        case .name:
-            let buckets = Dictionary(grouping: players) { player -> String in
-                guard let first = player.stats.name.first, first.isLetter else { return "#" }
-                return String(first).uppercased()
-            }
-            return buckets
-                .map { PlayerGroup(id: $0.key, players: $0.value) }
-                .sorted { $0.id < $1.id }
-        case .rank:
-            return Self.brackets.compactMap { bracket in
-                let members = players.filter { bracket.wins.contains($0.stats.wins) }
-                guard !members.isEmpty else { return nil }
-                return PlayerGroup(id: bracket.id, players: members)
-            }
-        }
-    }
-
-    private func selectedGroup(in groups: [PlayerGroup]) -> PlayerGroup? {
-        guard let id = selectedGroupID else { return nil }
-        return groups.first { $0.id == id }
+    private var selectedPlayer: RankedPlayer? {
+        guard let selectedKey else { return nil }
+        return players.first { $0.id == selectedKey }
     }
 
     // MARK: Body
     var body: some View {
-        // Group once per render, then thread down — as computed properties
-        // this was read three times a render (empty check, ForEach,
-        // selection).
-        let groups = self.groups
+        HSplitView {
+            playerList
+                .frame(minWidth: 220, idealWidth: 260, maxWidth: 340, maxHeight: .infinity)
 
-        return HSplitView {
-            groupList(groups)
-                .frame(minWidth: 200, idealWidth: 250, maxWidth: 300, maxHeight: .infinity)
-
-            detail(groups)
+            detail
                 .frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -96,9 +57,14 @@ internal struct PlayersColumnsView: View {
 
     // MARK: Instance Methods
 
+    /// Two independent empty states that both have to hold, as before the
+    /// redesign: the list takes its own "No players" arm rather than
+    /// rendering an empty `List` — unreachable in production, where the
+    /// destination gates on `players.isEmpty`, but previews build this view
+    /// directly — and the detail pane shows its placeholder.
     @ViewBuilder
-    private func groupList(_ groups: [PlayerGroup]) -> some View {
-        if groups.isEmpty {
+    private var playerList: some View {
+        if players.isEmpty {
             VStack {
                 Spacer()
                 Text("No players")
@@ -108,94 +74,202 @@ internal struct PlayersColumnsView: View {
             }
             .frame(maxWidth: .infinity)
         } else {
-            List(selection: $selectedGroupID) {
-                ForEach(groups) { group in
-                    HStack {
-                        Label(group.id, systemImage: grouping == .rank ? "trophy" : "person")
-                            .lineLimit(1)
-                        Spacer()
-                        Text("\(group.count)")
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.tertiary)
-                    }
-                    .tag(group.id)
+            List(selection: $selectedKey) {
+                ForEach(players) { player in
+                    row(for: player)
+                        .tag(player.id)
                 }
             }
-            .listStyle(.sidebar)
+            .listStyle(.plain)
         }
     }
 
-    private func detail(_ groups: [PlayerGroup]) -> some View {
-        Group {
-            if let group = selectedGroup(in: groups) {
-                ScrollView {
-                    LazyVGrid(
-                        columns: [GridItem(.adaptive(minimum: 160, maximum: 200),
-                                          spacing: CollectionGridMetrics.spacing)],
-                        spacing: CollectionGridMetrics.spacing
-                    ) {
-                        ForEach(group.players) { player in
-                            PlayerCardView(
-                                stats: player.stats,
-                                isSelected: selectedKey == player.id,
-                                onSelect: { selectedKey = player.id },
-                                rank: player.rank,
-                                onShowInLibrary: { onShowInLibrary(player.id) }
-                            )
-                        }
-                    }
-                    .padding(CollectionGridMetrics.inset)
+    private func row(for player: RankedPlayer) -> some View {
+        HStack(spacing: 8) {
+            PlayerMonogram(name: player.stats.name, diameter: 28)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(player.stats.name)
+                    .lineLimit(1)
+                Text("\(player.stats.games) games")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text("#\(player.rank)")
+                .font(.caption.weight(.bold).monospacedDigit())
+                .foregroundStyle(RankMedal.style(forRank: player.rank))
+        }
+        .padding(.vertical, 2)
+        .contextMenu {
+            Button {
+                onShowInLibrary(player.id)
+            } label: {
+                Label("Show in Library", systemImage: "books.vertical")
+            }
+            .accessibilityIdentifier(AccessibilityID.contextShowInLibrary)
+        }
+    }
+
+    @ViewBuilder
+    private var detail: some View {
+        if let player = selectedPlayer {
+            playerDetail(player)
+        } else {
+            ContentUnavailableView(
+                "No Player Selected",
+                systemImage: "person.crop.circle.dashed",
+                description: Text("Select a player in the list to see their profile and recent games.")
+            )
+        }
+    }
+
+    /// A scrolling profile, unlike the Library's fixed facts block: nothing
+    /// here fights for aspect ratio the way a board does, and the recent
+    /// games list is the part that grows.
+    private func playerDetail(_ player: RankedPlayer) -> some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                PlayerMonogram(name: player.stats.name, diameter: 96)
+
+                // The gallery's identity row, kept in both hosts: the rank
+                // is the destination's default sort and earns the medal
+                // styling beside the name.
+                HStack(spacing: 8) {
+                    Text("#\(player.rank)")
+                        .font(.title2.weight(.bold).monospacedDigit())
+                        .foregroundStyle(RankMedal.style(forRank: player.rank))
+                    Text(player.stats.name)
+                        .font(.title2.weight(.semibold))
                 }
+
+                PlayerStatsGrid(stats: player.stats, rating: player.rating)
+
+                Button {
+                    onShowInLibrary(player.id)
+                } label: {
+                    Label("Show in Library", systemImage: "books.vertical")
+                }
+                .help("Filter the Library to this player's games")
+
+                Divider()
+                    .frame(maxWidth: 420)
+
+                recentGamesBlock
+            }
+            .padding(24)
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    /// The inspector's recent-games rules, restated for this host: capped at
+    /// ten with an "and N more…" tail, rows open the game via the same
+    /// `openWindow(value:)` route (macOS dedups and tabs the windows). Two
+    /// hosts' two decisions that agree today — the row is private on each
+    /// side deliberately, the `OpeningSection` em-dash precedent, because
+    /// one lives in a `List` section and one in a plain stack and a shared
+    /// view would have to be generic over that difference.
+    private var recentGamesBlock: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Recent Games")
+                .font(.headline)
+
+            if recentGames.isEmpty {
+                Text("No games")
+                    .foregroundStyle(.secondary)
             } else {
-                ContentUnavailableView(
-                    "Nothing Selected",
-                    systemImage: "square.dashed",
-                    description: Text(grouping == .rank
-                        ? "Select a win band on the left to see its players."
-                        : "Select a letter on the left to see its players.")
-                )
+                ForEach(recentGames.prefix(10)) { game in
+                    gameRow(for: game)
+                }
+                if recentGames.count > 10 {
+                    Text("and \(recentGames.count - 10) more…")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: 420, alignment: .leading)
+    }
+
+    private func gameRow(for game: PGN) -> some View {
+        Button {
+            openWindow(value: game.persistentModelID)
+        } label: {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(game.name)
+                        .lineLimit(1)
+                    Text(game.displayDate)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Text(game.result.rawValue)
+                    .font(.callout.weight(.semibold).monospaced())
+                    .foregroundStyle(.secondary)
+                    .tracking(1)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
 // MARK: Previews
 
-#Preview("By Letter") {
+#Preview("Selected") {
+    @Previewable @State var selection: PlayerStats.ID? = PreviewFixtures.topStats().id
+
+    PlayersColumnsView(
+        players: PreviewFixtures.rankedPlayers(),
+        selectedKey: $selection,
+        recentGames: [
+            PGN(event: "Test Open", site: "Memory", round: 1,
+                white: "Carlsen, Magnus", black: "Nepomniachtchi, Ian", result: .whiteWins),
+            PGN(event: "Test Open", site: "Memory", round: 2,
+                white: "Nepomniachtchi, Ian", black: "Carlsen, Magnus", result: .draw)
+        ],
+        onShowInLibrary: { _ in }
+    )
+    .frame(width: 860, height: 520)
+    .modelContainer(for: PGN.self, inMemory: true)
+}
+
+/// The no-games branch of the detail — a selected player whose recent list
+/// is empty renders "No games", not a collapsed void.
+#Preview("Selected — No Games") {
+    @Previewable @State var selection: PlayerStats.ID? = PreviewFixtures.topStats().id
+
+    PlayersColumnsView(
+        players: PreviewFixtures.rankedPlayers(),
+        selectedKey: $selection,
+        recentGames: [],
+        onShowInLibrary: { _ in }
+    )
+    .frame(width: 860, height: 520)
+    .modelContainer(for: PGN.self, inMemory: true)
+}
+
+#Preview("No Selection") {
     @Previewable @State var selection: PlayerStats.ID?
 
     PlayersColumnsView(
         players: PreviewFixtures.rankedPlayers(),
-        grouping: .name,
         selectedKey: $selection,
+        recentGames: [],
         onShowInLibrary: { _ in }
     )
-    .frame(width: 820, height: 420)
+    .frame(width: 860, height: 520)
+    .modelContainer(for: PGN.self, inMemory: true)
 }
 
-/// All four brackets populated. The small fixture reaches only "1–4 wins"
-/// and "No wins", so the 5–9 and 10+ boundaries — and the `compactMap` that
-/// drops empty bands — are unwitnessed without this one.
-#Preview("By Win Band — All Four") {
-    @Previewable @State var selection: PlayerStats.ID?
-
-    PlayersColumnsView(
-        players: PreviewFixtures.deepRankedPlayers(),
-        grouping: .rank,
-        selectedKey: $selection,
-        onShowInLibrary: { _ in }
-    )
-    .frame(width: 820, height: 420)
-}
-
-/// Two independent empty states that both have to hold: the group list takes
-/// its own "No players" arm rather than rendering an empty `List`, and the
-/// detail pane still shows its placeholder.
 #Preview("Empty") {
     @Previewable @State var selection: PlayerStats.ID?
 
-    PlayersColumnsView(players: [], grouping: .rank,
-                       selectedKey: $selection, onShowInLibrary: { _ in })
-        .frame(width: 820, height: 420)
+    PlayersColumnsView(
+        players: [],
+        selectedKey: $selection,
+        recentGames: [],
+        onShowInLibrary: { _ in }
+    )
+    .frame(width: 860, height: 520)
 }

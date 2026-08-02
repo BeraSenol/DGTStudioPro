@@ -187,4 +187,46 @@ struct FENParsingTests {
             )
         }
     }
+
+    // MARK: Position Key
+
+    @Test func positionKeyCarriesEveryDoublePushEPTarget() throws {
+        // `updatedEnPassantTarget` is *permissive*: it stamps the skipped
+        // square after every double push, capturable or not — so two states
+        // identical in placement, side, and rights get different
+        // `positionKey`s when only a dead EP right separates them. After
+        // 1. e4 no black pawn attacks e3, yet the key still says `e3`.
+        //
+        // Pinned as documentation, not endorsement: `positionKey` has no
+        // repetition consumer today, but FIDE's repetition rule counts the
+        // EP square only when the capture is actually playable (capturer
+        // present, unpinned, not in check). Any future threefold/fivefold
+        // fold over this key must strictify the EP field first, or it will
+        // miss exactly the repetitions players notice. The convention
+        // choice is a decision for that feature; this test is the tripwire
+        // that makes it one.
+        let start: GameState = .starting
+        let afterDoublePush = start.applying(try start.parseSAN("e4"))
+
+        let permissive = FEN(
+            position: afterDoublePush.position,
+            activeColor: afterDoublePush.activeColor,
+            castlingRights: afterDoublePush.castlingRights,
+            enPassantTarget: afterDoublePush.enPassantTarget,
+            halfmoveClock: afterDoublePush.halfmoveClock,
+            fullmoveNumber: afterDoublePush.fullmoveNumber
+        )
+        let withoutEP = FEN(
+            position: afterDoublePush.position,
+            activeColor: afterDoublePush.activeColor,
+            castlingRights: afterDoublePush.castlingRights,
+            enPassantTarget: nil,
+            halfmoveClock: afterDoublePush.halfmoveClock,
+            fullmoveNumber: afterDoublePush.fullmoveNumber
+        )
+
+        #expect(permissive.enPassantTarget == Squares.e3)
+        #expect(permissive.positionKey.hasSuffix(" e3"))
+        #expect(permissive.positionKey != withoutEP.positionKey)
+    }
 }
