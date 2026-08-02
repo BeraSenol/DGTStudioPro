@@ -325,6 +325,16 @@ final class DGTStudioProUITests: XCTestCase {
         launch()
         XCTAssertTrue(waitFor(selectPlayer("Anish Giri")))
 
+        // TEMPORARY instrument (§ Zero, planted 2 Aug after the width fix
+        // changed nothing): the full hierarchy as XCUITest sees it, printed
+        // at the exact moment the next line fails. Read it for three things —
+        // does `players.inspector.rename` appear at all; what element type
+        // and depth is the profile section; are the header's controls
+        // siblings of the rows or absent entirely. Absent → app-side (the
+        // identifiers aren't applied); present → query-side. Remove when
+        // § Zero closes.
+        print(app.debugDescription)
+
         XCTAssertTrue(element(AccessibilityID.playersRenameButton).isHittable,
                       "The D26′ rename pencil must be reachable in the inspector header")
         XCTAssertTrue(element(AccessibilityID.playersActionsMenu).isHittable,
