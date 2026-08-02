@@ -122,6 +122,14 @@ internal struct DGTStudioProApp: App {
             connection.boardInfo.identityTag
         }
 
+        // D49′ — the `.unresolved` pre-flight: the session suspects, the
+        // connection asks the hardware for a full dump, and recovery only
+        // takes over if the dump-confirmed board still can't be explained.
+        // Strong capture, `boardIdentity`'s reasoning above.
+        session.requestBoardResync = {
+            connection.requestBoardResync()
+        }
+
         // M7.3 — a board vanishing mid-game auto-reconnects instead of
         // showing the failure banner. "Mid-game" is any game-bearing mode
         // (`liveGame` non-nil, finished-on-screen included: the finished

@@ -262,6 +262,28 @@ internal final class DGTLiveSession {
     /// (couples the board surface to audio and re-fires on both exits).
     @ObservationIgnored internal var onDesync: (() -> Void)?
 
+    /// Optional board-resync request (D49′, closing the 1 Aug audit's C4).
+    /// Invoked at most once per divergence, from the `.unresolved` settle
+    /// arm, *instead of* entering recovery: the field-update stream is not
+    /// lossless (the framer's MSB resync exists precisely because adapters
+    /// drop bytes), and a single lost update leaves `physicalBoard` wrong by
+    /// one square until reconnect — after which recovery would guide the
+    /// player to "fix" a board that is already correct. The hook asks the
+    /// hardware for a full dump; the dump replaces `physicalBoard`, that
+    /// publishes, a fresh quiescence settles, and only a board the *dump*
+    /// also can't explain escalates. Wired once in `App.init()` to
+    /// `connection.requestBoardResync()`; when nil — headless unit tests,
+    /// unwired builds — `.unresolved` enters recovery immediately, exactly
+    /// as before D49′, so the deferral is strictly additive.
+    @ObservationIgnored internal var requestBoardResync: (() -> Void)?
+
+    /// One shot per divergence: set when the resync is requested, cleared by
+    /// any settle the board can explain (the dump answered honestly) and by
+    /// the game-lifecycle exits. Not cleared in `clearPlayingOverlays()`,
+    /// deliberately — that runs at the top of every settle, which would
+    /// re-arm the dump forever and recovery would never be reachable.
+    @ObservationIgnored private var resyncAttempted = false
+
     /// Optional board-identity source (M2, D28′) — answers "which physical
     /// board is this?" as a ready-made `[Board "…"]` tag value. Wired once
     /// in `App.init()` to `connection.boardInfo.identityTag`; consulted
@@ -372,8 +394,15 @@ internal final class DGTLiveSession {
         // exclusive and recomputed each settle: clear both up front, then the
         // relevant branch re-sets its own.
         clearPlayingOverlays()
-        
-        switch DGTReconstructor.reconstruct(from: game.currentState, physical: board) {
+
+        let outcome = DGTReconstructor.reconstruct(from: game.currentState, physical: board)
+
+        // Any outcome the board can explain retires the one-shot resync debt
+        // (D49′): the dump — or the player — explained the position, so a
+        // *future* divergence earns a fresh dump before recovery does.
+        if case .unresolved = outcome {} else { resyncAttempted = false }
+
+        switch outcome {
         case .noChange:
             sessionLog?.capture(.debug, "settle: no change")
             
@@ -435,8 +464,36 @@ internal final class DGTLiveSession {
             }
             
         case .unresolved:
-            enterRecovery(game, board: board)
+            // D49′: before recovery takes over, confirm the divergence
+            // against ground truth once. The F5 commit-refused guard above
+            // deliberately does *not* route here — that path is an internal
+            // logic divergence, not a lost-field-update symptom, and a
+            // board dump has nothing to say about it.
+            escalateOrResync(game, board: board)
         }
+    }
+
+    /// The `.unresolved` gate (D49′): first divergence asks the hardware for
+    /// a full dump and stays in `playing`; a board the dump-refreshed state
+    /// *still* can't explain escalates into recovery for real. With no hook,
+    /// straight to recovery — pre-D49′ behaviour, pinned.
+    private func escalateOrResync(_ game: LiveGame, board: Position) {
+        guard let requestBoardResync else {
+            enterRecovery(game, board: board)
+            return
+        }
+        guard !resyncAttempted else {
+            resyncAttempted = false
+            enterRecovery(game, board: board)
+            return
+        }
+        resyncAttempted = true
+        Self.logger.info("Settled board unexplained — requesting a full dump before recovery")
+        sessionLog?.capture(
+            .info,
+            "settle: unreconciled — asking the board for a full dump before recovery (one shot)"
+        )
+        requestBoardResync()
     }
     
     /// The one door into `recovering`, shared by the unresolved-board path
@@ -531,6 +588,7 @@ internal final class DGTLiveSession {
         archivedPGN = nil
         shouldOfferNewGame = false
         offeredNewGameForCurrentStart = true
+        resyncAttempted = false   // a fresh game owes no dump debt (D49′)
         clearPlayingOverlays()
         
         let alreadySetUp = beginTracking(game)
@@ -565,6 +623,7 @@ internal final class DGTLiveSession {
     internal func discardGame() {
         mode = .idle
         clearPlayingOverlays()
+        resyncAttempted = false   // the debt dies with the game (D49′)
         offeredNewGameForCurrentStart = false
         // The explicit-Discard exit from a failed archive (M5): the player
         // chose to lose the game, so the suppression lifts with it.

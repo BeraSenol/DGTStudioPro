@@ -639,4 +639,94 @@ struct DGTLiveSessionTests {
         #expect(session.liveGame?.result == .blackWins)
         #expect(session.liveGame?.isFinished == true)
     }
+    // MARK: Board-Dump Resync (D49′)
+
+    /// The `.unresolved` pre-flight: with the resync hook wired, the first
+    /// unexplainable settle asks for a dump and stays in `playing` — no
+    /// recovery, no desync record, and exactly one request.
+    @Test func firstUnresolvedSettleAsksForADumpInsteadOfRecovery() async throws {
+        let session = DGTLiveSession()
+        session.quiescence = .milliseconds(10)
+        var requests = 0
+        session.requestBoardResync = { requests += 1 }
+        session.boardChanged(.starting)
+        session.startNewGame(roster: roster())
+
+        var garbage = Position.starting
+        garbage[Squares.e5] = .whitePawn
+        session.boardChanged(garbage)
+        try await settled(session)
+
+        #expect(session.needsRecovery == false)
+        #expect(requests == 1)
+        #expect(session.liveGame != nil)
+    }
+
+    /// A board the dump-refreshed state still can't explain escalates for
+    /// real — and does not ask twice: the second unresolved settle spends
+    /// the debt rather than re-arming it, so recovery is always reachable.
+    @Test func secondUnresolvedSettleEntersRecoveryWithoutAskingAgain() async throws {
+        let session = DGTLiveSession()
+        session.quiescence = .milliseconds(10)
+        var requests = 0
+        session.requestBoardResync = { requests += 1 }
+        session.boardChanged(.starting)
+        session.startNewGame(roster: roster())
+
+        var garbage = Position.starting
+        garbage[Squares.e5] = .whitePawn
+        session.boardChanged(garbage)
+        try await settled(session)          // defers, asks once
+        session.boardChanged(garbage)       // the "dump" confirmed the garbage
+        try await settled(session)
+
+        #expect(session.needsRecovery == true)
+        #expect(requests == 1)
+    }
+
+    /// An explained settle retires the one-shot debt, so a *later*
+    /// divergence earns a fresh dump before recovery does — the debt is per
+    /// divergence, not per game.
+    @Test func anExplainedSettleReArmsTheResyncForTheNextDivergence() async throws {
+        let session = DGTLiveSession()
+        session.quiescence = .milliseconds(10)
+        var requests = 0
+        session.requestBoardResync = { requests += 1 }
+        session.boardChanged(.starting)
+        session.startNewGame(roster: roster())
+
+        var garbage = Position.starting
+        garbage[Squares.e5] = .whitePawn
+        session.boardChanged(garbage)
+        try await settled(session)          // defers, asks (1)
+        session.boardChanged(.starting)     // dump answers: board was fine
+        try await settled(session)          // .noChange — debt retired
+        #expect(session.needsRecovery == false)
+
+        session.boardChanged(garbage)       // a new divergence
+        try await settled(session)
+        #expect(session.needsRecovery == false)   // deferred again…
+        #expect(requests == 2)                    // …with a fresh ask
+        session.boardChanged(garbage)
+        try await settled(session)
+        #expect(session.needsRecovery == true)    // …and still escalates
+    }
+
+    /// The additive contract, pinned from the side that would break: with no
+    /// hook — headless suites, unwired builds — `.unresolved` enters
+    /// recovery on the first settle, exactly as before D49′. (The recovery
+    /// suite above relies on this; here it is the *subject*.)
+    @Test func unresolvedWithoutTheHookEntersRecoveryImmediately() async throws {
+        let session = DGTLiveSession()
+        session.quiescence = .milliseconds(10)
+        session.boardChanged(.starting)
+        session.startNewGame(roster: roster())
+
+        var garbage = Position.starting
+        garbage[Squares.e5] = .whitePawn
+        session.boardChanged(garbage)
+        try await settled(session)
+
+        #expect(session.needsRecovery == true)
+    }
 }

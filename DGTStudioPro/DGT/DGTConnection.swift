@@ -114,6 +114,32 @@ internal final class DGTConnection {
         if case .connected = status { return true }
         return false
     }
+
+    /// D49′ — one full-board dump on demand, the session's `.unresolved`
+    /// pre-flight. `sendBoard` does not change the board's mode, so the
+    /// `UPDATE_BOARD` field stream continues untouched and the dump simply
+    /// replaces `physicalBoard` wholesale through the existing `.boardDump`
+    /// handling — which is what makes the resync strategy free. Fire-and-
+    /// forget by design: the *answer* arrives as a published board change
+    /// and settles like any other; a send failure is logged, and the
+    /// session's next unresolved settle escalates to recovery regardless,
+    /// so a dead port cannot strand the one-shot gate.
+    internal func requestBoardResync() {
+        guard isConnected else {
+            Self.logger.info("Board resync requested while disconnected — ignored")
+            return
+        }
+        Self.logger.info("Requesting full board dump to reconcile before recovery")
+        Task {
+            do {
+                try await port.send(.sendBoard)
+            } catch {
+                Self.logger.error(
+                    "Board resync send failed: \(error.localizedDescription, privacy: .public)"
+                )
+            }
+        }
+    }
     
     /// True while the M7.3 auto-reconnect loop is running. The sidebar's
     /// session panel reads this to say "reconnecting…" instead of showing no
