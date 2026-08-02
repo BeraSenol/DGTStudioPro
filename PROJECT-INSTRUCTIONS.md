@@ -8,7 +8,7 @@ The pass opened on a tree carrying the earlier audit pass's own uncommitted work
 
 M6's through-line, recorded up front because it is the day's lesson: **the milestone's goal sentence and its own constraint line disagreed, and nobody had noticed for four days.** "Pieces glide on the mirror" requires an identity at the exact render where the mirror may not have one; the constraint "never speculation" is the reason it may not. The resolution is D47′'s whole content — glide what is proven, fade what is honest — and the near-miss is the fifth-species shape again: a quantified goal ("all four shapes animate on the mirror") whose set nobody had sized against the invariants that bound it.
 
-Next free number: **D49′**.
+Next free number: **D50′**.
 
 ## What the app is
 
@@ -652,6 +652,16 @@ Rejected: **a segmented control for the sort** (two segmented pickers side by si
 
 **Perf note, honestly carried:** the merged body folds `Glicko1.histories` every render (Rankings' cost, now paid on the Players surface too). It joins the known-costs census below rather than being optimized ahead of M7's Instruments pass.
 
+### D49′ — an unexplained board earns one dump before recovery does
+
+Closes the 1 Aug audit's C4. The field-update stream is not lossless — the framer's MSB resync exists precisely because adapters drop bytes — and one lost update leaves `physicalBoard` permanently wrong by one square, after which the next quiescence reconstructs against a `before` no legal move reaches, `.unresolved` fires, and the recovery surface guides Bera to "fix" a board that is already correct. The well-built checklist pointing at the wrong thing was the audit's whole case.
+
+**The gate: first divergence asks, second escalates.** `settlePlaying`'s `.unresolved` arm routes through `escalateOrResync`: one shot per divergence requests a full dump through a new settable hook (`session.requestBoardResync`, wired once in `App.init()` to `connection.requestBoardResync()` — `sendBoard` doesn't change the board's mode, which is what makes the strategy free). The dump replaces `physicalBoard` through the existing `.boardDump` handling, publishes, settles fresh — and a board the *dump* also can't explain escalates into recovery having spent the debt, so recovery is always reachable. Any explained settle retires the debt (per divergence, not per game); `startNewGame` and `discardGame` clear it; `clearPlayingOverlays` deliberately does **not** (it runs at the top of every settle, and clearing there would re-arm the dump forever). The F5 commit-refused guard still enters recovery directly — an internal logic divergence is not a lost-update symptom, and a dump has nothing to say about it.
+
+**Strictly additive.** Nil hook — headless suites, unwired builds — means `.unresolved` enters recovery immediately, exactly as before; the fire-and-forget send means a dead port cannot strand the gate (the next unresolved settle escalates regardless); D13′'s alert fires only at real recovery, so the resync attempt is silent. Pinned by four session tests including the nil-hook contract from the side that would break.
+
+Rejected: **a periodic dump every few seconds** (the audit's optional extra — machinery running always to cover a case the on-demand dump already answers; revisit only if field sessions show divergences the one-shot misses); **routing the F5 guard through the gate** (above); **retrying the dump on send failure** (the escalation path is the retry).
+
 ## Architecture invariants
 
 - **The compiler enforces mode 6 (D43′).** `SWIFT_VERSION = 6.0` on all three targets, so isolation and `Sendable` claims below are checked rather than asserted. This changes the standing of every concurrency invariant in this list: they used to be conventions the code followed, and they are now conditions the build imposes. Two consequences worth stating. The `@unchecked Sendable` / `nonisolated(unsafe)` prohibition is no longer only a grep at sweep time — reaching for either is now the visible act of opting *out* of enforcement, which is why D43′ declined it for one static property. And the "@MainActor suites for @MainActor types, nonisolated for pure value types" rule is self-policing: the 79 unit-test sources produced zero diagnostics under complete concurrency before anything was fixed, which is the evidence that the rule was being followed rather than merely written down. The two waived `Binding(present:)` warnings are the whole of the residue.
@@ -659,7 +669,7 @@ Rejected: **a segmented control for the sort** (two segmented pickers side by si
 - Move generation defends against hand-edited state. Castling is generated only when the rook actually sits on its home square. Same boundary hardening in FEN parsing.
 - LiveGame is an I/O-free @Observable @MainActor final class. Append-only: no takebacks, no rollback() API, ever (Decision #1).
 - Single-Mode state machine, honestly scoped. DGTLiveSession's one private Mode derives liveGame, awaitingPhysicalSetup, needsRecovery. Three published members are deliberately not Mode-derived but Mode-guarded.
-- Settable-hook wiring. sessionLog, draftStore, onGameFinished, onBoardChanged, onDesync, boardIdentity, and shouldAutoReconnect are wired exactly once in App.init(). Nil hooks mean unit tests run headless by construction. recordError is the one door for must-reach-somewhere errors.
+- Settable-hook wiring. sessionLog, draftStore, onGameFinished, onBoardChanged, onDesync, boardIdentity, requestBoardResync (D49′), and shouldAutoReconnect are wired exactly once in App.init(). Nil hooks mean unit tests run headless by construction. recordError is the one door for must-reach-somewhere errors.
 - Auto-connect decisions are pure; transport is not.
 - Idle-sleep inhibition is App-owned, preference-gated, transport-only. Display sleep intentionally left alone — structural via .userInitiated. observe() is re-entry-guarded.
 - The mirror renders the physical board. Always. Only overlays come from the game. **Since D47′ this is a tested property, not a sentence**: `PieceIdentity`'s output occupancy is the rendered position verbatim, asserted across every fixture — the resolver decides *keys*, never *presence*.
