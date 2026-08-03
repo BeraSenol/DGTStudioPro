@@ -280,18 +280,31 @@ struct PGNStorePlayerTests {
     
     // MARK: Relationship Semantics
     
-    /// Deleting a game updates the player's inverse and never cascades
-    /// into the registry.
-    @Test func deletingGameEmptiesInverseWithoutDeletingPlayer() throws {
+    /// Deleting a game takes the players it strands with it.
+    ///
+    /// **This test used to assert the opposite** — `playerCount == 2`, under
+    /// the title `deletingGameEmptiesInverseWithoutDeletingPlayer`, pinning
+    /// D9′'s "orphans linger, there is no collector". The behaviour reversed
+    /// for game deletion specifically (`PGNStore.delete(_ pgns:)`), so the pin
+    /// reverses with it rather than being deleted: the interesting claim is
+    /// still "what happens to the registry when a game goes", and it now has a
+    /// different answer. The rest of D9′ is untouched — nothing collects the
+    /// registry unasked, and the D40′ sweep is still the only door for rows
+    /// stranded some other way.
+    ///
+    /// Note what is *not* asserted: the surviving player's inverse array. That
+    /// would be a read of a relationship whose update timing is SwiftData's
+    /// business, and the cascade deliberately does not depend on it — see
+    /// `PGNStore.playersOrphaned(byDeleting:)`.
+    @Test func deletingGameCollectsThePlayersItStrands() throws {
         let context = try Self.makeContext()
         let store = PGNStore(modelContext: context)
         let imported = try store.importPGN(text: Self.samplePGN())
-        let white = try #require(imported.whitePlayer)
-        
+        _ = try #require(imported.whitePlayer)
+
         try store.delete(imported)
-        
-        #expect(white.whiteGames.isEmpty)
-        #expect(try Self.playerCount(in: context) == 2)
+
+        #expect(try Self.playerCount(in: context) == 0)
     }
     
     // MARK: Read-Only Lookup (M-prs.6)

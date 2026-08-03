@@ -112,14 +112,18 @@ internal struct InspectorSectionHeader<Actions: View>: View {
                 .textCase(nil)
                 .lineLimit(1)
             Spacer(minLength: 8)
-            // The chevron sits **leading** of the actions, so the action glyph
-            // stays rightmost — which is where the four lone pencils already
-            // are, and what the Library's bespoke disclosure said it did.
-            // It didn't: its doc read "Leading of the copy button, which keeps
-            // the action glyph rightmost" while the `HStack` listed copy first
-            // and the chevron second, putting the app's one disclosure in the
-            // one slot every other inspector reserves for a verb. The order
-            // here is that comment's intent, finally executed.
+            // The chevron sits **trailing** of the actions — reversed
+            // 2 Aug 2026 from D45′'s original order (chevron leading, verb
+            // rightmost) in the same pass that widened `actionsInset`. What
+            // the new order buys: the disclosure sits at one fixed distance
+            // from the edge in **every** section, however many action glyphs
+            // precede it, so the fold affordances read as one column down the
+            // inspector. The cost, accepted: action glyphs are no longer
+            // edge-aligned across sections with different arities. The 3 Aug
+            // audit found this comment still asserting the old order — the
+            // exact comment-says-leading-while-code-lists-otherwise defect
+            // the old Library disclosure had, which D45′ was written to end.
+            // The instructions' D45′ anchor records the reversal.
             HStack(spacing: 12) {
                 actions()
                 if let section {
@@ -175,8 +179,10 @@ internal struct InspectorSectionHeader<Actions: View>: View {
 
 extension InspectorSectionHeader where Actions == EmptyView {
     
-    /// A header with nothing to act on — Players and Rankings today, and any
-    /// section whose title is a label rather than a subject.
+    /// A header with nothing to act on — the actionless sections (Opening,
+    /// Evaluation, Moves, Recent Games…), and any section whose title is a
+    /// label rather than a subject. (This read "Players and Rankings today"
+    /// until D48′ retired Rankings and the 3 Aug audit caught the tense.)
     ///
     /// It may still collapse: a chevron is not an action on the section's
     /// subject, it is an action on the section, which is why it lives in the
@@ -319,10 +325,12 @@ extension InspectorSectionHeader where Actions == EmptyView {
         } header: {
             // The arity worth looking hardest at, and the one thing in D45′
             // written from reasoning rather than from a compiler. The trailing
-            // cluster is `HStack(spacing: 12) { chevron; actions() }`, and with
-            // no actions that slot resolves to `EmptyView` — which should
-            // contribute no subview and therefore no 12 pt of spacing, because
-            // spacing applies *between* subviews and there is only one.
+            // cluster is `HStack(spacing: 12) { actions(); chevron }` (order
+            // reversed 2 Aug 2026 — see the body), and with no actions the
+            // slot resolves to `EmptyView` — which should contribute no
+            // subview and therefore no 12 pt of spacing, because spacing
+            // applies *between* subviews and there is only one either way
+            // the pair is ordered.
             //
             // Should. This preview is where that stops being an argument: if
             // this chevron sits 12 pt inside the one above it, `EmptyView` is

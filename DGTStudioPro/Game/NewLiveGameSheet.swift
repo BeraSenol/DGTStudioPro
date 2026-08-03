@@ -212,7 +212,7 @@ internal struct NewLiveGameSheet: View {
     
     /// Every Library game, projected per evaluation to `GameRecord` for
     /// the pairing fold. Relies on the player-link backfill having run
-    /// (any Library/Players/Rankings visit); an unhealed row projects nil
+    /// (any Library/Players visit); an unhealed row projects nil
     /// seats and simply doesn't inform the prefill — degrades to no
     /// suggestion, never to a wrong one.
     @Query private var games: [PGN]

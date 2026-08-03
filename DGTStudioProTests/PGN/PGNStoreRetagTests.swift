@@ -77,6 +77,25 @@ struct PGNStoreRetagTests {
         try context.fetch(FetchDescriptor<Player>()).filter(PGNStore.isOrphaned)
     }
 
+    /// Mints a linkless registry row — an orphan of the only kind that still
+    /// occurs, now that `delete(_ pgns:)` collects the ones a game deletion
+    /// would strand.
+    ///
+    /// Through `resolvePlayer`, not `context.insert(Player(...))`: D9′'s single
+    /// creation door is the whole reason a row exists at all, and a fixture
+    /// that constructs one directly would pin the sweep against a shape the app
+    /// cannot produce. The explicit `save` is not ceremony — the door inserts
+    /// without saving by contract, and these suites fetch.
+    private static func orphanedRow(
+        _ store: PGNStore,
+        in context: ModelContext,
+        named tag: String
+    ) throws -> Player {
+        let player = try #require(try store.resolvePlayer(named: tag))
+        try context.save()
+        return player
+    }
+
     private static func player(
         _ store: PGNStore,
         named tag: String
@@ -348,38 +367,128 @@ struct PGNStoreRetagTests {
         #expect(try store.player(withNormalizedKey: Self.key(forTag: "Senol, Bera")) != nil)
     }
 
-    /// And the case the sweep exists for: the row D9′ says lingers once its
-    /// last game is deleted — invisible in the Players destination, which folds
-    /// records, and therefore reachable through nothing else.
-    @Test("Deleting a player's last game lists them, and the sweep removes them")
+    /// And the case the sweep still exists for. It used to be spelled by
+    /// deleting a player's last game; the cascade collects those at the source
+    /// now, so the remaining orphan is a registry row that never had a link —
+    /// the pre-cascade backlog, and anything a future path strands.
+    @Test("An unlinked registry row is listed, and the sweep removes it")
     func orphanedPlayerIsListedAndSwept() throws {
         let (store, context) = try Self.storeAndContext()
-        let game = try store.importPGN(text: Self.pgnText())
-        try store.delete(game)
+        _ = try Self.orphanedRow(store, in: context, named: "Ghost, Casper")
 
         let orphans = try Self.orphans(in: context)
-        #expect(orphans.contains { $0.normalizedName == Self.key(forTag: "Senol, Bera") })
+        #expect(orphans.contains { $0.normalizedName == Self.key(forTag: "Ghost, Casper") })
         #expect(try store.deleteOrphanedPlayers(orphans) == orphans.count)
-        #expect(try store.player(withNormalizedKey: Self.key(forTag: "Senol, Bera")) == nil)
+        #expect(try store.player(withNormalizedKey: Self.key(forTag: "Ghost, Casper")) == nil)
     }
 
     /// The snapshot guard. The sweep acts on a list built for a confirmation
     /// dialog, so between listing and deleting a row can pick up a link — here
-    /// by importing a second game under the same tag, which resolves onto the
-    /// existing orphan rather than minting a row. Deleting it then would
-    /// nullify live links, so the re-check must skip it.
+    /// by importing a game under the same tag, which resolves onto the existing
+    /// orphan rather than minting a row. Deleting it then would nullify live
+    /// links, so the re-check must skip it.
     @Test("A row that gained a link since it was listed is skipped")
     func sweepSkipsARowRelinkedSinceListing() throws {
         let (store, context) = try Self.storeAndContext()
-        let game = try store.importPGN(text: Self.pgnText())
-        try store.delete(game)
+        _ = try Self.orphanedRow(store, in: context, named: "Senol, Bera")
         let stale = try Self.orphans(in: context)
         #expect(!stale.isEmpty)
 
-        _ = try store.importPGN(text: Self.pgnText(round: 2))
+        _ = try store.importPGN(text: Self.pgnText())
 
         #expect(try store.deleteOrphanedPlayers(stale) == 0)
         #expect(try store.player(withNormalizedKey: Self.key(forTag: "Senol, Bera")) != nil)
+    }
+
+    // MARK: Delete — the game-deletion cascade
+
+    /// The decision: deleting the last game a player appears in takes the row
+    /// with it. This is the half of D9′'s "no collector" that is narrowed —
+    /// and it works where the roadmap's old delete-player could not, because
+    /// the seat tags go with the game, leaving `backfillPlayerLinks()` nothing
+    /// to resolve the row back out of.
+    @Test("Deleting the last game collects both of its players")
+    func deletingTheLastGameCollectsItsPlayers() throws {
+        let store = try Self.store()
+        let game = try store.importPGN(text: Self.pgnText())
+
+        try store.delete(game)
+
+        #expect(try store.player(withNormalizedKey: Self.key(forTag: "Senol, Bera")) == nil)
+        #expect(try store.player(withNormalizedKey: Self.key(forTag: "Reinaud, Lorenzo")) == nil)
+    }
+
+    /// The other half, and the one a careless cascade gets wrong: a player with
+    /// a game outside the deletion set stays. Without this the feature is a
+    /// registry wipe wearing a delete button.
+    @Test("A player with another game survives the deletion")
+    func aPlayerWithAnotherGameSurvives() throws {
+        let store = try Self.store()
+        let first = try store.importPGN(text: Self.pgnText())
+        _ = try store.importPGN(
+            text: Self.pgnText(black: "Carlsen, Magnus", round: 2)
+        )
+
+        try store.delete(first)
+
+        // Bera held both games; only Lorenzo's last one went.
+        #expect(try store.player(withNormalizedKey: Self.key(forTag: "Senol, Bera")) != nil)
+        #expect(try store.player(withNormalizedKey: Self.key(forTag: "Reinaud, Lorenzo")) == nil)
+    }
+
+    /// One player on both sides is one row, collected once. A seat-wise reading
+    /// reaches `modelContext.delete` twice for the same model here — the
+    /// identifier-keyed fold in `playersOrphaned(byDeleting:)` is what prevents
+    /// it, and this is the fixture that exercises it (`selfPlayRewritesBothSeats`
+    /// is the same shape guarding the retag).
+    @Test("A self-play game's single player is collected once")
+    func selfPlayCollectsTheRowOnce() throws {
+        let (store, context) = try Self.storeAndContext()
+        let game = try store.importPGN(
+            text: Self.pgnText(white: "Senol, Bera", black: "Senol, Bera")
+        )
+
+        try store.delete(game)
+
+        #expect(try store.player(withNormalizedKey: Self.key(forTag: "Senol, Bera")) == nil)
+        #expect(try context.fetch(FetchDescriptor<Player>()).isEmpty)
+    }
+
+    /// The batch case a per-game reading cannot see: each row on its own leaves
+    /// the player looking survivable, because the game that would save it is
+    /// also going. Only the set question answers this, which is why the
+    /// predicate takes the whole deletion set rather than one game at a time.
+    @Test("A player spread across a batch is collected by it")
+    func aBatchCollectsAPlayerSpreadAcrossIt() throws {
+        let store = try Self.store()
+        let first = try store.importPGN(text: Self.pgnText())
+        let second = try store.importPGN(text: Self.pgnText(round: 2))
+
+        try store.delete([first, second])
+
+        #expect(try store.player(withNormalizedKey: Self.key(forTag: "Senol, Bera")) == nil)
+    }
+
+    /// The propagation-timing pin, and the reason it is spelled as a *pure*
+    /// question rather than a post-delete relationship read.
+    ///
+    /// This asserts the predicate answers correctly with **nothing deleted
+    /// yet** — no `modelContext.delete` has been called, so an implementation
+    /// that asked `isOrphaned` after the fact could not produce this answer at
+    /// all. It is the shape of check the project keeps rediscovering it needs:
+    /// one that could have failed. A test that deleted the game first and
+    /// looked for the row would pass whenever SwiftData happened to have
+    /// propagated the inverse, and pass just as quietly on the day it doesn't.
+    @Test("The cascade is answerable before anything is deleted")
+    func theCascadeIsComputedBeforeTheDeletion() throws {
+        let store = try Self.store()
+        let doomed = try store.importPGN(text: Self.pgnText())
+        _ = try store.importPGN(text: Self.pgnText(black: "Carlsen, Magnus", round: 2))
+
+        let stranded = PGNStore.playersOrphaned(byDeleting: [doomed])
+
+        // Both games still exist. Bera is in the survivor, Lorenzo is not.
+        #expect(stranded.map(\.normalizedName) == [Self.key(forTag: "Reinaud, Lorenzo")])
     }
 
     // MARK: Invariants the retag must not break

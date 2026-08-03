@@ -15,14 +15,18 @@ internal enum StorageKeys {
     internal static let showBoardCoordinates = "showBoardCoordinates"
 
     // Board presentation (2 Aug 2026): the piece glide duration, in
-    // seconds. Absent reads as `BoardPieceLayer.defaultDuration` at all
-    // three read sites (the layer's own, SettingsView's slider, and
-    // `GameNavigationCommands`' step throttle — review stepping is paced
-    // to the glide), each spelled off the owning static so the number
-    // lives exactly once — the `EngineConfiguration` arrangement. The
-    // layer and the throttle clamp every read to
+    // seconds. Absent reads as `BoardPieceLayer.defaultDuration` at both
+    // read sites (the layer's own and SettingsView's slider), each spelled
+    // off the owning static so the number lives exactly once — the
+    // `EngineConfiguration` arrangement. The layer clamps every read to
     // `BoardPieceLayer.durationRange` (0.1…1 s), so a hand-edited default
     // can't push the board into absurd motion.
+    //
+    // Was three sites for one day: `GameNavigationCommands` read it to pace
+    // ←/→ stepping to the glide, and that throttle was removed 3 Aug 2026.
+    // Corrected here rather than left to decay, because a count of read
+    // sites is exactly the kind of claim that stays plausible long after it
+    // stops being true.
     internal static let pieceAnimationDuration = "pieceAnimationDuration"
 
     // First-run seed guard for the default smart tags (M-prs.5): the flag
@@ -44,6 +48,23 @@ internal enum StorageKeys {
     /// `PlayersSortOrder.rawValue`; absent reads as `.rank` at the one
     /// `@AppStorage` site, which is the destination's default read.
     internal static let playersSortOrder = "playersSortOrder"
+
+    // The two list-mode tables' column layouts — which columns are shown,
+    // in what order, at what width. **Two keys, not one**, deliberately and
+    // for the opposite reason `collectionViewMode` is one: a view mode is a
+    // preference about browsing and travels between destinations, while a
+    // column layout is a statement about *these columns*, and the two tables
+    // share none. `TableColumnCustomization` is generic over its row type, so
+    // one key could not have typed both anyway — but the reason is the
+    // product one, not the compiler's.
+    //
+    // Each has exactly one `@AppStorage` site (the table that owns it), so
+    // neither is a documented twin. Absent reads as the shipped layout, which
+    // is a property of the representation rather than a default anyone has to
+    // restate: an empty customization means "nothing customized", the same
+    // trick D45′ uses by storing the *collapsed* set.
+    internal static let libraryColumns = "libraryColumnCustomization"
+    internal static let playersColumns = "playersColumnCustomization"
 
     // New-game dialog persisted defaults (M3.4): pre-filled on open,
     // written back on Start. Deliberately just the recurring tags.

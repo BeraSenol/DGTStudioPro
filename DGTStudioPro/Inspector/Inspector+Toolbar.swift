@@ -16,8 +16,8 @@ import SwiftUI
 /// keeps the `.inspector` column tucked beneath it. The Library — the one
 /// destination whose inspector draws full height, up through the toolbar — is
 /// also the one whose toggle lives in the same builder as everything else,
-/// with a `ToolbarSpacer` marking the break. Players, Rankings and Board all
-/// stack modifiers and all get the short column. Composing is what puts the
+/// with a `ToolbarSpacer` marking the break. Players and Board both
+/// stack modifiers and both get the short column. Composing is what puts the
 /// trailing items in the inspector's own toolbar region.
 ///
 /// Callers still own the `ToolbarSpacer` that precedes it, because only the
@@ -49,15 +49,15 @@ internal struct InspectorToggleContent: ToolbarContent {
 /// has one, and it acts on the *window*, not on the destination's content —
 /// so it belongs to its own group rather than sharing a pill with Flip Board
 /// and Connect. The Library, which open-codes its toggle, already spaced it
-/// this way; putting the spacer here rather than at three call sites is what
+/// this way; putting the spacer here rather than at each call site is what
 /// stops Board from being the one that forgets.
 ///
 /// **Apply this modifier innermost.** Items from separate `.toolbar` modifiers
 /// render in reverse application order, so a host that applies this one last
 /// gets the toggle *leading*, where the spacer has nothing on its left and
 /// collapses — the toggle then shares a pill with everything else, which is
-/// the exact symptom this modifier exists to prevent. Every current host
-/// (Board, Players, Rankings) applies it above its `.toolbar { … }`.
+/// the exact symptom this modifier exists to prevent. Both current hosts
+/// (Board, Players) apply it above their `.toolbar { … }`.
 internal struct InspectorToggleModifier: ViewModifier {
     @Binding var isPresented: Bool
     let identifier: String

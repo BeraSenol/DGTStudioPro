@@ -452,10 +452,31 @@ internal struct PlayersDestination: View {
         return count == 1 ? "Delete 1 Unused Player?" : "Delete \(count) Unused Players?"
     }
 
-    /// Names them, because this alert is the **only** place an orphaned player
-    /// is ever rendered (D40′): they appear in no view mode, so a bare count
-    /// would ask the user to approve deleting things they have never seen.
-    /// Capped like the refusal's list, for the same reason.
+    /// Names them, because an orphan appears in no *view mode* — the three
+    /// collection destinations fold `GameRecord`s, whose sides are resolved
+    /// links — so a bare count would ask the user to approve deleting rows the
+    /// list they are standing in cannot show. Capped like the refusal's list,
+    /// for the same reason.
+    ///
+    /// **Correction.** This comment used to claim the alert was the *only*
+    /// place an orphaned player is ever rendered, and D40′ says so too. It is
+    /// false. Counted rather than asserted this time: **four** `@Query`s stand
+    /// over the registry — this destination's, `NewLiveGameSheet`'s,
+    /// `MergePlayerSheet`'s, and `ContentView`'s. Two of them *render* an
+    /// unfiltered list, so an orphan has always been offered in the New Game
+    /// seat menu and as a merge target. `ContentView`'s is an id → model hop
+    /// that shows nothing, and this destination's is filtered to orphans by
+    /// definition.
+    ///
+    /// The claim that survives is the narrower one the invariants list already
+    /// makes — orphans are unreachable through *selection*. Worth keeping the
+    /// correction visible rather than silently rewriting the sentence: "the
+    /// only place X happens" is a claim about a set, and this one was never
+    /// counted.
+    ///
+    /// The seat-menu pollution is also most of the practical argument for the
+    /// deletion cascade in `PGNStore.delete(_ pgns:)`, which is what stops new
+    /// orphans reaching either picker.
     private static func sweepMessage(_ players: [Player]) -> String {
         let shown = players.prefix(5).map(\.name)
         let more = players.count > shown.count ? " And \(players.count - shown.count) more." : ""

@@ -119,7 +119,8 @@ struct LiveGameResumeTests {
         let resumed = try LiveGame(resuming: original.draftSnapshot)
 
         #expect(resumed.sanMoves == original.sanMoves)
-        #expect(resumed.currentFEN.string == original.currentFEN.string)
+        // `FEN(_:)` at the call site — `currentFEN` was deleted 3 Aug 2026.
+        #expect(FEN(resumed.currentState).string == FEN(original.currentState).string)
         #expect(resumed.plyCount == original.plyCount)
         #expect(resumed.result == .ongoing)
         #expect(resumed.startedAt == original.startedAt)

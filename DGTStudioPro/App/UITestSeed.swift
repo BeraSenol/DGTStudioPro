@@ -89,6 +89,7 @@ internal enum UITestSeed {
         for tag in SmartTag.defaultTags() {
             context.insert(tag)
         }
+        context.insert(orphanedPlayer())
         do {
             try context.save()
         } catch {
@@ -96,6 +97,26 @@ internal enum UITestSeed {
         }
     }
     
+    /// A registry row in no game — the one kind of orphan that still occurs
+    /// now that `PGNStore.delete(_ pgns:)` collects the ones a game deletion
+    /// would strand.
+    ///
+    /// Seeded because the sweep's UI test can no longer mint its own subject.
+    /// It used to delete the game two seeded players shared and watch the
+    /// toolbar item enable; the cascade collects those at the source, so that
+    /// flow now proves the *opposite* thing — which the test asserts, and which
+    /// left the sweep's own alert with no witness. This is that witness.
+    ///
+    /// Constructed rather than resolved through `PGNStore.resolvePlayer`: this
+    /// file already builds `PGN`s directly, and going through the door would
+    /// need a store on a context this method doesn't own. The name is
+    /// deliberately nobody — a seeded game gaining this seat later would
+    /// silently un-orphan the row and disable the item the test is here to
+    /// click.
+    private static func orphanedPlayer() -> Player {
+        Player(name: "Casper Ghost", tagName: "Ghost, Casper")
+    }
+
     private static func games() -> [PGN] {
         [
             // Fool's-mate: a real, legal checkmate. Round 1 + ends in "#"

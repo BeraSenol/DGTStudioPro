@@ -414,19 +414,44 @@ final class DGTStudioProUITests: XCTestCase {
     /// on the selected player having no games — a guard that could never be
     /// true, since the list folds `GameRecord`s and an orphan appears in none.
     ///
-    /// So this drives the complement: delete the one game two players share,
-    /// watch both rows leave the list entirely, and reach them through the
-    /// toolbar, which is the only affordance that can.
+    /// So this drives the complement: reach a row the list cannot show, through
+    /// the toolbar, which is the only affordance that can.
+    ///
+    /// **Its subject moved once.** The test used to mint its own orphan by
+    /// deleting the game two seeded players shared, then watch the toolbar item
+    /// enable. The deletion cascade collects those at the source now, so that
+    /// flow proves the opposite thing — which the second half of this test
+    /// asserts, and which is the stronger of the two claims because it is the
+    /// one that would fail if the cascade silently stopped firing. The sweep's
+    /// own subject is `UITestSeed.orphanedPlayer()`: a seeded row in no game,
+    /// which is the only kind of orphan the app still produces.
     func test_players_maintenanceSweep_reachesOrphansTheListCannotShow() {
         launch()
         element(AccessibilityID.sidebarDestination("players")).click()
         XCTAssertTrue(waitFor(element(AccessibilityID.playerRow("Liren Ding"))))
 
+        // The seeded orphan is in no view mode, so the list cannot show it —
+        // which is the whole finding, asserted before the affordance that
+        // reaches it anyway.
+        XCTAssertFalse(element(AccessibilityID.playerRow("Casper Ghost")).exists,
+                       "An orphan appears in no view mode — D40′'s whole finding")
+
         let sweepItem = element(AccessibilityID.playersSweepOrphansItem)
         element(AccessibilityID.playersMaintenanceMenu).click()
         XCTAssertTrue(waitFor(sweepItem), "The maintenance menu should carry the sweep")
-        XCTAssertFalse(sweepItem.isEnabled,
-                       "Every seeded player holds a game, so there is nothing to sweep")
+        XCTAssertTrue(sweepItem.isEnabled, "The seeded registry holds one unused row")
+        sweepItem.click()
+
+        let alert = app.sheets.firstMatch
+        XCTAssertTrue(waitFor(alert), "The sweep should confirm before deleting")
+        let shown = alert.staticTexts.allElementsBoundByIndex.map(\.label).joined(separator: " ")
+        XCTAssertTrue(shown.contains("Casper Ghost"),
+                      "The sweep names its rows, because nothing else in Players renders them")
+        alert.buttons["Delete"].click()
+
+        element(AccessibilityID.playersMaintenanceMenu).click()
+        XCTAssertTrue(waitFor(sweepItem))
+        XCTAssertFalse(sweepItem.isEnabled, "The sweep should have nothing left to offer")
         app.typeKey(.escape, modifierFlags: [])
 
         // Delete the only game Firouzja and Ding appear in.
@@ -440,31 +465,29 @@ final class DGTStudioProUITests: XCTestCase {
         element(AccessibilityID.libraryDeleteButton).click()
         let confirmDelete = app.sheets.buttons["Delete"]
         XCTAssertTrue(waitFor(confirmDelete), "Single-game delete should ask first")
+        // The confirmation names what else goes. It is the only warning the
+        // user gets that a deletion reaches a second destination, and the
+        // clause is conditional, so this is also the pin that it appears at all.
+        let deleteMessage = app.sheets.firstMatch.staticTexts
+            .allElementsBoundByIndex.map(\.label).joined(separator: " ")
+        XCTAssertTrue(deleteMessage.contains("Liren Ding"),
+                      "The delete confirmation should name the players it would strand")
         confirmDelete.click()
 
-        // The finding itself: orphans leave the list rather than becoming
-        // deletable in it.
         element(AccessibilityID.sidebarDestination("players")).click()
         XCTAssertTrue(waitFor(element(AccessibilityID.playerRow("Anish Giri"))),
                       "Players untouched by the deletion stay listed")
         XCTAssertFalse(element(AccessibilityID.playerRow("Liren Ding")).exists,
-                       "An orphaned player leaves the list entirely — D40′'s whole finding")
+                       "The deleted game's players leave the list")
 
+        // The cascade, end to end and from the side where it would break: the
+        // deletion stranded two rows, so a registry with no collector would
+        // have re-enabled this item. It stays quiet because they went with the
+        // game.
         element(AccessibilityID.playersMaintenanceMenu).click()
         XCTAssertTrue(waitFor(sweepItem))
-        XCTAssertTrue(sweepItem.isEnabled, "Two players are orphaned now")
-        sweepItem.click()
-
-        let alert = app.sheets.firstMatch
-        XCTAssertTrue(waitFor(alert), "The sweep should confirm before deleting")
-        let shown = alert.staticTexts.allElementsBoundByIndex.map(\.label).joined(separator: " ")
-        XCTAssertTrue(shown.contains("Liren Ding"),
-                      "This alert is the only place an orphan is ever rendered, so it must name them")
-        alert.buttons["Delete"].click()
-
-        element(AccessibilityID.playersMaintenanceMenu).click()
-        XCTAssertTrue(waitFor(sweepItem))
-        XCTAssertFalse(sweepItem.isEnabled, "The sweep should have nothing left to offer")
+        XCTAssertFalse(sweepItem.isEnabled,
+                       "A game deletion collects the players it strands — nothing is left to sweep")
         app.typeKey(.escape, modifierFlags: [])
         XCTAssertEqual(app.state, .runningForeground)
     }

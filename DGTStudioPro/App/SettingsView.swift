@@ -331,8 +331,17 @@ internal struct SettingsView: View {
     private func eraseLibrary() {
         do {
             try modelContext.delete(model: PGN.self)
+            // The registry goes too. This is the one deletion path that does
+            // not run through `PGNStore.delete(_ pgns:)` and therefore does not
+            // get its orphan cascade — a bulk `delete(model:)` never
+            // materializes the rows, which is the point of it. Erasing every
+            // game orphans every player by definition, so the cascade's own
+            // rule gives this exact answer; spelling it as a second bulk
+            // delete keeps the nuclear reset from being the one door that
+            // leaves a registry full of names behind an empty Library.
+            try modelContext.delete(model: Player.self)
             try modelContext.save()
-            Self.logger.info("Library erased via Settings")
+            Self.logger.info("Library and player registry erased via Settings")
         } catch {
             Self.logger.error("Library erase failed: \(error.localizedDescription, privacy: .public)")
             eraseErrorMessage = error.localizedDescription

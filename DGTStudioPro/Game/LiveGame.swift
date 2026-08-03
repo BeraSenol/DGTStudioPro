@@ -124,8 +124,10 @@ internal final class LiveGame {
     internal var currentState: GameState { states.last! }
     internal var currentTracker: PieceTracker { trackers.last! }
     internal var position: Position { currentState.position }
-    internal var currentFEN: FEN { FEN(currentState) }
-    
+    // `currentFEN` was deleted here (3 Aug 2026 audit) together with
+    // `Game`'s identical twin: neither had an app consumer. Spell it
+    // `FEN(currentState)` if a surface ever wants it.
+
     internal var isFinished: Bool { result != .ongoing }
     internal var plyCount: Int { moves.count }
     

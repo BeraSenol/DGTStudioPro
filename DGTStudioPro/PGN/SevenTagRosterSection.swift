@@ -32,8 +32,9 @@ import SwiftUI
 /// nothing and the header is a plain heading again.
 ///
 /// The header itself is `InspectorSectionHeader` — shared with the Players
-/// and Rankings inspectors, which have the same header and no roster, so the
-/// shape could not stay in here once they wanted it.
+/// inspector (and with Rankings' until D48′ merged it away), which has the
+/// same header and no roster, so the shape could not stay in here once
+/// another family wanted it.
 internal struct SevenTagRosterSection<Actions: View>: View {
     
     // MARK: Static Constants

@@ -77,10 +77,12 @@ internal final class Game {
     internal var currentState: GameState { states[currentPly] }
     internal var currentTracker: PieceTracker { trackers[currentPly] }
     
-    /// FEN of the position at `currentPly`. Convenience for "copy FEN"
-    /// and engine handoff.
-    internal var currentFEN: FEN { FEN(currentState) }
-    
+    // `currentFEN` was deleted here (3 Aug 2026 audit): its doc named two
+    // consumers — "copy FEN" and engine handoff — and neither ever existed;
+    // no app code read it (`LiveGame` carried the same dead twin). The
+    // spelling at any future call site is `FEN(currentState)`; re-adding
+    // the convenience needs a reader first — the `Player.createdAt` rule.
+
     /// The last move played to reach `currentState`, or `nil` at ply 0.
     /// The board view uses this for the "last move" highlight.
     internal var lastMove: LastMove? {

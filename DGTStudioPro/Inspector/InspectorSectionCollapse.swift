@@ -26,9 +26,11 @@ import os
 /// called Game, and the one that is actually the game is not either of them.
 ///
 /// Where two inspectors show genuinely different content under one idea, they
-/// get separate cases: `playerProfile` folds games and win rate while
-/// `rankingProfile` folds rank and rating, and the two grids have nothing in
-/// common but a name at the top.
+/// get separate cases — the rule that split `playerProfile` from
+/// `rankingProfile` when the two grids shared nothing but the name at the
+/// top. D48′ merged the grids and retired the second case (see the enum
+/// body); the rule outlives its founding example, and the retirement path it
+/// exercised is the one this type designed for.
 ///
 /// Raw values are spelled out rather than left to synthesis because they are
 /// the **stored** form. Synthesised raw values follow the case names, so a

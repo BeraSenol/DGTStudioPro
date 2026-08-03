@@ -255,20 +255,43 @@ internal struct PGNStore {
         }
     }
     
+    /// Forwards to the batch door rather than deleting here, so the orphan
+    /// cascade and the transaction shape have exactly one implementation.
+    /// Two doors that each remember to collect players is the twin-read-site
+    /// pattern with a delete rule inside it.
     internal func delete(_ pgn: PGN) throws {
-        Self.logger.info("Deleting: '\(pgn.name, privacy: .public)'")
-        modelContext.delete(pgn)
-        try modelContext.save()
+        try delete([pgn])
     }
-    
+
     /// Deletes several games in one transaction (a single `save`), so a
     /// multi-select delete of many games doesn't fan out into one save per
     /// game. A no-op for an empty array.
+    ///
+    /// **Players stranded by the deletion go with it.** This reverses the
+    /// no-collector half of D9′ for one specific cause, and only that cause:
+    /// the roadmap's old "delete-player = nullify + delete" could not work
+    /// because `.nullify` leaves the games' seat tags intact and the next
+    /// `backfillPlayerLinks()` resolves them straight back. Deleting the
+    /// *game* takes its seat tags with it, so there is nothing left to
+    /// re-resolve and the row stays gone. The sweep (D40′) survives as the
+    /// backstop for rows orphaned before this landed.
+    ///
+    /// The cascade is computed **before** the first `modelContext.delete`
+    /// and applied after — see `playersOrphaned(byDeleting:)` for why asking
+    /// afterwards is the trap.
     internal func delete(_ pgns: [PGN]) throws {
         guard !pgns.isEmpty else { return }
-        Self.logger.info("Deleting \(pgns.count) game(s) in batch")
+        let stranded = Self.playersOrphaned(byDeleting: pgns)
+        let subject = pgns.count == 1 ? "'\(pgns[0].name)'" : "\(pgns.count) games"
+        Self.logger.info("Deleting \(subject, privacy: .public)")
         for pgn in pgns {
             modelContext.delete(pgn)
+        }
+        for player in stranded {
+            Self.logger.info(
+                "Collecting '\(player.name, privacy: .public)' — its last game went with this deletion"
+            )
+            modelContext.delete(player)
         }
         try modelContext.save()
     }
@@ -440,10 +463,10 @@ internal struct PGNStore {
     /// property, the sweep quietly stops converging, and that test is what
     /// says so.
     ///
-    /// Called from the Library's `onAppear` only, not from all three
-    /// collection destinations the player backfills run at: Players and
-    /// Rankings read neither field, so running it there would triple the
-    /// scan to change nothing.
+    /// Called from the Library's `onAppear` only, not from both
+    /// collection destinations the player backfills run at: Players reads
+    /// neither field, so running it there would double the scan to change
+    /// nothing. (Rankings was the third caller until D48′ merged it away.)
     ///
     /// **Predicated, unlike its two neighbours, and the difference is the
     /// point.** `backfillPlayerLinks` fetches everything on purpose — a nil
@@ -653,11 +676,58 @@ internal struct PGNStore {
     /// from the *resolved links* — so a linkless row contributes to no record,
     /// appears in no view mode, and can never be selected. "Is in the list" and
     /// "is deletable" were exact complements, which left M5's per-player Delete
-    /// disabled for every player it could ever be offered for. Deleting a
-    /// player's last game is what mints one; D9′ says they linger with no
-    /// collector, so the sweep stays strictly user-invoked.
+    /// disabled for every player it could ever be offered for.
+    ///
+    /// Deleting a player's last game *used* to be what minted one. It no
+    /// longer is — `delete(_ pgns:)` collects them at the source now — so the
+    /// sweep is the backstop for rows orphaned before that landed, plus
+    /// anything a future path strands. It stays strictly user-invoked either
+    /// way: D9′'s "no collector" is narrowed, not repealed, and nothing
+    /// sweeps the registry unasked.
     internal static func isOrphaned(_ player: Player) -> Bool {
         player.whiteGames.isEmpty && player.blackGames.isEmpty
+    }
+
+    /// The players `pgns` would strand — `isOrphaned`'s **prospective twin**,
+    /// asked before a single row is deleted.
+    ///
+    /// One rule, two spellings, which is `contentHash`'s arrangement for
+    /// D39′'s pre-flight: the present-tense predicate reads live
+    /// relationships, and a pre-flight needs to know what would be true
+    /// *after* a write it hasn't performed. The alternative — delete the
+    /// games, then ask `isOrphaned` — bets on SwiftData having propagated the
+    /// inverse before `save()`, and **fails silently in the direction that
+    /// looks fine**: if the array still holds the tombstoned game the cascade
+    /// simply never fires, the build is green, no test crashes, and the
+    /// feature does nothing. That is D40′'s defect exactly, and it is why
+    /// this is a set question rather than a relationship read.
+    ///
+    /// A player goes iff every game linked to it is in the deletion set,
+    /// which handles the two cases a seat-wise reading gets wrong for free:
+    /// one player holding both seats of a deleted game (counted once, via
+    /// the identifier-keyed table), and a player whose games are spread
+    /// across several rows of one batch (each row alone would look
+    /// survivable). `allSatisfy` over an empty link array answers true, which
+    /// is the right answer for a stale link and the only way an already-
+    /// orphaned row could reach here at all.
+    ///
+    /// Sorted by name because the result is rendered — `LibraryDestination`
+    /// names these in the delete confirmation, and a `Dictionary`'s values
+    /// have no order to show them in.
+    internal static func playersOrphaned(byDeleting pgns: [PGN]) -> [Player] {
+        let doomed = Set(pgns.map(\.persistentModelID))
+        var seated: [PersistentIdentifier: Player] = [:]
+        for pgn in pgns {
+            for player in [pgn.whitePlayer, pgn.blackPlayer].compactMap({ $0 }) {
+                seated[player.persistentModelID] = player
+            }
+        }
+        return seated.values
+            .filter { player in
+                (player.whiteGames + player.blackGames)
+                    .allSatisfy { doomed.contains($0.persistentModelID) }
+            }
+            .sorted { $0.name < $1.name }
     }
 
     /// Deletes the given rows, skipping any that gained a link since they were

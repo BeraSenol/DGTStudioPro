@@ -5,7 +5,6 @@
 //  Created by Supreme Leader on 24/05/2026.
 //
 
-import AppKit
 import SwiftUI
 
 // MARK: Focused Value
@@ -49,19 +48,25 @@ internal struct GameNavigationCommands: Commands {
 
     @FocusedValue(\.activeGame) private var game: Game?
 
-    /// The glide preference, read here as its third site (the layer's own
-    /// and SettingsView's slider are the others; `StorageKeys` documents
-    /// the set): a held arrow repeats at the system key-repeat rate, which
-    /// outruns the piece animation and turns review into pieces teleporting
-    /// mid-flight. Stepping is paced to the glide instead (2 Aug 2026).
-    @AppStorage(StorageKeys.pieceAnimationDuration)
-    private var animationDuration = BoardPieceLayer.defaultDuration
-
-    /// When the last ←/→ step fired. `@MainActor` because a mutable static
-    /// needs an isolation under language mode 6, and menu actions already
-    /// run there; a static rather than instance state because `Commands`
-    /// values are recreated freely and cannot hold `@State`.
-    @MainActor private static var lastStep: Date = .distantPast
+    // No step throttle (removed 3 Aug 2026). ←/→ used to be paced to the
+    // piece-glide duration through a `lastStep` timestamp and a third
+    // `@AppStorage` read of `pieceAnimationDuration`, so a held arrow
+    // stepped once per animation instead of once per system key repeat.
+    //
+    // The behaviour it bought back is the reason not to re-add it blind:
+    // the key-repeat rate outruns the glide, so holding an arrow now moves
+    // pieces that are still mid-flight. That is the accepted trade — the
+    // throttle made held-arrow scrubbing slower than the keyboard, which is
+    // the thing you actually feel, while teleporting pieces are the thing
+    // you only notice if you look for them. If it ever needs revisiting,
+    // the honest fix is shortening or cancelling the *animation* while a
+    // repeat is in flight, not dropping the input that requested it.
+    //
+    // Consequences of the removal, both real: `pieceAnimationDuration` is
+    // back to two read sites (corrected at `StorageKeys`), and this file no
+    // longer imports AppKit — the Reduce Motion query on `NSWorkspace` was
+    // the only reason it did, since `Commands` cannot reach
+    // `@Environment(\.accessibilityReduceMotion)`.
 
     internal var body: some Commands {
         CommandMenu("Game") {
@@ -69,11 +74,11 @@ internal struct GameNavigationCommands: Commands {
                 .keyboardShortcut(.home, modifiers: [])
                 .disabled(game == nil)
 
-            Button("Previous Move") { step { game?.retreat() } }
+            Button("Previous Move") { game?.retreat() }
                 .keyboardShortcut(.leftArrow, modifiers: [])
                 .disabled(game == nil)
 
-            Button("Next Move") { step { game?.advance() } }
+            Button("Next Move") { game?.advance() }
                 .keyboardShortcut(.rightArrow, modifiers: [])
                 .disabled(game == nil)
 
@@ -81,22 +86,5 @@ internal struct GameNavigationCommands: Commands {
                 .keyboardShortcut(.end, modifiers: [])
                 .disabled(game == nil)
         }
-    }
-
-    /// One step per glide: repeats (and deliberate rapid taps — the glide
-    /// wouldn't have finished either way) inside the animation window are
-    /// dropped. Under Reduce Motion there is no glide to outrun, so the
-    /// gate opens fully — read via `NSWorkspace` because `Commands` is not
-    /// a view and `@Environment(\.accessibilityReduceMotion)` cannot reach
-    /// it. Home/End stay ungated: jumps are single actions, not repeats.
-    @MainActor
-    private func step(_ move: () -> Void) {
-        let interval = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-            ? 0
-            : BoardPieceLayer.clampedDuration(animationDuration)
-        let now = Date.now
-        guard now.timeIntervalSince(Self.lastStep) >= interval else { return }
-        Self.lastStep = now
-        move()
     }
 }

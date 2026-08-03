@@ -16,17 +16,48 @@ internal struct LibraryListView: View {
     let onExportIDs: (Set<PGN.ID>) -> Void
     let onDeleteIDs: (Set<PGN.ID>) -> Void
 
+    /// Which columns are shown, in what order, at what width — the state
+    /// behind the header's right-click menu.
+    ///
+    /// `@AppStorage` rather than D45′'s owning-type shape, and the difference
+    /// is worth stating because D45′ argued the other way. That decision moved
+    /// off `@AppStorage` because its value had **two** readers who had to
+    /// agree (the header drew the chevron, the host gated the body); this one
+    /// has exactly one — the `Table` it is bound to. What the property wrapper
+    /// buys here is the thing a hand-constructed object had to be given by
+    /// hand: `.defaultAppStorage(_:)` redirects it, so a seeded UI run reads
+    /// the scratch suite instead of whatever columns I last hid.
+    ///
+    /// The customization IDs below are a **persistence contract**. They are
+    /// stored verbatim, so renaming one silently resets that column to its
+    /// shipped state — the `InspectorSection` raw-value situation, and the
+    /// same remedy: hand-written, never derived from the title, because the
+    /// title is what a reader would reach for and titles are editable prose.
+    @AppStorage(StorageKeys.libraryColumns)
+    private var columnCustomization = TableColumnCustomization<PGN>()
+
     var body: some View {
-        Table(games, selection: $selectedPGNs) {
+        Table(games, selection: $selectedPGNs, columnCustomization: $columnCustomization) {
+            // Never hideable: this cell carries the row identifier every
+            // Library UITest addresses a game by, so hiding the column would
+            // not fail a test — it would make the element cease to exist, and
+            // the test would report "no such game" about a Library that has
+            // it. Reordering and resizing stay on; only visibility is
+            // contract-bearing, because an identifier rides the cell wherever
+            // the column sits.
             TableColumn("White") { game in
                 Text(game.whiteDisplayName)
                     .accessibilityIdentifier(AccessibilityID.gameRow(game.name))
             }
+            .customizationID("white")
+            .disabledCustomizationBehavior(.visibility)
             TableColumn("Black") { Text($0.blackDisplayName) }
+                .customizationID("black")
             TableColumn("Result") { game in
                 Text(game.result.rawValue).foregroundStyle(.secondary)
             }
             .width(60)
+            .customizationID("result")
             // Code only, not the name: at column width the family alone
             // truncates to "French Defe…", and the inspector's Opening
             // section is one click away with all three rows. An
@@ -45,15 +76,19 @@ internal struct LibraryListView: View {
                 Text(game.opening?.code ?? "").foregroundStyle(.secondary)
             }
             .width(min: 44, ideal: 52)
+            .customizationID("eco")
             TableColumn("Event") { Text($0.event).lineLimit(1) }
+                .customizationID("event")
             TableColumn("Date") { game in
                 Text(game.displayDate).foregroundStyle(.secondary)
             }
             .width(100)
+            .customizationID("date")
             TableColumn("Round") { game in
                 Text(game.displayRound).foregroundStyle(.secondary)
             }
             .width(60)
+            .customizationID("round")
         }
         .accessibilityIdentifier(AccessibilityID.libraryGamesTable)
         .contextMenu(forSelectionType: PGN.ID.self) { ids in
@@ -141,6 +176,10 @@ private func listPreviewGames() -> [PGN] {
     )
     .frame(width: 720, height: 360)
     .modelContainer(for: PGN.self, inMemory: true)
+    // Never `.standard`: the table's column layout is `@AppStorage` now, so a
+    // canvas on the real suite would render whatever columns I last hid in the
+    // app and read as a broken preview.
+    .defaultAppStorage(UserDefaults(suiteName: "preview")!)
 }
 
 #Preview("Empty") {
@@ -156,4 +195,8 @@ private func listPreviewGames() -> [PGN] {
     )
     .frame(width: 720, height: 360)
     .modelContainer(for: PGN.self, inMemory: true)
+    // Never `.standard`: the table's column layout is `@AppStorage` now, so a
+    // canvas on the real suite would render whatever columns I last hid in the
+    // app and read as a broken preview.
+    .defaultAppStorage(UserDefaults(suiteName: "preview")!)
 }

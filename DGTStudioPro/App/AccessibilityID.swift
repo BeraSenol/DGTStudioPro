@@ -362,12 +362,12 @@ internal enum AccessibilityID {
     
     // MARK: Cross-Destination
     
-    /// The "Show in Library" context-menu item on Players/Rankings rows
-    /// and cards (M-prs.6). One constant for both destinations: the item
-    /// is transient and its two homes never coexist, so a family prefix
-    /// would only fork future lookups. (The UITest drives it by *title* —
-    /// the codebase's established menu-item pattern; the identifier is
-    /// here so a future test can harden without a rename.)
+    /// The "Show in Library" context-menu item on Players rows and cards
+    /// (M-prs.6; it served Rankings' too until D48′). One constant across
+    /// its homes: the item is transient and no two homes ever coexist, so
+    /// a family prefix would only fork future lookups. (The UITest drives
+    /// it by *title* — the codebase's established menu-item pattern; the
+    /// identifier is here so a future test can harden without a rename.)
     internal static let contextShowInLibrary = "context.showInLibrary"
     
     // MARK: Players

@@ -74,15 +74,13 @@ internal struct DGTConnectionView: View {
 
     // MARK: The One Attempt
 
-    /// The board, if attached right now. `search()` refreshes the
-    /// enumeration synchronously; the view still never touches IOKit.
-    private var board: DGTSerialDevice? {
-        connection.availableDevices.first { $0.path == DGTConnection.onlyBoardPath }
-    }
-
     private func attemptConnect() {
+        // `search()` refreshes the enumeration synchronously and resolves the
+        // board itself, so the view still never touches IOKit — and no longer
+        // restates the path test either. It used to scan `availableDevices`
+        // here, which put the "what counts as the board" rule in a view.
         connection.search()
-        guard let board else { return }  // the not-found panel renders
+        guard let board = connection.attachedBoard else { return }  // not-found panel renders
         Task { await connection.connect(to: board) }
     }
 
@@ -99,7 +97,7 @@ internal struct DGTConnectionView: View {
     private var title: String {
         switch connection.status {
         case .disconnected, .searching:
-            board == nil ? "Board Not Found" : "Connecting…"
+            connection.attachedBoard == nil ? "Board Not Found" : "Connecting…"
         case .connecting:   "Connecting…"
         case .reconnecting: "Reconnecting…"
         case .connected:    "Board Connected"
@@ -113,7 +111,7 @@ internal struct DGTConnectionView: View {
     private var content: some View {
         switch connection.status {
         case .disconnected, .searching:
-            if board == nil {
+            if connection.attachedBoard == nil {
                 notFoundPanel
             } else {
                 // An attempt is in flight (or one click away after a

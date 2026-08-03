@@ -159,7 +159,10 @@ internal struct LibraryDestination: View {
                     Button("Cancel", role: .cancel) {}
                 },
                 message: { game in
-                    Text("\(game.name) will be permanently deleted.")
+                    Text(Self.deletionMessage(
+                        for: [game],
+                        lead: "\(game.name) will be permanently deleted."
+                    ))
                 }
             )
             .alert(
@@ -187,7 +190,10 @@ internal struct LibraryDestination: View {
                     Button("Cancel", role: .cancel) {}
                 },
                 message: { games in
-                    Text("\(games.count) games will be permanently deleted. This can't be undone.")
+                    Text(Self.deletionMessage(
+                        for: games,
+                        lead: "\(games.count) games will be permanently deleted. This can't be undone."
+                    ))
                 }
             )
             .onDeleteCommand {
@@ -703,6 +709,42 @@ internal struct LibraryDestination: View {
         Self.logger.info("Import batch complete: \(imported)/\(urls.count) imported")
     }
     
+    /// The confirmation's body: the lead sentence, plus a clause naming any
+    /// players the deletion would take with it.
+    ///
+    /// **Appended only when there are any**, so the ordinary delete — which is
+    /// nearly all of them — reads exactly as it did before the cascade landed.
+    /// A line that says "and no players will be removed" on every deletion is
+    /// the `.DS_Store` shape: text that is always there is text that stops
+    /// being read, and the one time it matters would scroll past with the
+    /// rest.
+    ///
+    /// Named rather than counted, D40′'s reason narrowed: the sweep names its
+    /// rows because they are strangers the user has never seen. These are the
+    /// opponent of the game on screen, so the argument is weaker — but the
+    /// *effect* still lands in a destination the user isn't looking at, and
+    /// the New Game seat menu quietly losing a name is exactly the kind of
+    /// thing that reads as a bug six months later. Capped at five, matching
+    /// the sweep, because it is the same list.
+    ///
+    /// Advisory, not authoritative: `PGNStore.delete(_:)` recomputes this at
+    /// write time. A snapshot held across a confirmation is stale by
+    /// construction — the lesson `deleteOrphanedPlayers` already carries — so
+    /// the message asks and the door decides.
+    private static func deletionMessage(for games: [PGN], lead: String) -> String {
+        let stranded = PGNStore.playersOrphaned(byDeleting: games)
+        guard !stranded.isEmpty else { return lead }
+        let shown = stranded.prefix(5).map(\.name)
+        let more = stranded.count > shown.count
+        ? " And \(stranded.count - shown.count) more."
+        : ""
+        let subject = shown.joined(separator: ", ")
+        let clause = stranded.count == 1
+        ? "\(subject) is in no other game and will be removed from Players."
+        : "\(subject) are in no other games and will be removed from Players."
+        return lead + " " + clause + more
+    }
+
     /// Routes a delete request for the current selection (toolbar button, ⌫).
     private func requestDeleteSelection() {
         requestDelete(ids: selectedPGNs)
@@ -808,8 +850,8 @@ internal struct LibraryDestination: View {
     }
     
     /// M-prs.1 sibling of `backfillEmptyNames()`: the logic is store-owned and
-    /// idempotent, so all three collection destinations call it from their own
-    /// `onAppear` (Players and Rankings do the same). This is only the
+    /// idempotent, so both collection destinations call it from their own
+    /// `onAppear` (Players does the same). This is only the
     /// Library's call site and its error sink.
     private func backfillPlayerLinks() {
         do {
@@ -829,8 +871,8 @@ internal struct LibraryDestination: View {
     /// Its own method with its own error sink, deliberately not a third line
     /// inside `backfillPlayerLinks()` — that sink logs "Player-link backfill
     /// failed", which a classification failure would turn into a lie. Unique
-    /// to the Library among the three collection destinations: Players and
-    /// Rankings read neither field (see the store doc).
+    /// to the Library between the two collection destinations: Players
+    /// reads neither field (see the store doc).
     ///
     /// Async, and riding `.task` rather than `onAppear`, because the first
     /// call is what forces the ECO table's parse. Awaiting `warmed()` puts

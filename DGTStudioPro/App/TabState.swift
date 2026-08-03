@@ -27,7 +27,7 @@ import SwiftData
 /// `TabState` "per tab" rather than "per app".
 ///
 /// Per-destination inspector visibility lives here (rather than as one
-/// shared boolean) because Library, Board, Players, and Rankings show
+/// shared boolean) because Library, Board, and Players show
 /// different inspector content; carrying one bool per destination matches
 /// each destination's natural default (Board on, Library off, etc.) and
 /// preserves the user's per-destination preference across switches.

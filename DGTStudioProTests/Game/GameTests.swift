@@ -142,10 +142,13 @@ struct GameTests {
         #expect(game.checkSquare == nil)
     }
     
-    @Test func currentFENMatchesStartingPositionAtPlyZero() throws {
+    // Rewritten when `Game.currentFEN` was deleted (3 Aug 2026 audit):
+    // the pinned property is `currentState`, projected through `FEN(_:)`
+    // at the call site the way any future consumer would spell it.
+    @Test func stateAtPlyZeroSerializesToStartingFEN() throws {
         let game = try Game(pgn: Self.makePGN(moves: ["e4"]))
         game.toStart()
-        #expect(game.currentFEN.string == FEN.startingString)
+        #expect(FEN(game.currentState).string == FEN.startingString)
     }
     
     // MARK: Evaluation Pass-Through

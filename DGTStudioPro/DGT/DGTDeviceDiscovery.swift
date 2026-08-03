@@ -29,7 +29,14 @@ internal enum DGTDeviceDiscovery {
         category: "dgt"
     )
     
-    /// Returns all serial callout devices, with likely-board candidates first.
+    /// Returns every serial callout device attached right now, unsorted.
+    ///
+    /// Unsorted deliberately, as of 3 Aug 2026. This used to order
+    /// likely-board candidates first, for a connect dialog that no longer
+    /// exists; every caller since the one-board decree asks whether
+    /// `DGTConnection.onlyBoardPath` is present, and a membership test has no
+    /// opinion about order. The IORegistry order is whatever IOKit hands back
+    /// — nothing renders it, so nothing can depend on it.
     internal static func availableDevices() -> [DGTSerialDevice] {
         guard let matching = IOServiceMatching(kIOSerialBSDServiceValue) else {
             logger.error("IOServiceMatching returned nil for serial services")
@@ -58,12 +65,13 @@ internal enum DGTDeviceDiscovery {
             service = IOIteratorNext(iterator)
         }
         
-        logger.info("Discovered \(devices.count) serial device(s)")
-        
-        // Stable order: likely boards first, then alphabetical by path.
-        return devices.sorted {
-            $0.isLikelyBoard == $1.isLikelyBoard ? $0.path < $1.path : $0.isLikelyBoard
-        }
+        // Debug, not info: this fires on every launch, every Rescan and every
+        // reconnect lap, and the count answers a question nobody asks — the
+        // one that matters ("is the board there?") is logged by the callers
+        // that can actually tell. A line that always appears and never
+        // decides anything is a line you learn to read past.
+        logger.debug("Enumerated \(devices.count) serial device(s)")
+        return devices
     }
     
     /// Reads a string-valued IORegistry property for a service, or nil.

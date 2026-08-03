@@ -154,9 +154,10 @@ internal struct RankBadge: View {
     }
 }
 
-/// The Players analogue of `LibraryGameCardView`, used by the icons grids,
-/// the columns details, and the gallery filmstrips of *both* Players and
-/// Rankings — the latter passes `rank` (M-prs.4) and gets the badge.
+/// The Players analogue of `LibraryGameCardView`, used by the icons grid,
+/// the columns details, and the gallery filmstrip. `rank` (M-prs.4) earns
+/// the badge — passed by the Players hosts since D48′ put the ladder in
+/// every mode; before the merge it was Rankings' distinguishing input.
 /// Players have no destructive actions (D9′ — the registry is
 /// machine-managed); the one non-selection affordance is M-prs.6's
 /// optional "Show in Library" context menu, threaded from the
@@ -167,7 +168,7 @@ internal struct PlayerCardView: View {
     let stats: PlayerStats
     let isSelected: Bool
     let onSelect: () -> Void
-    /// Ladder position; nil outside Rankings.
+    /// Ladder position; nil hides the badge (previews, rank-free contexts).
     var rank: Int? = nil
     /// Presents the "Show in Library" context menu when set (M-prs.6).
     /// Optional so previews and any selection-only context stay unchanged.

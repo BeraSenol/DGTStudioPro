@@ -108,10 +108,36 @@ internal final class DGTConnection {
     /// window until the board is back on this path. This constant retired
     /// the remembered-device machinery (M7.1) — a hardcoded identity needs
     /// no memory — and the connect dialog's device picker with it.
-    internal static let onlyBoardPath = "/dev/cu.usbmodem01"
+    ///
+    /// `nonisolated` because it is an immutable `String`, and nothing about a
+    /// hardcoded device path is main-actor work. Without it the constant
+    /// inherits this class's isolation, which makes it unreadable from the
+    /// initializer of a stored property in any nonisolated type — and the
+    /// first thing that wanted to read it that way was
+    /// `DGTAutoConnectPolicyTests`, whose whole point is that a pure-value
+    /// suite stays nonisolated. Isolating a constant to reach it from a test
+    /// would have been the tail wagging the dog; the constant was simply
+    /// over-isolated by inheritance.
+    nonisolated internal static let onlyBoardPath = "/dev/cu.usbmodem01"
 
     private(set) internal var status: Status = .disconnected
-    private(set) internal var availableDevices: [DGTSerialDevice] = []
+
+    /// The board, if the last enumeration found it attached — nil if it
+    /// didn't, and nil before anything has looked.
+    ///
+    /// Was `availableDevices: [DGTSerialDevice]`, the whole enumeration, until
+    /// 3 Aug 2026. That array was picker-shaped state: its one reader
+    /// immediately reduced it to `first { $0.path == onlyBoardPath }`, so the
+    /// property advertised a choice the app stopped offering with the
+    /// one-board decree. Resolving it here rather than at the reader puts the
+    /// rule beside the constant it tests against, and leaves the view holding
+    /// a board or nothing — which is the only distinction its panels draw.
+    ///
+    /// Still the full enumeration underneath: `enumerateDevices` walks
+    /// everything IOKit reports, because IOKit has no match-one-path query.
+    /// What changed is that the strangers are dropped at the door instead of
+    /// being carried into observable state that renders none of them.
+    private(set) internal var attachedBoard: DGTSerialDevice?
     private(set) internal var boardInfo = BoardInfo()
     
     /// Live snapshot of the pieces the board currently detects, in app
@@ -273,9 +299,24 @@ internal final class DGTConnection {
         cancelReconnect()
         cancelErrorClear()
         status = .searching
-        availableDevices = enumerateDevices()
-        Self.logger.info("search() found \(self.availableDevices.count) device(s)")
-        sessionLog?.capture(.debug, "search: \(availableDevices.count) device(s)")
+        // Through the policy, not a local `first { $0.path == … }`: that
+        // predicate is the one rule for what counts as the board, and it is
+        // suited there. Restating it here would have made this the third
+        // spelling in two files.
+        attachedBoard = DGTAutoConnectPolicy.board(
+            at: Self.onlyBoardPath,
+            among: enumerateDevices()
+        )
+        // The board's presence, not a device count. The count was the picker's
+        // question ("what can I choose from?"); this one's is the only question
+        // left, and it is the one worth reading in Console at launch.
+        if let attachedBoard {
+            Self.logger.info("search(): the board is attached at \(attachedBoard.path, privacy: .public)")
+            sessionLog?.capture(.debug, "search: board attached [\(attachedBoard.name)]")
+        } else {
+            Self.logger.info("search(): the board is not attached")
+            sessionLog?.capture(.debug, "search: board not attached")
+        }
     }
     
     // MARK: Connect / Disconnect
@@ -296,8 +337,15 @@ internal final class DGTConnection {
     ///
     /// The old confirm-before-connect contract is discharged by the decree
     /// itself: with exactly one lawful path, the constant *is* the standing
-    /// confirmation, and `isLikelyBoard` remains never consulted — the
-    /// policy's tests pin that a likely-looking stranger never wins.
+    /// confirmation. The policy's tests still pin that a likely-looking
+    /// stranger never wins, and since 3 Aug 2026 there is no heuristic left
+    /// for one to win *with* — `path` equality is the only criterion in the
+    /// codebase.
+    ///
+    /// This does not set `attachedBoard`: it enumerates for the decision and
+    /// discards, because a silent launch attempt has no panel to inform.
+    /// `search()` is what publishes presence, and the connect window calls it
+    /// on the way in.
     internal func autoConnectAtLaunch() async {
         // Absent reads as true — matches the `@AppStorage` default in
         // Settings ("Connect to board automatically", default on).
