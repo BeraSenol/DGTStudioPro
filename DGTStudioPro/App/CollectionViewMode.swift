@@ -24,6 +24,31 @@ internal enum CollectionViewMode: String, CaseIterable, Identifiable {
         case .gallery: "squares.below.rectangle"
         }
     }
+
+    /// Whether the mode renders its own detail pane, making the window's
+    /// inspector a second copy of the same facts (3 Aug 2026).
+    ///
+    /// Only `.columns` does, and that is the Finder metaphor working as
+    /// intended: the rightmost column *is* the inspector. Rendering both put
+    /// Event / Site / Date / Round / White / Black / Result on screen twice,
+    /// side by side.
+    ///
+    /// **It was also a layout bug, which is how it got noticed.** Columns is
+    /// the one mode built on `HSplitView` — `NSSplitView` underneath, which
+    /// sizes panes to their content rather than clamping to the window — so
+    /// its floor is real where a `Table`'s is not. Sidebar 200 + list column
+    /// 220 + detail (320 declared, more once the facts grid and its padding
+    /// are counted) + inspector 310 overflowed the window, and `NSSplitView`
+    /// answers an overflow by pushing content past the leading edge rather
+    /// than compressing. The sidebar went off screen. Reclaiming the
+    /// inspector's 310pt clears it with room, and removes the duplication in
+    /// the same move — which is why this is a property about *ownership of
+    /// the detail pane* and not a width workaround. A width workaround would
+    /// have raised the threshold; this removes the second pane that was
+    /// competing for the space.
+    internal var ownsDetailPane: Bool {
+        self == .columns
+    }
 }
 
 /// The icons grid's geometry, shared by the Library and Players icons views.

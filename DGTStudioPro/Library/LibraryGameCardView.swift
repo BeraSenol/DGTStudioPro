@@ -49,7 +49,7 @@ internal struct LibraryGameCardView: View {
                 Label("Open in Board", systemImage: "checkerboard.rectangle")
             }
             Button(action: onAnalyze) {
-                Label("Analyze", systemImage: AnalysisGlyph.name(for: game))
+                AnalysisLabel(analyzed: AnalysisGlyph.isAnalyzed(game))
             }
             Button(action: onExport) {
                 Label("Export PGN", systemImage: "square.and.arrow.up")

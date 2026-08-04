@@ -26,6 +26,25 @@ internal struct InspectorToggleContent: ToolbarContent {
     @Binding internal var isPresented: Bool
     internal let identifier: String
 
+    /// Set when the destination's current view mode renders its own detail
+    /// pane (`CollectionViewMode.ownsDetailPane`), which makes the window's
+    /// inspector a second copy of the same facts — and, in columns mode,
+    /// pushes the layout past the window's width.
+    ///
+    /// Defaulted, unlike `identifier`. That parameter is required precisely
+    /// because a default would be invisible to the registry's enforcement
+    /// grep; this one is a plain behaviour flag with an obviously correct
+    /// resting value, and demanding `isDisabled: false` at the Board's call
+    /// site would be ceremony over a destination that has no view modes at
+    /// all.
+    internal var isDisabled = false
+
+    /// The reason, shown on hover when disabled. Carried here rather than
+    /// left to the caller so the explanation cannot go missing at one of the
+    /// two hosts — a dimmed control with no help text is the thing that reads
+    /// as a bug.
+    internal var disabledReason: LocalizedStringKey = "This view shows details in its own pane"
+
     internal var body: some ToolbarContent {
         ToolbarItem {
             Button {
@@ -33,6 +52,8 @@ internal struct InspectorToggleContent: ToolbarContent {
             } label: {
                 Label("Inspector", systemImage: "sidebar.trailing")
             }
+            .disabled(isDisabled)
+            .help(isDisabled ? disabledReason : "Show or hide the inspector")
             .accessibilityIdentifier(identifier)
         }
     }

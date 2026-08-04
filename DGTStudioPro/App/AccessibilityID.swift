@@ -5,35 +5,53 @@
 //  Created by Supreme Leader on 16/07/2026.
 //
 
-//  TARGET MEMBERSHIP: DGTStudioPro **and** DGTStudioProUITests — and only
-//  those two. The dual membership is the entire point (F8): identifiers are
-//  a tested contract, and the contract only holds at compile time if both
-//  sides read the same constants. (The unit-test target sees this file
-//  through `@testable import DGTStudioPro`; adding it there as well would
-//  duplicate the symbols.)
+//  TARGET MEMBERSHIP: DGTStudioPro only, since 3 Aug 2026. This file used to
+//  compile into DGTStudioProUITests as well — the dual membership was the
+//  entire point (F8): identifiers were a tested contract, and the contract
+//  only held at compile time if both sides read the same constants. The UI
+//  suite was deleted, so the second membership went with it.
 //
-//  The rot this fixes was real: the UI suite asserted the *absence* of
-//  "board.error" while the app shipped the banner as "board.loaderror" — an
-//  absence assertion against a stale name passes forever while guarding
-//  nothing. With both sides on constants, a rename is a compile error in the
-//  UI test target instead of a silently vacuous test.
+//  **Two consequences, and the first one is a live trap.**
 //
-//  Registry of record: the F8 migrate-on-touch policy completed in M11.3 —
-//  every production identifier now lives here, including the `live.*`,
-//  `archive.*`, `dgt.*`, and `settings.*` families whose witness remains
-//  the manual hardware checklists rather than XCUITest (live play can't be
-//  XCUITest-driven without hardware injection). A raw identifier string in
-//  a view is a defect from here on, and a grep for the modifier followed by
-//  a quote, over production sources, is the enforcement.
+//  1. The `String`-only signatures below are now unenforced. Every function
+//     here takes a raw value rather than an app type — `sidebarDestination`
+//     takes a `Destination.rawValue`, not a `Destination` — because a
+//     signature naming an app type compiled in the app and broke the UI test
+//     target. That target is gone, so nothing stops someone "improving" these
+//     signatures now. Left as they are on purpose: the shape is harmless, and
+//     changing sixteen signatures to buy type safety nothing checks is churn.
+//     Recorded because a constraint obeyed by every instance and explained by
+//     none reads as taste — which is exactly how this one got broken once
+//     before.
+//
+//  2. **These identifiers currently have no automated consumer at all.** They
+//     are still applied throughout the view layer, and nothing reads them:
+//     `accessibilityIdentifier` is not surfaced to VoiceOver (that is
+//     `accessibilityLabel`, which the app sets separately and which is still
+//     live). They were kept rather than swept because removing 143 constants
+//     across 34 files is a large mechanical diff for no functional gain, and
+//     because they are what a future UI suite — or an accessibility audit
+//     tool — would need on day one. That is a stated bet, not an oversight.
+//
+//  The rot the registry originally fixed was real, and is worth keeping as
+//  the reason the naming discipline exists: the UI suite once asserted the
+//  *absence* of "board.error" while the app shipped the banner as
+//  "board.loaderror" — an absence assertion against a stale name passes
+//  forever while guarding nothing.
+//
+//  A raw identifier string in a view remains a defect, and a grep for the
+//  modifier followed by a quote, over production sources, is the enforcement.
 //
 //  Named rather than spelled, per D43′: writing that token verbatim here
 //  would make this file a permanent hit in the grep it is describing, and a
 //  check whose output always contains noise is a check being read past.
 //
 
-/// The accessibility-identifier contract shared by the app and the UI test
-/// suite. Dotted lowercase throughout; renaming any of these is a breaking
-/// change to the tested contract (see the project instructions).
+/// The app's accessibility-identifier registry. Dotted lowercase throughout.
+///
+/// Renaming one is no longer a compile-time breaking change — the target that
+/// made it one is gone (see the file header) — so renames are now checked by
+/// nothing but reading. Treat them as the stable contract they were.
 internal enum AccessibilityID {
     
     // MARK: Shell
@@ -451,14 +469,11 @@ internal enum AccessibilityID {
     }
 }
 
-/// The seeded Library's game display names, shared for the same reason as
-/// the identifiers above: the UI suite previously kept a hand-mirrored copy
-/// ("separate module — keep in sync"), which is the same drift class F8
-/// exists to kill. `UITestSeed.GameName` aliases these so the seeding code
-/// reads unchanged.
-internal enum SeedGameName {
-    internal static let quickMate = "Quick Mate"
-    internal static let ruyLopez  = "Ruy Lopez"
-    internal static let drawnGame = "Drawn Game"
-    internal static let blackWins = "Black Wins"
-}
+// No `SeedGameName` (deleted 3 Aug 2026 with the UI test suite). It held the
+// four seeded games' display names — "Quick Mate", "Ruy Lopez", "Drawn Game",
+// "Black Wins" — and lived here rather than in the seed because the UI suite
+// needed the same strings to build `gameCard.<name>` identifiers, and a
+// hand-mirrored copy across the module boundary is the drift class F8 exists
+// to kill. Both readers are gone: `UITestSeed.GameName` aliased it, and the
+// suite that compared against it. Nothing in the shipping app ever named a
+// game this way.

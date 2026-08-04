@@ -16,27 +16,22 @@ internal struct DGTStudioProApp: App {
     /// Shared `ModelContainer` for the whole app. Multiple tabs share
     /// one container so `PersistentIdentifier`s round-trip correctly.
     ///
-    /// Under the `-uiTestSeed` launch argument the container is in-memory
-    /// and pre-seeded with `UITestSeed`'s sample games, so UI tests run
-    /// against deterministic data and never touch the real library. A
-    /// normal launch is unaffected (persistent store, no seeding).
+    /// Always the persistent store now. This used to branch on the
+    /// `-uiTestSeed` launch argument into an in-memory container pre-seeded
+    /// with sample games; the UI test suite was deleted 3 Aug 2026 and the
+    /// branch went with it, along with `UITestSeed` itself. What remains is
+    /// the plain path that every real launch always took.
     private let sharedContainer: ModelContainer = {
         do {
-            let inMemory = UITestSeed.isActive
-            let config = ModelConfiguration(isStoredInMemoryOnly: inMemory)
             // Player joins the schema explicitly (M-prs.1), SmartTag in
             // M-prs.5 — SmartTag has no relationships, so inference would
             // NOT pull it in; listing all three is load-bearing now, not
             // just documentation.
             let container = try ModelContainer(
                 for: PGN.self, Player.self, SmartTag.self,
-                configurations: config
+                configurations: ModelConfiguration()
             )
-            if inMemory {
-                UITestSeed.seed(into: container)
-            } else {
-                SmartTag.seedDefaultsOnce(into: container)
-            }
+            SmartTag.seedDefaultsOnce(into: container)
             return container
         } catch {
             fatalError("Failed to create shared ModelContainer: \(error)")
@@ -82,16 +77,14 @@ internal struct DGTStudioProApp: App {
     /// the state is deliberately shared across tabs. Collapsing Opening is a
     /// statement about openings, not about the window it was made in.
     ///
-    /// Constructed with the same scratch-suite redirection the `WindowGroup`
-    /// applies to `@AppStorage` below, and for the same reason — except this
-    /// one has to be spelled here, because `.defaultAppStorage(_:)` redirects
-    /// the property wrapper and has nothing to say about a `UserDefaults` an
-    /// object was handed at construction. A seeded UI run reading the
-    /// developer's own collapsed sections would fail on a section that is
-    /// present and correct and simply folded.
-    @State private var inspectorCollapse = InspectorSectionCollapse(
-        defaults: UITestSeed.isActive ? UITestSeed.scratchDefaults : .standard
-    )
+    /// Handed `.standard` explicitly. The injectable-defaults seam on
+    /// `InspectorSectionCollapse` outlived the reason it was added: it existed
+    /// so a seeded UI run wouldn't read the developer's own collapsed
+    /// sections, and the UI suite is gone. The seam stays because the
+    /// previews still need it — a canvas writing into real preferences is the
+    /// same leak with a smaller blast radius — but this call site no longer
+    /// has anything to choose between.
+    @State private var inspectorCollapse = InspectorSectionCollapse(defaults: .standard)
 
     // The struct is `@MainActor` (above), so this init runs on the main actor
     // and may touch the `@MainActor` members of the DGT objects it wires. The
@@ -146,12 +139,15 @@ internal struct DGTStudioProApp: App {
         // `enterRecovery`, so it sounds exactly once per desync entry.
         // AppKit because SwiftUI has no sound API; `NSSound.beep()` is the
         // system alert — respects the user's alert sound and volume, no
-        // bundled asset, deliberately. Seeded UI runs stay silent: a
-        // deterministic test driving a desync must not beep the machine.
-        // The `?? true` here is the `@AppStorage` twin in `SettingsView` —
-        // the `autoConnectOnLaunch` contract, documented in `StorageKeys`.
+        // bundled asset, deliberately. The `?? true` here is the
+        // `@AppStorage` twin in `SettingsView` — the `autoConnectOnLaunch`
+        // contract, documented in `StorageKeys`.
+        //
+        // The seeded-run silence guard is gone with the UI suite (3 Aug
+        // 2026). Unit tests never reach this closure — a nil `onDesync` is
+        // what makes them headless by construction — so the preference is
+        // now the only thing standing between a desync and a beep.
         session.onDesync = {
-            guard !UITestSeed.isActive else { return }
             let enabled = UserDefaults.standard
                 .object(forKey: StorageKeys.illegalMoveSoundEnabled) as? Bool ?? true
             if enabled { NSSound.beep() }
@@ -200,7 +196,7 @@ internal struct DGTStudioProApp: App {
         let environment = ProcessInfo.processInfo.environment
         let isUnitTestHost = environment["XCTestConfigurationFilePath"] != nil
         || environment["XCTestSessionIdentifier"] != nil
-        if !UITestSeed.isActive && !isUnitTestHost {
+        if !isUnitTestHost {
             Task { await connection.autoConnectAtLaunch() }
         }
         
@@ -237,12 +233,12 @@ internal struct DGTStudioProApp: App {
                 .environment(dgtSession)
                 .environment(sessionLog)
                 .environment(inspectorCollapse)
-                // Test hosts stay hermetic: a seeded launch points every
-                // `@AppStorage` in the tab at the once-wiped scratch suite
-                // (see `UITestSeed.scratchDefaults` for the full why,
-                // including the rejected argument-domain pin). A normal
-                // launch keeps `.standard` — a no-op outside UI tests.
-                .defaultAppStorage(UITestSeed.isActive ? UITestSeed.scratchDefaults : .standard)
+            // No `.defaultAppStorage(_:)` here any more. It redirected every
+            // `@AppStorage` in the tab to a wiped scratch suite under the
+            // `-uiTestSeed` argument, so a UI run couldn't read — or write —
+            // the developer's real preferences. With the suite deleted the
+            // expression could only ever evaluate to `.standard`, which is
+            // the environment default, so the modifier said nothing.
         }
         .modelContainer(sharedContainer)
         .defaultLaunchBehavior(.presented)
@@ -276,7 +272,6 @@ internal struct DGTStudioProApp: App {
         // declared first.
         WindowGroup("Evaluation", for: EvaluationGraphRequest.self) { $request in
             EvaluationGraphWindow(request: request)
-                .defaultAppStorage(UITestSeed.isActive ? UITestSeed.scratchDefaults : .standard)
         }
         .modelContainer(sharedContainer)
         .defaultSize(width: 720, height: 420)
@@ -290,12 +285,6 @@ internal struct DGTStudioProApp: App {
         Settings {
             SettingsView()
                 .environment(sleepInhibitor)
-                // Same scratch-suite redirection as the WindowGroup.
-                // Settings isn't exercised under the seed today, but a
-                // future settings UITest silently reading the human's
-                // real preferences is exactly the leak class the
-                // WindowGroup line exists to close.
-                .defaultAppStorage(UITestSeed.isActive ? UITestSeed.scratchDefaults : .standard)
         }
         .modelContainer(sharedContainer)
     }

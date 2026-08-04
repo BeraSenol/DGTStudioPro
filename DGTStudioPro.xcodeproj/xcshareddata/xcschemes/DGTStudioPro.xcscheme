@@ -46,17 +46,6 @@
                ReferencedContainer = "container:DGTStudioPro.xcodeproj">
             </BuildableReference>
          </TestableReference>
-         <TestableReference
-            skipped = "NO"
-            parallelizable = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "C5D920D92F732FE9003D0A74"
-               BuildableName = "DGTStudioProUITests.xctest"
-               BlueprintName = "DGTStudioProUITests"
-               ReferencedContainer = "container:DGTStudioPro.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

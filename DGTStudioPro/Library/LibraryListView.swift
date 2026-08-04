@@ -114,9 +114,12 @@ internal struct LibraryListView: View {
                 Button {
                     onAnalyzeIDs(ids)
                 } label: {
-                    Label(
-                        ids.count > 1 ? "Analyze \(ids.count) Games" : "Analyze",
-                        systemImage: AnalysisGlyph.name(analyzed: analyzed)
+                    // The counted plural keeps its verb: "Analyzed 3 Games"
+                    // would read as a claim about what happened rather than a
+                    // menu item you can click.
+                    AnalysisLabel(
+                        analyzed: analyzed,
+                        title: ids.count > 1 ? "Analyze \(ids.count) Games" : nil
                     )
                 }
                 Button {

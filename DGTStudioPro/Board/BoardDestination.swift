@@ -118,6 +118,20 @@ internal struct BoardDestination: View {
         // since D15′ (behavior unchanged, surface moved — `ContentView`
         // renders `tabState.boardLoadError` there).
         .navigationTitle(tabState.boardPGN?.name ?? "Board")
+        // The subtitle is *state*; the title above is identity and the
+        // inspector's `GameHeadline` below is the pairing. Branching on
+        // `boardPGN` mirrors the body's own branch at the top of this
+        // property: a review tab reports the position it is showing, a live
+        // tab reports the physical board. Never both — a tab reviewing a PGN
+        // has no business announcing a desync it isn't party to (D15′).
+        .navigationSubtitle(
+            DestinationSubtitle.board(
+                phase: .current(session: session, connection: connection),
+                reviewing: tabState.boardPGN == nil
+                    ? nil
+                    : tabState.boardGame?.currentState.activeColor
+            ) ?? ""
+        )
         .toolbar { boardToolbarContent }
         .sheet(isPresented: $showConnectSheet) {
             DGTConnectionView()

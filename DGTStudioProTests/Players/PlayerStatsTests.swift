@@ -127,6 +127,90 @@ struct PlayerStatsTests {
         #expect(index.map(\.key) == ["alice", "bob"])
     }
     
+    // MARK: Head to Head (3 Aug 2026)
+
+    /// The claim that is cheap to get wrong and plausible when wrong:
+    /// orientation. Alice is White in one win and Black in another, so a fold
+    /// that ignored which seat she held would report the same totals for both
+    /// players — and 2–1–1 read from the wrong side is a sentence nobody
+    /// looking at the toolbar could falsify.
+    ///
+    /// The asymmetry is asserted directly rather than through a spot check:
+    /// swapping the arguments must mirror the record, which is a property no
+    /// single-direction assertion can express.
+    @Test func headToHeadIsOrientedToTheFirstPlayer() throws {
+        let records = [
+            record(white: alice, black: bob, result: .whiteWins),   // Alice
+            record(white: bob, black: alice, result: .blackWins),   // Alice
+            record(white: alice, black: bob, result: .draw),
+            record(white: bob, black: alice, result: .whiteWins),   // Bob
+        ]
+
+        let forAlice = try #require(PlayerStats.headToHead("alice", "bob", in: records))
+        #expect(forAlice.wins == 2)
+        #expect(forAlice.draws == 1)
+        #expect(forAlice.losses == 1)
+
+        let forBob = try #require(PlayerStats.headToHead("bob", "alice", in: records))
+        #expect(forBob.wins == 1)
+        #expect(forBob.draws == 1)
+        #expect(forBob.losses == 2)
+    }
+
+    /// Only their own games count. A fold that matched on "either seat is
+    /// Alice" rather than on the pair would absorb the Carol game and answer
+    /// a question nobody asked.
+    @Test func headToHeadIgnoresGamesAgainstOthers() throws {
+        let carol = GameRecord.Side(key: "carol", name: "Carol")
+        let records = [
+            record(white: alice, black: bob, result: .whiteWins),
+            record(white: alice, black: carol, result: .whiteWins),
+            record(white: carol, black: bob, result: .whiteWins),
+        ]
+
+        // Not named `record`: that would shadow the fixture helper of the
+        // same name for the rest of the scope.
+        let meeting = try #require(PlayerStats.headToHead("alice", "bob", in: records))
+        #expect(meeting.wins == 1)
+        #expect(meeting.draws == 0)
+        #expect(meeting.losses == 0)
+    }
+
+    /// Never met is nil, not 0–0–0 — the subtitle must be able to say nothing
+    /// rather than print a record for a rivalry that doesn't exist. An
+    /// all-zero tuple would render as "Alice 0–0–0 Bob", which reads as a
+    /// result.
+    @Test func headToHeadIsNilWhenTheyHaveNeverMet() {
+        let records = [record(white: alice, black: nil, result: .whiteWins)]
+        #expect(PlayerStats.headToHead("alice", "bob", in: records) == nil)
+        #expect(PlayerStats.headToHead("alice", "alice", in: records) == nil)
+    }
+
+    /// `*` is not a result (Decision #3), so an undecided meeting counts in
+    /// none of the three columns — the totals may sum to less than the games
+    /// played, deliberately.
+    @Test func headToHeadExcludesUndecidedGames() throws {
+        let records = [
+            record(white: alice, black: bob, result: .ongoing),
+            record(white: alice, black: bob, result: .whiteWins),
+        ]
+
+        // Not named `record`: that would shadow the fixture helper of the
+        // same name for the rest of the scope.
+        let meeting = try #require(PlayerStats.headToHead("alice", "bob", in: records))
+        #expect(meeting.wins == 1)
+        #expect(meeting.draws == 0)
+        #expect(meeting.losses == 0)
+    }
+
+    /// A self-play row is not a meeting. Counted naively it would be a win
+    /// *and* a loss for the same person, which is the shape
+    /// `selfPlayRewritesBothSeats` guards on the retag side.
+    @Test func headToHeadIgnoresSelfPlay() {
+        let records = [record(white: alice, black: alice, result: .whiteWins)]
+        #expect(PlayerStats.headToHead("alice", "alice", in: records) == nil)
+    }
+
     // MARK: Ranking (D11′)
     
     /// Wins outrank win rate outranks key — each link exercised at a

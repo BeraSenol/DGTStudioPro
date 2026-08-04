@@ -188,35 +188,14 @@ internal struct SessionSidebarPanel: View {
     /// make the same move — it co-occurs with a live game, whose inspector
     /// is showing that game — so it stays a card. (Moved verbatim from
     /// `BoardDestination.hudPhase` by D15′.)
+    /// Delegates since 3 Aug 2026. The priority ordering used to live here in
+    /// full; the Board's toolbar subtitle became its second consumer, so it
+    /// moved to `LiveGameHUDView.Phase.current(session:connection:)` — the
+    /// `RecoveryGuidance.current` treatment, for the same reason and with the
+    /// same signature. Two views computing this is fine; two views *spelling*
+    /// it is how the sidebar and the toolbar end up disagreeing on screen.
     private var hudPhase: LiveGameHUDView.Phase? {
-        if connection.isReconnecting { return .reconnecting }
-        guard connection.isConnected else { return nil }
-        
-        if session.needsRecovery {
-            return .recovering(lastSAN: session.liveGame?.sanMoves.last)
-        }
-        if let hint = session.correctionHint {
-            return .correction(message: hint.message)
-        }
-        if session.awaitingPhysicalSetup {
-            return .awaitingSetup
-        }
-        if let game = session.liveGame {
-            if game.isFinished {
-                // A failed archive outranks the plain finished banner: the
-                // player must Retry or discard before anything else (M5).
-                if case .failed(let message) = session.archiveOutcome {
-                    return .archiveFailed(result: game.result, message: message)
-                }
-                return .finished(result: game.result)
-            }
-            return .playing(
-                sideToMove: game.currentState.activeColor,
-                lastSAN: game.sanMoves.last,
-                ply: game.plyCount
-            )
-        }
-        return .idle
+        .current(session: session, connection: connection)
     }
     
     /// The restore checklist while `recovering`, nil otherwise. Recomputed

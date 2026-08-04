@@ -59,8 +59,18 @@ internal struct LibraryColumnsView: View {
     // MARK: Body
     internal var body: some View {
         HSplitView {
+            // 160/200/300, down from 220/260/340. A one-line row that
+            // truncates in the middle needs far less width than the two-line
+            // row that had to fit a date and a result side by side, and the
+            // floor is the number that mattered: columns is the one mode
+            // whose minimum is real (`HSplitView` sizes to content), so 60pt
+            // off the floor is 60pt the sidebar and inspector stop competing
+            // for. Belt and braces with the inspector suppression — that
+            // change alone should clear the overflow; this makes the mode
+            // survivable at window widths where it previously could not fit
+            // at all.
             gameList
-                .frame(minWidth: 220, idealWidth: 260, maxWidth: 340, maxHeight: .infinity)
+                .frame(minWidth: 160, idealWidth: 200, maxWidth: 300, maxHeight: .infinity)
 
             detail
                 .frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
@@ -97,23 +107,35 @@ internal struct LibraryColumnsView: View {
         }
     }
 
-    /// Two lines, the inspector's recent-games grammar: name above, date
-    /// and result below. The context menu mirrors the card's affordances so
-    /// switching view modes never loses a verb.
+    /// **Finder's row: one icon, one name, one line** (3 Aug 2026).
+    ///
+    /// Was two lines carrying the date and the result as well. The argument
+    /// for stripping them is the one the columns metaphor makes for itself:
+    /// this is a *browser*, and every fact the row used to repeat is on the
+    /// detail pane one column to the right, larger and in context. Finder
+    /// does not put the modification date in the file list either — it puts
+    /// it in the pane you get when you click.
+    ///
+    /// It buys width, which is not a side effect here. Columns mode was
+    /// pushing the sidebar off screen because its floor exceeded the window
+    /// (see `CollectionViewMode.ownsDetailPane`), and a row that no longer
+    /// has to fit "21/07/2026" and "1/2-1/2" side by side is a row that can
+    /// live in a narrower column.
+    ///
+    /// The icon is uniform, deliberately. Making it carry state — result, or
+    /// analysis — would be a third encoding of facts the detail pane already
+    /// states, and Finder's own list gets its plainness precisely from every
+    /// row of a kind looking identical.
     private func row(for game: PGN) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: 6) {
+            Image(systemName: "doc.text")
+                .foregroundStyle(.tint)
+                .imageScale(.medium)
             Text(game.name)
                 .lineLimit(1)
-            HStack {
-                Text(game.displayDate)
-                Spacer()
-                Text(game.result.rawValue)
-                    .monospaced()
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
+                .truncationMode(.middle)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 1)
         .contextMenu {
             Button("Open") { onOpen(game) }
             Button("Analyze") { onAnalyze(game) }
@@ -142,14 +164,43 @@ internal struct LibraryColumnsView: View {
         }
     }
 
-    /// Preview above, facts below. The preview reuses the gallery's
-    /// `LibraryGamePreviewView` whole — header, board, async replay — and
-    /// takes the flexible space; the facts block keeps its natural height,
-    /// so a short window squeezes the board, never the text (Finder's own
-    /// trade).
+    /// Raw PGN above, facts below (3 Aug 2026).
+    ///
+    /// **The board is gone, and it was the cause of the squeeze.** This used
+    /// to render `LibraryGamePreviewView` whole — header, board, async replay
+    /// — and `BoardView` is `aspectRatio(1, .fit)` over a `GeometryReader`,
+    /// so in a tall window it demands a width equal to its height. That is
+    /// not a view taking the space it is given; it is a view *asking* for
+    /// width, and in an `HSplitView` the ask wins. Selecting a game visibly
+    /// stole width from the list column beside it, which is the same
+    /// mechanism that pushed the sidebar off screen, arriving from a
+    /// different direction.
+    ///
+    /// Text has no such appetite: it wraps. So the detail pane now shows what
+    /// the file will actually say, at a size worth reading, and reflows into
+    /// whatever width is left instead of bidding for more.
+    ///
+    /// `PGN.pgnText` is the same accessor the inspector reads — byte-identical
+    /// to what Export writes (D24′). Not a second rendering of the model: a
+    /// detail pane that formatted its own tag block would be a third PGN
+    /// shape in the app, free to drift from the reference files that pin it.
+    ///
+    /// `boardStyle` is still taken as a parameter and no longer read here.
+    /// Left in place rather than threaded out: `LibraryDestination` passes it
+    /// to every mode view uniformly, and removing it from one of four is a
+    /// signature change that buys nothing while making the call sites differ.
     private func gameDetail(_ game: PGN) -> some View {
         VStack(spacing: 0) {
-            LibraryGamePreviewView(game: game, boardStyle: boardStyle)
+            ScrollView {
+                Text(game.pgnText)
+                    .font(.system(.body, design: .monospaced))
+                    .textSelection(.enabled)
+                    .lineLimit(nil)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(20)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
             Divider()
             factsAndActions(game)
         }
@@ -181,7 +232,7 @@ internal struct LibraryColumnsView: View {
                 Button {
                     onAnalyze(game)
                 } label: {
-                    Label("Analyze", systemImage: AnalysisGlyph.name(for: game))
+                    AnalysisLabel(analyzed: AnalysisGlyph.isAnalyzed(game))
                 }
                 .help("Analyze this game with Stockfish")
             }

@@ -83,9 +83,15 @@ internal final class SmartTag: Identifiable {
     
     // MARK: Defaults
     
-    /// The former enum cases, reborn as editable rule sets. One factory
-    /// feeds both the first-run seed and the UI-test seed — a single
-    /// source, so the tests exercise exactly what ships.
+    /// The former enum cases, reborn as editable rule sets.
+    ///
+    /// One factory fed both the first-run seed and the UI-test seed, so the
+    /// tests exercised exactly what ships. The UI seed went with its suite on
+    /// 3 Aug 2026, leaving the first-run seed as the only caller — which
+    /// makes "one factory" a description of the present rather than a
+    /// guarantee about it. Worth keeping as one anyway: a second seeding path
+    /// that built its own tags is how the shipped defaults and the tested
+    /// defaults come apart.
     internal static func defaultTags() -> [SmartTag] {
         [
             SmartTag(

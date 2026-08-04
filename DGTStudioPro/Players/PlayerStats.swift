@@ -74,6 +74,59 @@ internal struct PlayerStats: Sendable, Hashable, Identifiable {
             .sorted { $0.key < $1.key }
     }
     
+    // MARK: Head to Head (3 Aug 2026)
+
+    /// Wins–draws–losses **from `first`'s side**, over the games these two
+    /// played against each other. Nil when they have never met.
+    ///
+    /// A separate fold rather than a slice of `index(of:)`, because the two
+    /// answer different questions: `index` asks "how has this player done",
+    /// which sums over every opponent, and no arrangement of those totals can
+    /// be narrowed back down to one pairing. The subtitle is the first
+    /// surface to ask the pairing question; `PairingRound` asks a different
+    /// one about the same pair and shares only the set-matching.
+    ///
+    /// Orientation is the content. A record read the wrong way round is
+    /// silently, plausibly wrong — 7–3–2 and 2–3–7 are both believable — so
+    /// the caller passes an ordered pair and gets numbers oriented to the
+    /// first of it. `DestinationSubtitle.players` brackets them with the
+    /// names in the same order for exactly that reason.
+    ///
+    /// Draws count for both; an undecided game (`*`) contributes to none of
+    /// the three, so the totals can sum to less than the games played — the
+    /// same "`*` is not a result" stance the archive door takes (Decision #3).
+    /// Self-play is excluded: a row with the same player on both seats is not
+    /// a meeting, and would otherwise count as a win *and* a loss.
+    internal static func headToHead(
+        _ first: String,
+        _ second: String,
+        in records: [GameRecord]
+    ) -> (wins: Int, draws: Int, losses: Int)? {
+        guard first != second else { return nil }
+        var wins = 0, draws = 0, losses = 0, met = false
+
+        for record in records {
+            guard let white = record.white?.key, let black = record.black?.key else { continue }
+            let firstIsWhite: Bool
+            if white == first && black == second {
+                firstIsWhite = true
+            } else if white == second && black == first {
+                firstIsWhite = false
+            } else {
+                continue
+            }
+            met = true
+            switch record.result {
+            case .whiteWins: firstIsWhite ? (wins += 1) : (losses += 1)
+            case .blackWins: firstIsWhite ? (losses += 1) : (wins += 1)
+            case .draw:      draws += 1
+            case .ongoing:   break
+            }
+        }
+
+        return met ? (wins, draws, losses) : nil
+    }
+
     // MARK: Ranking (D11′)
     
     /// The recorded Rankings order: total wins descending, win rate

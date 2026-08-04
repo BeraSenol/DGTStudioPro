@@ -267,10 +267,9 @@ private struct LoadedSection: View {
             Button {
                 queue.enqueue([pgn], modelContext: modelContext)
             } label: {
-                Label(
-                    hasRecordedAnalysis ? "Re-analyze" : "Analyze",
-                    systemImage: AnalysisGlyph.name(analyzed: hasRecordedAnalysis)
-                )
+                // "Analyzed" rather than "Re-analyze" since 3 Aug 2026 —
+                // state over verb; the button still re-runs the pass.
+                AnalysisLabel(analyzed: hasRecordedAnalysis)
             }
         }
     }

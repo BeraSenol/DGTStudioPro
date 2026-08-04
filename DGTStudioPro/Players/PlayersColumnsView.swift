@@ -52,8 +52,10 @@ internal struct PlayersColumnsView: View {
     // MARK: Body
     var body: some View {
         HSplitView {
+            // Matched to the Library's, per collection-destination parity —
+            // see its twin for why the floor came down with the row.
             playerList
-                .frame(minWidth: 220, idealWidth: 260, maxWidth: 340, maxHeight: .infinity)
+                .frame(minWidth: 160, idealWidth: 200, maxWidth: 300, maxHeight: .infinity)
 
             detail
                 .frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
@@ -90,22 +92,33 @@ internal struct PlayersColumnsView: View {
         }
     }
 
+    /// **Finder's row: one icon, one name, one line** (3 Aug 2026) — the
+    /// Library's twin, and the reasoning is at `LibraryColumnsView.row(for:)`.
+    ///
+    /// Three things left: the 28pt monogram, the game count, and the rank
+    /// badge. All three are on the profile in the next column, and the
+    /// monogram in particular was doing the opposite of Finder's job — a
+    /// per-player coloured disc makes every row look different, where a list
+    /// you scan wants every row to look the same so the *names* are what
+    /// varies.
+    ///
+    /// The rank badge is the one worth naming, because losing it is a real
+    /// cost rather than pure cleanup: in rank order the list is a ladder, and
+    /// the number said where each rung sat. It goes because the position in
+    /// the list already says that when sorted by rank, and says something
+    /// actively misleading when sorted by name — a "#3" scattered mid-list
+    /// reads as a sort that has gone wrong. The table view is where ranks
+    /// belong; it has a column for them.
     private func row(for player: RankedPlayer) -> some View {
-        HStack(spacing: 8) {
-            PlayerMonogram(name: player.stats.name, diameter: 28)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(player.stats.name)
-                    .lineLimit(1)
-                Text("\(player.stats.games) games")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Text("#\(player.rank)")
-                .font(.caption.weight(.bold).monospacedDigit())
-                .foregroundStyle(RankMedal.style(forRank: player.rank))
+        HStack(spacing: 6) {
+            Image(systemName: "person")
+                .foregroundStyle(.tint)
+                .imageScale(.medium)
+            Text(player.stats.name)
+                .lineLimit(1)
+                .truncationMode(.middle)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 1)
         .contextMenu {
             Button {
                 onShowInLibrary(player.id)

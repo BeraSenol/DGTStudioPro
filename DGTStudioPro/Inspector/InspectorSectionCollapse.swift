@@ -99,13 +99,17 @@ internal final class InspectorSectionCollapse {
     // MARK: Initializers
 
     /// `defaults` is injectable so the contract can be pinned against a
-    /// scratch suite, and so the App can point it at `UITestSeed`'s wiped
-    /// suite under a seeded run. That second reason is load-bearing rather
-    /// than tidy: this value reaches every inspector, and a UI test reading
-    /// the developer's own collapsed sections would fail on a section that is
-    /// present, correct, and folded shut — the ambient-`UserDefaults` leak M1
-    /// closed for `@AppStorage`, which a hand-constructed `UserDefaults` does
-    /// not inherit from `.defaultAppStorage(_:)`.
+    /// scratch suite, and so `preview` can hold its own.
+    ///
+    /// It had a third reason until 3 Aug 2026, and that one was the
+    /// load-bearing one: the App pointed it at the UI seed's wiped suite,
+    /// because a seeded run reading the developer's own collapsed sections
+    /// would fail on a section that is present, correct, and folded shut —
+    /// the ambient-`UserDefaults` leak M1 closed for `@AppStorage`, which a
+    /// hand-constructed `UserDefaults` does not inherit from
+    /// `.defaultAppStorage(_:)`. The UI suite is gone, so the App now passes
+    /// `.standard` outright. The seam survives on the previews alone, which
+    /// is a weaker reason but a real one.
     ///
     /// Assignment in `init` doesn't fire `didSet`, so a first launch reads the
     /// empty default without writing it back.
@@ -190,9 +194,9 @@ extension InspectorSectionCollapse {
     /// the freshness of the instance, which is what this doc claimed until
     /// the 1 Aug review. A named suite is a real plist and `persist()` writes
     /// every toggle into it, so a fresh instance alone reads the last
-    /// canvas's toggles straight back. `UITestSeed.scratchDefaults` wipes for
-    /// the same reason at the same kind of boundary, and was one file away
-    /// the whole time.
+    /// canvas's toggles straight back. The UI test seed wiped its own suite
+    /// for exactly this reason at exactly this kind of boundary; that seed is
+    /// gone, and this is now the only place in the app that does it.
     internal static var preview: InspectorSectionCollapse {
         let name = "preview"
         // `!` over a `?? .standard` fallback, `SettingsView`'s sibling

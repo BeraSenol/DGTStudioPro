@@ -133,7 +133,10 @@ internal struct LiveGameHUDView: View {
         case .awaitingSetup:
             "Set up the starting position on the board…"
         case .playing(let side, _, _):
-            side == .white ? "White to move" : "Black to move"
+            // One spelling, shared with the toolbar subtitle — this card and
+            // that subtitle are on screen together, so a drift between "to
+            // move" and "to play" would be visible at a glance.
+            side.toMoveDescription
         case .correction:
             "One correction needed"
         case .recovering:

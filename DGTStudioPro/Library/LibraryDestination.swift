@@ -54,14 +54,19 @@ internal struct LibraryDestination: View {
     // system field claims the toolbar's trailing edge and that isn't
     // negotiable, but native search behavior won over field placement.)
     @State private var searchText = ""
-    /// The two toolbar-menu filters; nil means "any". They are filters and
-    /// not search scopes deliberately: they answer in the field's own
-    /// vocabulary rather than free text, they stay useful with no query
-    /// typed, and their active state is visible on the toolbar (the filled
-    /// filter glyph) — a scope bar exists only while searching, which would
-    /// make an empty-query filter invisible after the field closes.
-    @State private var resultFilter: GameResult?
-    @State private var analysisFilter: Bool?
+    /// The non-text facets, as chips inside the search field (3 Aug 2026).
+    ///
+    /// Was a `GameResult?` / `Bool?` pair driven by the toolbar menu alone.
+    /// Two things were wrong with that and only one was visible: the filters
+    /// were single-valued, so "decisive games" could not be expressed at all;
+    /// and an active filter was announced only by a filled toolbar glyph,
+    /// which says *that* something is narrowing the list and never *what*.
+    /// A chip says both and carries its own remove button.
+    ///
+    /// The toolbar menu stays as the way to add one — `suggestedTokens` only
+    /// surface while the field is focused, so the menu remains the discoverable
+    /// entry point, and its filled/unfilled glyph now tracks `!tokens.isEmpty`.
+    @State private var searchTokens: [LibrarySearchToken] = []
     
     // MARK: Initializers
     internal init(
@@ -94,14 +99,19 @@ internal struct LibraryDestination: View {
                 SearchMatch.matches(query: searchText, fields: searchFields(of: $0))
             }
         }
-        if let resultFilter {
-            result = result.filter { $0.result == resultFilter }
-        }
-        if let analysisFilter {
+        if !searchTokens.isEmpty {
             // `AnalysisGlyph.isAnalyzed`, not a bare `isEmpty` check: the
             // filter and the gear glyphs must answer "analyzed?" the same
-            // way, and that type is the one spelling.
-            result = result.filter { AnalysisGlyph.isAnalyzed($0) == analysisFilter }
+            // way, and that type is the one spelling. The token rule itself
+            // (OR within a facet, AND across facets) lives on the token, so
+            // this stays a projection and never a second opinion.
+            result = result.filter {
+                LibrarySearchToken.admit(
+                    searchTokens,
+                    result: $0.result,
+                    isAnalyzed: AnalysisGlyph.isAnalyzed($0)
+                )
+            }
         }
         return result
     }
@@ -122,11 +132,11 @@ internal struct LibraryDestination: View {
     /// Whether the empty gate should read as "no matches" rather than
     /// "no games".
     private var isNarrowedBySearchOrFilters: Bool {
-        !searchText.isEmpty || resultFilter != nil || analysisFilter != nil
+        !searchText.isEmpty || !searchTokens.isEmpty
     }
     
     private var hasActiveMenuFilters: Bool {
-        resultFilter != nil || analysisFilter != nil
+        !searchTokens.isEmpty
     }
     
     /// The single selected game, nil for empty *and* multiple — the columns
@@ -202,7 +212,7 @@ internal struct LibraryDestination: View {
             .onAppear {
                 backfillEmptyNames()
                 backfillPlayerLinks()
-                if viewMode == .gallery { tabState.libraryInspectorPresented = true }
+                applyInspectorPolicy(for: viewMode)
             }
         // `.task`, not a fourth line in `onAppear`: this one has to await
         // the ECO table, and awaiting it is the entire point — see
@@ -211,7 +221,7 @@ internal struct LibraryDestination: View {
                 await backfillClassifications()
             }
             .onChange(of: viewMode) { _, mode in
-                if mode == .gallery { tabState.libraryInspectorPresented = true }
+                applyInspectorPolicy(for: mode)
             }
     }
     
@@ -252,6 +262,17 @@ internal struct LibraryDestination: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .navigationTitle(filter?.displayName ?? "Library")
+        // Counted over `filteredGames`, not the whole Library: the subtitle
+        // describes what you are looking at, so a smart tag that hides the
+        // backlog should quiet the line rather than keep reporting it. The
+        // backlog clause disappears at zero by construction — a fully
+        // analysed view shows a bare title, which is the point.
+        .navigationSubtitle(
+            DestinationSubtitle.library(
+                selected: selectedPGNs.count,
+                unanalyzed: filteredGames.count(where: { !AnalysisGlyph.isAnalyzed($0) })
+            ) ?? ""
+        )
         .dropDestination(for: URL.self) { urls, _ in
             Self.logger.info("Drop received: \(urls.count) URL(s)")
             importURLs(urls)
@@ -266,11 +287,20 @@ internal struct LibraryDestination: View {
             .inspectorColumnWidth(min: 310, ideal: 310, max: 430)
         }
         .toolbar { toolbarContent }
+        // Tokens ahead of the text, inside the field. `suggestedTokens` is
+        // every facet minus the ones already applied — offering a chip you
+        // are already wearing is how a suggestion list stops being read.
         .searchable(
             text: $searchText,
+            tokens: $searchTokens,
+            suggestedTokens: .constant(
+                LibrarySearchToken.allCases.filter { !searchTokens.contains($0) }
+            ),
             placement: .toolbarPrincipal,
             prompt: "Search Games"
-        )
+        ) { token in
+            tokenLabel(token)
+        }
         .sheet(isPresented: Binding(present: $importProgress)) {
             if let importProgress {
                 ImportStatusView(progress: importProgress) {
@@ -387,10 +417,37 @@ internal struct LibraryDestination: View {
     private func requestAnalysis(_ pgn: PGN) {
         Self.logger.info("Analyze requested: '\(pgn.name, privacy: .public)'")
         selectedPGNs = [pgn.id]
-        tabState.libraryInspectorPresented = true
+        // Not in columns mode: its detail pane already shows the game being
+        // analyzed, and forcing the inspector open here would reintroduce the
+        // overflow the mode's own policy exists to prevent — from a code path
+        // nobody would think to check.
+        if !viewMode.ownsDetailPane {
+            tabState.libraryInspectorPresented = true
+        }
         tabState.analysisQueue.enqueue([pgn], modelContext: modelContext)
     }
     
+    /// The two modes with an opinion about the inspector, in one place so
+    /// `onAppear` and `onChange` cannot answer differently.
+    ///
+    /// Gallery forces it **open** — the gallery is a picker and the inspector
+    /// is where the picked game is read. Columns forces it **shut**, because
+    /// columns renders its own detail pane (`CollectionViewMode.ownsDetailPane`,
+    /// which carries the full reason). The other two modes are left alone:
+    /// list and icons have no detail surface of their own, so whatever the
+    /// user last chose is still what they want.
+    ///
+    /// Leaving columns does not restore it. Remembering would need a
+    /// "was open before columns" flag, which is state that exists only to
+    /// undo a state change — and the toggle is one click away.
+    private func applyInspectorPolicy(for mode: CollectionViewMode) {
+        if mode.ownsDetailPane {
+            tabState.libraryInspectorPresented = false
+        } else if mode == .gallery {
+            tabState.libraryInspectorPresented = true
+        }
+    }
+
     /// Multi-game entry (the toolbar button, the list's contextual
     /// selection): enqueues in **display order** — a `Set` carries none,
     /// and top-to-bottom-as-shown is the order a batch should crunch in.
@@ -427,30 +484,28 @@ internal struct LibraryDestination: View {
     }
     
     /// The search-independent half of the 2 Aug 2026 search feature — see
-    /// the `resultFilter` declaration for why these are a menu and not
-    /// scopes. Content side of the break, the Maintenance-menu argument:
+    /// the `searchTokens` declaration for why this stays a menu even now
+    /// that the chips are in the field. Content side of the break, the
+    /// Maintenance-menu argument:
     /// it acts on what the list shows.
     @ToolbarContentBuilder
     private var filterToolbarItem: some ToolbarContent {
         ToolbarItem {
             Menu {
-                Picker("Result", selection: $resultFilter) {
-                    Text("Any Result").tag(GameResult?.none)
-                    ForEach(GameResult.allCases, id: \.self) { result in
-                        Text(Self.filterLabel(for: result)).tag(GameResult?.some(result))
+                // Toggles rather than pickers, because the underlying state
+                // stopped being single-valued: a `Picker` over an optional
+                // can't express "1-0 and 0-1 both selected", which is the
+                // whole reason the filters became tokens. Checkmarks are the
+                // menu's own multi-select idiom, and they stay in sync with
+                // the chips because both read `searchTokens`.
+                ForEach(LibrarySearchToken.allCases) { token in
+                    Toggle(isOn: binding(for: token)) {
+                        tokenLabel(token)
                     }
-                }
-                Picker("Analysis", selection: $analysisFilter) {
-                    Text("Any Analysis").tag(Bool?.none)
-                    Text("Analyzed").tag(Bool?.some(true))
-                    Text("Not Analyzed").tag(Bool?.some(false))
                 }
                 if hasActiveMenuFilters {
                     Divider()
-                    Button("Clear Filters") {
-                        resultFilter = nil
-                        analysisFilter = nil
-                    }
+                    Button("Clear Filters") { searchTokens.removeAll() }
                 }
             } label: {
                 Label("Filter", systemImage: hasActiveMenuFilters
@@ -463,18 +518,51 @@ internal struct LibraryDestination: View {
                   : "Filter by result or analysis state")
         }
     }
-    
-    /// Menu copy pairs the word with PGN's own vocabulary — the raw value
-    /// stays the app's one rendering of a result (RosterSummary shows it
-    /// verbatim); this label only introduces it.
-    private static func filterLabel(for result: GameResult) -> String {
-        switch result {
-        case .whiteWins: "White Wins (1-0)"
-        case .blackWins: "Black Wins (0-1)"
-        case .draw:      "Draw (1/2-1/2)"
-        case .ongoing:   "Ongoing (*)"
+
+    /// One token, rendered — used by both the chip inside the search field
+    /// and the row in the Filter menu, so the two cannot drift.
+    ///
+    /// The analysis pair carries the same tinted badge it wears everywhere
+    /// else in the Library, through `AnalysisGlyph`'s one colour source: a
+    /// green checkmark next to "Analyzed" in the menu, a red one on the chip,
+    /// and the identical treatment on the toolbar button that acts on them.
+    /// Result tokens take no tint — a checkered flag has no state to signal,
+    /// and colouring it would imply one.
+    @ViewBuilder
+    private func tokenLabel(_ token: LibrarySearchToken) -> some View {
+        switch token {
+        case .analyzed:   AnalysisLabel(analyzed: true, title: token.displayName)
+        case .unanalyzed: AnalysisLabel(analyzed: false, title: token.displayName)
+        case .result:     Label(token.displayName, systemImage: token.symbol)
         }
     }
+
+    /// One token's membership, as a `Binding<Bool>` for the menu's toggles.
+    ///
+    /// Appends rather than inserting at a fixed index, so the chips sit in
+    /// the order they were added — which is the order the user chose them in,
+    /// and the only order they can predict. Sorting them by facet would make
+    /// a chip appear somewhere other than where the click happened.
+    private func binding(for token: LibrarySearchToken) -> Binding<Bool> {
+        Binding(
+            get: { searchTokens.contains(token) },
+            set: { isOn in
+                if isOn {
+                    if !searchTokens.contains(token) { searchTokens.append(token) }
+                } else {
+                    searchTokens.removeAll { $0 == token }
+                }
+            }
+        )
+    }
+    
+    // `filterLabel(for:)` lived here until 3 Aug 2026. Its copy moved to
+    // `LibrarySearchToken.displayName` when the filters became chips — the
+    // same strings, now owned by the thing that renders them in two places
+    // (the chip and the menu row) instead of by the one menu that used to.
+    // The convention it carried survives with it: pair the word with PGN's
+    // own vocabulary, because the raw value is the app's one rendering of a
+    // result and a label that hides it makes the reader translate.
     
     /// The Library's two file doors, in and out — one toolbar cell, with a
     /// vertical divider between them. A single `ToolbarItem` (not two split
@@ -547,12 +635,14 @@ internal struct LibraryDestination: View {
                 // game is analyzed — until then the button has work left,
                 // which is what the xmark says. An empty (disabled)
                 // selection reads as work too, harmlessly.
-                Label("Analyze", systemImage: AnalysisGlyph.name(
-                    analyzed: {
-                        let games = gamesInDisplayOrder(selectedPGNs)
-                        return !games.isEmpty && games.allSatisfy(AnalysisGlyph.isAnalyzed)
-                    }()
-                ))
+                // Computed once and threaded into both the symbol and the
+                // tint: two independent evaluations of the same fold is how
+                // a green badge ends up on an xmark.
+                let allAnalyzed = {
+                    let games = gamesInDisplayOrder(selectedPGNs)
+                    return !games.isEmpty && games.allSatisfy(AnalysisGlyph.isAnalyzed)
+                }()
+                AnalysisLabel(analyzed: allAnalyzed)
             }
             // Queue-of-N since M-batch: any non-empty selection enqueues
             // in display order (see `requestAnalysis(ids:)`). The old
@@ -615,6 +705,16 @@ internal struct LibraryDestination: View {
             } label: {
                 Label("Inspector", systemImage: "sidebar.trailing")
             }
+            // Disabled, not hidden. A control that vanishes on a mode switch
+            // reads as a glitch; a dimmed one reads as "not here" — and the
+            // `.help` below says why rather than leaving it to be guessed.
+            // Its guard is producible: `ownsDetailPane` is true for exactly
+            // one of four modes the user picks from, which is the check D40′
+            // taught this project to run before shipping a `.disabled(…)`.
+            .disabled(viewMode.ownsDetailPane)
+            .help(viewMode.ownsDetailPane
+                  ? "Columns view shows details in its own pane"
+                  : "Show or hide the inspector")
             .accessibilityIdentifier(AccessibilityID.libraryInspectorToggle)
         }
     }

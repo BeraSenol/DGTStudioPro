@@ -98,7 +98,12 @@ internal struct PlayersDestination: View {
 
     // MARK: Search (2 Aug 2026)
     @State private var searchText = ""
-    @State private var searchScope: PlayersSearchScope = .all
+    /// Rated-ness, as chips inside the field (3 Aug 2026). Was a
+    /// `.searchScopes` bar, which had one flaw the Library's menu shared: it
+    /// existed only while the field was focused, so a rating filter left the
+    /// screen the moment search was dismissed while still narrowing the list.
+    /// A chip stays visible and carries its own remove control.
+    @State private var searchTokens: [PlayersSearchToken] = []
 
     // MARK: Player Editing (M5 — D37′, D38′, D39′)
 
@@ -214,19 +219,25 @@ internal struct PlayersDestination: View {
         let displayed = sortOrder == .rank
         ? ranked
         : ranked.sorted { $0.stats.name < $1.stats.name }
-        // Search narrows the *list only*, and only while a query is typed:
-        // the system scope bar exists only during a search, so a
-        // text-independent scope would keep filtering invisibly after the
-        // field closes. (A custom always-visible field briefly lifted that
-        // gate; reverting to native `.searchable` restored it.) `selected`
-        // / `history` below read the full ladder, so a selected player
-        // filtered out of view keeps their inspector profile — searching
-        // is about finding, not deselecting.
-        let searched = searchText.isEmpty
+        // Search narrows the *list only*. `selected` / `history` below read
+        // the full ladder, so a player filtered out of view keeps their
+        // inspector profile — searching is about finding, not deselecting.
+        //
+        // **The rating filter no longer waits for a query, and that is the
+        // point of the change.** Under the scope bar it had to: the bar only
+        // existed during a search, so a text-independent scope would have
+        // kept narrowing the list invisibly after the field closed. A token
+        // is a chip that stays on screen, so the reason for the gate is gone
+        // — filtering with nothing typed is now visible by construction,
+        // which is the whole argument for moving off scopes. The gate stays
+        // on the *text* half, where an empty query still matches everything
+        // by the matcher's own contract and the walk is pure cost.
+        let searched = (searchText.isEmpty && searchTokens.isEmpty)
         ? displayed
         : displayed.filter {
-            searchScope.admits($0.rating)
-            && SearchMatch.matches(query: searchText, fields: [$0.stats.name])
+            PlayersSearchToken.admit(searchTokens, rating: $0.rating)
+            && (searchText.isEmpty
+                || SearchMatch.matches(query: searchText, fields: [$0.stats.name]))
         }
         // One player or none: the profile inputs resolve only for a
         // count-of-one selection; plural renders the counting state.
@@ -237,8 +248,36 @@ internal struct PlayersDestination: View {
         // The store owns the rule, the query owns the rows (D40′).
         let orphans = registry.filter(PGNStore.isOrphaned)
 
+        // Exactly two selected is the head-to-head question, and the one
+        // gesture in this destination that had no payoff — the inspector
+        // resolves for a count of one and renders a bare count above that.
+        //
+        // Ordered off the *displayed* ladder rather than off `selectedKeys`,
+        // which is a `Set` and has no order to offer: the pair reads in the
+        // order they appear on screen, so the sentence matches the rows the
+        // user just clicked. Reading a record backwards is the failure this
+        // guards against — 7–3–2 and 2–3–7 are equally believable.
+        let pair = selectedKeys.count == 2
+        ? displayed.filter { selectedKeys.contains($0.id) }
+        : []
+        let headToHead: (first: String, second: String, record: (Int, Int, Int))? = {
+            guard pair.count == 2,
+                  let record = PlayerStats.headToHead(
+                    pair[0].stats.key, pair[1].stats.key, in: records
+                  )
+            else { return nil }
+            return (pair[0].stats.name, pair[1].stats.name,
+                    (record.wins, record.draws, record.losses))
+        }()
+
         return coreContent(players: searched)
             .navigationTitle("Players")
+            .navigationSubtitle(
+                DestinationSubtitle.players(
+                    selected: selectedKeys.count,
+                    headToHead: headToHead
+                ) ?? ""
+            )
             .inspector(isPresented: $tabState.playersInspectorPresented) {
                 PlayersInspectorView(
                     ranked: selected,
@@ -284,29 +323,55 @@ internal struct PlayersDestination: View {
                 message: { players in Text(Self.sweepMessage(players)) }
             )
             .toolbar { toolbarContent(orphans: orphans) }
+            // `.searchScopes` is gone with the scope bar — the same three
+            // choices are chips now. `suggestedTokens` drops what is already
+            // applied, so the list never offers a chip you are wearing.
             .searchable(
                 text: $searchText,
+                tokens: $searchTokens,
+                suggestedTokens: .constant(
+                    PlayersSearchToken.allCases.filter { !searchTokens.contains($0) }
+                ),
                 placement: .toolbarPrincipal,
                 prompt: "Search Players"
-            )
-            .searchScopes($searchScope) {
-                ForEach(PlayersSearchScope.allCases) { scope in
-                    Text(scope.displayName).tag(scope)
-                }
+            ) { token in
+                Label(token.displayName, systemImage: token.symbol)
             }
             .onAppear {
                 // Players must work even if Library was never visited this
                 // launch — the backfill is store-owned; this is just the
                 // second call site (see `PGNStore.backfillPlayerLinks`).
                 backfillPlayerLinks()
-                if viewMode == .gallery { tabState.playersInspectorPresented = true }
+                applyInspectorPolicy(for: viewMode)
             }
             .onChange(of: viewMode) { _, mode in
-                if mode == .gallery { tabState.playersInspectorPresented = true }
+                applyInspectorPolicy(for: mode)
             }
     }
 
     // MARK: Instance Methods
+
+    /// The Library's `applyInspectorPolicy` twin, and deliberately a twin
+    /// rather than a shared helper: it reads *this* destination's binding on
+    /// `TabState`, and the only way to share it would be to pass that binding
+    /// in — a parameter whose sole purpose is to tell a shared function which
+    /// destination is calling it. Two four-line copies of a rule that lives
+    /// on `CollectionViewMode` is the smaller cost. The rule itself is not
+    /// duplicated; only the assignment is.
+    ///
+    /// Parity is why this exists here at all: Players' columns mode is the
+    /// same `HSplitView` shape with the same 220/320 floors, and its detail
+    /// pane repeats the profile the inspector shows. It has not been seen to
+    /// overflow — Players' detail is a stat grid where the Library's is a
+    /// board — but the difference is a few points of content, not a
+    /// structural one, and collection-destination parity is an invariant.
+    private func applyInspectorPolicy(for mode: CollectionViewMode) {
+        if mode.ownsDetailPane {
+            tabState.playersInspectorPresented = false
+        } else if mode == .gallery {
+            tabState.playersInspectorPresented = true
+        }
+    }
 
     /// Resolves the pure stats key to its `Player` row and hops the
     /// sidebar into the programmatic player filter. Store-owned lookup,
@@ -607,7 +672,9 @@ internal struct PlayersDestination: View {
         ToolbarSpacer(.fixed)
         InspectorToggleContent(
             isPresented: $tabState.playersInspectorPresented,
-            identifier: AccessibilityID.playersInspectorToggle
+            identifier: AccessibilityID.playersInspectorToggle,
+            isDisabled: viewMode.ownsDetailPane,
+            disabledReason: "Columns view shows details in its own pane"
         )
     }
 
