@@ -42,7 +42,7 @@ internal struct SevenTagRosterSection<Actions: View>: View {
     /// No game at all — distinct from `RosterSummary.unknownTag`'s "this
     /// game doesn't say". Preserves the Board inspector's existing empty
     /// state exactly.
-    private static var noGamePlaceholder: String { "—" }
+    private static var noGamePlaceholder: String { RosterSummary.displayUnknown }
     
     // MARK: Stored Properties
     

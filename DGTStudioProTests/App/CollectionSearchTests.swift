@@ -48,6 +48,24 @@ struct SearchMatchTests {
         #expect(!SearchMatch.matches(query: "kasparov", fields: ["Magnus Carlsen"]))
         #expect(!SearchMatch.matches(query: "kasparov", fields: []))
     }
+
+    /// `Query` is the hoisted spelling (4 Aug 2026) — needles fold at
+    /// construction, so a filter loop folds the query exactly once however
+    /// many rows it walks. The one-shot `matches(query:fields:)` delegates
+    /// here, which is what keeps this one grammar rather than two agreeing
+    /// ones — so the pins are on the *hoist* itself: construction does the
+    /// folding, and matching consumes the already-folded needles.
+    @Test func queryFoldsAtConstructionAndMatchesFromNeedles() {
+        let query = SearchMatch.Query("  BÜCHER   1-0 ")
+        #expect(query.needles == ["bücher", "1-0"])
+        #expect(!query.isEmpty)
+        #expect(query.matches(fields: ["Bücher", "1-0"]))
+        #expect(!query.matches(fields: ["Bucher", "1-0"]))
+
+        let blank = SearchMatch.Query("   ")
+        #expect(blank.isEmpty)
+        #expect(blank.matches(fields: []))
+    }
 }
 
 /// Was `PlayersSearchScopeTests`. The per-case assertions survive verbatim

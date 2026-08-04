@@ -29,9 +29,9 @@ import SwiftUI
 /// `BoardDestination`'s guard, absence-not-a-50/50-lie — and never on the
 /// live surface (no live engine eval, assumed-never).
 internal struct EvaluationBarView: View {
-
+    
     // MARK: Static Constants
-
+    
     /// The bar's fixed width, and the **one** place it is stated.
     ///
     /// It lived here as a bare `.frame(width: 20)` while `BoardDestination`
@@ -45,34 +45,34 @@ internal struct EvaluationBarView: View {
     /// owning type, that type holds it. The view that draws the bar owns how
     /// wide the bar is; the caller owns only the *gap*, which is a
     /// relationship between two views and belongs to neither alone.
-    internal static let width: CGFloat = 20
-
+    internal static let width: CGFloat = 22
+    
     // MARK: Stored Properties
-
+    
     internal let reading: EvaluationBarReading
     internal let perspective: PieceColor
     internal let style: BoardStyle
-
+    
     // MARK: Derived
-
+    
     /// The share drawn from the bar's *bottom* — white's under the white
     /// perspective, black's under the black (D33′'s one flip, applied to
     /// geometry only).
     private var bottomFraction: Double {
         perspective == .white ? reading.whiteFraction : 1 - reading.whiteFraction
     }
-
+    
     /// The color of the bottom share; the remainder wears the other.
     private var bottomColor: Color {
         perspective == .white ? style.light : style.dark
     }
-
+    
     private var topColor: Color {
         perspective == .white ? style.dark : style.light
     }
-
+    
     // MARK: Body
-
+    
     internal var body: some View {
         VStack(spacing: 4) {
             GeometryReader { geometry in
@@ -90,7 +90,7 @@ internal struct EvaluationBarView: View {
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .strokeBorder(.gridBorder, lineWidth: 1)
             }
-
+            
             Text(reading.label)
                 .font(.caption2.monospacedDigit())
                 .foregroundStyle(.secondary)

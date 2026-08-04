@@ -177,3 +177,26 @@ internal final class SleepInhibitor {
         )
     }
 }
+
+// MARK: Previews
+
+extension SleepInhibitor {
+
+    /// The instance canvas previews inject — `InspectorSectionCollapse.preview`'s
+    /// exact shape, adopted 4 Aug 2026 when the 1 Aug review's S4 finding turned
+    /// out to have a sibling: `SettingsView`'s preview built this inline with the
+    /// force-unwrap but **without the wipe**, so the Energy toggle's last state
+    /// leaked between canvas sessions through the named suite's real plist. Same
+    /// suite name as the collapse preview on purpose — previews share one scratch
+    /// domain, and whichever accessor runs first wipes it whole.
+    ///
+    /// `!` over a `?? .standard` fallback, for the recorded reason: the init only
+    /// fails for a nil or system-reserved suite name, and the fallback's failure
+    /// mode is a canvas silently editing the developer's own defaults.
+    internal static var preview: SleepInhibitor {
+        let name = "preview"
+        let defaults = UserDefaults(suiteName: name)!
+        defaults.removePersistentDomain(forName: name)
+        return SleepInhibitor(defaults: defaults)
+    }
+}

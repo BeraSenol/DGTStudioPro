@@ -96,18 +96,21 @@ internal struct LibraryIconsView: View {
                         )
                         .id(game.id)
                         .onGeometryChange(for: CGRect.self) { geometry in
-                            // `.integral` is the third correction on the
-                            // "cycling between duplicate values" warning,
-                            // and each one removed a real layer: viewport →
-                            // content anchoring (a frame shouldn't mean
-                            // scroll offset), `@State` → box (the observer
-                            // shouldn't re-enter layout), and now exact →
-                            // whole-point comparison, because consecutive
-                            // passes can produce sub-point float wobble for
-                            // an identical layout and this transform is
-                            // compared by exact equality. A rubber band is
-                            // indifferent to half a point.
-                            geometry.frame(in: .named(Self.gridSpace)).integral
+                            // Fourth correction on the "cycling between
+                            // duplicate values" warning, each one a real
+                            // layer: viewport → content anchoring (a frame
+                            // shouldn't mean scroll offset), `@State` → box
+                            // (the observer shouldn't re-enter layout),
+                            // exact → quantized comparison — and now
+                            // `.integral` → half-point rounding, because
+                            // floor/ceil put the flip boundaries exactly on
+                            // the integers layout rests on and turned
+                            // sub-point wobble into the whole-point A/B the
+                            // warning names. The rule and the full account
+                            // live on `IconGridSelection.stableFrame`.
+                            IconGridSelection.stableFrame(
+                                geometry.frame(in: .named(Self.gridSpace))
+                            )
                         } action: { frame in
                             // A box write: free, and invisible to the
                             // render pass — no invalidation, no loop.

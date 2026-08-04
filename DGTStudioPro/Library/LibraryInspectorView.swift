@@ -99,75 +99,45 @@ private struct LoadedSection: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
-    @FocusState private var isNameFieldFocused: Bool
-    @State private var isEditingName: Bool = false
-    @State private var draftName: String = ""
-    
+
+    // `isNameFieldFocused`, `isEditingName` and `draftName` went with the
+    // rename feature (M10) — see `body`.
+
     // MARK: Body
     var body: some View {
         Group {
-            identitySection
-            
+            // `identitySection` lived here and is gone with the rename it
+            // existed for. It was a `Section` with no header, empty except
+            // while a rename was in progress — D45′ records that as the one
+            // section deliberately not collapsible, "a chevron for hiding
+            // something already invisible". With the editor gone it was a
+            // section that was invisible always.
+
             // D22′ — the seven tags as one object, under the game's own name.
-            // "Game Details" labelled what the rows already say they are;
-            // the name is the one thing the section couldn't tell you, and
-            // putting it here is what lets the rename pencil sit beside what
-            // it renames. Board and the live inspector name their game in
-            // this same header, so the three now read alike.
+            // "Game Details" labelled what the rows already say they are; the
+            // name is the one thing the section couldn't tell you.
+            //
+            // The actions slot is empty now. The pencil here renamed
+            // `PGN.name` — the Library's *display* name, outside the content
+            // hash and outside what export writes — which made it the odd one
+            // of the five: the other four edit interchange truth. Removed
+            // whole rather than folded into Get Info, by request: the default
+            // name is derived from the seats (`PGN.defaultName`), and a
+            // hand-typed override is a second naming rule beside D23′'s
+            // one-way transform, which is the thing D23′ exists to refuse.
             SevenTagRosterSection(
                 roster: RosterSummary(pgn),
                 headline: pgn.name
             ) {
-                // No local padding: the trailing inset lives on
-                // `InspectorSectionHeader.actionsInset`, for every header
-                // control in the app rather than for the five pencils. An
-                // 8 pt one here used to stack on top of the pencil's own 10
-                // and put this one alone at 18 — and the fix for *that*
-                // still left the number on the pencil, where it silently
-                // stopped being an edge inset the moment a second control
-                // followed one. Two corrections, one line.
-                InspectorEditButtonView(
-                    label: "Rename",
-                    identifier: AccessibilityID.libraryInspectorRename
-                ) {
-                    beginEdit()
-                }
+                reviewGlyphButton
             }
-            
+
             OpeningSection(opening: pgn.opening)
             evaluationSection
             pgnSection
         }
     }
     
-    
-    // MARK: Identity
-    
-    /// Open, and the rename field while one is in progress. The name's
-    /// *display* is the roster header now; what stays here is the editor,
-    /// because a `TextField` in a sidebar section header is a control at
-    /// caption size in a header whose height must not move. The header keeps
-    /// showing the committed name while the field holds the draft — before
-    /// and after, visible together.
-    ///
-    /// `PGN.name` is still deliberately not one of the seven tags: it is a
-    /// user label outside the content hash, which is why the rename needs no
-    /// `refreshHash` and why the pencil is its own registry entry rather than
-    /// a member of the Edit Info family.
-    ///
-    /// **The one section in the app that is not a `CollapsibleSection`**, and
-    /// the exception is structural rather than an oversight: it has no header,
-    /// because it has nothing to name — it is empty except while a rename is in
-    /// progress. A chevron here would be a control for hiding a section that is
-    /// already invisible, permanently attached to a header that would exist
-    /// only to carry it.
-    private var identitySection: some View {
-        Section {
-            if isEditingName {
-                nameEditor
-            }
-        }
-    }
     
     // MARK: Open Affordance
     /// "Open" button in the Library inspector. Asks macOS to open a
@@ -186,12 +156,19 @@ private struct LoadedSection: View {
     // MARK: Evaluation Section
     @ViewBuilder
     private var evaluationSection: some View {
-        // Collapsing this one also hides Review and Analyze, which live in its
-        // body rather than its header. Accepted rather than worked around: they
-        // are controls *about the analysis*, the section says so, and the
-        // alternative — promoting them to the header to keep them reachable —
-        // would put two more glyphs beside a chevron to protect against a state
-        // the reader chose and can undo with one click.
+        // The Review and Analyze row that used to sit under the graph is gone
+        // (M10, by request). D45′ recorded its presence here as an accepted
+        // cost — collapsing this section hid both controls — and rejected
+        // promoting them "because it would put two more glyphs beside a
+        // chevron". Removing them settles that differently: Review is a glyph
+        // in the roster header now, and Analyze is reachable from the Library
+        // toolbar and every row's context menu, which is where a verb that
+        // takes a *selection* belongs anyway.
+        //
+        // What went with the row and is not replaced here: the queue's
+        // per-ply progress, Skip, and a failure's Retry, all four shapes of
+        // `analysisControlRow`. The row's own state is still visible per game
+        // through `AnalysisGlyph`, and the toolbar's popover owns the queue.
         CollapsibleSection(.evaluation, title: "Evaluation") {
             EvaluationGraphView(
                 evaluations: pgn.evaluations.map {
@@ -202,13 +179,6 @@ private struct LoadedSection: View {
             )
             .frame(height: 100)
             .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
-            
-            HStack {
-                Spacer()
-                reviewButton
-                analysisControlRow
-                Spacer()
-            }
         } actions: {
             EvaluationMagnifierButton(gameID: pgn.persistentModelID)
         }
@@ -385,6 +355,40 @@ private struct LoadedSection: View {
     /// drift, and widening it to take a symbol would turn a named affordance
     /// into a generic icon button and lose exactly that guarantee. Extract
     /// only if a second copy affordance appears.
+    /// Review, as a glyph in the roster header — the same action as
+    /// `reviewButton` in the Evaluation section body, reachable when that
+    /// section is folded.
+    ///
+    /// **This is D45′'s recorded cost, paid.** That decision noted that
+    /// collapsing the Library's Evaluation section also hides Review and
+    /// Analyze, and rejected promoting them "because it would put two more
+    /// glyphs beside a chevron to guard against a state the reader chose".
+    /// Two circumstances changed: the promotion is to a *different* header —
+    /// the roster, which is the section actually about the game — and that
+    /// header's actions slot emptied when M10 removed the rename pencil. So
+    /// this costs no crowding anywhere, which is the whole of what was
+    /// objected to.
+    ///
+    /// **Not an `InspectorEditButtonView`**, for that type's own stated
+    /// reason: it hardcodes the pencil precisely so the remaining edit
+    /// affordances cannot drift, and widening it to take a symbol would turn a
+    /// named affordance into a generic icon button. The fourth open-coded
+    /// glyph beside Copy-PGN and the evaluation magnifier, sharing with them
+    /// the pair that must not drift — `.font(.body)`, and one label feeding
+    /// both `.help` and `.accessibilityLabel`.
+    private var reviewGlyphButton: some View {
+        Button {
+            openWindow(value: pgn.persistentModelID)
+        } label: {
+            Image(systemName: "play.fill")
+        }
+        .buttonStyle(.borderless)
+        .font(.body)
+        .help("Review this game in a new window")
+        .accessibilityLabel("Review")
+        .accessibilityIdentifier(AccessibilityID.libraryInspectorReviewGlyph)
+    }
+
     private var copyPGNButton: some View {
         Button {
             NSPasteboard.general.clearContents()
@@ -401,34 +405,14 @@ private struct LoadedSection: View {
         .accessibilityIdentifier(AccessibilityID.libraryInspectorCopyPGN)
     }
     
-    // MARK: Instance Methods
-    /// Renamed from `nameRow` with the display branch: it is only an editor
-    /// now, and the `if` that used to choose between the two moved to the
-    /// call site, where the row can be absent rather than empty.
-    private var nameEditor: some View {
-        HStack(spacing: 6) {
-            TextField("Name", text: $draftName)
-                .textFieldStyle(.roundedBorder)
-                .focused($isNameFieldFocused)
-                .onSubmit { commitEdit() }
-            Button("Done") { commitEdit() }
-                .buttonStyle(.borderless)
-        }
-    }
-    
-    private func beginEdit() {
-        draftName = pgn.name
-        isEditingName = true
-        isNameFieldFocused = true
-    }
-    
-    private func commitEdit() {
-        let trimmed = draftName.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty {
-            pgn.name = trimmed
-        }
-        isEditingName = false
-    }
+    // `nameEditor`, `beginEdit()` and `commitEdit()` are gone with the rename
+    // feature (M10). Worth one line on what left with them: `commitEdit` wrote
+    // `pgn.name` straight through the model with no `PGNStore` door and no
+    // `refreshHash` — correct, because `name` is outside the content hash, and
+    // the *only* write in this file that was. It was also the app's one edit
+    // that never passed through a store door, which is the shape the
+    // invariants call out; nothing here needs re-homing because the write no
+    // longer exists.
 }
 
 // MARK: Previews

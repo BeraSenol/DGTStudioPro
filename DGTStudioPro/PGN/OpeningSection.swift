@@ -46,7 +46,7 @@ internal struct OpeningSection: View {
     /// two decisions that agree today, not one decision with two call sites.
     /// Collapsing them would make a future divergence a merge conflict in
     /// the wrong file.
-    private static var unclassifiedPlaceholder: String { "—" }
+    private static var unclassifiedPlaceholder: String { RosterSummary.displayUnknown }
 
     // MARK: Stored Properties
 
@@ -62,9 +62,24 @@ internal struct OpeningSection: View {
             if let opening {
                 LabeledContent("ECO", value: opening.code)
                 LabeledContent("Opening", value: opening.family)
-                if let variation = opening.variation {
-                    LabeledContent("Variation", value: variation)
-                }
+                // Always present, placeholder when nil (by request). D22′
+                // recorded this section's varying row count as its deliberate
+                // difference from `SevenTagRosterSection`, whose seven are
+                // fixed by the standard "while these rows are ours" — and ours
+                // is what makes this a choice rather than a violation. A row
+                // that appears and disappears makes the section's height move
+                // between games, and a reader scanning a variation down a list
+                // of games is reading a row that isn't always in the same
+                // place. The absent case is now stated rather than implied,
+                // which is what the placeholder is for.
+                //
+                // D35′ is untouched underneath: nil is still the one spelling
+                // of "no variation", and `fullName` still omits it. This is a
+                // rendering decision, not a data one.
+                LabeledContent(
+                    "Variation",
+                    value: opening.variation ?? Self.unclassifiedPlaceholder
+                )
             } else {
                 LabeledContent("Opening", value: Self.unclassifiedPlaceholder)
             }

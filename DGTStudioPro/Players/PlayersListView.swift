@@ -42,10 +42,11 @@ internal struct PlayersListView: View {
             // cell — a breaking accessibility change that should travel alone.
             TableColumn("Rank") { player in
                 // The rank cell carries the order-pinning identifier
-                // (`rankingRow.1.Liren Ding`) so the ladder UITest asserts
-                // the computed order without geometry queries; the Player
-                // cell keeps `playerRow(name)` for the rename/merge flows.
-                // Two cells, two currencies — one element can't serve both.
+                // (`rankingRow.1.Liren Ding`) — minted so the ladder UITest
+                // could assert the computed order without geometry queries,
+                // kept per the registry's bet (D51′). The Player cell keeps
+                // `playerRow(name)` from the rename/merge flows. Two cells,
+                // two currencies — one element can't serve both.
                 Group {
                     if RankMedal(rank: player.rank) != nil {
                         RankBadge(rank: player.rank)
@@ -98,7 +99,7 @@ internal struct PlayersListView: View {
             .width(60)
             .customizationID("winRate")
             TableColumn("Rating") { player in
-                Text(player.rating?.displaySummary ?? "—")
+                Text(player.rating?.displaySummary ?? RosterSummary.displayUnknown)
                     .foregroundStyle(.secondary)
             }
             .width(120)
@@ -118,6 +119,10 @@ internal struct PlayersListView: View {
                     Label("Show in Library", systemImage: "books.vertical")
                 }
                 .accessibilityIdentifier(AccessibilityID.contextShowInLibrary)
+                GetInfoMenuItem(
+                    request: .player(key: key),
+                    identifier: AccessibilityID.getInfoMenuItem(Destination.players.rawValue)
+                )
             }
         }
         .accessibilityIdentifier(AccessibilityID.playersTable)

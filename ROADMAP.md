@@ -312,6 +312,37 @@ GM).
 
 ## Landed
 
+### The 2–4 August burst — search, selection, chrome, the cascade, and the suite's exit *(recorded 4 August 2026)*
+
+Four commits outside milestone discipline (`d7398ca` "flat columns view",
+`772ecb3` "Features removed", `b972b5a` "Checkpoint before deleting the UI
+test target", `b2f3c32` "UI Improvements"), landed fast and recorded late —
+the messages describe almost none of the contents, so this entry is the
+readable record the log doesn't give. Shipped: live search with token chips
+on both collection destinations (`SearchMatch` on the D30′ fold;
+`LibrarySearchToken` / `PlayersSearchToken` after a one-day scope-bar detour,
+both retirements documented in `CollectionSearch.swift`); Finder-flat
+columns; icon-grid rubber-band and arrow-key selection (`IconGridSelection`,
+plus `IconGridFrameStore` after two observed-state designs oscillated
+layout); toolbar subtitles (`DestinationSubtitle`, with
+`SessionPhase.current` extracted so the sidebar and the toolbar cannot rank
+session states differently); the analysis-state glyph (`AnalysisGlyph`,
+unifying two latent spellings of "analyzed?"); the glide-speed preference;
+**D50′** — game deletions collect the players they strand; and **D51′** —
+the UI test target deleted (884 lines, `UITestSeed`, and the seeded
+container branch with it; § Zero closed unresolved).
+
+**Gate evidence: none claimed.** The burst carried no ⌘U report of its own.
+The 4 Aug recording pass that paid this entry's debt also applied the
+same-day review to the tree: the icons grids' ↓-on-last-row slide fixed and
+pinned; the merge refusal alert titled for its own operation
+(`RetagRefusal.Operation`); `SearchMatch.Query` folding the query once per
+pass; `LibraryDestination`'s filter folded once per render; the twin
+`DGTStudioProUnitTests.xctestplan` deleted with the Tests scheme repointed;
+and the dead-suite comment sweep. ⌘U owed on the combined tree, expected
+green — **reported green by Bera the same day**, which discharges the
+burst's and the review's gates together.
+
 ### M9 — One Players destination *(landed 2 August 2026)*
 
 **Requested by Bera, delivered as D48′.** Players absorbs Rankings:

@@ -35,12 +35,39 @@ internal enum SearchMatch {
     /// search field teaches ("carlsen 1-0" narrows, it doesn't union). An
     /// empty or whitespace-only query matches everything, so callers gate
     /// on emptiness for clarity, not correctness.
+    ///
+    /// The one-shot spelling. It folds the query per call, which is right
+    /// for a single ask and waste inside a filter loop — both destinations
+    /// fold once through `Query` and match many times (4 Aug 2026).
     internal static func matches(query: String, fields: [String]) -> Bool {
-        let needles = terms(in: query)
-        guard !needles.isEmpty else { return true }
-        let haystacks = fields.map(folded)
-        return needles.allSatisfy { needle in
-            haystacks.contains { $0.contains(needle) }
+        Query(query).matches(fields: fields)
+    }
+
+    /// A query folded once, matched many times.
+    ///
+    /// `matches(query:fields:)` used to re-fold and re-split the same query
+    /// string for every row a filter asked about — per game, per keystroke,
+    /// in the most body-invalidation-prone destinations in the app. The
+    /// needles never change between rows; only the fields do. This is the
+    /// same grammar with the query half hoisted, and the one-shot form above
+    /// now delegates here, so there is still exactly one matcher.
+    internal struct Query {
+        internal let needles: [String]
+
+        internal init(_ text: String) {
+            self.needles = SearchMatch.terms(in: text)
+        }
+
+        /// Empty matches everything — the matcher's own contract. Callers
+        /// test it only to skip the walk, never for correctness.
+        internal var isEmpty: Bool { needles.isEmpty }
+
+        internal func matches(fields: [String]) -> Bool {
+            guard !needles.isEmpty else { return true }
+            let haystacks = fields.map(SearchMatch.folded)
+            return needles.allSatisfy { needle in
+                haystacks.contains { $0.contains(needle) }
+            }
         }
     }
 }

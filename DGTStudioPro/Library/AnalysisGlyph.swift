@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// The analysis-state glyph (2 Aug 2026, retiring the state-blind
-/// `wand.and.stars` everywhere): a   with a checkmark for a game that
+/// `wand.and.stars` everywhere): a gear with a checkmark for a game that
 /// has been analyzed, a gear with an xmark for one that hasn't. One home
 /// for both symbol names *and* for the predicate, because the glyph made a
 /// latent fork visible: the inspector's Re-analyze keyed off

@@ -33,7 +33,12 @@ internal struct EvaluationGraphView: View {
             
             context.stroke(
                 midline,
-                with: .color(style.light.opacity(0.10)),
+                // Neutral, not `style.light` (4 Aug 2026): the 50/50 line
+                // is structure. The wash already places the grid-border
+                // colour at this exact height, so the stroke is a whisper
+                // of definition on top of a seam that is itself the mark —
+                // belt and braces, either alone would do.
+                with: .color(.black.opacity(0.15)),
                 lineWidth: 0.5
             )
             
@@ -85,7 +90,31 @@ internal struct EvaluationGraphView: View {
                 context.fill(dot, with: .color(dotColor.opacity(0.95)))
             }
         }
-        .background(.ultraThickMaterial)
+        .background {
+            // The triple wash, final form (4 Aug 2026, Bera's design after
+            // four spec iterations): native window ground at both poles,
+            // the board's grid-border colour at the seam. The poles melt
+            // the panel into the app — `windowBackgroundColor` follows
+            // appearance *and* wallpaper tinting, so the chart's edges sit
+            // on whatever the window actually is rather than on a guess —
+            // and the geometry places each treatment where it works:
+            // near-equality slivers, the thin fills that every earlier
+            // take struggled with, sit against the seam's grid colour (the
+            // hue the app already uses for structural lines), while the
+            // poles back only extreme advantages, where the fill is thick
+            // enough to carry itself on any ground. Wrapped in
+            // `Color(nsColor:)` because a gradient's stops are `Color`;
+            // `.gridBorder` is the asset symbol and needs no bridge.
+            LinearGradient(
+                colors: [
+                    .gray.opacity(0.1),
+                    .black.opacity(0.1),
+                    .gray.opacity(0.1)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .padding(.horizontal, -8)
     }
@@ -100,7 +129,7 @@ internal struct EvaluationGraphView: View {
             width: rect.width,
             plyCount: evaluations.count
         )
-
+        
         return evaluations.enumerated().map { index, probability in
             let x = rect.minX + (geometry.x(forPly: index) ?? 0)
             let y = rect.maxY - CGFloat(probability) * rect.height

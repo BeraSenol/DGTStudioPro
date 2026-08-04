@@ -183,8 +183,7 @@ internal struct DGTStudioProApp: App {
         // so first render isn't held hostage to IOKit enumeration plus the
         // serial handshake.
         //
-        // Skipped under UI tests (a developer's real remembered board must
-        // not hijack a deterministic run) AND under unit tests: ⌘U launches
+        // Skipped under the unit-test host: ⌘U launches
         // this very app as the test host, and a board attached during a
         // run would put serial I/O, the staggered init handshake, and live
         // board-change traffic on the main actor for the entire suite —
@@ -192,7 +191,9 @@ internal struct DGTStudioProApp: App {
         // window) and feeding the app-global session real hardware events
         // mid-run. The test host must stay hermetic. XCTest marks its host
         // process with these environment variables (Swift Testing runs
-        // under the same harness in Xcode).
+        // under the same harness in Xcode). The guard's UI-test half
+        // retired with the suite (3 Aug 2026, D51′); this env-var check
+        // was always the unit half.
         let environment = ProcessInfo.processInfo.environment
         let isUnitTestHost = environment["XCTestConfigurationFilePath"] != nil
         || environment["XCTestSessionIdentifier"] != nil
@@ -223,9 +224,10 @@ internal struct DGTStudioProApp: App {
         //
         // `.defaultLaunchBehavior(.presented)` forces an initial window
         // even when there is nothing to restore. A value-based
-        // `WindowGroup` otherwise opens NO window on a clean launch (the
-        // case in UI tests, where the in-memory store restores nothing) —
-        // it normally relies on session restoration to reopen windows.
+        // `WindowGroup` otherwise opens NO window on a clean launch — it
+        // normally relies on session restoration to reopen windows. (The
+        // UI suite's in-memory launches hit this on every run before it
+        // retired; a fresh machine hits it once.)
         WindowGroup("DGT Studio Pro", for: PersistentIdentifier.self) { $gameID in
             ContentView(loadedGameID: $gameID)
                 .environment(openGames)
@@ -270,6 +272,9 @@ internal struct DGTStudioProApp: App {
         // type for the full reason — the short version is that the routing is
         // now a fact about the type system rather than about which scene was
         // declared first.
+        //
+        // (This scene spent part of 4 Aug 2026 deleted, the graph a popover;
+        // reverted the same night — the D46′ anchor records the round trip.)
         WindowGroup("Evaluation", for: EvaluationGraphRequest.self) { $request in
             EvaluationGraphWindow(request: request)
         }
@@ -281,6 +286,30 @@ internal struct DGTStudioProApp: App {
         // click, which is exactly the companion-while-scrubbing use D46′
         // chose a window to protect.
         .windowLevel(.floating)
+
+        // M10 — Get Info. One group for all three subjects (a game, the
+        // recording, a player), which is what makes two info windows tab with
+        // *each other* rather than with the boards: macOS tabs within a group,
+        // and two rosters side by side is a comparison while an info window
+        // tabbed behind a board is a window you lost.
+        //
+        // Keyed on `GetInfoRequest` for the reason D46′ established one scene
+        // up: `openWindow(value:)` routes by value type, the first group above
+        // claims `PersistentIdentifier`, and five call sites depend on that.
+        // The enum pays that cost once for three subjects instead of three
+        // times.
+        //
+        // Deliberately *not* `.windowLevel(.floating)`, unlike the graph. The
+        // graph floats because it is read while the board underneath is
+        // driven; Get Info is edited, so it takes focus, and a floating window
+        // that owns the keyboard while sitting over everything is the shape
+        // people file bugs about.
+        WindowGroup("Info", for: GetInfoRequest.self) { $request in
+            GetInfoWindow(request: request)
+                .environment(dgtSession)
+        }
+        .modelContainer(sharedContainer)
+        .defaultSize(width: 460, height: 520)
 
         Settings {
             SettingsView()

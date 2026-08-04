@@ -87,6 +87,16 @@ internal struct LibraryDestination: View {
     /// therefore batch analyze/export/delete) reads the same narrowed list,
     /// which is exactly how the tag filter already behaved: a hidden game
     /// is out of every bulk action, never silently included.
+    ///
+    /// **Render reads it once; actions re-derive it fresh.** `coreContent`
+    /// folds this a single time per pass and threads the result to the empty
+    /// gate, the subtitle census, the mode view, and the inspector's
+    /// resolution — `PlayersDestination`'s fold-once arrangement, arriving
+    /// here 4 Aug 2026 after the walk was found running three to four times
+    /// a render, each one a full tag-match + search pass over every game.
+    /// `gamesInDisplayOrder` still calls it directly on purpose: an action
+    /// fires long after the fold that painted the screen, and a stale
+    /// narrowed list is exactly what bulk actions must not act on.
     private var filteredGames: [PGN] {
         var result = games
         if let filter {
@@ -95,8 +105,12 @@ internal struct LibraryDestination: View {
         // The emptiness guard only skips the walk — an empty query matches
         // everything by the matcher's own contract.
         if !searchText.isEmpty {
+            // Folded once, matched per game — `SearchMatch.Query`'s reason
+            // (4 Aug 2026): the one-shot form re-folded the query for every
+            // row of the walk.
+            let query = SearchMatch.Query(searchText)
             result = result.filter {
-                SearchMatch.matches(query: searchText, fields: searchFields(of: $0))
+                query.matches(fields: searchFields(of: $0))
             }
         }
         if !searchTokens.isEmpty {
@@ -144,9 +158,9 @@ internal struct LibraryDestination: View {
     /// with a rubber-band or ⌘-click selection "the first of the set" is an
     /// arbitrary game wearing a specific game's face. The inspector gets
     /// the count instead and names it.
-    private var selectedPGN: PGN? {
+    private func selectedPGN(in games: [PGN]) -> PGN? {
         guard selectedPGNs.count == 1, let id = selectedPGNs.first else { return nil }
-        return filteredGames.first(where: { $0.id == id })
+        return games.first(where: { $0.id == id })
     }
     
     /// Resolves a selection to models in **display order**. A `Set` carries
@@ -232,18 +246,21 @@ internal struct LibraryDestination: View {
     /// compiler reports as an "unable to type-check in reasonable time" error
     /// pinned to an arbitrary modifier.)
     private var coreContent: some View {
-        VStack(spacing: 0) {
+        // One walk per render — see `filteredGames`'s doc. Every render-time
+        // consumer below reads this local; none re-runs the filter.
+        let games = filteredGames
+        return VStack(spacing: 0) {
             if let filter {
                 filterChipBar(for: filter)
                 Divider()
             }
             Group {
-                if filteredGames.isEmpty {
+                if games.isEmpty {
                     // Two vocabularies for one gate: an empty *library*
                     // invites importing; an empty *result set* names the
                     // narrowing that caused it. The identifier stays on the
-                    // true empty state — the UITests' seeded runs never
-                    // search.
+                    // true empty state — placed for the seeded UI runs,
+                    // kept per the registry's bet (D51′).
                     if isNarrowedBySearchOrFilters {
                         ContentUnavailableView(
                             "No Matches",
@@ -255,7 +272,7 @@ internal struct LibraryDestination: View {
                             .accessibilityIdentifier(AccessibilityID.libraryEmptyState)
                     }
                 } else {
-                    modeView
+                    modeView(games: games)
                 }
             }
             .accessibilityIdentifier(AccessibilityID.libraryContent)
@@ -270,7 +287,7 @@ internal struct LibraryDestination: View {
         .navigationSubtitle(
             DestinationSubtitle.library(
                 selected: selectedPGNs.count,
-                unanalyzed: filteredGames.count(where: { !AnalysisGlyph.isAnalyzed($0) })
+                unanalyzed: games.count(where: { !AnalysisGlyph.isAnalyzed($0) })
             ) ?? ""
         )
         .dropDestination(for: URL.self) { urls, _ in
@@ -280,11 +297,11 @@ internal struct LibraryDestination: View {
         }
         .inspector(isPresented: $tabState.libraryInspectorPresented) {
             LibraryInspectorView(
-                pgn: selectedPGN,
+                pgn: selectedPGN(in: games),
                 selectionCount: selectedPGNs.count,
                 queue: tabState.analysisQueue
             )
-            .inspectorColumnWidth(min: 310, ideal: 310, max: 430)
+            .inspectorColumnWidth(min: 310, ideal: 310, max: 400)
         }
         .toolbar { toolbarContent }
         // Tokens ahead of the text, inside the field. `suggestedTokens` is
@@ -351,11 +368,11 @@ internal struct LibraryDestination: View {
     
     // MARK: Instance Methods
     @ViewBuilder
-    private var modeView: some View {
+    private func modeView(games: [PGN]) -> some View {
         switch viewMode {
         case .icons:
             LibraryIconsView(
-                games: filteredGames,
+                games: games,
                 selectedPGNs: $selectedPGNs,
                 onOpen:    openGame,
                 onAnalyze: requestAnalysis,
@@ -365,7 +382,7 @@ internal struct LibraryDestination: View {
             .accessibilityIdentifier(AccessibilityID.libraryModeIcons)
         case .list:
             LibraryListView(
-                games: filteredGames,
+                games: games,
                 selectedPGNs: $selectedPGNs,
                 onOpen:       openGame,
                 onAnalyzeIDs: { requestAnalysis(ids: $0) },
@@ -375,7 +392,7 @@ internal struct LibraryDestination: View {
             .accessibilityIdentifier(AccessibilityID.libraryModeList)
         case .columns:
             LibraryColumnsView(
-                games: filteredGames,
+                games: games,
                 selectedPGNs: $selectedPGNs,
                 boardStyle: boardStyle,
                 onOpen:    openGame,
@@ -386,7 +403,7 @@ internal struct LibraryDestination: View {
             .accessibilityIdentifier(AccessibilityID.libraryModeColumns)
         case .gallery:
             LibraryGalleryView(
-                games: filteredGames,
+                games: games,
                 selectedPGNs: $selectedPGNs,
                 boardStyle: boardStyle,
                 onOpen:    openGame,
@@ -569,7 +586,7 @@ internal struct LibraryDestination: View {
     /// by a `ToolbarSpacer`) so the pair shares one capsule: they are the
     /// two directions of the same job, and the explicit `Divider` marks the
     /// direction change inside it. Identifiers, helps and the disabled
-    /// state stay on the individual buttons, so the UITest lookups and the
+    /// state stay on the individual buttons, so identifier lookups and the
     /// per-button affordances are unmoved by the shared container.
     @ToolbarContentBuilder
     private var transferToolbarItems: some ToolbarContent {
@@ -609,12 +626,12 @@ internal struct LibraryDestination: View {
     private var viewModeToolbarItem: some ToolbarContent {
         ToolbarItem {
             // NOTE: On macOS a `.segmented` Picker built from
-            // `Label(_:systemImage:)` renders icon-only, and each segment
-            // is exposed to UI tests as a radioButton keyed by its SF
-            // Symbol name (e.g. "square.grid.2x2"), NOT by any
-            // per-segment accessibilityIdentifier. The identifier below
-            // only tags the picker container; tests address the segments
-            // by symbol name. See DGTStudioProUITests.
+            // `Label(_:systemImage:)` renders icon-only, and AX exposes
+            // each segment as a radioButton keyed by its SF Symbol name
+            // (e.g. "square.grid.2x2"), NOT by any per-segment
+            // accessibilityIdentifier — the identifier below only tags
+            // the picker container. (The suite that addressed segments
+            // that way is gone — D51′; the platform behavior isn't.)
             Picker("View Mode", selection: $viewMode) {
                 ForEach(CollectionViewMode.allCases) { mode in
                     Label(mode.displayName, systemImage: mode.systemImage).tag(mode)

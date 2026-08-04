@@ -176,7 +176,7 @@ internal final class AnalysisQueueController {
         guard let modelContext,
               let pgn = modelContext.model(for: id) as? PGN,
               !pgn.isDeleted
-        else { return "—" }
+        else { return RosterSummary.displayUnknown }
         return pgn.name
     }
     

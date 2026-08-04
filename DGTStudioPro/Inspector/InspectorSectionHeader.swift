@@ -168,9 +168,10 @@ internal struct InspectorSectionHeader<Actions: View>: View {
         .font(.body)
         .help(label)
         .accessibilityLabel(label)
-        // The registry takes the raw value because it compiles into the UI test
-        // target too, which has no `InspectorSection`. This is the only caller,
-        // and it holds the real thing — see the registry entry for the trade.
+        // The registry takes the raw value — the String-only rule minted when
+        // it compiled into the UI test target too (kept after the suite left,
+        // D51′; the registry header owns that call). This is the only caller,
+        // and it holds the real thing.
         .accessibilityIdentifier(AccessibilityID.inspectorSectionDisclosure(section.rawValue))
     }
 }

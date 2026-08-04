@@ -179,11 +179,12 @@ extension InspectorSectionCollapse {
     /// enumerated-caller-list anti-pattern, decaying at exactly the rate a
     /// preview census does.
     ///
-    /// Named rather than spelled inline at each site — `SettingsView`'s
-    /// `SleepInhibitor(defaults: UserDefaults(suiteName: "preview")!)` is the
-    /// precedent and the shape this improves on: one site can afford a literal,
-    /// thirty-one would be thirty-one chances to reach for `.standard` and edit
-    /// the developer's own settings from a canvas.
+    /// Named rather than spelled inline at each site — `SettingsView`'s inline
+    /// `SleepInhibitor(defaults:)` literal was the precedent and the shape this
+    /// improves on: one site can afford a literal, thirty-one would be
+    /// thirty-one chances to reach for `.standard` and edit the developer's own
+    /// settings from a canvas. (That literal moved to `SleepInhibitor.preview`
+    /// on 4 Aug 2026, adopting this accessor's wipe with it.)
     ///
     /// Computed, not stored: a `static let` on a `@MainActor` type needs its
     /// initializer isolated, and a fresh start per access is the *right*
@@ -196,7 +197,8 @@ extension InspectorSectionCollapse {
     /// every toggle into it, so a fresh instance alone reads the last
     /// canvas's toggles straight back. The UI test seed wiped its own suite
     /// for exactly this reason at exactly this kind of boundary; that seed is
-    /// gone, and this is now the only place in the app that does it.
+    /// gone, and `SleepInhibitor.preview` adopted the same wipe on 4 Aug 2026 —
+    /// two homes now, so this sentence stopped being a uniqueness claim.
     internal static var preview: InspectorSectionCollapse {
         let name = "preview"
         // `!` over a `?? .standard` fallback, `SettingsView`'s sibling

@@ -192,8 +192,10 @@ internal struct BoardView: View {
                             style: style,
                             ghostPiece: (square == ghostSquare) ? ghostPiece : nil
                         )
-                        // e.g. "square.e4" — stable algebraic handle for
-                        // UI tests (esp. keyboard-nav verification).
+                        // e.g. "square.e4" — stable algebraic handle,
+                        // minted for the UI suite's keyboard-nav checks and
+                        // kept per the registry's stated bet (D51′; see
+                        // AccessibilityID's header).
                         .accessibilityIdentifier(
                             AccessibilityID.boardSquare(square.algebraicNotation)
                         )

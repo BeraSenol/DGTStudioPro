@@ -618,51 +618,24 @@ internal struct PGNStore {
         return Array(byGame.values)
     }
 
-    /// Folds `loser` into `survivor`: retag the loser's games to the survivor's
-    /// stored tag form, which relinks them by resolution, then delete the row
-    /// nothing points at any more (D38′).
-    ///
-    /// **Merge is retag, and it has to be.** Pure link surgery — move the
-    /// relationships, leave the tags — looks cheaper and is unstable:
-    /// `applyEdit` re-resolves both seats from the tag strings unconditionally,
-    /// so the first metadata edit on a merged game would read its untouched
-    /// tag, fail to find the survivor, and mint the deleted player straight
-    /// back. Rewriting the tags is what makes the merge survive the app's own
-    /// existing doors instead of needing them weakened.
-    ///
-    /// The survivor's `tagName` is the target, falling back to its display
-    /// `name` for a pre-D29′ orphan that never got one — the same fallback the
-    /// seat picker uses, for the same reason.
-    @discardableResult
-    internal func merge(_ loser: Player, into survivor: Player) throws -> Int {
-        guard loser.persistentModelID != survivor.persistentModelID else { return 0 }
-        let target = survivor.tagName ?? survivor.name
-        let moved = try retag(loser, to: target)
-        // Retagging resolved every game onto the survivor, so the loser is now
-        // orphaned by construction — but assert it rather than assume it: a
-        // still-linked loser means the target tag didn't fold onto the
-        // survivor's key, and deleting it here would nullify live links.
-        guard Self.isOrphaned(loser) else {
-            Self.logger.error(
-                "Merge left '\(loser.name, privacy: .public)' still linked — not deleting"
-            )
-            return moved
-        }
-        modelContext.delete(loser)
-        try modelContext.save()
-        Self.logger.info(
-            "Merged '\(loser.name, privacy: .public)' into '\(survivor.name, privacy: .public)' (\(moved) seat(s))"
-        )
-        return moved
-    }
+    // `merge(_:into:)` lived here from M5 (D38′) until 4 Aug 2026 (D52′,
+    // surface simplicity by decree — the profile's ellipsis menu existed for
+    // this one item). What it knew survives where it matters: a duplicate
+    // spelling is fixed by *renaming* the misspelt player to the canonical
+    // tag — the same `retag` door merge called, which relinks by resolution
+    // and refuses collisions identically — and D38′'s finding that link
+    // surgery without tag rewriting is undone by `applyEdit`'s unconditional
+    // re-resolve stands recorded at the decision, because it constrains any
+    // future door that moves players between rows.
 
     /// The one spelling of "nothing points at this row" (D40′).
     ///
     /// Three sites asked this question independently before the sweep landed —
     /// this file's delete guard, `merge`'s post-retag assertion, and the
-    /// inspector's `canDelete` — which is the twin-read-site pattern wearing
-    /// behavioural clothes. Two survive as callers of this; the third went with
-    /// the per-player menu item it guarded.
+    /// inspector's `canDelete` — the twin-read-site pattern wearing
+    /// behavioural clothes. The callers today: the sweep door's per-row
+    /// re-check and `PlayersDestination`'s `@Query` filter (merge's assertion
+    /// retired with merge, D52′; the per-player item with D40′).
     ///
     /// Static and free of the context on purpose: `PlayersDestination` filters
     /// its own `@Query` through it, so the *rule* is store-owned while the rows

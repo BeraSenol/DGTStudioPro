@@ -12,8 +12,8 @@ internal struct PlayersGalleryView: View {
     let players: [RankedPlayer]
     /// A set since 2 Aug 2026 (the shared selection model). The gallery
     /// remains a one-at-a-time surface by gesture — thumbnails select
-    /// singly — and previews the *first* of a plural selection, its own
-    /// long-standing fallback rule.
+    /// singly — and previews the *first* of a plural selection, as the
+    /// Library gallery does.
     @Binding var selectedKeys: Set<PlayerStats.ID>
     let onShowInLibrary: (PlayerStats.ID) -> Void
 
@@ -22,17 +22,55 @@ internal struct PlayersGalleryView: View {
         return players.first { $0.id == key }
     }
     
+    /// The grids' focus arrangement (4 Aug 2026): the gallery itself is the
+    /// focusable, a card click hands it focus, and ← / → step the strip.
+    @FocusState private var isFocused: Bool
+
     var body: some View {
         VStack(spacing: 0) {
             preview
             Divider()
             filmstrip
         }
+        .focusable()
+        .focusEffectDisabled()
+        .focused($isFocused)
+        .onMoveCommand { direction in
+            move(direction)
+        }
+    }
+
+    /// ← / → step the filmstrip; ↑ / ↓ hold — `LibraryGalleryView.move`'s
+    /// twin, and the reasoning lives there: the shared grammar's one-row
+    /// degenerate case (`columnCount == count`), the previewed card as the
+    /// anchor, first arrow lands on the first card.
+    private func move(_ direction: MoveCommandDirection) {
+        guard !players.isEmpty else { return }
+        let target: Int
+        if let key = selectedKeys.first,
+           let current = players.firstIndex(where: { $0.id == key }) {
+            target = IconGridSelection.destination(
+                from: current,
+                direction: direction,
+                columnCount: players.count,
+                count: players.count
+            )
+        } else {
+            target = 0
+        }
+        selectedKeys = [players[target].id]
     }
     
+    /// Selection-driven with no fallback to `players.first` since 4 Aug 2026
+    /// — the Library gallery's rule ("never preview what the user didn't
+    /// pick"), adopted here to close the last gallery parity residue: the two
+    /// galleries answered empty selection opposite ways, each documented as
+    /// correct. The placeholder below was unreachable in production before
+    /// this (the destination gates on an empty registry); it is now the
+    /// honest unselected state.
     @ViewBuilder
     private var preview: some View {
-        if let player = selectedPlayer ?? players.first {
+        if let player = selectedPlayer {
             VStack(spacing: 12) {
                 PlayerMonogram(name: player.stats.name, diameter: 96)
                 HStack(spacing: 8) {
@@ -59,6 +97,15 @@ internal struct PlayersGalleryView: View {
                 systemImage: "person.crop.circle.dashed",
                 description: Text("Select a player to preview.")
             )
+            // The greedy frame is load-bearing, not styling: it is what
+            // pins the filmstrip to the window's bottom edge. The selected
+            // arm carries the same frame on its VStack; without it here the
+            // gallery collapses to intrinsic height, centers, and the strip
+            // floats mid-window — seen on this arm's *first production
+            // render* (4 Aug 2026), minutes after the parity close made it
+            // reachable. A branch nobody has rendered has layout nobody has
+            // checked, no matter how plain it looks.
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -70,7 +117,7 @@ internal struct PlayersGalleryView: View {
                         PlayerCardView(
                             stats: player.stats,
                             isSelected: selectedKeys.contains(player.id),
-                            onSelect: { selectedKeys = [player.id] },
+                            onSelect: { selectedKeys = [player.id]; isFocused = true },
                             rank: player.rank,
                             onShowInLibrary: { onShowInLibrary(player.id) }
                         )

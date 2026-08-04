@@ -126,6 +126,10 @@ internal struct PlayersColumnsView: View {
                 Label("Show in Library", systemImage: "books.vertical")
             }
             .accessibilityIdentifier(AccessibilityID.contextShowInLibrary)
+            GetInfoMenuItem(
+                request: .player(key: player.id),
+                identifier: AccessibilityID.getInfoMenuItem(Destination.players.rawValue)
+            )
         }
     }
 

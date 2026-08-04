@@ -96,7 +96,7 @@ internal struct RenamePlayerSheet: View {
             }
 
             VStack(alignment: .leading, spacing: Self.captionSpacing) {
-                LabeledContent("Shown as", value: derivedDisplayName.isEmpty ? "—" : derivedDisplayName)
+                LabeledContent("Shown as", value: derivedDisplayName.isEmpty ? RosterSummary.displayUnknown : derivedDisplayName)
                 Text(rewriteSummary)
                     .font(.caption)
                     .foregroundStyle(.secondary)

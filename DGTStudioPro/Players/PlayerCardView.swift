@@ -78,7 +78,7 @@ internal struct PlayerStatsGrid: View {
                 PlayerStatCell("Win Rate", stats.winRate.formatted(.percent.precision(.fractionLength(0))))
             }
             GridRow {
-                PlayerStatCell("Rating", rating?.displaySummary ?? "—")
+                PlayerStatCell("Rating", rating?.displaySummary ?? RosterSummary.displayUnknown)
                 PlayerStatCell("Mates", "\(stats.matesDelivered)")
             }
         }
@@ -231,6 +231,15 @@ internal struct PlayerCardView: View {
                 }
                 .accessibilityIdentifier(AccessibilityID.contextShowInLibrary)
             }
+            // Outside the `onShowInLibrary` guard deliberately: that closure
+            // is optional because some hosts don't offer navigation, but a
+            // card always knows which player it draws, so Get Info is always
+            // reachable. A menu whose only item is conditional is a menu that
+            // is sometimes empty.
+            GetInfoMenuItem(
+                request: .player(key: stats.id),
+                identifier: AccessibilityID.getInfoMenuItem(Destination.players.rawValue)
+            )
         }
     }
 }

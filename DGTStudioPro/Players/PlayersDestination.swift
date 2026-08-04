@@ -105,12 +105,13 @@ internal struct PlayersDestination: View {
     /// A chip stays visible and carries its own remove control.
     @State private var searchTokens: [PlayersSearchToken] = []
 
-    // MARK: Player Editing (M5 — D37′, D38′, D39′)
+    // MARK: Player Editing (M5 — D37′, D39′; merge removed by D52′)
 
-    /// The two editors, mutually exclusive by construction — `activeEditor`'s
-    /// shape from D18′. One optional rather than two booleans, so "rename and
-    /// merge are both open" is unrepresentable rather than merely unlikely.
-    @State private var editor: PlayerEditor?
+    /// The one editor. This was `PlayerEditor`, a two-case enum whose whole
+    /// argument was making "rename and merge are both open" unrepresentable;
+    /// D52′ removed merge, and a one-case enum is a struct wearing a
+    /// costume, so it became the request value it always carried.
+    @State private var renameRequest: RenameRequest?
 
     /// D39′'s refusal, held for the alert. Nil is the normal state; a value
     /// means the last retag was refused whole and nothing was written.
@@ -122,20 +123,16 @@ internal struct PlayersDestination: View {
     /// a player listed here can pick up a link before the alert is answered.
     @State private var sweep: [Player]?
 
-    /// Which sheet is up, and for whom. Carries the stats key rather than a
-    /// `Player`: the destination's currency is the pure key everywhere else
-    /// (D10′), and resolving to a row at action time is the same bridge
+    /// Which player the rename sheet is up for. Carries the stats key rather
+    /// than a `Player`: the destination's currency is the pure key everywhere
+    /// else (D10′), and resolving to a row at action time is the same bridge
     /// `showInLibrary` already uses.
-    private enum PlayerEditor: Identifiable {
-        case rename(key: String, tag: String, gameCount: Int)
-        case merge(key: String, name: String, gameCount: Int)
+    private struct RenameRequest: Identifiable {
+        let key: String
+        let tag: String
+        let gameCount: Int
 
-        var id: String {
-            switch self {
-            case .rename(let key, _, _): return "rename:\(key)"
-            case .merge(let key, _, _):  return "merge:\(key)"
-            }
-        }
+        var id: String { key }
     }
 
     /// A refused retag, rendered as an alert.
@@ -144,6 +141,13 @@ internal struct PlayersDestination: View {
     /// never models — so the alert can name the games without resolving
     /// anything. `Identifiable` off the first collision's game identifier: a
     /// refusal is always about at least one pair.
+    ///
+    /// (It carried an `Operation` for part of 4 Aug 2026, minted that
+    /// morning because merge shared this alert under a title that named the
+    /// wrong door; merge retired the same evening, D52′, and the title went
+    /// back to being a constant. A full same-day circle, kept as one line
+    /// because the next shared-refusal door will face the same title
+    /// question.)
     private struct RetagRefusal: Identifiable {
         let collisions: [PGNStore.HashCollision]
         var id: PersistentIdentifier { collisions[0].gameID }
@@ -232,12 +236,17 @@ internal struct PlayersDestination: View {
         // which is the whole argument for moving off scopes. The gate stays
         // on the *text* half, where an empty query still matches everything
         // by the matcher's own contract and the walk is pure cost.
-        let searched = (searchText.isEmpty && searchTokens.isEmpty)
+        // The query folds once out here, not once per row inside the
+        // closure — `SearchMatch.Query`'s whole reason (4 Aug 2026). An
+        // all-whitespace query now also skips the walk, which the raw
+        // `searchText.isEmpty` gate let through; the matcher answered it
+        // "everything" either way.
+        let query = SearchMatch.Query(searchText)
+        let searched = (query.isEmpty && searchTokens.isEmpty)
         ? displayed
         : displayed.filter {
             PlayersSearchToken.admit(searchTokens, rating: $0.rating)
-            && (searchText.isEmpty
-                || SearchMatch.matches(query: searchText, fields: [$0.stats.name]))
+            && (query.isEmpty || query.matches(fields: [$0.stats.name]))
         }
         // One player or none: the profile inputs resolve only for a
         // count-of-one selection; plural renders the counting state.
@@ -284,25 +293,13 @@ internal struct PlayersDestination: View {
                     history: history,
                     recentGames: selectedGames,
                     selectionCount: selectedKeys.count,
-                    onRename: { beginRename(stats: selected?.stats) },
-                    onMerge: { beginMerge(stats: selected?.stats) }
+                    onRename: { beginRename(stats: selected?.stats) }
                 )
-                .inspectorColumnWidth(min: 320, ideal: 320, max: 430)
+                .inspectorColumnWidth(min: 310, ideal: 310, max: 400)
             }
-            .sheet(item: $editor) { editor in
-                switch editor {
-                case .rename(let key, let tag, let count):
-                    RenamePlayerSheet(currentTag: tag, gameCount: count) { newTag in
-                        rename(key: key, to: newTag)
-                    }
-                case .merge(let key, let name, let count):
-                    MergePlayerSheet(
-                        losingName: name,
-                        losingKey: key,
-                        gameCount: count
-                    ) { survivorID in
-                        merge(key: key, into: survivorID)
-                    }
+            .sheet(item: $renameRequest) { request in
+                RenamePlayerSheet(currentTag: request.tag, gameCount: request.gameCount) { newTag in
+                    rename(key: request.key, to: newTag)
                 }
             }
             .alert(
@@ -360,11 +357,14 @@ internal struct PlayersDestination: View {
     /// duplicated; only the assignment is.
     ///
     /// Parity is why this exists here at all: Players' columns mode is the
-    /// same `HSplitView` shape with the same 220/320 floors, and its detail
-    /// pane repeats the profile the inspector shows. It has not been seen to
-    /// overflow — Players' detail is a stat grid where the Library's is a
-    /// board — but the difference is a few points of content, not a
-    /// structural one, and collection-destination parity is an invariant.
+    /// same `HSplitView` shape with the same 160/320 floors (both destinations
+    /// came down together in the 3 Aug flat-columns redesign — this said
+    /// 220/320 until 4 Aug, a stale number outliving its layout), and its
+    /// detail pane repeats the profile the inspector shows. It has not been
+    /// seen to overflow — Players' detail is a stat grid where the Library's
+    /// has been a monospaced text pane since the board left it — but the
+    /// difference is content, not structure, and collection-destination
+    /// parity is an invariant.
     private func applyInspectorPolicy(for mode: CollectionViewMode) {
         if mode.ownsDetailPane {
             tabState.playersInspectorPresented = false
@@ -400,18 +400,9 @@ internal struct PlayersDestination: View {
     /// every affected game's `[White]`.
     private func beginRename(stats: PlayerStats?) {
         guard let stats, let player = resolvedPlayer(for: stats.key) else { return }
-        editor = .rename(
+        renameRequest = RenameRequest(
             key: stats.key,
             tag: player.tagName ?? player.name,
-            gameCount: player.whiteGames.count + player.blackGames.count
-        )
-    }
-
-    private func beginMerge(stats: PlayerStats?) {
-        guard let stats, let player = resolvedPlayer(for: stats.key) else { return }
-        editor = .merge(
-            key: stats.key,
-            name: player.name,
             gameCount: player.whiteGames.count + player.blackGames.count
         )
     }
@@ -435,24 +426,10 @@ internal struct PlayersDestination: View {
         }
     }
 
-    /// D38′. Merge is the same door, so it inherits the same refusal.
-    private func merge(key: String, into survivorID: PersistentIdentifier) {
-        // The cast is paired with an `isDeleted` check, per the standing
-        // id→model rule: the sheet's picker was built from a `@Query` snapshot,
-        // and a row deleted between presentation and Merge resolves to a
-        // tombstone that would otherwise be merged *into*.
-        guard let loser = resolvedPlayer(for: key),
-              let survivor = modelContext.model(for: survivorID) as? Player,
-              !survivor.isDeleted else { return }
-        do {
-            try PGNStore(modelContext: modelContext).merge(loser, into: survivor)
-            selectedKeys = [survivor.normalizedName]
-        } catch let rejection as PGNStore.RetagRejection {
-            present(rejection)
-        } catch {
-            Self.logger.error("Merge failed: \(error.localizedDescription, privacy: .public)")
-        }
-    }
+    // `merge(key:into:)` and `beginMerge` lived here from M5 until D52′
+    // (4 Aug 2026). The id→model tombstone lesson their picker carried is
+    // not lost — the standing invariant records it, and the sweep below is
+    // its remaining exemplar in this file.
 
     /// Deletes the confirmed snapshot. The door skips any row that gained a
     /// link since the alert was raised, so this reports what actually went
@@ -498,9 +475,8 @@ internal struct PlayersDestination: View {
     }
 
     /// Names the games, because "this would create a duplicate" is
-    /// unactionable otherwise. Caps the list: a merge of two large
-    /// double-imported sets could collide dozens of times, and an alert is
-    /// not a report.
+    /// unactionable otherwise. Caps the list: a rename over a double-imported
+    /// set can collide many times, and an alert is not a report.
     private static func refusalMessage(_ collisions: [PGNStore.HashCollision]) -> String {
         let shown = collisions.prefix(3).map { "“\($0.gameName)” and “\($0.existingName)”" }
         let lead = "This would make these games identical: " + shown.joined(separator: "; ") + "."
@@ -525,13 +501,12 @@ internal struct PlayersDestination: View {
     ///
     /// **Correction.** This comment used to claim the alert was the *only*
     /// place an orphaned player is ever rendered, and D40′ says so too. It is
-    /// false. Counted rather than asserted this time: **four** `@Query`s stand
-    /// over the registry — this destination's, `NewLiveGameSheet`'s,
-    /// `MergePlayerSheet`'s, and `ContentView`'s. Two of them *render* an
-    /// unfiltered list, so an orphan has always been offered in the New Game
-    /// seat menu and as a merge target. `ContentView`'s is an id → model hop
-    /// that shows nothing, and this destination's is filtered to orphans by
-    /// definition.
+    /// false. Counted rather than asserted — and recounted when D52′ removed
+    /// `MergePlayerSheet`'s query: **three** `@Query`s stand over the registry
+    /// — this destination's, `NewLiveGameSheet`'s, and `ContentView`'s. One
+    /// *renders* an unfiltered list, so an orphan has always been offered in
+    /// the New Game seat menu. `ContentView`'s is an id → model hop that shows
+    /// nothing, and this destination's is filtered to orphans by definition.
     ///
     /// The claim that survives is the narrower one the invariants list already
     /// makes — orphans are unreachable through *selection*. Worth keeping the
@@ -659,8 +634,9 @@ internal struct PlayersDestination: View {
         ToolbarSpacer()
         ToolbarItem {
             // Same macOS segmented-picker caveat as the Library's: the
-            // identifier tags the container; UI tests address segments by
-            // SF Symbol name. See DGTStudioProUITests.
+            // identifier tags the container — macOS exposes the segments
+            // as their SF Symbol names, never as children of it. (The
+            // suite that addressed them that way is gone — D51′.)
             Picker("View Mode", selection: $viewMode) {
                 ForEach(CollectionViewMode.allCases) { mode in
                     Label(mode.displayName, systemImage: mode.systemImage).tag(mode)

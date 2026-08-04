@@ -81,8 +81,8 @@ internal struct MoveHistoryView: View {
             Text("\(moveNumber).")
                 .font(.callout)
                 .foregroundStyle(.tertiary)
-                .frame(width: 30, alignment: .trailing)
-                .padding(.trailing, 20)
+                .frame(width: 20, alignment: .leading)
+                .padding(.trailing, 35)
 
             moveCell(at: whiteIndex)
             

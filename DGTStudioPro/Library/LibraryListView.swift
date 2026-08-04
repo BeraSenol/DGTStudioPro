@@ -38,13 +38,14 @@ internal struct LibraryListView: View {
 
     var body: some View {
         Table(games, selection: $selectedPGNs, columnCustomization: $columnCustomization) {
-            // Never hideable: this cell carries the row identifier every
-            // Library UITest addresses a game by, so hiding the column would
-            // not fail a test — it would make the element cease to exist, and
-            // the test would report "no such game" about a Library that has
-            // it. Reordering and resizing stay on; only visibility is
-            // contract-bearing, because an identifier rides the cell wherever
-            // the column sits.
+            // Never hideable: this cell carries the row identifier the
+            // Library UITests addressed a game by (suite retired, D51′;
+            // the identifier stays per the registry's bet). Hiding the
+            // column wouldn't fail anything — it would make the element
+            // cease to exist, and a future test would report "no such
+            // game" about a Library that has it. Reordering and resizing
+            // stay on; only visibility is contract-bearing, because an
+            // identifier rides the cell wherever the column sits.
             TableColumn("White") { game in
                 Text(game.whiteDisplayName)
                     .accessibilityIdentifier(AccessibilityID.gameRow(game.name))
@@ -105,6 +106,14 @@ internal struct LibraryListView: View {
                 } label: {
                     Label("Open in Board", systemImage: "checkerboard.rectangle")
                 }
+                // Single-selection only, beside Open and for its reason: Get
+                // Info edits one subject's fields, and a multi-selection has
+                // no single roster to show. A batch editor is a different
+                // feature — the toolbar verbs are the ones that take a set.
+                GetInfoMenuItem(
+                    request: .game(game.persistentModelID),
+                    identifier: AccessibilityID.getInfoMenuItem(Destination.library.rawValue)
+                )
             }
             if !ids.isEmpty {
                 // The toolbar's aggregate rule: checkmark only when the

@@ -118,13 +118,26 @@ internal struct BoardInspectorView: View {
             .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
             .listRowSeparator(.hidden)
         } actions: {
-            if let onEditMoves {
-                InspectorEditButtonView(
-                    label: "Edit Moves",
-                    identifier: AccessibilityID.boardEditMovesButton,
-                    action: onEditMoves
-                )
-            }
+            // The Edit Moves pencil is gone (M10, by request): movetext is
+            // read-only in both branches, live and review.
+            //
+            // **Live was always the stranger of the two.** Decision #1 says
+            // the physical board is truth and the live game is append-only —
+            // no takebacks, ever — and an editor that could rewrite the
+            // movetext mid-game was the one surface that could contradict the
+            // board it mirrors. In review the argument is weaker but points
+            // the same way: an imported game's file is the truth, and the app
+            // is not where you correct it.
+            //
+            // What this leaves surface-less, stated rather than discovered:
+            // `MovetextEdit`, `PGNStore.applyMovetextEdit`, and the whole of
+            // D18′'s replay validator — accept-whole-or-reject-whole, the
+            // per-ply error, the splice refusal, the re-classification on
+            // accept. All still built, all still suited, now reachable from
+            // nothing. That is the D40′ shape and it needs a decision rather
+            // than this comment: either a door returns for it or D18′ is
+            // narrowed to metadata and the machinery goes the way D52′ took
+            // merge. `onEditMoves` survives as the seam either answer uses.
         }
     }
 }

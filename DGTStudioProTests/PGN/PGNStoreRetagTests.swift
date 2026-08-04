@@ -280,76 +280,13 @@ struct PGNStoreRetagTests {
         #expect(game.white == "Senol, Bera")
     }
 
-    // MARK: Merge — D38′
-
-    @Test("Merge moves the loser's games and deletes the row")
-    func mergeMovesGamesAndDeletesLoser() throws {
-        let store = try Self.store()
-        let canonical = try store.importPGN(text: Self.pgnText(black: "Reinaud, Lorenzo"))
-        let variant = try store.importPGN(
-            text: Self.pgnText(black: "L. Reinaud", round: 2)
-        )
-        let survivor = try Self.player(store, named: "Reinaud, Lorenzo")
-        let loser = try Self.player(store, named: "L. Reinaud")
-
-        let moved = try store.merge(loser, into: survivor)
-
-        #expect(moved == 1)
-        #expect(variant.black == "Reinaud, Lorenzo")
-        #expect(variant.blackPlayer?.persistentModelID == survivor.persistentModelID)
-        #expect(canonical.blackPlayer?.persistentModelID == survivor.persistentModelID)
-        #expect(try store.player(withNormalizedKey: Self.key(forTag: "L. Reinaud")) == nil)
-    }
-
-    /// D38′'s reason for existing. Link surgery alone would be undone here:
-    /// `applyEdit` re-resolves both seats from the tag strings unconditionally,
-    /// so an untouched tag would resolve back to the merged-away player and
-    /// mint it again. Because merge rewrote the tag, the edit is a no-op for
-    /// identity.
-    @Test("A merged game survives applyEdit's unconditional re-resolve")
-    func mergeSurvivesApplyEdit() throws {
-        let store = try Self.store()
-        _ = try store.importPGN(text: Self.pgnText(black: "Reinaud, Lorenzo"))
-        let variant = try store.importPGN(text: Self.pgnText(black: "L. Reinaud", round: 2))
-        let survivor = try Self.player(store, named: "Reinaud, Lorenzo")
-        let loser = try Self.player(store, named: "L. Reinaud")
-        try store.merge(loser, into: survivor)
-
-        // Any metadata edit re-resolves both seats.
-        try store.applyEdit(to: variant) { $0.event = "Club Night II" }
-
-        #expect(variant.blackPlayer?.persistentModelID == survivor.persistentModelID)
-        #expect(try store.player(withNormalizedKey: Self.key(forTag: "L. Reinaud")) == nil)
-    }
-
-    @Test("Merging a player into itself is a no-op")
-    func mergeIntoSelfIsNoOp() throws {
-        let store = try Self.store()
-        let game = try store.importPGN(text: Self.pgnText())
-        let bera = try Self.player(store, named: "Senol, Bera")
-
-        #expect(try store.merge(bera, into: bera) == 0)
-        #expect(game.white == "Senol, Bera")
-    }
-
-    /// A merge inherits the retag door's refusal, since it *is* a retag —
-    /// which is the whole point of D38′ putting them on one door.
-    @Test("A merge that would collide is refused, like any other retag")
-    func collidingMergeIsRefused() throws {
-        let store = try Self.store()
-        let first = try store.importPGN(text: Self.pgnText(black: "Reinaud, Lorenzo"))
-        let second = try store.importPGN(text: Self.pgnText(black: "L. Reinaud"))
-        let survivor = try Self.player(store, named: "Reinaud, Lorenzo")
-        let loser = try Self.player(store, named: "L. Reinaud")
-
-        #expect(throws: PGNStore.RetagRejection.self) {
-            try store.merge(loser, into: survivor)
-        }
-        // Refused whole: the loser is still a player, still holding its game.
-        #expect(second.black == "L. Reinaud")
-        #expect(first.black == "Reinaud, Lorenzo")
-        #expect(try store.player(withNormalizedKey: Self.key(forTag: "L. Reinaud")) != nil)
-    }
+    // The four merge pins (moves-and-deletes, survives-applyEdit,
+    // merge-into-self, colliding-merge-refused) went with `merge` itself
+    // (D52′, 4 Aug 2026). What they guarded that still needs guarding is
+    // guarded: the rename pins cover the same retag door — collision
+    // refusal, fold-equivalent identity, resolver-only target creation —
+    // and the applyEdit re-resolve contract is pinned by the rename
+    // round-trips above.
 
     // MARK: Delete — the orphan sweep (D38′'s guard, D40′'s surface)
 

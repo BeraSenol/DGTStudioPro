@@ -72,11 +72,15 @@ internal struct PlayersIconsView: View {
                         )
                         .id(player.id)
                         .onGeometryChange(for: CGRect.self) { geometry in
-                            // `.integral` — the Library grid's third
-                            // correction, same reason: sub-point wobble
-                            // between identical layout passes reads as
-                            // change under exact comparison.
-                            geometry.frame(in: .named(Self.gridSpace)).integral
+                            // Half-point quantization — the warning's
+                            // fourth correction, shared with the Library
+                            // grid; `.integral`'s floor/ceil flipped whole
+                            // points at the integer anchors layout rests
+                            // on. The account lives on
+                            // `IconGridSelection.stableFrame`.
+                            IconGridSelection.stableFrame(
+                                geometry.frame(in: .named(Self.gridSpace))
+                            )
                         } action: { frame in
                             // A box write: free, and invisible to the
                             // render pass — no invalidation, no loop.

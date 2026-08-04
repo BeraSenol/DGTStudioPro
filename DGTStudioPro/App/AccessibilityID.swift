@@ -59,8 +59,8 @@ internal enum AccessibilityID {
     internal static let sidebar = "sidebar"
     
     /// `sidebar.board`, `sidebar.library`, … — one per `Destination`
-    /// raw value. Takes the raw string (not the enum) so the UI test
-    /// target, which can't see app types, can build the same identifiers.
+    /// raw value. Takes the raw string (not the enum) — the String-only
+    /// rule this file kept after the UI suite left (D51′; see the header).
     internal static func sidebarDestination(_ rawValue: String) -> String {
         "sidebar.\(rawValue)"
     }
@@ -153,7 +153,44 @@ internal enum AccessibilityID {
     internal static let movetextEditorStatus = "movetext.editor.status"
     internal static let movetextEditorSave   = "movetext.editor.save"
     internal static let movetextEditorCancel = "movetext.editor.cancel"
-    
+
+    // MARK: Get Info (M10)
+
+    /// The one editable surface behind every inspector's subject, and the
+    /// three gestures that open it.
+    ///
+    /// **Three window identifiers, not one**, which is the opposite call from
+    /// `evaluationMagnifier` one group up and for the reason that entry
+    /// states: the magnifier's two buttons open literally the same window onto
+    /// the same game, so a second identifier would assert a difference that
+    /// isn't there. These three are one window rendering three *different
+    /// subjects* — a game, a recording, a player — and a check that found the
+    /// player form where it expected the game form should fail rather than
+    /// pass on a shared handle.
+    ///
+    /// The menu item takes its own identifier despite being the same verb as
+    /// the two context-menu items: it is the Board's only door (⌘I plus the
+    /// Game menu — the Board has one subject and no list to right-click), so
+    /// it is the one that can break independently.
+    internal static let getInfoGame          = "getinfo.game"
+    internal static let getInfoLive          = "getinfo.live"
+    internal static let getInfoPlayer        = "getinfo.player"
+    internal static let getInfoEmpty         = "getinfo.empty"
+    internal static let getInfoBoardMenuItem = "getinfo.menuitem.board"
+
+    /// The context-menu item, per destination. A function rather than two
+    /// constants because the item is one verb reached from two row types, and
+    /// the destination is what distinguishes them — the `sidebarDestination`
+    /// shape.
+    ///
+    /// Takes a raw `String` like everything else in this file. The reason is
+    /// no longer shared target membership (D51′ deleted the UI test target),
+    /// but the rule outlived it deliberately: re-typing these signatures buys
+    /// type safety nothing now checks.
+    internal static func getInfoMenuItem(_ destinationRawValue: String) -> String {
+        "getinfo.menuitem.\(destinationRawValue)"
+    }
+
     // MARK: Live
     
     /// HUD (M3.1). The container's identifier names the phase — a closed
@@ -297,6 +334,16 @@ internal enum AccessibilityID {
     /// of the `board.editInfo` / `live.inspector.editdetails` family even
     /// though all three are now the same glyph in the same place.
     internal static let libraryInspectorRename = "library.inspector.rename"
+
+    /// Review, as a glyph in the roster header (M10). Its own identifier
+    /// rather than sharing with the Evaluation section's `Review` button
+    /// despite the identical action: two controls in two headers are two
+    /// controls, and a check that found one where it expected the other
+    /// should fail. The `boardEditInfo` / `liveInspectorEditDetails` reasoning
+    /// — the opposite call from `evaluationMagnifier`, which shares one
+    /// identifier across two inspectors because it opens literally the same
+    /// window.
+    internal static let libraryInspectorReviewGlyph = "library.inspector.reviewGlyph"
     
     /// The raw-PGN section: the text itself, and the copy affordance in its
     /// header. Split because the header stays visible while the section is
@@ -321,15 +368,15 @@ internal enum AccessibilityID {
     /// guarantees uniqueness, so ten hand-written entries would be ten chances
     /// to typo a string the compiler cannot check.
     ///
-    /// **It takes the raw value, not `InspectorSection`, and that is not a
-    /// weakening — it is this file's actual constraint.** This registry is
-    /// compiled into the UI test target as well as the app, which is the whole
-    /// point of it (F8's "separate module — keep in sync" drift, killed). The
-    /// test target has none of the app's types, so *every* function here takes
-    /// a `String`: `boardSquare` takes algebraic notation rather than a
-    /// `Square`, `sidebarDestination` a raw value rather than a `Destination`.
-    /// Typing this one to the enum compiled beautifully in the app and broke
-    /// the moment the other target reached the same line.
+    /// **It takes the raw value, not `InspectorSection`.** The rule was minted
+    /// while this registry compiled into the UI test target as well as the app
+    /// (F8's "separate module — keep in sync" drift, killed): that target had
+    /// none of the app's types, so *every* function here took a `String` —
+    /// `boardSquare` algebraic notation rather than a `Square`,
+    /// `sidebarDestination` a raw value rather than a `Destination`. Typing
+    /// this one to the enum compiled beautifully in the app and broke the
+    /// moment the other target reached the same line. The suite is gone
+    /// (D51′) and the shape is kept on purpose — the header owns that call.
     ///
     /// What is lost is a caller's inability to invent a section, and it is
     /// bought back at the call site instead: `InspectorSectionHeader`'s private
@@ -344,10 +391,11 @@ internal enum AccessibilityID {
         "inspector.\(sectionRawValue).disclosure"
     }
     
-    /// Analysis-queue toolbar family (M-batch). `queue.status` has a
-    /// UITest witness (asserted *absent* while the queue is idle); the
-    /// popover internals are manual-checklist territory — clicking
-    /// Analyze in a UI test would spin live Stockfish passes.
+    /// Analysis-queue toolbar family (M-batch). `queue.status` *had* a
+    /// UITest witness (asserted absent while the queue was idle — gone
+    /// with the suite, D51′); the popover internals were always
+    /// manual-checklist territory, since clicking Analyze in a UI test
+    /// would spin live Stockfish passes.
     internal static let libraryQueueStatus  = "library.queue.status"
     internal static let libraryQueuePopover = "library.queue.popover"
     internal static let libraryQueueStopAll = "library.queue.stopAll"
@@ -383,7 +431,7 @@ internal enum AccessibilityID {
     /// The "Show in Library" context-menu item on Players rows and cards
     /// (M-prs.6; it served Rankings' too until D48′). One constant across
     /// its homes: the item is transient and no two homes ever coexist, so
-    /// a family prefix would only fork future lookups. (The UITest drives
+    /// a family prefix would only fork future lookups. (The UITest drove
     /// it by *title* — the codebase's established menu-item pattern; the
     /// identifier is here so a future test can harden without a rename.)
     internal static let contextShowInLibrary = "context.showInLibrary"
@@ -402,22 +450,19 @@ internal enum AccessibilityID {
     /// arbitrary member.
     internal static let playersInspectorMulti   = "players.inspector.multi"
 
-    // MARK: Player Editing (M5 — D37′, D38′; the orphan sweep is D40′)
+    // MARK: Player Editing (M5 — D37′; the orphan sweep is D40′)
 
-    /// The profile header's rename pencil, and the menu beside it holding the
-    /// selection-scoped operation that isn't a rename. Separate identifiers
-    /// because they are separate affordances: the pencil is D26′'s shared
-    /// control with its fixed meaning, and folding "merge" into it would widen
-    /// a named affordance into a generic one.
+    /// The profile header's rename pencil — D26′'s shared control with its
+    /// fixed meaning, and since D52′ the header's only verb.
     ///
-    /// `players.inspector.deleteItem` was **removed** with the per-player
-    /// Delete it named (D40′). A registry removal is a breaking
-    /// accessibility-contract change, so it is recorded here rather than done
-    /// quietly — and it gets no successor in this group, because an orphan has
-    /// no row to select and the replacement is destination-scoped (below).
+    /// Removals recorded here rather than done quietly, because a registry
+    /// removal is as breaking as a rename: `players.inspector.deleteItem`
+    /// went with the per-player Delete it named (D40′; no successor in this
+    /// group — orphans have no row to select, the replacement is
+    /// destination-scoped below), and `players.inspector.actionsMenu` +
+    /// `players.inspector.mergeItem` went with merge itself (D52′, 4 Aug
+    /// 2026 — the ellipsis menu existed for that one item).
     internal static let playersRenameButton   = "players.inspector.rename"
-    internal static let playersActionsMenu    = "players.inspector.actionsMenu"
-    internal static let playersMergeMenuItem  = "players.inspector.mergeItem"
 
     /// The destination's maintenance menu and its one item (D40′), on the
     /// toolbar rather than in the inspector: orphaned players contribute to no
@@ -436,10 +481,10 @@ internal enum AccessibilityID {
     internal static let playerRenameTagField  = "player.renameSheet.tag"
     internal static let playerRenameSave      = "player.renameSheet.save"
 
-    internal static let playerMergeSheet      = "player.mergeSheet"
-    internal static let playerMergePicker     = "player.mergeSheet.survivor"
-    internal static let playerMergeConfirm    = "player.mergeSheet.merge"
-    
+    // The `player.mergeSheet` family (sheet, survivor picker, confirm) was
+    // **removed** with `MergePlayerSheet` (D52′, 4 Aug 2026) — recorded, not
+    // quiet, per the rule above.
+
     /// `playerRow.Anish Giri`, … — one per list-mode row, keyed by the
     /// player's display name (the `gameRow(_:)` precedent).
     internal static func playerRow(_ name: String) -> String {

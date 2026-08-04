@@ -45,21 +45,80 @@ internal struct RosterSummary: Equatable, Sendable {
     internal let white: String
     internal let black: String
     internal let result: GameResult
-    
+
+    /// True only for the live projection — set by `init(_:result:)`, never by
+    /// the `PGN` one.
+    ///
+    /// It exists for exactly one display rule: `*` is *true* while a game is
+    /// being recorded and a *placeholder* everywhere else. Decision #3 says `*`
+    /// never archives, so an archived game carrying one got it from the import
+    /// door, which admits it deliberately — and there it means "this file
+    /// didn't say", which is an unknown like any other. Same token, two
+    /// meanings, and only the constructor knows which.
+    ///
+    /// A `var` with a default rather than a `let`: the synthesized memberwise
+    /// init keeps its existing shape for every fixture and preview that builds
+    /// a summary directly, so this field is additive rather than a call-site
+    /// sweep.
+    internal var isRecording: Bool = false
+
+
     // MARK: Display
     
     /// The value for a tag, formatted. Reached by the section through
     /// `SevenTagRoster.allCases`, so adding a case to that enum is a
     /// compile error here — the roster can't quietly lose a tag.
+    /// Every unknown, on every display surface, is this. One glyph — an em
+    /// dash, not the PGN vocabulary and not a hyphen.
+    ///
+    /// The em dash is the app's existing house glyph rather than a new choice:
+    /// `OpeningSection` and `SevenTagRosterSection` already spelled "nothing to
+    /// show" this way, and the change here was never about which mark to use —
+    /// it was about there being *four* (`?`, `????.??.??`, `*`, `—`) on one
+    /// panel, reading as four different kinds of problem. A hyphen was tried
+    /// first, in this constant, for one revision; the em dash won because it is
+    /// visibly a placeholder rather than possibly a value, which matters most
+    /// in the one place a short mark could be mistaken for content — a Result
+    /// column beside `1-0`.
+    ///
+    /// **This deliberately collapses a distinction D22′ drew on purpose**, and
+    /// the collapse is the decision rather than a side effect. That entry kept
+    /// two placeholders apart: `unknownTag` (`?`) meaning "this game doesn't
+    /// say", and the section's em dash meaning "there is no game to ask". Real,
+    /// and invisible in use — the reader sees one inspector at a time and
+    /// cannot tell which question a glyph is answering, while the four
+    /// spellings on one panel (`?`, `????.??.??`, `*`, `—`) read as four
+    /// different kinds of problem. One glyph says "nothing here" once.
+    ///
+    /// **Display only.** `tagValue(for:)` is untouched and must stay that way:
+    /// D24′ pins export to the reference files byte for byte, where an unknown
+    /// is `?`, a missing date is `????.??.??` and `*` is a real result token.
+    /// Folding this into the export path would put a hyphen in a file the
+    /// ecosystem reads as fact. The two functions below are the whole reason
+    /// that split exists.
+    internal static let displayUnknown = "—"
+
+    /// A stored tag value as it should be *shown* — the PGN unknown folded to
+    /// the display glyph, everything else verbatim.
+    private static func shown(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespaces)
+        return trimmed.isEmpty || trimmed == unknownTag ? displayUnknown : raw
+    }
+
     internal subscript(tag: SevenTagRoster) -> String {
         switch tag {
-        case .event:  event
-        case .site:   site
+        case .event:  Self.shown(event)
+        case .site:   Self.shown(site)
         case .date:   Self.displayDate(date)
         case .round:  Self.displayRound(round)
-        case .white:  PlayerName.displayForm(of: white)
-        case .black:  PlayerName.displayForm(of: black)
-        case .result: result.rawValue
+        case .white:  Self.shown(PlayerName.displayForm(of: white))
+        case .black:  Self.shown(PlayerName.displayForm(of: black))
+        // `*` shows only while a game is actually being recorded, where it is
+        // the truth — the game *is* ongoing. On an archived game the same
+        // token came from the import door (Decision #3 admits it there and
+        // refuses it at the archive door) and means "this file didn't say",
+        // so it takes the placeholder like every other unknown.
+        case .result: result == .ongoing && !isRecording ? Self.displayUnknown : result.rawValue
         }
     }
     
@@ -89,12 +148,15 @@ internal struct RosterSummary: Equatable, Sendable {
     /// `.dateTime.year().month(.twoDigits).day(.twoDigits)` again — five
     /// copies of one format, all identical, none of them the "one".
     internal static func displayDate(_ date: Date?) -> String {
-        guard let date else { return unknownDate }
+        // `unknownDate` (`????.??.??`) stays as the *export* vocabulary and is
+        // still what `PGNParser.pgnDateString` writes; this is the display
+        // side, so it takes the one display glyph.
+        guard let date else { return displayUnknown }
         return date.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits))
     }
-    
+
     internal static func displayRound(_ round: Int?) -> String {
-        guard let round else { return unknownTag }
+        guard let round else { return displayUnknown }
         return String(round)
     }
 }
@@ -142,7 +204,8 @@ extension RosterSummary {
             round:  roster.round,
             white:  roster.white,
             black:  roster.black,
-            result: result
+            result: result,
+            isRecording: true
         )
     }
 }

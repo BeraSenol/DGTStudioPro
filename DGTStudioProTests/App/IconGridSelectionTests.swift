@@ -49,6 +49,50 @@ struct IconGridSelectionTests {
         #expect(IconGridSelection.destination(from: 13, direction: .down, columnCount: columns, count: 14) == 13)
     }
 
+    /// ↓ holds across the *whole* last row, not only on the last card — the
+    /// pre-fix formula slid 12 → 13 (6 columns, count 14): a vertical key
+    /// performing a horizontal move, asymmetric with `.up`'s hold. This is
+    /// the case the original pins missed; both shipped expectations above
+    /// are points where the broken formula happened to be right (4 Aug 2026).
+    @Test func downHoldsAcrossTheWholeLastRow() {
+        #expect(IconGridSelection.destination(from: 12, direction: .down, columnCount: columns, count: 14) == 12)
+        // A *full* last row holds too — 12 of 12 at 6 columns has no hole
+        // anywhere, and ↓ from its middle must not walk to the corner.
+        #expect(IconGridSelection.destination(from: 9, direction: .down, columnCount: columns, count: 12) == 9)
+    }
+
+    /// The galleries reuse the grammar as its one-row degenerate case
+    /// (`columnCount == count`, 4 Aug 2026): ← / → clamp without wrapping —
+    /// a strip has no next row to wrap onto — and ↑ / ↓ hold everywhere.
+    /// The ↓ hold is the last-row guard earning its keep a second time: on
+    /// the pre-fix formula, ↓ in a one-row strip jumped to the *last* card.
+    @Test func aFilmstripIsAOneRowGrid() {
+        #expect(IconGridSelection.destination(from: 2, direction: .right, columnCount: 5, count: 5) == 3)
+        #expect(IconGridSelection.destination(from: 4, direction: .right, columnCount: 5, count: 5) == 4)
+        #expect(IconGridSelection.destination(from: 0, direction: .left,  columnCount: 5, count: 5) == 0)
+        #expect(IconGridSelection.destination(from: 2, direction: .up,    columnCount: 5, count: 5) == 2)
+        #expect(IconGridSelection.destination(from: 2, direction: .down,  columnCount: 5, count: 5) == 2)
+    }
+
+    // MARK: Geometry Stability
+
+    /// The transform-stability rule (the "cycling between duplicate values"
+    /// warning's fourth correction, 4 Aug 2026): sub-point wobble must map
+    /// to one value at every anchor macOS layout actually rests on —
+    /// integers at 1×, halves at 2×. `.integral` failed exactly this:
+    /// floor/ceil across 91.0 turned a ±0.0002 wobble into 91 ↔ 92, the
+    /// alternation the warning names.
+    @Test func stableFrameAbsorbsSubPointWobbleAtRealAnchors() {
+        let a = IconGridSelection.stableFrame(
+            CGRect(x: 90.9998, y: 10.4999, width: 160.0001, height: 199.9999)
+        )
+        let b = IconGridSelection.stableFrame(
+            CGRect(x: 91.0002, y: 10.5001, width: 159.9999, height: 200.0001)
+        )
+        #expect(a == b)
+        #expect(a == CGRect(x: 91, y: 10.5, width: 160, height: 200))
+    }
+
     // MARK: Rubber Band
 
     /// All four sweep directions produce the same normalized band — a

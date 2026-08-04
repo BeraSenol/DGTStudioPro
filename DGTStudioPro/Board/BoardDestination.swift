@@ -372,7 +372,7 @@ internal struct BoardDestination: View {
                 onEditInfo:   { activeEditor = .info },
                 onEditMoves:  { activeEditor = .movetext }
             )
-            .inspectorColumnWidth(min: 340, ideal: 340, max: 430)
+            .inspectorColumnWidth(min: 310, ideal: 310, max: 400)
         }
     }
     
@@ -388,7 +388,7 @@ internal struct BoardDestination: View {
         mirrorBoard
             .inspector(isPresented: $tabState.boardInspectorPresented) {
                 liveInspector
-                    .inspectorColumnWidth(min: 340, ideal: 340, max: 430)
+                    .inspectorColumnWidth(min: 310, ideal: 310, max: 400)
             }
         // M4.3 — the resume offer. A modal fork, not a HUD banner,
         // because Decision #3 makes this a genuine either/or the player
@@ -677,7 +677,8 @@ internal struct BoardDestination: View {
         // other window) leaves `boardPGN` a tombstone whose attribute reads
         // are stale at best. Falling through re-resolves, and the guard
         // below lands on the load-error card — the honest surface for "this
-        // game is gone" (30 July audit; pinned by the load-error UITest).
+        // game is gone" (30 July audit; was pinned by the load-error UITest
+        // until the suite retired, D51′ — the manual checklist owns it now).
         if tabState.boardPGN?.persistentModelID == id,
            tabState.boardPGN?.isDeleted == false,
            tabState.boardGame != nil {

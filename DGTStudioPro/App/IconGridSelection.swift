@@ -13,13 +13,16 @@ import SwiftUI
 /// (different element types, different cards); *this* is the half that
 /// must not fork, because two grids answering "where does ↓ land on a
 /// partial row" differently is a divergence a user feels and no test
-/// smells. One spelling, two callers, suited once.
+/// smells. One spelling, four hosts, suited once: both galleries joined
+/// on 4 Aug 2026 through the one-row degenerate case (`columnCount ==
+/// count` — ← / → clamp, ↑ / ↓ hold; pinned by `aFilmstripIsAOneRowGrid`).
 internal enum IconGridSelection {
 
     /// Finder's arrow grammar on a fixed-column grid, as index math so it
     /// needs no frames: left/right step reading order and therefore wrap
-    /// across rows; up holds on the top row; down past the bottom lands on
-    /// the last card rather than dying in a hole of the final partial row.
+    /// across rows; up holds on the top row; down holds on the last row,
+    /// and from a card with a hole beneath it (the final partial row's
+    /// shadow) lands on the last card rather than dying in the hole.
     internal static func destination(
         from index: Int,
         direction: MoveCommandDirection,
@@ -34,7 +37,15 @@ internal enum IconGridSelection {
         case .up:
             index - columnCount >= 0 ? index - columnCount : index
         case .down:
-            min(index + columnCount, count - 1)
+            // Hold anywhere on the last row — the mirror of `.up`'s
+            // top-row hold. Without the row guard, the overflow clamp
+            // below slid a last-row card *sideways* to the last card
+            // (12 → 13 at 6 columns, count 14): a vertical key performing
+            // a horizontal move. The clamp is only for cards with a hole
+            // beneath them, which is always a row above the last one.
+            index / columnCount == (count - 1) / columnCount
+            ? index
+            : min(index + columnCount, count - 1)
         @unknown default:
             index
         }
@@ -48,6 +59,38 @@ internal enum IconGridSelection {
             y: min(origin.y, point.y),
             width: abs(origin.x - point.x),
             height: abs(origin.y - point.y)
+        )
+    }
+
+    /// The geometry transform's stability rule — one spelling for both grids
+    /// (4 Aug 2026, the **fourth** correction on "Geometry action is cycling
+    /// between duplicate values", replacing `.integral`).
+    ///
+    /// `onGeometryChange` compares the transform's output by exact equality
+    /// and warns when consecutive layout passes alternate between outputs it
+    /// has seen before. The first two corrections killed real feedback
+    /// (content anchoring; the box instead of observed state). `.integral`
+    /// was the third, meant to absorb sub-point float wobble — and it
+    /// *amplified* it instead, because floor/ceil put the decision
+    /// boundaries exactly on the integers, which is exactly where macOS
+    /// layout rests: a ±0.0002 wobble across 91.0 flips the far edge a
+    /// whole point (91 ↔ 92), which is precisely the A/B/A/B the warning
+    /// names. Multi-pass ScrollView/LazyVGrid sizing supplies that wobble
+    /// freely — six flexible columns divide non-integer widths.
+    ///
+    /// Rounding to nearest on the **half-point grid** moves the boundaries
+    /// to .25/.75, where layout never lands — cells rest on integers at 1×
+    /// and halves at 2× — so wobble collapses to one value at every real
+    /// anchor. A rubber band is indifferent to half a point either way.
+    internal static func stableFrame(_ rect: CGRect) -> CGRect {
+        func quantized(_ value: CGFloat) -> CGFloat {
+            (value * 2).rounded() / 2
+        }
+        return CGRect(
+            x: quantized(rect.minX),
+            y: quantized(rect.minY),
+            width: quantized(rect.width),
+            height: quantized(rect.height)
         )
     }
 }

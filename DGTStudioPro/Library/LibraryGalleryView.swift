@@ -22,12 +22,50 @@ internal struct LibraryGalleryView: View {
         return games.first(where: { $0.id == id })
     }
     
+    // MARK: Private Properties
+
+    /// The grids' focus arrangement (4 Aug 2026): the gallery itself is the
+    /// focusable, a thumbnail click hands it focus, and ← / → step the strip.
+    @FocusState private var isFocused: Bool
+
     var body: some View {
         VStack(spacing: 0) {
             preview
             Divider()
             thumbnailStrip
         }
+        .focusable()
+        .focusEffectDisabled()
+        .focused($isFocused)
+        .onMoveCommand { direction in
+            move(direction)
+        }
+    }
+
+    /// ← / → step the filmstrip; ↑ / ↓ hold (4 Aug 2026). The stepping is
+    /// `IconGridSelection.destination` in its **one-row degenerate case** —
+    /// `columnCount == count` — so the strip speaks the exact grammar the
+    /// icons grids speak rather than a fourth hand-rolled ±1: left/right
+    /// clamp at the ends (a strip has no next row to wrap onto), and the
+    /// vertical keys hold via the top-row and last-row guards. No anchor
+    /// state, unlike the grids: the previewed card *is* the anchor, and with
+    /// nothing selected the first arrow lands on the first card. The strip's
+    /// own `.onChange(of:)` scroll-to does the rest.
+    private func move(_ direction: MoveCommandDirection) {
+        guard !games.isEmpty else { return }
+        let target: Int
+        if let id = selectedPGNs.first,
+           let current = games.firstIndex(where: { $0.id == id }) {
+            target = IconGridSelection.destination(
+                from: current,
+                direction: direction,
+                columnCount: games.count,
+                count: games.count
+            )
+        } else {
+            target = 0
+        }
+        selectedPGNs = [games[target].id]
     }
     
     /// Selection-driven with no fallback to `games.first`: an unselected
@@ -35,6 +73,8 @@ internal struct LibraryGalleryView: View {
     /// the user didn't pick. (Retires the old `ContentUnavailableView` arm,
     /// which was unreachable — `LibraryDestination` gates on
     /// `filteredGames.isEmpty` before the mode views are ever built.)
+    /// `PlayersGalleryView` adopted this rule on 4 Aug 2026, closing the
+    /// last gallery parity residue.
     private var preview: some View {
         LibraryGamePreviewView(game: selectedPGN, boardStyle: boardStyle)
     }
@@ -49,6 +89,12 @@ internal struct LibraryGalleryView: View {
                 }
                 .padding()
             }
+            // 260 fits the card at its ideal height — the now-rigid glyph
+            // block (~138 pt with its padding), a three-line name, the date,
+            // and the paddings (4 Aug 2026). 180 was the height that *caused*
+            // the icon-vs-gallery size difference: the strip sized the card,
+            // and the card's one flexible element was the symbol it exists
+            // to show.
             .frame(height: 180)
             .background(.thinMaterial)
             .onChange(of: selectedPGNs) { _, newSelection in
@@ -64,7 +110,7 @@ internal struct LibraryGalleryView: View {
         LibraryGameCardView(
             game: game,
             isSelected: selectedPGNs.contains(game.id),
-            onSelect:  { selectedPGNs = [game.id] },
+            onSelect:  { selectedPGNs = [game.id]; isFocused = true },
             onOpen:    { onOpen(game) },
             onAnalyze: { onAnalyze(game) },
             onExport:  { onExport(game) },

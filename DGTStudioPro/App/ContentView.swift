@@ -128,8 +128,9 @@ internal struct ContentView: View {
                         // AXButton for a borderless button in a List
                         // section header, and a header `.contextMenu`
                         // never surfaces either — both proven by 29 July
-                        // UITest runs. Every other input path (keyboard,
-                        // VoiceOver, the UITest suite) goes through
+                        // UITest runs (the suite is gone, D51′; the
+                        // finding stands). Every other input path
+                        // (keyboard, VoiceOver) goes through
                         // File ▸ New Smart Tag… (`SmartTagCommands`, fed
                         // by the `.focusedSceneValue` below). Witness for
                         // this button: the manual checklist.

@@ -42,7 +42,7 @@ internal struct LibraryColumnsView: View {
     /// `OpeningSection`'s em-dash carries, deliberately restated per surface
     /// (its own comment makes the same call beside `SevenTagRosterSection`'s).
     /// The roster rows never need it: `RosterSummary` speaks PGN's own `?`.
-    private static let noValue = "—"
+    private static let noValue = RosterSummary.displayUnknown
 
     // MARK: Computed Properties
 
@@ -97,13 +97,46 @@ internal struct LibraryColumnsView: View {
             }
             .frame(maxWidth: .infinity)
         } else {
-            List(selection: $selectedPGNs) {
-                ForEach(games) { game in
+            // A one-column `Table`, not a `List` (4 Aug 2026, Bera's call).
+            //
+            // **The header is a known, accepted cost.** Shipping SwiftUI on
+            // macOS has no modifier to suppress a `Table` header — the
+            // compact-size-class collapse that hides it is an iOS behaviour
+            // macOS never enters, and `tableStyle` governs insets and row
+            // backgrounds, not header visibility. So this browser carries a
+            // column header Finder's does not, deliberately, in exchange for
+            // sharing `LibraryListView`'s row and selection machinery instead
+            // of maintaining a second one. Recorded rather than discovered: if
+            // the header ever becomes intolerable the answer is to revert this
+            // to a `List`, not to hunt for a modifier that doesn't exist.
+            //
+            // **No `columnCustomization` binding, and that is load-bearing.**
+            // `LibraryListView` persists its layout under a `StorageKeys` key;
+            // binding the same one here would let hiding a column over there
+            // empty this view entirely. One column has nothing to customize,
+            // so the omission costs nothing and closes the hazard by
+            // construction.
+            Table(games, selection: $selectedPGNs) {
+                TableColumn("Name") { game in
                     row(for: game)
-                        .tag(game.id)
                 }
             }
-            .listStyle(.plain)
+            .tableStyle(.inset)
+            // Selection-typed, the `LibraryListView` shape — which is the
+            // other half of the reuse. The per-row `.contextMenu` this
+            // replaced could only ever act on one game; this one inherits
+            // ⌘/⇧-click multi-select and hands the whole set to
+            // `GameActionsMenu`, whose counted plurals were unreachable from
+            // this view mode until now.
+            .contextMenu(forSelectionType: PGN.ID.self) { ids in
+                GameActionsMenu(
+                    games: games.filter { ids.contains($0.id) },
+                    onOpen: onOpen,
+                    onAnalyze: { $0.forEach(onAnalyze) },
+                    onExport: { $0.forEach(onExport) },
+                    onDelete: { $0.forEach(onDelete) }
+                )
+            }
         }
     }
 
@@ -136,13 +169,9 @@ internal struct LibraryColumnsView: View {
                 .truncationMode(.middle)
         }
         .padding(.vertical, 1)
-        .contextMenu {
-            Button("Open") { onOpen(game) }
-            Button("Analyze") { onAnalyze(game) }
-            Button("Export…") { onExport(game) }
-            Divider()
-            Button("Delete", role: .destructive) { onDelete(game) }
-        }
+        // The menu moved to the `Table` as a selection-typed one — see
+        // `gameList`. A per-row `.contextMenu` inside a `Table` cell would
+        // shadow it and act on one game regardless of what is selected.
     }
 
     @ViewBuilder
@@ -189,6 +218,11 @@ internal struct LibraryColumnsView: View {
     /// Left in place rather than threaded out: `LibraryDestination` passes it
     /// to every mode view uniformly, and removing it from one of four is a
     /// signature change that buys nothing while making the call sites differ.
+    ///
+    /// The serialization runs per body pass while a game is selected — the
+    /// inspector's PGN-section cost without its collapse gate. Accepted and
+    /// carried on the known-costs census (4 Aug 2026): one game, not a walk,
+    /// and columns mode re-renders on selection, not on keystrokes.
     private func gameDetail(_ game: PGN) -> some View {
         VStack(spacing: 0) {
             ScrollView {

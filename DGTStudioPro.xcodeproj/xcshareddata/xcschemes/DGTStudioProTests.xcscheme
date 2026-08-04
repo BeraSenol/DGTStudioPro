@@ -14,7 +14,7 @@
       shouldUseLaunchSchemeArgsEnv = "YES">
       <TestPlans>
          <TestPlanReference
-            reference = "container:DGTStudioProUnitTests.xctestplan"
+            reference = "container:DGTStudioPro.xctestplan"
             default = "YES">
          </TestPlanReference>
       </TestPlans>

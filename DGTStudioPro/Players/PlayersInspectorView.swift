@@ -5,7 +5,6 @@
 //  Created by Supreme Leader on 12/04/2026.
 //
 
-import Charts
 import SwiftData
 import SwiftUI
 
@@ -29,14 +28,16 @@ internal struct PlayersInspectorView: View {
     /// the destination always passes it.
     internal var selectionCount: Int = 0
 
-    /// M5's two selection-scoped operations, as closures rather than store
-    /// reach.
+    /// M5's selection-scoped operation, as a closure rather than store
+    /// reach. (Rename is the one left — merge retired with D52′, and the
+    /// ellipsis menu that existed to hold it went too; the header is back
+    /// to pencil + chevron.)
     ///
     /// This view is pure-value by design — stats and rating arrive computed —
-    /// and both rename and merge need a resolved `Player`, a `modelContext` and
-    /// somewhere to put a sheet. Handing it closures keeps that property
+    /// and a rename needs a resolved `Player`, a `modelContext` and
+    /// somewhere to put a sheet. Handing it a closure keeps that property
     /// intact: the destination already owns the context and the key→row bridge
-    /// (`showInLibrary`'s route), so it owns these too, and the inspector
+    /// (`showInLibrary`'s route), so it owns this too, and the inspector
     /// stays previewable without a container.
     ///
     /// **Delete is deliberately not here (D40′).** M5 put a per-player "Delete
@@ -48,10 +49,9 @@ internal struct PlayersInspectorView: View {
     /// accepts, appear in no view mode at all. The operation lives on the
     /// destination's toolbar, where it can reach them.
     ///
-    /// Defaulted so the previews below and any future host can omit them;
-    /// the app always wires both.
+    /// Defaulted so the previews below and any future host can omit it;
+    /// the app always wires it.
     internal var onRename: () -> Void = {}
-    internal var onMerge: () -> Void = {}
 
     // MARK: Body
     internal var body: some View {
@@ -61,11 +61,10 @@ internal struct PlayersInspectorView: View {
                 ProfileSection(
                     ranked: ranked,
                     ratedGames: history.count,
-                    onRename: onRename,
-                    onMerge: onMerge
+                    onRename: onRename
                 )
                 .id(ranked.id)   // reset per-player, the Library-inspector idiom
-                TrendSection(history: history)
+                PlayerRatingGraph(history: history)
                 RecentGamesSection(playerKey: ranked.stats.key, games: recentGames)
             }
             .listStyle(.sidebar)
@@ -105,7 +104,6 @@ private struct ProfileSection: View {
     let ranked: RankedPlayer
     let ratedGames: Int
     let onRename: () -> Void
-    let onMerge: () -> Void
 
     /// `.playerProfile` — the surviving identity of the D48′ merge.
     /// `.rankingProfile` is retired from `InspectorSection` with the
@@ -114,8 +112,9 @@ private struct ProfileSection: View {
     /// have minted two names for one section. A stored collapse under the
     /// retired raw value evicts on the next write, per D45′'s designed cost.
     ///
-    /// Three controls in the header — chevron, pencil, menu. The chevron
-    /// leads, so the verbs stay rightmost.
+    /// Two controls in the header — chevron, then the pencil (back from
+    /// three: the ellipsis menu existed to hold Merge Into…, and went with
+    /// it, D52′). The chevron leads, so the verb stays rightmost.
     var body: some View {
         CollapsibleSection(.playerProfile, title: ranked.stats.name) {
             // Rank leads because it is what the destination sorts by
@@ -142,104 +141,49 @@ private struct ProfileSection: View {
             // of thing this is, and the header is the one place that can say
             // *which*.
             //
-            // Two controls, the Library inspector's PGN-header shape: the D26′
-            // pencil keeps its one fixed meaning (edit *this* thing's name),
-            // and everything that isn't a rename lives in a menu beside it.
-            // Widening the pencil to also merge would turn a named affordance
-            // into a generic icon button and lose the guarantee three
-            // inspectors' pencils currently give.
+            // The lone D26′ pencil, its one fixed meaning intact (edit *this*
+            // thing's name). The ellipsis menu that used to sit beside it
+            // existed for exactly one item — Merge Into… — after D40′ took
+            // Delete out of it; when D52′ removed merge, the menu had nothing
+            // left to hold and went too. If a second player-scoped verb ever
+            // arrives, the two-control precedent lives in the Library's
+            // PGN header, not here.
+            // The pencil is gone (M10). Rename moved to Get Info, which is the
+            // Players instance of one verb the Library and Board also have —
+            // not a pencil rehomed, which is what makes retiring it a
+            // generalization rather than a removal.
             //
-            // The menu holds one item since D40′ took Delete out of it, and
-            // stays a menu rather than becoming a second glyph button: a merge
-            // icon would have to be either a new parameter on the shared pencil
-            // or a locally open-coded button, and both are the drift D26′
-            // exists to prevent. A menu is also where the next player-scoped
-            // verb goes without another decision.
-            HStack(spacing: 12) {
-                InspectorEditButtonView(
-                    label: "Rename Player",
-                    identifier: AccessibilityID.playersRenameButton,
-                    action: onRename
-                )
-                actionsMenu
-            }
+            // `onRename` deliberately survives with no caller for the length
+            // of one pass: it is the seam Get Info's player form plugs into,
+            // and `PGNStore.retag` behind it is what D52′ named as the reason
+            // merge was safe to delete. A store door with no surface is the
+            // D40′ lie one layer down, so this comment is a deadline, not a
+            // description.
         }
-        // Stays on the section, not the header, so it keeps naming what the
-        // UITest expects it to name. Collapsing hides the rows and not this —
-        // the seeded run has an empty collapsed set, so the flow tests see the
+        // Stays on the section, not the header, so it named what the flow
+        // tests looked for. Collapsing hides the rows and not this — the
+        // seeded run had an empty collapsed set, so those tests saw the
         // section open regardless.
         //
-        // UNVERIFIED as of 1 August, and flagged rather than left reading as
-        // settled: `test_players_profileHeaderControls_areHittable`,
-        // `…renameRewritesTheListedName` and `…mergeFoldsTheLoserAway` all fail
-        // here, with the pencil and the menu not resolving by identifier while
-        // this identifier resolves fine. `.accessibilityElement(children:
-        // .contain)` ahead of this line was tried and changed nothing, so the
-        // shadowing explanation is disproved rather than merely unconfirmed.
-        // Cause still unknown; see AUDIT-2026-08-01.md § Zero for what has been
-        // ruled out and the instrument that would settle it.
+        // Closed UNRESOLVED (D51′). Three flow tests failed here with the
+        // pencil and the menu not resolving by identifier while this
+        // identifier resolved fine; `.accessibilityElement(children:
+        // .contain)` ahead of this line changed nothing, so the shadowing
+        // explanation is disproved rather than merely unconfirmed. The
+        // suite — and § Zero's hierarchy instrument with it — was deleted
+        // 3 Aug 2026 before the cause was found (AUDIT-2026-08-01.md § Zero
+        // records what was ruled out). If a UI suite ever returns, expect
+        // these three to fail again for the same unknown reason.
         .accessibilityIdentifier(AccessibilityID.playersInspectorProfile)
     }
-
-    private var actionsMenu: some View {
-        Menu {
-            Button("Merge Into…", action: onMerge)
-                .accessibilityIdentifier(AccessibilityID.playersMergeMenuItem)
-        } label: {
-            Image(systemName: "ellipsis.circle")
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        // `InspectorEditButtonView`'s reason: a glyph at header font size is
-        // an ~11 pt mouse target.
-        .font(.body)
-        .help("Merge this player into another")
-        .accessibilityIdentifier(AccessibilityID.playersActionsMenu)
-    }
 }
 
-// MARK: Trend
-
-/// Moved whole from the retired `RankingsInspectorView` (D48′) — same
-/// `.ratingTrend` identity, because the section shows the same thing from a
-/// new host, and D45′ says identity follows content, not address.
-private struct TrendSection: View {
-
-    let history: [Glicko1.Sample]
-
-    var body: some View {
-        CollapsibleSection(.ratingTrend, title: "Rating Trend") {
-            if history.isEmpty {
-                Text("No rated games yet — the rating starts once this player finishes a game against another named player.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else {
-                // Indexed identity: two rated games can share an effective
-                // date (undated same-day imports), so `\.date` can't be
-                // the id.
-                Chart(Array(history.enumerated()), id: \.offset) { _, sample in
-                    LineMark(
-                        x: .value("Date", sample.date),
-                        y: .value("Rating", sample.rating.mean)
-                    )
-                    PointMark(
-                        x: .value("Date", sample.date),
-                        y: .value("Rating", sample.rating.mean)
-                    )
-                }
-                .frame(height: 160)
-                .padding(.vertical, 4)
-
-                if history.last?.rating.isProvisional == true {
-                    Text("Provisional — the rating settles as more games are played.")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
-            }
-        }
-    }
-}
+// `TrendSection` lived here until 4 Aug 2026 — replaced whole by
+// `PlayerRatingGraph` (its own file), which redraws the same `.ratingTrend`
+// section over games played instead of time. The date axis spent its width
+// on pauses; the ordinal axis spends it on games, which is the rating's own
+// clock under c = 0 (D11′). The D48′ provenance travels with the new file's
+// doc.
 
 // MARK: Recent Games
 

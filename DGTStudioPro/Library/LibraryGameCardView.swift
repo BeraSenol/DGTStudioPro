@@ -44,21 +44,23 @@ internal struct LibraryGameCardView: View {
         // and select-then-open is Finder's order anyway.
         .onTapGesture(count: 2, perform: onOpen)
         .simultaneousGesture(TapGesture().onEnded { onSelect() })
+        // The card's closures are argument-free — it draws one game and its
+        // hosts already close over it — so the adaptation drops the payload
+        // rather than building one.
+        //
+        // Item *order* now comes from `GameActionsMenu` and no longer from
+        // here. This host had been reordered by hand (Get Info raised, Open
+        // lowered) while the other two kept Open first, which is the same
+        // divergence in a new place: changing the order in one menu changed
+        // one view mode. It is one line in the shared type now.
         .contextMenu {
-            Button(action: onOpen) {
-                Label("Open in Board", systemImage: "checkerboard.rectangle")
-            }
-            Button(action: onAnalyze) {
-                AnalysisLabel(analyzed: AnalysisGlyph.isAnalyzed(game))
-            }
-            Button(action: onExport) {
-                Label("Export PGN", systemImage: "square.and.arrow.up")
-            }
-            .accessibilityIdentifier(AccessibilityID.libraryExport)
-            Divider()
-            Button(role: .destructive, action: onDelete) {
-                Label("Delete", systemImage: "trash")
-            }
+            GameActionsMenu(
+                games: [game],
+                onOpen: { _ in onOpen() },
+                onAnalyze: { _ in onAnalyze() },
+                onExport: { _ in onExport() },
+                onDelete: { _ in onDelete() }
+            )
         }
         // Collapse the card into a single addressable element for UI
         // tests. Without `.combine`, macOS exposes only the inner static
@@ -74,14 +76,24 @@ internal struct LibraryGameCardView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .foregroundStyle(.white)
-                .frame(width: 80)
+                .frame(width: 60)
+            // Rigid, not merely width-pinned (4 Aug 2026): a resizable
+            // image under `fit` was the one compressible element in this
+            // card, so a short host — the gallery filmstrip — squeezed
+            // the glyph to roughly half height while the icons grid
+            // showed it full size. Ideal height now follows the 80 pt
+            // width whatever the proposal, which is what
+            // `PlayerMonogram`'s rigid frame always did for the Players
+            // card. Hosts size themselves to the card, never the
+            // reverse — see the gallery strip's height.
+                .fixedSize(horizontal: false, vertical: true)
                 .fontWeight(.ultraLight)
                 .padding(.leading, 6)
             
             Text(displayResult(game.result))
-                .font(.system(size: 18, weight: .semibold, design: .monospaced))
+                .font(.system(size: 14, weight: .semibold, design: .monospaced))
                 .foregroundStyle(.white)
-                .tracking(game.result == .draw ? 4 : 2)
+                .tracking(game.result == .draw ? 2 : 1)
                 .offset(x: 2, y: 4)
         }
         .padding()
