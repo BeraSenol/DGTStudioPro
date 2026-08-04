@@ -248,19 +248,27 @@ extension InspectorSectionHeader where Actions == EmptyView {
 }
 
 /// Every arity of the actions slot the app actually passes, stacked so their
-/// trailing edges are readable against each other — one control, two glyphs,
-/// a control plus a menu, and none.
+/// trailing edges are readable against each other — one control, two, and
+/// none, with and without a chevron.
 ///
 /// This is the preview the type should have had. `actionsInset` is a claim
-/// about *every* header's outermost control, and until now the only witness
-/// was four headers all passing a lone pencil — the one arity where the old
-/// arrangement happened to be right. The multi-control rows are the ones that
-/// were wrong for a month: the Players shape put its menu flush against the
-/// edge, and the Library shape sat two points inside everything else.
+/// about *every* header's outermost control, and until M8 the only witness was
+/// four headers all passing a lone pencil — the one arity where the old
+/// arrangement happened to be right. The multi-control row is the one that was
+/// wrong for a month: the Players shape put its menu flush against the edge,
+/// and the Library shape sat two points inside everything else.
 ///
-/// What to look at is a vertical line, not a row: if any one of the four
-/// trailing controls is out of column with the others, the inset has escaped
-/// its single statement again.
+/// What to look at is a vertical line, not a row: if any one of the trailing
+/// controls is out of column with the others, the inset has escaped its single
+/// statement again.
+///
+/// **Kept honest 4 Aug.** This preview carried a "Pencil and Menu" row long
+/// after the app stopped having one — D52′ removed the Players ellipsis menu
+/// and M10 removed the pencil beside it, leaving a witness for an arity
+/// nothing passes. The header this row shows now is the Library's PGN header,
+/// which is the app's only remaining two-verb slot. A preview that shows an
+/// arrangement the app has retired is worse than no preview: it reads as
+/// evidence that the arrangement is still checked.
 #Preview("Actions — Every Arity") {
     List {
         Section {
@@ -276,42 +284,22 @@ extension InspectorSectionHeader where Actions == EmptyView {
             }
         }
         Section {
-            Text("Chevron plus a glyph — the Library's PGN header, D45′ shape.")
+            Text("Chevron, pencil, glyph — the Library's PGN header (D54′).")
                 .foregroundStyle(.secondary)
         } header: {
-            InspectorSectionHeader("Glyph Pair", section: .pgn) {
+            // The app's one multi-control header, and the only place two verbs
+            // share a slot since D52′ took the Players menu and M10 took its
+            // pencil. The pencil leads the glyph because Edit Moves is the
+            // section's verb and Copy is a convenience on what it shows.
+            InspectorSectionHeader("Pencil and Glyph", section: .pgn) {
+                InspectorEditButtonView(
+                    label: "Edit Moves",
+                    identifier: AccessibilityID.libraryEditMovesButton,
+                    action: {}
+                )
                 Button { } label: { Image(systemName: "doc.on.doc") }
                     .buttonStyle(.borderless)
                     .font(.body)
-            }
-        }
-        Section {
-            Text("Pencil plus menu — the Players profile header (M5).")
-                .foregroundStyle(.secondary)
-        } header: {
-            InspectorSectionHeader("Pencil and Menu") {
-                HStack(spacing: 12) {
-                    InspectorEditButtonView(
-                        label: "Rename Player",
-                        identifier: AccessibilityID.playersRenameButton,
-                        action: {}
-                    )
-                    Menu {
-                        Button("Merge Into…") { }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                    }
-                    // `.menuIndicator(.hidden)` and `.fixedSize()` copied from
-                    // `PlayersInspectorView.actionsMenu` deliberately: without
-                    // them the menu reserves width for a disclosure arrow, and
-                    // this preview would show the trailing control in a column
-                    // the app never puts it in — a preview that agrees with
-                    // itself and not with the screen.
-                    .menuStyle(.borderlessButton)
-                    .menuIndicator(.hidden)
-                    .fixedSize()
-                    .font(.body)
-                }
             }
         }
         Section {

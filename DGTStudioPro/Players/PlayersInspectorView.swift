@@ -28,30 +28,30 @@ internal struct PlayersInspectorView: View {
     /// the destination always passes it.
     internal var selectionCount: Int = 0
 
-    /// M5's selection-scoped operation, as a closure rather than store
-    /// reach. (Rename is the one left — merge retired with D52′, and the
-    /// ellipsis menu that existed to hold it went too; the header is back
-    /// to pencil + chevron.)
-    ///
-    /// This view is pure-value by design — stats and rating arrive computed —
-    /// and a rename needs a resolved `Player`, a `modelContext` and
-    /// somewhere to put a sheet. Handing it a closure keeps that property
-    /// intact: the destination already owns the context and the key→row bridge
-    /// (`showInLibrary`'s route), so it owns this too, and the inspector
-    /// stays previewable without a container.
-    ///
-    /// **Delete is deliberately not here (D40′).** M5 put a per-player "Delete
-    /// Player" in the menu below, guarded by `recentGames.isEmpty`, and that
-    /// guard could never be true: this view is only ever handed a row the
-    /// stats index emitted, the index folds `GameRecord`s, and a record's
-    /// sides are built from the resolved links — so every selectable player
-    /// has at least one game. Orphans, the only rows the store's delete
-    /// accepts, appear in no view mode at all. The operation lives on the
-    /// destination's toolbar, where it can reach them.
-    ///
-    /// Defaulted so the previews below and any future host can omit it;
-    /// the app always wires it.
-    internal var onRename: () -> Void = {}
+    // `onRename` lived here from M5 until M10 and is gone with the seam it
+    // named. The header's three controls went one at a time and the sequence
+    // is worth one comment rather than three: D40′ took Delete to the toolbar,
+    // D52′ took Merge and the ellipsis menu holding it, and M10 took the
+    // pencil to Get Info. What is left is a chevron.
+    //
+    // The property outlived every one of them. It survived D52′ documented as
+    // "the one left", and M10 kept it deliberately as the seam Get Info would
+    // plug into — a comment that called itself "a deadline, not a
+    // description". The 4 Aug review found it wired to nothing from either
+    // end. The lesson is not that keeping a seam is wrong; it is that a seam
+    // with no caller and no *test* is indistinguishable from dead code, and
+    // the only thing separating them was a sentence.
+    //
+    // **Delete is deliberately not here (D40′)** and this paragraph stays,
+    // because the argument outlives the property it was attached to. M5 put a
+    // per-player "Delete Player" in the menu below, guarded by
+    // `recentGames.isEmpty`, and that guard could never be true: this view is
+    // only ever handed a row the stats index emitted, the index folds
+    // `GameRecord`s, and a record's sides are built from the resolved links —
+    // so every selectable player has at least one game. Orphans, the only
+    // rows the store's delete accepts, appear in no view mode at all. Any
+    // future player-scoped operation belongs on the destination's toolbar or
+    // in Get Info, never gated on the *selected* player lacking games.
 
     // MARK: Body
     internal var body: some View {
@@ -60,8 +60,7 @@ internal struct PlayersInspectorView: View {
             List {
                 ProfileSection(
                     ranked: ranked,
-                    ratedGames: history.count,
-                    onRename: onRename
+                    ratedGames: history.count
                 )
                 .id(ranked.id)   // reset per-player, the Library-inspector idiom
                 PlayerRatingGraph(history: history)
@@ -103,7 +102,6 @@ private struct ProfileSection: View {
 
     let ranked: RankedPlayer
     let ratedGames: Int
-    let onRename: () -> Void
 
     /// `.playerProfile` — the surviving identity of the D48′ merge.
     /// `.rankingProfile` is retired from `InspectorSection` with the
@@ -112,9 +110,12 @@ private struct ProfileSection: View {
     /// have minted two names for one section. A stored collapse under the
     /// retired raw value evicts on the next write, per D45′'s designed cost.
     ///
-    /// Two controls in the header — chevron, then the pencil (back from
-    /// three: the ellipsis menu existed to hold Merge Into…, and went with
-    /// it, D52′). The chevron leads, so the verb stays rightmost.
+    /// One control in the header now: the chevron. It was three (chevron,
+    /// pencil, ellipsis menu) at M5, two after D52′ retired merge, and one
+    /// after M10 moved rename to Get Info. The "chevron leads so the verb
+    /// stays rightmost" rule is not gone — it is `InspectorSectionHeader`'s,
+    /// and it governs the Library's PGN header, which is where the app's two
+    /// remaining header verbs sit.
     var body: some View {
         CollapsibleSection(.playerProfile, title: ranked.stats.name) {
             // Rank leads because it is what the destination sorts by
@@ -148,17 +149,17 @@ private struct ProfileSection: View {
             // left to hold and went too. If a second player-scoped verb ever
             // arrives, the two-control precedent lives in the Library's
             // PGN header, not here.
-            // The pencil is gone (M10). Rename moved to Get Info, which is the
-            // Players instance of one verb the Library and Board also have —
-            // not a pencil rehomed, which is what makes retiring it a
-            // generalization rather than a removal.
+            // The pencil is gone (M10). Rename is Get Info's — the Players
+            // instance of one verb the Library and Board also have, not a
+            // pencil rehomed, which is what makes retiring it a generalization
+            // rather than a removal.
             //
-            // `onRename` deliberately survives with no caller for the length
-            // of one pass: it is the seam Get Info's player form plugs into,
-            // and `PGNStore.retag` behind it is what D52′ named as the reason
-            // merge was safe to delete. A store door with no surface is the
-            // D40′ lie one layer down, so this comment is a deadline, not a
-            // description.
+            // The `onRename` seam that survived here "for the length of one
+            // pass" is gone too, and the deadline its comment set was met the
+            // way deadlines should be: by the door existing. `GetInfoWindow`'s
+            // player form carries the field, the `PGNStore.retag` call and
+            // D39′'s refusal alert. Nothing routes through this header any
+            // more, so this slot is empty rather than merely quiet.
         }
         // Stays on the section, not the header, so it named what the flow
         // tests looked for. Collapsing hides the rows and not this — the

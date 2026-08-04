@@ -96,60 +96,29 @@ internal struct LibraryListView: View {
             // `ids` is the set the menu acts on: the full selection when a
             // selected row is right-clicked, otherwise just that row. Open
             // stays single-game (one window per game); Analyze and Delete
-            // operate on the whole set — Analyze enqueues in display
-            // order via `LibraryDestination.requestAnalysis(ids:)`, and a
-            // single id there routes through the single-game path (which
-            // also surfaces the inspector).
-            if ids.count == 1, let id = ids.first, let game = games.first(where: { $0.id == id }) {
-                Button {
-                    onOpen(game)
-                } label: {
-                    Label("Open in Board", systemImage: "checkerboard.rectangle")
-                }
-                // Single-selection only, beside Open and for its reason: Get
-                // Info edits one subject's fields, and a multi-selection has
-                // no single roster to show. A batch editor is a different
-                // feature — the toolbar verbs are the ones that take a set.
-                GetInfoMenuItem(
-                    request: .game(game.persistentModelID),
-                    identifier: AccessibilityID.getInfoMenuItem(Destination.library.rawValue)
-                )
-            }
-            if !ids.isEmpty {
-                // The toolbar's aggregate rule: checkmark only when the
-                // whole set is analyzed.
-                let selection = games.filter { ids.contains($0.id) }
-                let analyzed = !selection.isEmpty && selection.allSatisfy(AnalysisGlyph.isAnalyzed)
-                Button {
-                    onAnalyzeIDs(ids)
-                } label: {
-                    // The counted plural keeps its verb: "Analyzed 3 Games"
-                    // would read as a claim about what happened rather than a
-                    // menu item you can click.
-                    AnalysisLabel(
-                        analyzed: analyzed,
-                        title: ids.count > 1 ? "Analyze \(ids.count) Games" : nil
-                    )
-                }
-                Button {
-                    onExportIDs(ids)
-                } label: {
-                    Label(
-                        ids.count > 1 ? "Export \(ids.count) PGNs" : "Export PGN",
-                        systemImage: "square.and.arrow.up"
-                    )
-                }
-                .accessibilityIdentifier(AccessibilityID.libraryExport)
-                Divider()
-                Button(role: .destructive) {
-                    onDeleteIDs(ids)
-                } label: {
-                    Label(
-                        ids.count > 1 ? "Delete \(ids.count) Games" : "Delete",
-                        systemImage: "trash"
-                    )
-                }
-            }
+            // operate on the whole set — Analyze enqueues in display order via
+            // `LibraryDestination.requestAnalysis(ids:)`, and a single id
+            // there routes through the single-game path (which also surfaces
+            // the inspector).
+            //
+            // **Resolved to models here rather than passed as ids**, which is
+            // the adaptation `GameActionsMenu` documents each host owing it.
+            // The filter is not just a lookup: it is what puts the games in
+            // *display* order, which a `Set<PGN.ID>` cannot carry and which is
+            // the order the enqueue above depends on. The closures convert
+            // back at the boundary because this view's owners speak in ids.
+            //
+            // This host was the menu's model — its counted plurals and its
+            // single-selection guard are the shape the shared type was built
+            // around — so it is the last of the three to adopt and the one
+            // whose behaviour should be unchanged by having done so.
+            GameActionsMenu(
+                games: games.filter { ids.contains($0.id) },
+                onOpen: onOpen,
+                onAnalyze: { onAnalyzeIDs(Set($0.map(\.id))) },
+                onExport: { onExportIDs(Set($0.map(\.id))) },
+                onDelete: { onDeleteIDs(Set($0.map(\.id))) }
+            )
         } primaryAction: { ids in
             // Fires on row double-click *and* on Return when a row is
             // focused — both routes converge here so we don't need a

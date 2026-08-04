@@ -54,8 +54,11 @@ internal struct PlayersColumnsView: View {
         HSplitView {
             // Matched to the Library's, per collection-destination parity —
             // see its twin for why the floor came down with the row.
+            // See `LibraryColumnsView`'s twin for why the priority is the
+            // floor's enforcement rather than decoration.
             playerList
                 .frame(minWidth: 160, idealWidth: 200, maxWidth: 300, maxHeight: .infinity)
+                .layoutPriority(1)
 
             detail
                 .frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
@@ -82,13 +85,36 @@ internal struct PlayersColumnsView: View {
             }
             .frame(maxWidth: .infinity)
         } else {
-            List(selection: $selectedKeys) {
-                ForEach(players) { player in
+            // A one-column `Table`, the Library's twin — see
+            // `LibraryColumnsView.gameList` for the full reasoning, including
+            // the accepted header cost (shipping SwiftUI on macOS cannot
+            // suppress one) and why no `columnCustomization` binding appears
+            // here (`PlayersListView` persists its layout under
+            // `StorageKeys.playersColumns`; sharing that key would let hiding
+            // a column there empty this view).
+            Table(players, selection: $selectedKeys) {
+                TableColumn("Player") { player in
                     row(for: player)
-                        .tag(player.id)
+                }
+                // 160 floor, all three — the Library twin's reasoning applies
+                // verbatim: the enclosing frame's floor governs the pane, this
+                // governs the column, and `Table` would otherwise let the
+                // column be dragged narrower than the pane it sits in. The
+                // min-only spelling was tried there and did not hold the floor
+                // (4 Aug, observed), which is why `ideal` and `max` are not
+                // decoration here either.
+                .width(min: 160, ideal: 200, max: .infinity)
+            }
+            .tableStyle(.inset)
+            // Selection-typed, `PlayersListView`'s shape. The menu itself
+            // stays single-subject (`PlayerActionsMenu`): both its verbs
+            // describe one player, so this reads the first key rather than
+            // pretending a multi-selection means something here.
+            .contextMenu(forSelectionType: PlayerStats.ID.self) { keys in
+                if let key = keys.first {
+                    PlayerActionsMenu(key: key, onShowInLibrary: onShowInLibrary)
                 }
             }
-            .listStyle(.plain)
         }
     }
 
@@ -119,18 +145,9 @@ internal struct PlayersColumnsView: View {
                 .truncationMode(.middle)
         }
         .padding(.vertical, 1)
-        .contextMenu {
-            Button {
-                onShowInLibrary(player.id)
-            } label: {
-                Label("Show in Library", systemImage: "books.vertical")
-            }
-            .accessibilityIdentifier(AccessibilityID.contextShowInLibrary)
-            GetInfoMenuItem(
-                request: .player(key: player.id),
-                identifier: AccessibilityID.getInfoMenuItem(Destination.players.rawValue)
-            )
-        }
+        // The menu moved to the `Table` as a selection-typed one — see the
+        // list above. A per-row `.contextMenu` inside a `Table` cell would
+        // shadow it.
     }
 
     @ViewBuilder

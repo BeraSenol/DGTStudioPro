@@ -69,8 +69,19 @@ internal struct LibraryColumnsView: View {
             // change alone should clear the overflow; this makes the mode
             // survivable at window widths where it previously could not fit
             // at all.
+            // `.layoutPriority(1)` is the floor's enforcement, not decoration.
+            // `HSplitView` honours a child's `minWidth` only while the other
+            // child isn't demanding more than what's left — and selecting a
+            // game swaps a `ContentUnavailableView` for the facts block, whose
+            // intrinsic width demand is larger. Without a priority the split
+            // resolved that conflict by squeezing this pane past 160 (4 Aug,
+            // observed). Priority makes the list's width non-negotiable and
+            // pushes the compression onto the detail, which can take it: its
+            // content wraps, where a truncated name does not degrade, it just
+            // stops being readable.
             gameList
                 .frame(minWidth: 160, idealWidth: 200, maxWidth: 300, maxHeight: .infinity)
+                .layoutPriority(1)
 
             detail
                 .frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
@@ -120,6 +131,20 @@ internal struct LibraryColumnsView: View {
                 TableColumn("Name") { game in
                     row(for: game)
                 }
+                // The 160 is the same number the enclosing frame carries, and
+                // it has to be stated twice for two different reasons — this
+                // is not the twin-read-site pattern D25′ warns about. The
+                // frame's floor governs the *pane* inside the `HSplitView`;
+                // this governs the *column* inside the table, which `Table`
+                // will otherwise let the user drag narrower than the pane,
+                // truncating names in a browser whose only job is names.
+                //
+                // All three, not `min:` alone — the min-only spelling did not
+                // hold the floor in practice (4 Aug, observed). `.infinity`
+                // for max is what keeps the column filling the pane rather
+                // than leaving dead space on the right at wide splits; the
+                // pane's own 300 max is what actually caps it.
+                .width(min: 160, ideal: 200, max: .infinity)
             }
             .tableStyle(.inset)
             // Selection-typed, the `LibraryListView` shape — which is the

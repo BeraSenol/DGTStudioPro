@@ -222,23 +222,20 @@ internal struct PlayerCardView: View {
         // a tappable element.
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier(AccessibilityID.playerCard(stats.name))
+        // The conditional Show in Library — and the reason Get Info sits
+        // outside it — moved into `PlayerActionsMenu`, which is where all
+        // three Players hosts now get their menu. This card is the host that
+        // *had* the conditional, so it is the one whose shape the shared type
+        // had to grow an optional to keep.
+        //
+        // The closure is adapted rather than re-typed: a card is handed a
+        // no-argument action because it draws exactly one player and the host
+        // already closed over which. Widening it to take a key would make
+        // every caller pass back the id the card was built from.
         .contextMenu {
-            if let onShowInLibrary {
-                Button {
-                    onShowInLibrary()
-                } label: {
-                    Label("Show in Library", systemImage: "books.vertical")
-                }
-                .accessibilityIdentifier(AccessibilityID.contextShowInLibrary)
-            }
-            // Outside the `onShowInLibrary` guard deliberately: that closure
-            // is optional because some hosts don't offer navigation, but a
-            // card always knows which player it draws, so Get Info is always
-            // reachable. A menu whose only item is conditional is a menu that
-            // is sometimes empty.
-            GetInfoMenuItem(
-                request: .player(key: stats.id),
-                identifier: AccessibilityID.getInfoMenuItem(Destination.players.rawValue)
+            PlayerActionsMenu(
+                key: stats.id,
+                onShowInLibrary: onShowInLibrary.map { show in { _ in show() } }
             )
         }
     }

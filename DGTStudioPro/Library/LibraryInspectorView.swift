@@ -31,16 +31,29 @@ internal struct LibraryInspectorView: View {
     /// request because the driver lived in this view's `@State`; with
     /// the controller reachable directly, they simply enqueue.
     internal let queue: AnalysisQueueController
-    
+
+    /// The movetext-edit request. Presentation and the write belong to
+    /// `LibraryDestination` (D15′ — modals are destination furniture); this
+    /// view only asks, which is what keeps it renderable in a canvas.
+    ///
+    /// Optional and defaulted, `BoardInspectorView.onEditInfo`'s precedent, so
+    /// the previews render without a destination and the pencil simply doesn't
+    /// draw. That is also the honest shape for a *host* capability: an
+    /// affordance that cannot act does not exist rather than sitting greyed
+    /// out — D40′'s rule, applied when minting rather than at the next sweep.
+    internal let onEditMoves: (() -> Void)?
+
     // MARK: Initializers
     internal init(
         pgn: PGN? = nil,
         selectionCount: Int = 0,
-        queue: AnalysisQueueController
+        queue: AnalysisQueueController,
+        onEditMoves: (() -> Void)? = nil
     ) {
         self.pgn = pgn
         self.selectionCount = selectionCount
         self.queue = queue
+        self.onEditMoves = onEditMoves
     }
     
     // MARK: Body
@@ -55,7 +68,7 @@ internal struct LibraryInspectorView: View {
                 // state (the name-edit draft). It no longer tears down an
                 // analysis — the queue lives on the tab and keeps
                 // crunching while the user browses (decision 1).
-                LoadedSection(pgn: pgn, queue: queue)
+                LoadedSection(pgn: pgn, queue: queue, onEditMoves: onEditMoves)
                     .id(pgn.id)
             }
             .listStyle(.sidebar)
@@ -94,6 +107,7 @@ private struct LoadedSection: View {
     // MARK: Stored Properties
     @Bindable var pgn: PGN
     let queue: AnalysisQueueController
+    let onEditMoves: (() -> Void)?
     
     // MARK: Private Properties
     @Environment(\.modelContext) private var modelContext
@@ -304,6 +318,30 @@ private struct LoadedSection: View {
         CollapsibleSection(.pgn, title: "PGN") {
             rawPGNText
         } actions: {
+            // **The app's one movetext door, and this is where it landed.**
+            // M10 made movetext read-only on the Board in both branches; the
+            // Library is where a game's bytes are managed, and this is the
+            // section that renders them, so the pencil sits adjacent to its
+            // subject exactly as `InspectorEditButtonView`'s own argument
+            // requires. A pencil on the roster header would have been the
+            // wrong neighbour — that section is identity and tags.
+            //
+            // Labelled "Edit Moves" rather than "Edit PGN": the editor is
+            // D18′'s movetext validator and touches no tag. The label is the
+            // only thing separating the two readings of a pencil in a header
+            // called PGN, which is why it names the narrower one.
+            //
+            // Chevron first, then this, then Copy — `InspectorSectionHeader`
+            // owns that ordering and the trailing inset, so a two-control
+            // slot here needs no geometry of its own (D45′, and the
+            // three-control Players header is the precedent).
+            if let onEditMoves {
+                InspectorEditButtonView(
+                    label: "Edit Moves",
+                    identifier: AccessibilityID.libraryEditMovesButton,
+                    action: onEditMoves
+                )
+            }
             copyPGNButton
         }
     }

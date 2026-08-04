@@ -18,17 +18,21 @@ internal struct BoardInspectorView: View {
     internal let style: BoardStyle
     internal let onMoveTapped: ((Int) -> Void)?
     
-    /// The two edit requests. Presentation belongs to `BoardDestination`
-    /// (D15′ — modals are destination furniture) and so does the write; this
-    /// view only asks, which is what keeps it renderable in a canvas.
+    /// The edit request. Presentation belongs to `BoardDestination` (D15′ —
+    /// modals are destination furniture) and so does the write; this view only
+    /// asks, which is what keeps it renderable in a canvas.
     ///
     /// Optional and defaulted — the `LiveGameHUDView.onRetryArchive`
-    /// precedent — so a host with nothing to offer omits them and the buttons
-    /// simply don't render. That replaces the retired toolbar item's
+    /// precedent — so a host with nothing to offer omits it and the button
+    /// simply doesn't render. That replaces the retired toolbar item's
     /// `.disabled(boardPGN == nil)`: an affordance that can't act now doesn't
     /// exist rather than sitting there greyed out.
+    ///
+    /// `onEditMoves` was the second of these until M10 made movetext
+    /// read-only here and the 4 Aug review found it wired to nothing. It is
+    /// not coming back as a seam: the Library owns that editor now, so a
+    /// closure here would be a request no destination is prepared to answer.
     internal var onEditInfo: (() -> Void)? = nil
-    internal var onEditMoves: (() -> Void)? = nil
     
     internal var body: some View {
         List {
@@ -118,26 +122,24 @@ internal struct BoardInspectorView: View {
             .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
             .listRowSeparator(.hidden)
         } actions: {
-            // The Edit Moves pencil is gone (M10, by request): movetext is
-            // read-only in both branches, live and review.
+            // No pencil here, deliberately and permanently: movetext is
+            // read-only on this destination in **both** branches, live and
+            // review, and the editor lives in the Library.
             //
             // **Live was always the stranger of the two.** Decision #1 says
             // the physical board is truth and the live game is append-only —
             // no takebacks, ever — and an editor that could rewrite the
             // movetext mid-game was the one surface that could contradict the
             // board it mirrors. In review the argument is weaker but points
-            // the same way: an imported game's file is the truth, and the app
-            // is not where you correct it.
+            // the same way: a game on the board is a game being *read*, and
+            // the Library is where its bytes are managed.
             //
-            // What this leaves surface-less, stated rather than discovered:
-            // `MovetextEdit`, `PGNStore.applyMovetextEdit`, and the whole of
-            // D18′'s replay validator — accept-whole-or-reject-whole, the
-            // per-ply error, the splice refusal, the re-classification on
-            // accept. All still built, all still suited, now reachable from
-            // nothing. That is the D40′ shape and it needs a decision rather
-            // than this comment: either a door returns for it or D18′ is
-            // narrowed to metadata and the machinery goes the way D52′ took
-            // merge. `onEditMoves` survives as the seam either answer uses.
+            // The seam went with the pencil. M10 removed the control and left
+            // `onEditMoves` behind "for the length of one pass" as the seam
+            // either answer would use, which the 4 Aug review correctly called
+            // a D40′ lie one layer down — a wired closure nothing could call.
+            // D18′'s validator is not surface-less any more; it is the
+            // Library's, and `library.editMoves` is where it is reached.
         }
     }
 }
@@ -169,8 +171,7 @@ internal struct BoardInspectorView: View {
         currentMoveIndex: 14,
         style: .walnut,
         onMoveTapped: { _ in },
-        onEditInfo: {},
-        onEditMoves: {}
+        onEditInfo: {}
     )
     .frame(width: 300, height: 600)
     .environment(InspectorSectionCollapse.preview)

@@ -35,8 +35,14 @@ extension FocusedValues {
 /// surfaces — both proven by 29 July UITest runs (`.any` finds only an
 /// inert StaticText mirror; `.buttons` finds nothing; the header
 /// right-click produced no menu). A menu-bar command is reachable by
-/// everything — pointer, keyboard, VoiceOver, and the UITest suite, which
-/// already drives the Game and Diagnostics menus by title.
+/// everything — pointer, keyboard, VoiceOver, and, while it existed, the
+/// UITest suite, which drove the Game and Diagnostics menus by title.
+///
+/// (Past tense since D51′ deleted that target. The 3 Aug sweep re-tensed
+/// roughly a dozen of these and missed this one, which the 4 Aug review
+/// found — a good ratio and still a survivor. The reachability argument
+/// above does not depend on the suite: it is about AX, and AX is what the
+/// suite was measuring.)
 ///
 /// Ellipsis per HIG: the item opens the editor sheet rather than acting
 /// immediately (`Export Session Log…` is the in-app precedent). Filed

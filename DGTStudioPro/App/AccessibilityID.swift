@@ -132,32 +132,43 @@ internal enum AccessibilityID {
     }
     
     // MARK: Movetext Editor (M-lib.3, D18′)
-    
-    /// The review inspector's two edit affordances and the sheets they
-    /// request. `board.editMoves` kept its name through the move off the
-    /// toolbar into the Moves section header — same action, same destination,
-    /// only the surface changed, so unlike D15′'s `board.loaderror` →
-    /// `sidebar.loaderror` there was nothing to rename. `board.editInfo` is
+
+    /// The edit affordances and the sheets they request. `board.editInfo` is
     /// the entry `SevenTagRosterSection`'s doc predicted: the review side's
     /// own identifier rather than borrowing the live inspector's
     /// `live.inspector.editdetails`, since two buttons in two inspectors are
     /// not one button.
     ///
-    /// Unlike the live families, both are reachable in a boardless UI run — a
-    /// loaded PGN needs no hardware — so a future XCUITest can harden them;
-    /// for now the validator and store suites are the contract.
-    internal static let boardEditMovesButton = "board.editMoves"
-    internal static let boardEditInfoButton  = "board.editInfo"
-    internal static let movetextEditorSheet  = "movetext.editor"
-    internal static let movetextEditorField  = "movetext.editor.field"
-    internal static let movetextEditorStatus = "movetext.editor.status"
-    internal static let movetextEditorSave   = "movetext.editor.save"
-    internal static let movetextEditorCancel = "movetext.editor.cancel"
+    /// **`board.editMoves` is removed**, with the affordance it named. M10
+    /// made movetext read-only on the Board — live *and* review — and the
+    /// editor now opens from the Library inspector's PGN section instead, so
+    /// the identifier moved rather than died: `library.editMoves` is its
+    /// successor. Recorded rather than done quietly, per the rule D40′ set at
+    /// `players.inspector.deleteItem` and D45′ repeated at
+    /// `library.inspector.pgn.disclosure` — a removal is as breaking as a
+    /// rename, and this one is a rename wearing a removal's clothes.
+    ///
+    /// The `movetext.editor.*` five are unchanged and were never Board-
+    /// specific: they name the sheet, which is the same sheet from whichever
+    /// door opens it. For the length of one commit in M10 they named controls
+    /// that could not render at all — the 4 Aug review's finding, and the
+    /// reason the registry's referenced-grep is not a reachability check.
+    ///
+    /// All are reachable in a boardless run — a loaded PGN needs no hardware —
+    /// so a future XCUITest can harden them; for now the validator and store
+    /// suites are the contract.
+    internal static let boardEditInfoButton    = "board.editInfo"
+    internal static let libraryEditMovesButton = "library.editMoves"
+    internal static let movetextEditorSheet    = "movetext.editor"
+    internal static let movetextEditorField    = "movetext.editor.field"
+    internal static let movetextEditorStatus   = "movetext.editor.status"
+    internal static let movetextEditorSave     = "movetext.editor.save"
+    internal static let movetextEditorCancel   = "movetext.editor.cancel"
 
     // MARK: Get Info (M10)
 
-    /// The one editable surface behind every inspector's subject, and the
-    /// three gestures that open it.
+    /// The window behind every inspector's subject, and the gestures that open
+    /// it.
     ///
     /// **Three window identifiers, not one**, which is the opposite call from
     /// `evaluationMagnifier` one group up and for the reason that entry
@@ -171,10 +182,19 @@ internal enum AccessibilityID {
     /// The menu item takes its own identifier despite being the same verb as
     /// the two context-menu items: it is the Board's only door (⌘I plus the
     /// Game menu — the Board has one subject and no list to right-click), so
-    /// it is the one that can break independently.
+    /// it is the one that can break independently. It named a control that did
+    /// not exist for the length of M10 — minted against a doc sentence rather
+    /// than against a built item, which the 4 Aug review caught; the Game menu
+    /// carries it now.
+    ///
+    /// `getinfo.player.tag` is the one *editable* control in the window, which
+    /// is why it is the only form field here: the game and live forms are
+    /// `LabeledContent` throughout, so their form-level identifier is all
+    /// there is to address.
     internal static let getInfoGame          = "getinfo.game"
     internal static let getInfoLive          = "getinfo.live"
     internal static let getInfoPlayer        = "getinfo.player"
+    internal static let getInfoPlayerTagField = "getinfo.player.tag"
     internal static let getInfoEmpty         = "getinfo.empty"
     internal static let getInfoBoardMenuItem = "getinfo.menuitem.board"
 
@@ -462,7 +482,14 @@ internal enum AccessibilityID {
     /// destination-scoped below), and `players.inspector.actionsMenu` +
     /// `players.inspector.mergeItem` went with merge itself (D52′, 4 Aug
     /// 2026 — the ellipsis menu existed for that one item).
-    internal static let playersRenameButton   = "players.inspector.rename"
+    ///
+    /// **`players.inspector.rename` is removed too (M10 / D53′).** The profile
+    /// pencil went with the milestone and the identifier outlived it by a
+    /// commit — kept alive only by a preview simulating a header the app no
+    /// longer has, which is why the referenced-grep stayed clean while the
+    /// control was gone. Successor: `getinfo.player.tag`, the field in the
+    /// window that now owns the verb. Nothing is left in this group but the
+    /// section identifiers below.
 
     /// The destination's maintenance menu and its one item (D40′), on the
     /// toolbar rather than in the inspector: orphaned players contribute to no
@@ -472,18 +499,20 @@ internal enum AccessibilityID {
     internal static let playersMaintenanceMenu  = "players.maintenanceMenu"
     internal static let playersSweepOrphansItem = "players.maintenanceMenu.deleteUnused"
 
-    internal static let playerRenameSheet     = "player.renameSheet"
-    /// The **tag-form** field — "Senol, Bera". D37′: the tag is what games
-    /// store and export writes, and D23′ forbids deriving it back out of a
-    /// display name, so the tag is what the sheet edits. The identifier says
-    /// `tag` rather than `name` so a test asserting on it can't drift into
-    /// believing this field holds a display name.
-    internal static let playerRenameTagField  = "player.renameSheet.tag"
-    internal static let playerRenameSave      = "player.renameSheet.save"
-
+    // The `player.renameSheet` family (sheet, tag field, save) was **removed**
+    // with `RenamePlayerSheet` itself (M10 / D53′, 4 Aug 2026) — recorded, not
+    // quiet, per the rule above. Successor: `getinfo.player.tag`.
+    //
+    // The tag field's doc is worth carrying across, because the reason it said
+    // `tag` and not `name` is unchanged and now applies to its successor: D37′
+    // — the tag is what games store and export writes, and D23′ forbids
+    // deriving it back out of a display name, so the tag is what the field
+    // edits. An identifier saying `name` would let a future check drift into
+    // believing the field holds a display form.
+    //
     // The `player.mergeSheet` family (sheet, survivor picker, confirm) was
-    // **removed** with `MergePlayerSheet` (D52′, 4 Aug 2026) — recorded, not
-    // quiet, per the rule above.
+    // **removed** with `MergePlayerSheet` (D52′, 4 Aug 2026) — same rule, one
+    // evening earlier.
 
     /// `playerRow.Anish Giri`, … — one per list-mode row, keyed by the
     /// player's display name (the `gameRow(_:)` precedent).

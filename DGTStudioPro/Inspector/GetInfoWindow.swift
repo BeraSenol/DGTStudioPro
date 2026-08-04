@@ -5,6 +5,7 @@
 //  Created by Supreme Leader on 04/08/2026.
 //
 
+import os
 import SwiftData
 import SwiftUI
 
@@ -75,32 +76,85 @@ internal enum GetInfoRequest: Codable, Hashable, Sendable {
 /// destinations would be the same wiring with more places to get it wrong.
 ///
 /// ⌘I is attached here so the shortcut travels with the item. The Board's copy
-/// lives in `GameNavigationCommands` instead — it has one subject and no list
-/// to right-click, so the menu bar is its only door.
+/// lives in `GameNavigationCommands`, which is why this type has two doors
+/// rather than one: a `Commands` scene has no `openWindow`, so the menu-bar
+/// item can only *ask* a view to open it (`SmartTagCommands`' trigger-binding
+/// shape). Both spellings render the same label, symbol and shortcut, which is
+/// the whole point — the alternative was a hand-written seventh item in the
+/// Game menu, drifting from the six this type exists to keep identical.
 internal struct GetInfoMenuItem: View {
 
+    // MARK: Door
+
+    /// How this item reaches the window. Not a public distinction: callers
+    /// pick an initializer and never name this.
+    private enum Door {
+        /// A view that can open the window itself.
+        case opens(GetInfoRequest)
+        /// A command menu that must ask one to. Nil means no front-tab
+        /// subject, which is the item's own disabled condition.
+        case requests(Binding<Bool>?)
+    }
+
     // MARK: Stored Properties
-    internal let request: GetInfoRequest
-    internal let identifier: String
+    private let door: Door
+    private let identifier: String
 
     // MARK: Private Properties
     @Environment(\.openWindow) private var openWindow
 
+    // MARK: Initializers
+
+    /// The context-menu form: this item owns the window route, the same
+    /// arrangement `PlayersInspectorView` and `PlayersColumnsView` use for the
+    /// game-window one. Six closure parameters threaded from two destinations
+    /// would be the same wiring with more places to get it wrong.
+    internal init(request: GetInfoRequest, identifier: String) {
+        self.door = .opens(request)
+        self.identifier = identifier
+    }
+
+    /// The menu-bar form: the item sets a flag the Board observes.
+    internal init(requesting trigger: Binding<Bool>?, identifier: String) {
+        self.door = .requests(trigger)
+        self.identifier = identifier
+    }
+
     // MARK: Body
     internal var body: some View {
         Button {
-            openWindow(value: request)
+            switch door {
+            case .opens(let request):   openWindow(value: request)
+            case .requests(let trigger): trigger?.wrappedValue = true
+            }
         } label: {
             Label("Get Info", systemImage: "info.circle")
         }
         .keyboardShortcut("i", modifiers: .command)
+        .disabled(isDisabled)
         .accessibilityIdentifier(identifier)
+    }
+
+    /// Only the menu-bar form can be disabled: a context menu is raised *from*
+    /// the row it describes, so its subject exists by construction.
+    private var isDisabled: Bool {
+        if case .requests(let trigger) = door { return trigger == nil }
+        return false
     }
 }
 
 // MARK: - Window
 
-/// M10 — the one editable surface behind every inspector's subject.
+/// M10 — one gesture on the thing itself, and the app's rename door.
+///
+/// **Scope, stated first because the earlier version of this comment did not
+/// and was wrong for it.** This window called itself "the one editable surface
+/// behind every inspector's subject" while every row in all three forms was a
+/// `LabeledContent`. It edits exactly one thing today: a player's tag name.
+/// The game and live forms are read-only, and that is a current fact rather
+/// than a permanent one — but a doc that describes the destination instead of
+/// the code is the comment-asserting-a-guarantee shape this project keeps
+/// catching itself in, so it describes the code.
 ///
 /// **Why this replaces five pencils rather than joining them.** D26′ bought a
 /// guarantee by hardcoding the pencil: five edit affordances could not drift
@@ -111,6 +165,15 @@ internal struct GetInfoMenuItem: View {
 /// gesture on the thing itself, which is what lets rename stop being a special
 /// case: it is not a pencil rehomed, it is the Players instance of the same
 /// verb the Library and Board already have.
+///
+/// **The rename machinery moved here whole rather than being reached from
+/// here.** `RenamePlayerSheet`, `RenameRequest` and `PlayersDestination`'s
+/// `beginRename` are gone: a sheet opened *from* this window would be a modal
+/// over a companion window, and leaving the door in the destination while the
+/// field lives here would be two surfaces for one write. What survived intact
+/// is D37′'s argument, because the player form already had its exact shape —
+/// tag above, derived display form below, game count in the next section —
+/// and only needed the top row to become a field.
 ///
 /// **A window, not a popover or a sheet**, and this is D46′'s finding taken as
 /// settled rather than re-argued. That decision built a popover on 4 Aug, lived
@@ -130,10 +193,19 @@ internal struct GetInfoWindow: View {
 
     /// The three HIG-derived numbers `DGTConnectionView.Metrics` names, cited
     /// by name and reason rather than imported — the third dialog to do so,
-    /// after `RenamePlayerSheet` and the merge sheet that D52′ retired. Two
+    /// after the rename and merge sheets that M10 and D52′ retired. Two
     /// dialogs' two decisions that agree today; a shared constant would claim
     /// they must agree forever.
     private static let contentPadding: CGFloat = 20
+
+    /// `players`, not a category of this window's own: the retag lines this
+    /// door emits are the same lines the sweep and the old sheet emitted, and
+    /// splitting them would make `log stream --predicate 'category ==
+    /// "players"'` — which the manual checks name — stop showing renames.
+    private static let logger = Logger(
+        subsystem: "com.berasenol.dgtstudiopro",
+        category: "players"
+    )
 
     // MARK: Stored Properties
 
@@ -148,6 +220,18 @@ internal struct GetInfoWindow: View {
 
     @State private var subject: Subject?
 
+    /// The tag being edited, seeded by `resolve()` and committed on Return.
+    ///
+    /// A draft rather than a binding straight onto `Player.tagName`, for the
+    /// reason D37′ gives the sheet it replaces: a rename is not a label change
+    /// but a rewrite across every linked game, each with an MD5 and a
+    /// re-resolve. Writing on every keystroke would run that per character.
+    @State private var draftTag = ""
+
+    /// D39′'s refusal, held for the alert. Nil is the normal state; a value
+    /// means the last retag was refused whole and nothing was written.
+    @State private var refusal: Refusal?
+
     // MARK: Body
     internal var body: some View {
         Group {
@@ -160,6 +244,23 @@ internal struct GetInfoWindow: View {
         .frame(minWidth: 420, minHeight: 320)
         .navigationTitle(title)
         .task(id: request) { resolve() }
+        // Re-resolves when the live game ends, which `.task(id: request)`
+        // cannot: a `.live` request never changes, so without this the window
+        // would keep rendering a retained `LiveGame` under "Recording" long
+        // after it archived. The unavailable state's doc claims to cover "a
+        // live game that ended" — this is what makes that claim true rather
+        // than merely plausible, and it was written for a branch nothing could
+        // reach until the Board grew its own Get Info door.
+        .onChange(of: session.liveGame == nil) { _, _ in
+            if case .live = request { resolve() }
+        }
+        .alert(
+            "Can’t Rename",
+            isPresented: Binding(present: $refusal),
+            presenting: refusal,
+            actions: { _ in Button("OK", role: .cancel) {} },
+            message: { refusal in Text(Self.refusalMessage(refusal.collisions)) }
+        )
     }
 }
 
@@ -179,6 +280,18 @@ extension GetInfoWindow {
         case game(PGN)
         case live(LiveGame)
         case player(Player)
+    }
+
+    /// A refused retag, rendered as an alert.
+    ///
+    /// Holds the store's `Sendable` collision payload — identifiers and names,
+    /// never models — so the alert can name the games without resolving
+    /// anything. `Identifiable` off the first collision's game identifier: a
+    /// refusal is always about at least one pair. Moved here with the rename
+    /// door it belongs to; `PlayersDestination` kept nothing of it.
+    fileprivate struct Refusal: Identifiable {
+        let collisions: [PGNStore.HashCollision]
+        var id: PersistentIdentifier { collisions[0].gameID }
     }
 
     /// The cast paired with an `isDeleted` check, per the standing invariant:
@@ -219,6 +332,14 @@ extension GetInfoWindow {
                 subject = nil
                 return
             }
+            // Seeded with the stored **tag** form — `tagName ?? name`, the
+            // seat picker's fallback (D29′) for a pre-schema row. Seeding with
+            // `name` instead would put a display form in a field that stores a
+            // tag, and the first commit would write "Bera Şenol" into every
+            // affected game's `[White]`. D37′'s trap, one keystroke away, and
+            // it is the reason this seeding lives beside the fetch rather than
+            // in the form where the field is drawn.
+            draftTag = player.tagName ?? player.name
             subject = .player(player)
 
         case .none:
@@ -272,10 +393,17 @@ extension GetInfoWindow {
                 // distinction, applied to its own field and one more.
                 LabeledContent("Opening", value: pgn.opening?.fullName ?? RosterSummary.displayUnknown)
                 LabeledContent("Plies", value: "\(pgn.moves.count)")
-                // The Index row lands with `PGN.libraryIndex` (M10 batch 1).
-                // Deliberately absent rather than stubbed: a row reading "—"
-                // for every game in the Library would be a field the reader
-                // learns to ignore before it ever carries a value.
+                // There is no Index row, and that is a decision rather than a
+                // gap: a row reading "—" for every game in the Library would
+                // be a field the reader learns to ignore before it ever
+                // carries a value. If `PGN` ever grows a stored library index,
+                // this section is where it surfaces.
+                //
+                // (This comment scheduled that work — "lands with
+                // `PGN.libraryIndex`" — until the 4 Aug review pointed out
+                // that a comment is not a roadmap and the roadmap had never
+                // heard of it. The observation survives; the promise does
+                // not.)
             }
         }
         .formStyle(.grouped)
@@ -304,17 +432,35 @@ extension GetInfoWindow {
         .accessibilityIdentifier(AccessibilityID.getInfoLive)
     }
 
-    /// The registry row, and the games it is reached through.
+    /// The registry row, the games it is reached through, and the app's one
+    /// rename door.
     ///
     /// The tag form is shown above the display form deliberately, in that
     /// order: D23′ says names travel tag → display and never back, and a
     /// dialog that puts the derived value first invites editing the wrong one.
-    /// D37′'s rename sheet makes the same arrangement its own explanation.
+    /// The editable row is the tag and the derived row updates live beneath it
+    /// as you type, which is D37′'s move of turning the one-way rule into the
+    /// form's own explanation — kept verbatim from the sheet this replaced,
+    /// because it is the part that made the sheet worth having.
+    ///
+    /// **The cost statement is the Library section rather than a sentence.**
+    /// D37′'s sheet said "Rewrites the name stored in 42 games" because
+    /// nothing else on screen did; here the game count is two rows below the
+    /// field, permanently, which says the same thing without a line of prose
+    /// that can go stale against the number beside it.
     private func playerForm(_ player: Player) -> some View {
         Form {
             Section("Name") {
-                LabeledContent("Tag", value: player.tagName ?? player.name)
-                LabeledContent("Shown as", value: PlayerName.displayForm(of: player.tagName ?? player.name))
+                // Commit on Return only — not on every keystroke, and not on
+                // focus loss. Each commit is `retag`: a rewrite across every
+                // linked game with an MD5 and a re-resolve each, inside one
+                // transaction. Per-keystroke would run that per character, and
+                // on focus loss it would fire when the window is merely
+                // clicked away from, which is not a decision the reader made.
+                TextField("Tag", text: $draftTag)
+                    .onSubmit { commitRename(for: player) }
+                    .accessibilityIdentifier(AccessibilityID.getInfoPlayerTagField)
+                LabeledContent("Shown as", value: PlayerName.displayForm(of: draftTag))
             }
 
             Section("Library") {
@@ -349,4 +495,114 @@ extension GetInfoWindow {
         )
         .padding(Self.contentPadding)
     }
+}
+
+// MARK: - Rename
+
+extension GetInfoWindow {
+
+    /// D37′. Every consequence — the rewrite across linked games, the
+    /// re-resolve, the rehash, D39′'s refusal — belongs to the store door;
+    /// this is transport plus the two failure sinks, which are deliberately
+    /// different: a refusal is a *value* the reader must see, a save failure
+    /// is a logged error. The same split `applyMovetextEdit` draws.
+    ///
+    /// Two no-op guards ahead of the door, both cheap and both load-bearing.
+    /// An empty tag is refused by the store as `.emptyTag`, and letting it
+    /// reach there would turn a stray ⌫-then-Return into an alert; an
+    /// unchanged tag would spend a full rehash across every linked game to
+    /// write what is already stored. The store's own fold-equivalence check
+    /// (D39′) would accept that second one silently, which is exactly why it
+    /// is worth stopping here — "nothing happened" and "everything was
+    /// rewritten to the same bytes" look identical from the outside.
+    fileprivate func commitRename(for player: Player) {
+        let proposed = draftTag.trimmingCharacters(in: .whitespaces)
+        guard !proposed.isEmpty else {
+            draftTag = player.tagName ?? player.name
+            return
+        }
+        guard proposed != (player.tagName ?? player.name) else { return }
+
+        do {
+            try PGNStore(modelContext: modelContext).retag(player, to: proposed)
+        } catch let rejection as PGNStore.RetagRejection {
+            present(rejection, revertingTo: player)
+        } catch {
+            Self.logger.error("Rename failed: \(error.localizedDescription, privacy: .public)")
+            draftTag = player.tagName ?? player.name
+        }
+    }
+
+    /// `.emptyTag` cannot reach here — `commitRename` guards it — so the alert
+    /// is D39′'s collision case only. A future third rejection arrives as a
+    /// compile error in this switch rather than as a silently swallowed
+    /// refusal.
+    ///
+    /// The field reverts on refusal, which the sheet did not have to do
+    /// because it closed. D39′'s refusal is all-or-nothing and names nothing
+    /// as changed; leaving the rejected text in a field that describes stored
+    /// state would be the one place in the app showing a name no game carries.
+    private func present(_ rejection: PGNStore.RetagRejection, revertingTo player: Player) {
+        switch rejection {
+        case .wouldCollide(let collisions):
+            refusal = Refusal(collisions: collisions)
+        case .emptyTag:
+            Self.logger.error("Retag refused for an empty tag — the field's guard let one through")
+        }
+        draftTag = player.tagName ?? player.name
+    }
+
+    /// Names the games, because "this would create a duplicate" is
+    /// unactionable otherwise. Caps the list: a rename over a double-imported
+    /// set can collide many times, and an alert is not a report.
+    fileprivate static func refusalMessage(_ collisions: [PGNStore.HashCollision]) -> String {
+        let shown = collisions.prefix(3).map { "“\($0.gameName)” and “\($0.existingName)”" }
+        let lead = "This would make these games identical: " + shown.joined(separator: "; ") + "."
+        let more = collisions.count > shown.count
+            ? " And \(collisions.count - shown.count) more."
+            : ""
+        return lead + more + " Delete or edit one of each pair first — nothing has been changed."
+    }
+}
+
+// MARK: - Previews
+
+/// The branch a reader hits by accident — a window restored onto a game that
+/// is gone, or opened and then the subject deleted underneath it. Reachable in
+/// a canvas because it is the one state that needs no resolved subject, which
+/// is exactly why it is the one worth pinning here: the three content forms
+/// each need a model *inserted in a container* before `resolve()` can find
+/// them, and a preview that builds one is testing SwiftData rather than this
+/// view's layout.
+#Preview("Unavailable") {
+    GetInfoWindow(request: nil)
+        .frame(width: 460, height: 520)
+        .modelContainer(for: [PGN.self, Player.self], inMemory: true)
+        .environment(DGTLiveSession())
+}
+
+/// The live form, which is the one content branch a canvas *can* reach: its
+/// subject comes from the session rather than the store, so seeding it is one
+/// object rather than a container round trip.
+///
+/// It is also the branch with no automated witness anywhere else — the game
+/// and player forms are `RosterSummary` and `Player` rows that other suites
+/// cover, while this one is the only place `LiveGame.Roster`'s projection is
+/// rendered outside the live inspector.
+#Preview("Recording") {
+    let session = DGTLiveSession()
+    session.startNewGame(
+        roster: LiveGame.Roster(
+            event: "Club Championship",
+            site:  "Antwerp",
+            date:  Date(timeIntervalSince1970: 1_720_000_000),
+            round: 101,
+            white: "Senol, Bera",
+            black: "Reinaud, Lorenzo"
+        )
+    )
+    return GetInfoWindow(request: .live)
+        .frame(width: 460, height: 520)
+        .modelContainer(for: [PGN.self, Player.self], inMemory: true)
+        .environment(session)
 }

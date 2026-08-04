@@ -62,6 +62,7 @@ internal struct BoardDestination: View {
     // MARK: Environment
     
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openWindow) private var openWindow
     @Environment(DGTConnection.self) private var connection
     @Environment(DGTLiveSession.self) private var session
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
@@ -91,12 +92,26 @@ internal struct BoardDestination: View {
     /// was just hidden inside a modifier.
     @State private var showConnectSheet = false
     
+    /// Set by the Game menu's Get Info item, which cannot open a window
+    /// itself; cleared as soon as this view has. A trigger rather than a
+    /// stored request because the *subject* is already derivable here — see
+    /// `getInfoSubject` — and publishing it upward only to have it handed
+    /// back would give the menu a value it has no way to use.
+    @State private var getInfoRequested = false
+
     /// Nested and private: this is presentation state for one destination's
     /// inspector, not a shared vocabulary.
+    ///
+    /// **Down to one case since M10 took the movetext editor off this
+    /// destination**, and kept as an enum rather than collapsed to a `Bool`
+    /// for the reason the `activeEditor` doc above gives: `.sheet(item:)`
+    /// makes "which editor" and "is a sheet up" one value, where a `Bool`
+    /// plus a subject is the pairing class the 2027 SDK's `.alert(item:)`
+    /// exists to retire. A second editor is one case away; a second boolean
+    /// would be a second way to be asked twice.
     private enum BoardEditor: String, Identifiable {
         case info
-        case movetext
-        
+
         var id: String { rawValue }
     }
     
@@ -167,17 +182,25 @@ internal struct BoardDestination: View {
                 || session.resumableDraft != nil
             )
         }
-        // The review inspector's two editors (D18′ movetext, and the metadata
-        // surface a loaded archived game never had), at body level rather than
-        // in the inspector: D15′ keeps modals as destination furniture, and
-        // both writes need `modelContext`, the store doors, and — for
-        // movetext — the cached `Game` rebuilt. The inspector only requests.
+        // The review inspector's metadata editor (the surface a loaded
+        // archived game never had), at body level rather than in the
+        // inspector: D15′ keeps modals as destination furniture, and the write
+        // needs `modelContext` and the store door. The inspector only
+        // requests.
         //
-        // Both are guarded by a loaded PGN, so they stay mutually exclusive
-        // with the live new-game/archive sheets by branch, and with each other
-        // by `activeEditor` being one value. Movetext commit rebuilds the
-        // cached Game, whose scrub state describes the pre-edit moves;
-        // metadata commit needs no rebuild, since the moves didn't change.
+        // **The movetext editor was the other arm here until M10** and is now
+        // the Library's, wholly — read-only on this destination in both
+        // branches. Live was always the stranger of the two: Decision #1 says
+        // the physical board is truth and the live game is append-only, so an
+        // editor that could rewrite movetext mid-game was the one surface that
+        // could contradict the board it mirrors. Review is the weaker case and
+        // points the same way — a game on the board is a game being *read*,
+        // and the Library is where its bytes are managed. `applyEditedMovetext`
+        // went with it; nothing here rebuilds the cached `Game` any more,
+        // because nothing here can change the moves underneath it.
+        //
+        // The sheet is guarded by a loaded PGN, so it stays mutually exclusive
+        // with the live new-game/archive sheets by branch.
         .sheet(item: $activeEditor) { editor in
             if let pgn = tabState.boardPGN {
                 switch editor {
@@ -199,16 +222,28 @@ internal struct BoardDestination: View {
                         ),
                         onSave: { roster in applyEditedInfo(roster, to: pgn) }
                     )
-                case .movetext:
-                    MovetextEditorSheet(pgn: pgn) { proposed in
-                        applyEditedMovetext(proposed, to: pgn)
-                    }
                 }
             }
         }
         // Phase 11: publish the active game so GameNavigationCommands' arrow
         // keys can scrub it.
         .focusedSceneValue(\.activeGame, tabState.boardGame)
+        // …and the Get Info trigger, published only when this tab has a
+        // subject, so the menu item's `disabled(_:)` reads a condition that is
+        // genuinely producible both ways: a live tab with no recording and no
+        // loaded PGN publishes nil.
+        .focusedSceneValue(
+            \.boardGetInfoRequest,
+            getInfoSubject == nil ? nil : $getInfoRequested
+        )
+        // The menu asks, this opens. Cleared before opening rather than after,
+        // so a second ⌘I is a fresh request rather than a no-op against a flag
+        // that is still true.
+        .onChange(of: getInfoRequested) { _, requested in
+            guard requested else { return }
+            getInfoRequested = false
+            if let subject = getInfoSubject { openWindow(value: subject) }
+        }
         .onAppear { loadIfNeeded() }
         .onChange(of: loadedGameID) { _, _ in loadIfNeeded() }
     }
@@ -369,8 +404,7 @@ internal struct BoardDestination: View {
                 currentMoveIndex: game.currentPly > 0 ? game.currentPly - 1 : nil,
                 style: boardStyle,
                 onMoveTapped: { index in game.jump(to: index + 1) },
-                onEditInfo:   { activeEditor = .info },
-                onEditMoves:  { activeEditor = .movetext }
+                onEditInfo:   { activeEditor = .info }
             )
             .inspectorColumnWidth(min: 310, ideal: 310, max: 400)
         }
@@ -520,31 +554,30 @@ internal struct BoardDestination: View {
         }
     }
     
-    /// Commits an edited movetext through `PGNStore.applyMovetextEdit`
-    /// (validation + canonical store + hash refresh + eval invalidation, one
-    /// transaction) and rebuilds the on-board `Game`: the moves changed
-    /// underfoot, so the cached game and its scrub position now describe the
-    /// old movetext, and `loadIfNeeded`'s cache guard would otherwise skip the
-    /// reload. A rejection at commit would mean the sheet enabled Save on an
-    /// invalid game — it can't (same pure validation both sides) — so only a
-    /// persistence failure is logged.
-    private func applyEditedMovetext(_ proposed: [String], to pgn: PGN) {
-        do {
-            let outcome = try PGNStore(modelContext: modelContext)
-                .applyMovetextEdit(to: pgn, proposed: proposed)
-            if case .success = outcome {
-                tabState.boardGame = nil
-                loadIfNeeded()
-            } else {
-                Self.logger.error("movetext edit unexpectedly rejected at commit")
-            }
-        } catch {
-            Self.logger.error(
-                "movetext edit failed to persist: \(error.localizedDescription, privacy: .public)"
-            )
-        }
+    // `applyEditedMovetext` lived here until M10 and is now
+    // `LibraryDestination`'s, with the door that calls it. What it did that
+    // the Library's copy does not need: rebuild the cached on-board `Game`,
+    // because the moves had changed underfoot and `loadIfNeeded`'s cache guard
+    // would otherwise skip the reload. That rebuild is the one piece of this
+    // destination the move deliberately left behind — and it is also the
+    // recorded cost of editing from the Library while the same game sits on a
+    // board, since a Board window in another tab holds its own `TabState` and
+    // will keep showing the pre-edit moves until it reloads.
+
+    /// What the Game menu's ⌘I would open, or nil if this tab has no subject.
+    ///
+    /// Review before live, matching `body`'s own branch: a tab showing a
+    /// loaded PGN describes that game even while a recording is in progress
+    /// elsewhere in the session. The live case carries nothing because a live
+    /// game has no `PersistentIdentifier` until it archives — `GetInfoRequest`
+    /// is an enum rather than a struct with an optional id for exactly that
+    /// asymmetry.
+    private var getInfoSubject: GetInfoRequest? {
+        if let pgn = tabState.boardPGN { return .game(pgn.persistentModelID) }
+        return session.liveGame == nil ? nil : .live
     }
-    
+
+
     private var isNewGameSheetPresented: Binding<Bool> {
         Binding(
             get: {

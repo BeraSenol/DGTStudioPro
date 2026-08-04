@@ -111,18 +111,13 @@ internal struct PlayersListView: View {
             .width(100)
             .customizationID("lastPlayed")
         }
+        // Single-subject even though the selection type is a set: both verbs
+        // describe one player, so this reads the first key rather than
+        // pretending a multi-selection means something here. The menu's own
+        // shape lives in `PlayerActionsMenu`.
         .contextMenu(forSelectionType: PlayerStats.ID.self) { keys in
             if let key = keys.first {
-                Button {
-                    onShowInLibrary(key)
-                } label: {
-                    Label("Show in Library", systemImage: "books.vertical")
-                }
-                .accessibilityIdentifier(AccessibilityID.contextShowInLibrary)
-                GetInfoMenuItem(
-                    request: .player(key: key),
-                    identifier: AccessibilityID.getInfoMenuItem(Destination.players.rawValue)
-                )
+                PlayerActionsMenu(key: key, onShowInLibrary: onShowInLibrary)
             }
         }
         .accessibilityIdentifier(AccessibilityID.playersTable)

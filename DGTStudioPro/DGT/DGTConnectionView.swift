@@ -34,11 +34,17 @@ internal struct DGTConnectionView: View {
     /// D15′(b): the dialog's spacing, named and HIG-derived instead of ad
     /// hoc — 20 pt content margins at sheet edges, 12 pt between sibling
     /// controls, 4 pt between a text line and its caption. Survives the
-    /// picker's deletion untouched because `RenamePlayerSheet` and
-    /// `MergePlayerSheet` cite these three numbers by name and reason; the
+    /// picker's deletion untouched because the dialogs that borrow these three
+    /// numbers cite them by name and reason rather than importing them; the
     /// 420 × 320 frame and 260 pt info table are *sizing*, not spacing
     /// (320, down from 380 — the height the device list earned went with
     /// it).
+    ///
+    /// The two that cited them by name — `RenamePlayerSheet` and
+    /// `MergePlayerSheet` — are both retired (M10 and D52′). `GetInfoWindow`
+    /// is the current borrower, of `margin` alone. Named as a class rather
+    /// than as a list, because an enumerated-caller list on a primitive is the
+    /// anti-pattern that put two dead type names in this comment.
     private enum Metrics {
         /// Sheet edge margin (the standard 20 pt dialog content margin).
         static let margin: CGFloat = 20

@@ -136,3 +136,29 @@ internal struct AnalysisLabel: View {
 // `AnalysisLabel` is used at those sites anyway: it costs nothing where it is
 // ignored, and the alternative is a rule about which call sites get the
 // treatment that nobody would remember.
+
+// MARK: Previews
+
+/// The defect this type exists to prevent is **visual and nothing else** — a
+/// tint leaking from the symbol onto the word beside it — so a preview is not
+/// a nicety here, it is the only witness that can fail. Neither the compiler
+/// nor a unit test can see a green "Analyze".
+///
+/// Both tints, both title forms, on one canvas: the claim is that all four
+/// titles render in the *default* foreground while the badges differ. If the
+/// modifier this replaced ever comes back, two of these words turn colour and
+/// the row above stays put, which is what makes the pairing worth the space.
+///
+/// The counted plural is here rather than only at the call site because it is
+/// the form where the leak was most visible — a long green string rather than
+/// one word.
+#Preview("Both Tints, Both Titles") {
+    VStack(alignment: .leading, spacing: 12) {
+        AnalysisLabel(analyzed: false, title: nil)
+        AnalysisLabel(analyzed: true, title: nil)
+        AnalysisLabel(analyzed: false, title: "Analyze 3 Games")
+        AnalysisLabel(analyzed: true, title: "Analyze 3 Games")
+    }
+    .padding()
+    .frame(width: 220, alignment: .leading)
+}

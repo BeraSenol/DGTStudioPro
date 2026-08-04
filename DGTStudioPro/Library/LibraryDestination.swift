@@ -5,6 +5,11 @@
 //  Created by Supreme Leader on 12/04/2026.
 //
 
+// `AppKit` explicitly, though `NSOpenPanel` below has compiled without it:
+// `selectAll(_:)` is a member of an AppKit *protocol*, and
+// `MemberImportVisibility` is precisely the upcoming feature that stops
+// members arriving through a module nobody imported.
+import AppKit
 import os
 import SwiftData
 import SwiftUI
@@ -47,6 +52,20 @@ internal struct LibraryDestination: View {
     @State private var pendingBatchDeletion: [PGN]?
     @State private var selectedPGNs: Set<PGN.ID> = []
     @State private var importProgress: ImportProgress?
+
+    /// Which game the movetext editor is up for, nil when it is closed.
+    ///
+    /// An item-sheet over the model rather than a `Bool` beside the selection:
+    /// the sheet must edit the game it was opened on, and a selection can
+    /// change underneath a modal. `BoardDestination.activeEditor` makes the
+    /// same call for the same reason.
+    ///
+    /// **This is M10's other half.** The editor was the Board's until movetext
+    /// went read-only there — live and review both — and the Library became
+    /// the one place a game's bytes are managed. The store door, D18′'s replay
+    /// validator and the five `movetext.editor.*` identifiers are unchanged;
+    /// only the door moved.
+    @State private var editingMovetext: PGN?
     @State private var isQueuePopoverPresented = false
     
     // MARK: Search & Filters (2 Aug 2026 — native `.searchable`, restored
@@ -170,7 +189,84 @@ internal struct LibraryDestination: View {
     private func gamesInDisplayOrder(_ ids: Set<PGN.ID>) -> [PGN] {
         filteredGames.filter { ids.contains($0.id) }
     }
-    
+
+    /// ⌘A over all four view modes, as the system's own Edit ▸ Select All
+    /// rather than a shortcut of this destination's invention.
+    ///
+    /// `.onCommand` puts the action in the responder chain, which is what both
+    /// enables the menu item and gives it its shortcut — the `.onDeleteCommand`
+    /// arrangement one chain up, same mechanism, and the reason ⌘A inside the
+    /// search field still selects *text*: the field is first responder and
+    /// answers first. List and columns are `Table`s, so `NSTableView` answers
+    /// there too and this never fires; the set it produces is identical,
+    /// because the table was built from the same narrowed array. Icons and
+    /// gallery have no such responder, and for them this is the whole
+    /// implementation.
+    ///
+    /// **Selects what the render painted, deliberately not what `filteredGames`
+    /// would answer at action time** — the opposite of `gamesInDisplayOrder`'s
+    /// rule directly above, for the opposite reason. That one re-derives
+    /// because a destructive action firing against a stale list is the failure
+    /// to prevent; this one *is* the visible state, so "select all" has to mean
+    /// the rows on screen or it means something the user cannot check. The
+    /// narrowing itself is unchanged either way: a game hidden by a smart tag,
+    /// a query or a chip is not selected, so it stays out of every bulk action
+    /// exactly as it always has.
+    ///
+    /// Nil on an empty list rather than a closure assigning an empty set: a nil
+    /// action leaves Edit ▸ Select All disabled, and both arms of that guard
+    /// are producible — the check D40′ taught this project to run *at minting*
+    /// rather than at the next sweep.
+    ///
+    /// Not reached, and named so it isn't read as an oversight: the icons
+    /// grid's `anchorID`, which is `@State` a destination cannot touch. After a
+    /// ⌘A the next arrow steps from the last card clicked, or from the first
+    /// card if none — Finder anchors at the last click too, so the divergence
+    /// is only that ours has no anchor to inherit from a keyboard gesture.
+    ///
+    /// Takes the list rather than reading the property, and is a method rather
+    /// than a closure factory, for one reason each: the parameter is what makes
+    /// "the painted list" a fact about the call site instead of a promise; and
+    /// a `@MainActor` type returning an escaping `() -> Void` is a shape this
+    /// codebase has never needed, where `Button { delete(game) }` — a literal
+    /// formed in place, calling a member — is the shape on every page of it.
+    private func selectAll(_ games: [PGN]) {
+        selectedPGNs = Set(games.map(\.id))
+    }
+
+    /// Commits an edited movetext through `PGNStore.applyMovetextEdit` —
+    /// validation, canonical store, hash refresh, evaluation invalidation and
+    /// re-classification, one transaction. D18′ owns all of it; this is
+    /// transport plus one failure sink.
+    ///
+    /// A rejection at commit would mean the sheet enabled Save on an invalid
+    /// game, which it cannot: both sides run the same pure validation. So only
+    /// a persistence failure is user-invisible-but-logged, and a rejection is
+    /// logged as the contradiction it would be.
+    ///
+    /// **What this does not do, which its Board ancestor did:** rebuild a
+    /// cached on-board `Game`. There is none here. The recorded cost is that a
+    /// Board window already reviewing this game holds its own `TabState` and
+    /// keeps rendering the pre-edit moves until it reloads — accepted rather
+    /// than engineered around, at one Mac and one reader, and named here so it
+    /// is a decision rather than a surprise.
+    private func applyEditedMovetext(_ proposed: [String], to pgn: PGN) {
+        do {
+            let outcome = try PGNStore(modelContext: modelContext)
+                .applyMovetextEdit(to: pgn, proposed: proposed)
+            if case .success = outcome {
+                Self.logger.info("Movetext edit applied to “\(pgn.name, privacy: .public)”")
+            } else {
+                Self.logger.error("movetext edit unexpectedly rejected at commit")
+            }
+        } catch {
+            Self.logger.error(
+                "movetext edit failed to persist: \(error.localizedDescription, privacy: .public)"
+            )
+        }
+    }
+
+
     // MARK: Body
     internal var body: some View {
         coreContent
@@ -249,6 +345,12 @@ internal struct LibraryDestination: View {
         // One walk per render — see `filteredGames`'s doc. Every render-time
         // consumer below reads this local; none re-runs the filter.
         let games = filteredGames
+        // Typed explicitly rather than left to a ternary's inference, and
+        // hoisted out of the modifier so the nil arm reads as the decision it
+        // is: no games means no Edit ▸ Select All, disabled by the system.
+        let selectAllAction: (() -> Void)? = games.isEmpty
+        ? nil
+        : { selectAll(games) }
         return VStack(spacing: 0) {
             if let filter {
                 filterChipBar(for: filter)
@@ -277,6 +379,15 @@ internal struct LibraryDestination: View {
             }
             .accessibilityIdentifier(AccessibilityID.libraryContent)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // On the content group rather than beside `.onDeleteCommand` in
+            // `body`: the local `games` is the painted list this gesture is
+            // defined against (see `selectAll(_:)`), and `body`'s chain cannot
+            // see it. It also keeps the modifier off the chain whose
+            // type-check budget the third alert already blew.
+            .onCommand(
+                #selector(NSStandardKeyBindingResponding.selectAll(_:)),
+                perform: selectAllAction
+            )
         }
         .navigationTitle(filter?.displayName ?? "Library")
         // Counted over `filteredGames`, not the whole Library: the subtitle
@@ -299,7 +410,14 @@ internal struct LibraryDestination: View {
             LibraryInspectorView(
                 pgn: selectedPGN(in: games),
                 selectionCount: selectedPGNs.count,
-                queue: tabState.analysisQueue
+                queue: tabState.analysisQueue,
+                // Passed only when there is a game to edit, so the pencil
+                // doesn't render over an empty or multi selection. The
+                // inspector's own `if let` is what makes that a non-rendering
+                // control rather than a disabled one.
+                onEditMoves: selectedPGN(in: games).map { pgn in
+                    { editingMovetext = pgn }
+                }
             )
             .inspectorColumnWidth(min: 310, ideal: 310, max: 400)
         }
@@ -317,6 +435,14 @@ internal struct LibraryDestination: View {
             prompt: "Search Games"
         ) { token in
             tokenLabel(token)
+        }
+        // D18′'s editor, on the destination rather than in the inspector:
+        // modals are destination furniture (D15′) and the write needs
+        // `modelContext` and the store door. The inspector only requests.
+        .sheet(item: $editingMovetext) { pgn in
+            MovetextEditorSheet(pgn: pgn) { proposed in
+                applyEditedMovetext(proposed, to: pgn)
+            }
         }
         .sheet(isPresented: Binding(present: $importProgress)) {
             if let importProgress {

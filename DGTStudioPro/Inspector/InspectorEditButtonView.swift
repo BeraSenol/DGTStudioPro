@@ -13,9 +13,16 @@ import SwiftUI
 /// header. A row was the wrong home twice over: the rows are a fixed set of
 /// seven, so an eighth that is a *verb* reads as part of the roster, and it
 /// sits at the far end of the section from the heading it acts on. In the
-/// header the affordance is adjacent to its subject — which is where
-/// `BoardInspectorView`'s Edit Moves already was, so the two now agree
-/// instead of one being documented as a deliberate break from the other.
+/// header the affordance is adjacent to its subject, which is the arrangement
+/// every host now shares.
+///
+/// (This paragraph cited `BoardInspectorView`'s Edit Moves as the precedent
+/// the roster header was moved into agreement *with*. M10 deleted that pencil
+/// and the 4 Aug review caught the citation outliving it — the argument never
+/// depended on the witness, so the argument stayed and the dead name went. The
+/// movetext editor's pencil now sits in the Library's PGN header, adjacent to
+/// the bytes it edits, which is the same rule reaching the same answer from a
+/// different destination.)
 ///
 /// Shared rather than open-coded per host for `InspectorEmptyState`'s reason
 /// (D26′): the chrome is small enough that each host would happily carry its

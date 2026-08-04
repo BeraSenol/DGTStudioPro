@@ -5,6 +5,10 @@
 //  Created by Supreme Leader on 12/04/2026.
 //
 
+// `AppKit` for `selectAll(_:)` alone — see the twin import in
+// `LibraryDestination` for why an AppKit *protocol* member needs the module
+// named under `MemberImportVisibility`.
+import AppKit
 import os
 import SwiftData
 import SwiftUI
@@ -105,53 +109,26 @@ internal struct PlayersDestination: View {
     /// A chip stays visible and carries its own remove control.
     @State private var searchTokens: [PlayersSearchToken] = []
 
-    // MARK: Player Editing (M5 — D37′, D39′; merge removed by D52′)
+    // MARK: Player Editing (M5 — D40′; rename moved to Get Info by M10,
+    // merge removed by D52′)
 
-    /// The one editor. This was `PlayerEditor`, a two-case enum whose whole
-    /// argument was making "rename and merge are both open" unrepresentable;
-    /// D52′ removed merge, and a one-case enum is a struct wearing a
-    /// costume, so it became the request value it always carried.
-    @State private var renameRequest: RenameRequest?
-
-    /// D39′'s refusal, held for the alert. Nil is the normal state; a value
-    /// means the last retag was refused whole and nothing was written.
-    @State private var refusal: RetagRefusal?
+    // `renameRequest`, `RenameRequest` and `RetagRefusal` lived here until
+    // M10. The rename door is `GetInfoWindow`'s player form now — the field,
+    // the store call, D39′'s refusal alert and its message builder moved there
+    // whole, so this destination holds no part of a write it cannot surface.
+    //
+    // What that closes, and it is the point rather than a side effect: this
+    // file's copy had been reachable from nothing since M10 removed the
+    // profile pencil, while `PlayersInspectorView` carried an `onRename` seam
+    // documented as "a deadline, not a description". A store door with no
+    // surface is the D40′ lie one layer down, and the deadline is met by the
+    // door existing rather than by the seam being tidied.
 
     /// D40′'s sweep, held between offer and confirmation — the same optional-
     /// array shape as the Library's `pendingBatchDeletion`. It is a *snapshot*
     /// of rows, which is why the store door re-checks each one before deleting:
     /// a player listed here can pick up a link before the alert is answered.
     @State private var sweep: [Player]?
-
-    /// Which player the rename sheet is up for. Carries the stats key rather
-    /// than a `Player`: the destination's currency is the pure key everywhere
-    /// else (D10′), and resolving to a row at action time is the same bridge
-    /// `showInLibrary` already uses.
-    private struct RenameRequest: Identifiable {
-        let key: String
-        let tag: String
-        let gameCount: Int
-
-        var id: String { key }
-    }
-
-    /// A refused retag, rendered as an alert.
-    ///
-    /// Holds the store's `Sendable` collision payload — identifiers and names,
-    /// never models — so the alert can name the games without resolving
-    /// anything. `Identifiable` off the first collision's game identifier: a
-    /// refusal is always about at least one pair.
-    ///
-    /// (It carried an `Operation` for part of 4 Aug 2026, minted that
-    /// morning because merge shared this alert under a title that named the
-    /// wrong door; merge retired the same evening, D52′, and the title went
-    /// back to being a constant. A full same-day circle, kept as one line
-    /// because the next shared-refusal door will face the same title
-    /// question.)
-    private struct RetagRefusal: Identifiable {
-        let collisions: [PGNStore.HashCollision]
-        var id: PersistentIdentifier { collisions[0].gameID }
-    }
 
     // MARK: Initializers
 
@@ -292,23 +269,10 @@ internal struct PlayersDestination: View {
                     ranked: selected,
                     history: history,
                     recentGames: selectedGames,
-                    selectionCount: selectedKeys.count,
-                    onRename: { beginRename(stats: selected?.stats) }
+                    selectionCount: selectedKeys.count
                 )
                 .inspectorColumnWidth(min: 310, ideal: 310, max: 400)
             }
-            .sheet(item: $renameRequest) { request in
-                RenamePlayerSheet(currentTag: request.tag, gameCount: request.gameCount) { newTag in
-                    rename(key: request.key, to: newTag)
-                }
-            }
-            .alert(
-                "Can’t Rename",
-                isPresented: Binding(present: $refusal),
-                presenting: refusal,
-                actions: { _ in Button("OK", role: .cancel) {} },
-                message: { refusal in Text(Self.refusalMessage(refusal.collisions)) }
-            )
             .alert(
                 sweepTitle,
                 isPresented: Binding(present: $sweep),
@@ -393,38 +357,20 @@ internal struct PlayersDestination: View {
 
     // MARK: Player Editing (M5)
 
-    /// Opens the rename sheet seeded with the player's stored **tag** form —
-    /// `tagName ?? name`, the seat picker's fallback (D29′) for a pre-schema
-    /// row. Seeding with `name` instead would put a display form in a field
-    /// that stores a tag, and the first Save would write "Bera Şenol" into
-    /// every affected game's `[White]`.
-    private func beginRename(stats: PlayerStats?) {
-        guard let stats, let player = resolvedPlayer(for: stats.key) else { return }
-        renameRequest = RenameRequest(
-            key: stats.key,
-            tag: player.tagName ?? player.name,
-            gameCount: player.whiteGames.count + player.blackGames.count
-        )
-    }
-
-    /// D37′. Every consequence — the rewrite across linked games, the
-    /// re-resolve, the rehash, D39′'s refusal — belongs to the store door;
-    /// this is transport plus the two failure sinks, which are deliberately
-    /// different: a refusal is a *value* the user must see, a save failure is
-    /// a logged error, exactly the split `applyMovetextEdit` draws.
-    private func rename(key: String, to newTag: String) {
-        guard let player = resolvedPlayer(for: key) else { return }
-        do {
-            try PGNStore(modelContext: modelContext).retag(player, to: newTag)
-            // The stats key is derived from the name, so the old selection now
-            // points at a player that no longer exists under that key.
-            selectedKeys = [Player.normalizedKey(for: PlayerName.displayForm(of: newTag))]
-        } catch let rejection as PGNStore.RetagRejection {
-            present(rejection)
-        } catch {
-            Self.logger.error("Rename failed: \(error.localizedDescription, privacy: .public)")
-        }
-    }
+    // `beginRename` and `rename(key:to:)` lived here until M10 and are
+    // `GetInfoWindow.commitRename` now. One behaviour did not survive the
+    // move, recorded rather than left to be noticed: `rename` used to follow
+    // the rename with `selectedKeys = [newKey]`, because a stats key is
+    // derived from the name and the old selection points at a player that no
+    // longer exists under it. A separate window cannot reach into this
+    // destination's selection, so a rename performed while Players is open
+    // now clears the selection instead of following it. Accepted — the row is
+    // one click away and under the name you just typed — and it is the price
+    // of the door being one surface for three destinations rather than a
+    // pencil on this one.
+    //
+    // `resolvedPlayer(for:)` went with them: `showInLibrary` above carries its
+    // own inline lookup and was never a caller.
 
     // `merge(key:into:)` and `beginMerge` lived here from M5 until D52′
     // (4 Aug 2026). The id→model tombstone lesson their picker carried is
@@ -444,47 +390,10 @@ internal struct PlayersDestination: View {
         }
     }
 
-    /// The key→row bridge, `showInLibrary`'s route: store-owned, never
-    /// creates (D9′). A miss is impossible for a key the stats index emitted,
-    /// so it logs and the caller no-ops.
-    private func resolvedPlayer(for key: PlayerStats.ID) -> Player? {
-        do {
-            guard let player = try PGNStore(modelContext: modelContext)
-                .player(withNormalizedKey: key) else {
-                Self.logger.error("No Player row for key '\(key, privacy: .public)'")
-                return nil
-            }
-            return player
-        } catch {
-            Self.logger.error("Player lookup failed: \(error.localizedDescription, privacy: .public)")
-            return nil
-        }
-    }
-
-    /// `.emptyTag` never reaches here — both sheets disable their primary
-    /// button for it — so the alert is D39′'s collision case only. A future
-    /// third rejection arrives as a compile error in this switch rather than
-    /// as a silently swallowed refusal.
-    private func present(_ rejection: PGNStore.RetagRejection) {
-        switch rejection {
-        case .wouldCollide(let collisions):
-            refusal = RetagRefusal(collisions: collisions)
-        case .emptyTag:
-            Self.logger.error("Retag refused for an empty tag — the sheet's guard let one through")
-        }
-    }
-
-    /// Names the games, because "this would create a duplicate" is
-    /// unactionable otherwise. Caps the list: a rename over a double-imported
-    /// set can collide many times, and an alert is not a report.
-    private static func refusalMessage(_ collisions: [PGNStore.HashCollision]) -> String {
-        let shown = collisions.prefix(3).map { "“\($0.gameName)” and “\($0.existingName)”" }
-        let lead = "This would make these games identical: " + shown.joined(separator: "; ") + "."
-        let more = collisions.count > shown.count
-        ? " And \(collisions.count - shown.count) more."
-        : ""
-        return lead + more + " Delete or edit one of each pair first — nothing has been changed."
-    }
+    // `present(_:)` and `refusalMessage(_:)` moved to `GetInfoWindow` with the
+    // rename they served (M10). Both are unchanged there, including the
+    // exhaustive switch whose point is that a future third `RetagRejection`
+    // case arrives as a compile error rather than a swallowed refusal.
 
     /// Singular and plural spelled out rather than an interpolated "s": the
     /// count reaching 1 is the common case here, not the edge one.
@@ -525,8 +434,34 @@ internal struct PlayersDestination: View {
         + " Removing them changes no game and no export; they return by name if a game of theirs is ever imported again."
     }
 
+    /// ⌘A over all four view modes. `LibraryDestination.selectAll(_:)` carries
+    /// the full argument — the responder chain, `Table` answering first in list
+    /// and columns, nil-on-empty leaving Edit ▸ Select All disabled — and it is
+    /// not restated here.
+    ///
+    /// Two four-line copies rather than one shared helper, `applyInspectorPolicy`'s
+    /// call two methods up: sharing this would mean passing in the selection
+    /// binding *and* the row currency, which is a parameter list whose only job
+    /// is to tell a shared function which destination is calling it.
+    ///
+    /// `players` is the **searched** ladder, and that is the one place this
+    /// destination has to be read rather than copied. Search here narrows the
+    /// list only and never deselects — `body` says so, and the profile of a
+    /// player scrolled out by a query deliberately survives. ⌘A still means the
+    /// rows on screen, because the alternative selects people the reader cannot
+    /// see, and this destination has a subtitle that would then name two
+    /// strangers as a head-to-head.
+    private func selectAll(_ players: [RankedPlayer]) {
+        selectedKeys = Set(players.map(\.id))
+    }
+
     @ViewBuilder
     private func coreContent(players: [RankedPlayer]) -> some View {
+        // The Library's arrangement, down to the explicit type: nil when there
+        // is nobody to select, so the system menu item disables itself.
+        let selectAllAction: (() -> Void)? = players.isEmpty
+        ? nil
+        : { selectAll(players) }
         Group {
             if players.isEmpty {
                 // The Library's two-vocabulary gate: a search that matched
@@ -569,6 +504,10 @@ internal struct PlayersDestination: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier(AccessibilityID.playersContent)
+        .onCommand(
+            #selector(NSStandardKeyBindingResponding.selectAll(_:)),
+            perform: selectAllAction
+        )
     }
 
     private var emptyState: some View {

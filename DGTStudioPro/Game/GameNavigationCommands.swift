@@ -25,6 +25,32 @@ extension FocusedValues {
     }
 }
 
+/// The Board's Get Info trigger — `SmartTagCommands`' shape, third use.
+///
+/// **A trigger binding rather than the request value itself, because a
+/// `Commands` scene cannot open a window.** `DiagnosticsCommands` records that
+/// a command menu has no `modelContext` and no presentation surface;
+/// `openWindow` is the same class of thing, so the door is opened by
+/// ``BoardDestination`` — which is a `View` and has the environment action —
+/// and the menu item only asks. Publishing the resolved `GetInfoRequest` here
+/// instead would put the value one step from a scene that cannot act on it.
+///
+/// Published as nil when the front tab has no subject, so the item's
+/// `disabled(_:)` guard reads a value that is genuinely producible both ways:
+/// a live tab with no recording and no loaded PGN publishes nothing. That is
+/// the D40′ check applied at the moment of minting rather than at the next
+/// sweep.
+private struct GetInfoRequestKey: FocusedValueKey {
+    typealias Value = Binding<Bool>
+}
+
+extension FocusedValues {
+    internal var boardGetInfoRequest: Binding<Bool>? {
+        get { self[GetInfoRequestKey.self] }
+        set { self[GetInfoRequestKey.self] = newValue }
+    }
+}
+
 // MARK: Commands
 
 /// Move-navigation menu (First / Previous / Next / Last) with the standard
@@ -47,6 +73,7 @@ extension FocusedValues {
 internal struct GameNavigationCommands: Commands {
 
     @FocusedValue(\.activeGame) private var game: Game?
+    @FocusedValue(\.boardGetInfoRequest) private var getInfo: Binding<Bool>?
 
     // No step throttle (removed 3 Aug 2026). ←/→ used to be paced to the
     // piece-glide duration through a `lastStep` timestamp and a third
@@ -85,6 +112,25 @@ internal struct GameNavigationCommands: Commands {
             Button("Last Move") { game?.toEnd() }
                 .keyboardShortcut(.end, modifiers: [])
                 .disabled(game == nil)
+
+            Divider()
+
+            // The Board's only Get Info door, and `GetInfoWindow`'s doc has
+            // claimed it lives here since M10 — it did not until the 4 Aug
+            // review found the sentence naming a control nobody had built.
+            // Both context-menu copies belong to list rows; the Board has one
+            // subject and nothing to right-click, so the menu bar is the only
+            // surface left.
+            //
+            // Gated on the trigger's presence rather than on `game`: the two
+            // differ exactly where it matters, because a *live* tab has a
+            // subject (the recording) and no `Game` at all. Reusing the
+            // navigation guard here would have made ⌘I dead during the one
+            // activity the app exists for.
+            GetInfoMenuItem(
+                requesting: getInfo,
+                identifier: AccessibilityID.getInfoBoardMenuItem
+            )
         }
     }
 }

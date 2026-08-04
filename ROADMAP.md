@@ -6,6 +6,18 @@ dates, sequence only. Updates to this file arrive as a complete `.md`, same as
 the instructions. When a milestone lands, it moves to the Landed section at the
 bottom with its gate evidence — the roadmap is also the record of what shipped.*
 
+*Revised 4 August 2026 (evening): **M10 entered retroactively and moved
+straight to Landed** — it had shipped in `7390227` with zero references in
+either document, which is the first time in this roadmap's life that a whole
+milestone existed only in code. Two decisions minted at recording time, to
+close the two surfaces it left wired to nothing: **D53′** (Get Info is one
+window over three subjects and the app's rename door) and **D54′** (movetext
+is read-only everywhere but the Library), and **D55′** (one display glyph for
+every unknown, minted after ⌘U came back red on four pins asserting the
+contract it replaced). Next free: **D56′**. The standing
+counter-grep that would have caught this — milestone numbers in the code
+against milestone numbers in these two documents — is now on the sweep list.*
+
 *Revised 2 August 2026 (second): **M9 added by request and moved to Landed in
 the same pass** — Players and Rankings merged into one destination (D48′): the
 ladder becomes Players' default sort with a persisted name toggle, rank and
@@ -311,6 +323,78 @@ GM).
 ---
 
 ## Landed
+
+### M10 — Get Info, and three affordances removed *(shipped 4 August 2026 in `7390227`; **recorded 4 August 2026, evening**)*
+
+**This milestone was never on this roadmap.** It shipped whole — seven
+commits' worth of surface across eight app sources — and `grep -c "M10"` over
+this file and the instructions returned zero against thirteen references in
+the code. It is entered here retroactively, from the sites, because a
+milestone the roadmap never knew about is the one thing neither document's
+checks can catch: absence never fails a grep that reads what is written. The
+lesson and the standing counter-grep are in the instructions' working
+agreements as the fifth species of unchecked claim.
+
+**Shipped.** The Get Info system — `GetInfoRequest` (a three-case enum: an
+archived game, the live recording, a player by key), `GetInfoMenuItem`,
+`GetInfoWindow`, a third `WindowGroup`, a registry group, and ⌘I on six
+context menus. Three removals: the Players rename pencil, the Library
+inspector's `PGN.name` editor (`nameEditor` / `beginEdit` / `commitEdit`), and
+the Board's Edit Moves pencil. Plus a session-recorder growth bound (M10.2,
+suited) and, in the two commits before it, the `GameActionsMenu` /
+`PlayerActionsMenu` extractions.
+
+**What the recording pass had to decide, because the milestone left two
+surfaces wired to nothing.** Both were found by the 4 Aug review, both were
+documented at their sites as needing a decision rather than a comment, and
+neither was visible to a symbol-level dead-code scan — every name on both
+chains was referenced, and both chains ended at a closure no control invoked.
+
+- **Player rename had no door.** The pencil went with this milestone, Get
+  Info was read-only, and D52′ had removed merge that same evening — so
+  `PGNStore.retag` wrote nothing anywhere in the app while `RenamePlayerSheet`,
+  `RenameRequest`, `beginRename` and the refusal alert all sat intact behind
+  `PlayersInspectorView.onRename`, a property whose own comment called itself
+  "a deadline, not a description". Resolved as **D53′**: Get Info's player form
+  became editable and the whole rename path moved into it; the sheet is
+  deleted.
+- **Movetext editing had no door.** `BoardDestination` still wired the
+  `.movetext` editor case and `applyEditedMovetext`; nothing set it. Resolved
+  as **D54′**: read-only on the Board in both branches, and the editor is the
+  Library inspector's PGN header. D18′'s validator, store door and five
+  identifiers are untouched.
+
+Also applied from the review: `getInfoBoardMenuItem` had been minted against a
+doc sentence rather than a built control — the Board had no Get Info door at
+all — so the Game menu item was **built**, which forced the trigger-binding
+shape (`Commands` has no `openWindow`, `SmartTagCommands`' arrangement, third
+use) and made `.live` reachable for the first time, which in turn exposed a
+staleness the unavailable state's doc had claimed to handle. `board.editMoves`
+removed with its affordance, successor `library.editMoves`. The two menu
+extractions' "once" made true across all six hosts. Previews for
+`GetInfoWindow`, `GameActionsMenu`, `PlayerActionsMenu` and `AnalysisLabel`; a
+waiver row for `SessionPhase`.
+
+**A fifth undeclared decision surfaced when the tests were finally run.**
+`RosterSummary` collapsed the four display placeholders into one em dash —
+recorded now as **D55′** — overturning D22′'s two-placeholder rule and
+leaving four pins asserting the old contract.
+
+**Gate evidence: ⌘U run by Bera on the recording pass's tree — RED, 4 of 940
+failing, all `RosterSummaryTests`, all pre-existing at `7390227`.** So the
+milestone shipped red as well as unrecorded, and neither fact was visible
+until someone ran the suite: the failures are in a file this pass never
+touched, and the milestone's own commit is what changed it. The tests were
+stale rather than wrong — the production behaviour is D55′ and is correct —
+and they now pin the shipped rule plus the two claims the collapse introduced
+and nothing checked. ⌘U owed again on the fix, expected green, never claimed;
+that phrase is worth exactly what it was worth the first time.
+
+The milestone shipped without a check list, which is a consequence of shipping
+without a roadmap entry. The recording pass wrote that list after the fact,
+against what the code does rather than what it was meant to do; it is in the
+instructions under *M10's own*, and its first item is the `openWindow` routing
+check, because five existing call sites depend on the answer.
 
 ### The 2–4 August burst — search, selection, chrome, the cascade, and the suite's exit *(recorded 4 August 2026)*
 

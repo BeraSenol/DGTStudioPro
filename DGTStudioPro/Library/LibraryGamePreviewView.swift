@@ -70,11 +70,6 @@ internal struct LibraryGamePreviewView: View {
                     .lineLimit(1)
             }
             .font(.system(size: 22, weight: .semibold, design: .rounded))
-            
-            Text(game.result.rawValue)
-                .font(.system(size: 14, weight: .regular, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .tracking(1)
         }
     }
     
