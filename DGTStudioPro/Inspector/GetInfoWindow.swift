@@ -232,6 +232,52 @@ internal struct GetInfoWindow: View {
     /// means the last retag was refused whole and nothing was written.
     @State private var refusal: Refusal?
 
+    // MARK: Game Details Drafts (D57′)
+
+    /// The six text-shaped roster tags, held as drafts and committed one at a
+    /// time — the player tab's arrangement, widened.
+    ///
+    /// Drafts rather than bindings straight onto the model for the reason the
+    /// tag field gives: a commit is `PGNStore.applyEdit`, which re-resolves
+    /// **both** seats and recomputes the MD5 in one transaction, and binding a
+    /// `TextField` to `pgn.event` would run that per keystroke.
+    ///
+    /// Six `@State`s rather than a draft struct, because the field being
+    /// committed is the unit of work: `commitField(_:on:)` writes exactly the
+    /// one property its case names, so a stray edit in one row cannot ride
+    /// along with another row's Return. A struct would make "which of these
+    /// changed?" a diff, which is the shape D18′ already rejected at
+    /// `applyEdit`.
+    @State private var draftEvent = ""
+    @State private var draftSite = ""
+    @State private var draftRound = ""
+    @State private var draftWhite = ""
+    @State private var draftBlack = ""
+    @State private var draftDate: Date?
+
+    /// The two tags D24′ writes *after* the roster — `Board` and `TimeControl`
+    /// — which are editable on Details as of the same-evening amendment to
+    /// D57′. Optional-backed in the model, so an emptied field is a legitimate
+    /// nil here in a way it is not for Event or Site.
+    @State private var draftBoard = ""
+    @State private var draftTimeControl = ""
+
+    /// Which row holds the keyboard, so a commit can fire on focus loss as
+    /// well as on Return.
+    ///
+    /// **Focus loss commits here and deliberately does not on the player tab**,
+    /// which is the one place the two tabs' rules differ and the difference is
+    /// the blast radius. A game edit writes one row; a rename rewrites every
+    /// game the player appears in, so committing that because the window lost
+    /// focus would turn clicking away into a forty-game rewrite nobody asked
+    /// for. Same window, two rules, stated at both sites.
+    @FocusState private var focusedField: GameField?
+
+    /// A refused result change, held for its alert (D57′). Carries the
+    /// validator's own rejection so the message is D18′'s sentence rather than
+    /// a second opinion about the same position.
+    @State private var resultRefusal: ResultRefusal?
+
     // MARK: Body
     internal var body: some View {
         Group {
@@ -261,6 +307,46 @@ internal struct GetInfoWindow: View {
             actions: { _ in Button("OK", role: .cancel) {} },
             message: { refusal in Text(Self.refusalMessage(refusal.collisions)) }
         )
+        // D57′. A separate alert from the rename refusal rather than one
+        // widened to carry both: they are refusals from two different doors
+        // about two different things, and the one thing a refusal alert must do
+        // is name what it refused. `RetagRefusal.Operation` was minted to make
+        // one alert serve two doors on 4 Aug and retired the same evening with
+        // the second door (D52′) — the lesson stuck.
+        .alert(
+            "Can’t Change Result",
+            isPresented: Binding(present: $resultRefusal),
+            presenting: resultRefusal,
+            actions: { _ in Button("OK", role: .cancel) {} },
+            message: { refusal in Text(refusal.message) }
+        )
+    }
+}
+
+// MARK: - Game Fields
+
+extension GetInfoWindow {
+
+    /// The editable roster rows, as focus identities and as commit targets.
+    ///
+    /// Deliberately **not** `SevenTagRoster`: that enum is the *display* order
+    /// of seven tags including Result, and Result is a `Picker` with no focus
+    /// state and no draft. Reusing it would give this enum a case that can
+    /// never be focused and no field to commit, which is the "a guard that can
+    /// never be true" shape one type over. Six cases, all of them real.
+    fileprivate enum GameField: Hashable {
+        case event, site, round, white, black, date
+        case board, timeControl
+    }
+
+    /// A result change the final position disproves (D57′).
+    ///
+    /// Carries the rendered sentence rather than the `MovetextEdit.Rejection`
+    /// itself, because the alert needs one string and the mapping from
+    /// rejection to prose belongs beside the switch that is exhaustive over it.
+    fileprivate struct ResultRefusal: Identifiable {
+        let message: String
+        var id: String { message }
     }
 }
 
@@ -306,6 +392,7 @@ extension GetInfoWindow {
                 subject = nil
                 return
             }
+            seedGameDrafts(from: pgn)
             subject = .game(pgn)
 
         case .live:
@@ -347,6 +434,40 @@ extension GetInfoWindow {
         }
     }
 
+    /// Seeds the six drafts from stored state, beside the fetch rather than in
+    /// the form — the player tab's placement, for the reason its comment gives
+    /// about seeding a tag field from a display name.
+    ///
+    /// **Tag form in, verbatim**, including the `?` placeholders: these fields
+    /// edit what export writes byte for byte (D24′), so the field must show the
+    /// stored string and not `RosterSummary`'s rendering of it. That is the one
+    /// place this form parts company with the read-only version it replaces —
+    /// the old rows went through `RosterSummary`'s subscript, which folds
+    /// "Senol, Bera" to "Bera Senol" and every unknown to an em dash (D55′).
+    /// Seeding from that would put a display form in a field that stores a tag,
+    /// and the first commit would write it into `[White]`. D37′'s trap, in a
+    /// second place.
+    ///
+    /// Round is a `String` draft rather than an `Int?` binding because the
+    /// empty field has to mean "no round" (D31′ — a sub-round imports as nil
+    /// and exports as `?`), and a numeric `TextField` with a nil formatter
+    /// makes empty and zero the same gesture.
+    private func seedGameDrafts(from pgn: PGN) {
+        draftEvent = pgn.event
+        draftSite = pgn.site
+        draftRound = pgn.round.map(String.init) ?? ""
+        draftWhite = pgn.white
+        draftBlack = pgn.black
+        draftDate = pgn.date
+        // Empty string for nil, not the export's `?` / `-`: those are what the
+        // *file* says when there is no value, and a field pre-filled with `-`
+        // invites editing around a placeholder rather than typing a value.
+        // The commit maps the empty field back to nil, so the round trip is
+        // nil → "" → nil.
+        draftBoard = pgn.board ?? ""
+        draftTimeControl = pgn.timeControl ?? ""
+    }
+
     private var title: String {
         switch subject {
         case .game(let pgn):     pgn.name
@@ -370,50 +491,346 @@ extension GetInfoWindow {
         }
     }
 
-    /// The seven tags in standard order, then what the Library knows that the
-    /// tags do not.
+    /// An archived game: what you can change, and what the app knows about the
+    /// row (D57′).
     ///
-    /// Rendered through `RosterSummary` rather than off `PGN`'s fields
-    /// directly, so this surface inherits D22′'s display rules — tag form in,
-    /// display form out, `?` for "this game doesn't say" — instead of becoming
-    /// the one place that spells an unknown seat differently.
+    /// **Two tabs, and the split is by *authorship* rather than by topic.**
+    /// Details is everything the reader wrote or can rewrite — which is exactly
+    /// D24′'s **nine** exported tags: the Seven Tag Roster, then Board, then
+    /// TimeControl. File is everything the app derived, stamped or measured:
+    /// when it arrived, what it hashes to, what the classifier made of it, how
+    /// far the engine got. That line is also why File has no edit affordance
+    /// anywhere on it and needs no comment saying so — nothing there is a value
+    /// a person holds an opinion about.
+    ///
+    /// **The line moved once, and the correction is worth keeping.** For one
+    /// evening this doc claimed "the nine tags" while the tab held seven, with
+    /// `board` and `timeControl` on File under an argument that called them
+    /// "equipment facts the archive door stamps". That is true of `board` on a
+    /// game played here and true of neither on a game imported from a file that
+    /// carried them — and either way they are *exported tags*, so a window that
+    /// lets you rewrite what lands on disk should hold all nine. Nothing caught
+    /// this: the sentence and its own next sentence disagreed, both read well,
+    /// and it took a reader looking at the running app. The transferable part is
+    /// that a doc stating a *set* ("the nine tags") beside code enumerating a
+    /// different one is checkable by counting, and nobody counts a number that
+    /// arrives inside a sentence they just agreed with.
+    ///
+    /// `TabView` with `.tabItem`, not the 2027 `Tab(role:)` spelling, which is
+    /// beta (D27′).
     private func gameForm(_ pgn: PGN) -> some View {
-        let roster = RosterSummary(pgn)
-        return Form {
+        TabView {
+            detailsTab(pgn)
+                .tabItem { Label("Details", systemImage: "list.bullet.rectangle") }
+
+            fileTab(pgn)
+                .tabItem { Label("File", systemImage: "doc.text.magnifyingglass") }
+        }
+        .padding(.top, 8)
+        .accessibilityIdentifier(AccessibilityID.getInfoGame)
+    }
+
+    /// The seven tags, editable (D57′).
+    ///
+    /// Each row is the native control for what the tag *is* rather than a text
+    /// field for all seven: a date is a `DatePicker`, a result is a `Picker`
+    /// over `GameResult`, a round is a numeric field. That is not decoration —
+    /// it is what makes the invalid states unreachable rather than validated.
+    /// A `Picker` cannot produce a result outside the enum, and a `DatePicker`
+    /// cannot produce 2026-02-31, so the only rule left to *check* is the one
+    /// no widget can know, which is whether the position agrees with the
+    /// result.
+    ///
+    /// The rows read off drafts and commit one at a time — see `commitField`.
+    /// The two non-text rows have no draft and no focus: a `Picker` and a
+    /// `DatePicker` have no Return and no editing session, so their commit
+    /// point is the change itself.
+    private func detailsTab(_ pgn: PGN) -> some View {
+        Form {
             Section("Seven Tag Roster") {
-                ForEach(SevenTagRoster.allCases, id: \.self) { tag in
-                    LabeledContent(tag.rawValue, value: roster[tag])
-                }
+                TextField("Event", text: $draftEvent)
+                    .focused($focusedField, equals: .event)
+                    .onSubmit { commitField(.event, on: pgn) }
+                    .accessibilityIdentifier(AccessibilityID.getInfoGameField("event"))
+
+                TextField("Site", text: $draftSite)
+                    .focused($focusedField, equals: .site)
+                    .onSubmit { commitField(.site, on: pgn) }
+                    .accessibilityIdentifier(AccessibilityID.getInfoGameField("site"))
+
+                dateRow(pgn)
+
+                TextField("Round", text: $draftRound)
+                    .focused($focusedField, equals: .round)
+                    .onSubmit { commitField(.round, on: pgn) }
+                    .accessibilityIdentifier(AccessibilityID.getInfoGameField("round"))
+
+                seatRow("White", text: $draftWhite, field: .white, on: pgn)
+                seatRow("Black", text: $draftBlack, field: .black, on: pgn)
+
+                resultRow(pgn)
             }
 
-            Section("Library") {
-                // Em dash rather than "?" — the roster's `?` means "this game
-                // doesn't say", which is a PGN tag's own unknown vocabulary,
-                // and these rows are not PGN tags. `OpeningSection`'s
-                // distinction, applied to its own field and one more.
-                LabeledContent("Opening", value: pgn.opening?.fullName ?? RosterSummary.displayUnknown)
-                LabeledContent("Plies", value: "\(pgn.moves.count)")
-                // There is no Index row, and that is a decision rather than a
-                // gap: a row reading "—" for every game in the Library would
-                // be a field the reader learns to ignore before it ever
-                // carries a value. If `PGN` ever grows a stored library index,
-                // this section is where it surfaces.
-                //
-                // (This comment scheduled that work — "lands with
-                // `PGN.libraryIndex`" — until the 4 Aug review pointed out
-                // that a comment is not a roadmap and the roadmap had never
-                // heard of it. The observation survives; the promise does
-                // not.)
+            // The other two of D24′'s **nine**, in the order the exported tag
+            // block writes them: the roster, then Board, then TimeControl.
+            //
+            // These sat on the File tab for the length of one evening, under an
+            // argument that read well and was wrong — "equipment facts the
+            // archive door stamps", true of `board` on a game played here and
+            // true of neither on a game imported from a file that carried them.
+            // What settles it is that they are *exported tags*: whatever this
+            // window lets you rewrite should be the set that lands on disk, and
+            // seven of nine is a split with no rule behind it. D57′'s own text
+            // said "the nine tags" while the tab held seven, which is the
+            // clearest evidence available that nine was the intended line.
+            //
+            // Their own section rather than seven-plus-two in one, because the
+            // Seven Tag Roster is a *named standard* (D22′ renders it from
+            // `SevenTagRoster.allCases` precisely so it cannot quietly grow) and
+            // these two are the app's additions to it. One section would make
+            // the roster look like it has nine members.
+            Section("Equipment") {
+                TextField("Board", text: $draftBoard)
+                    .focused($focusedField, equals: .board)
+                    .onSubmit { commitField(.board, on: pgn) }
+                    .accessibilityIdentifier(AccessibilityID.getInfoGameField("board"))
+
+                TextField("Time Control", text: $draftTimeControl)
+                    .focused($focusedField, equals: .timeControl)
+                    .onSubmit { commitField(.timeControl, on: pgn) }
+                    .accessibilityIdentifier(AccessibilityID.getInfoGameField("timecontrol"))
+            }
+            // Commits whichever row the keyboard just left. `focusedField` goes
+            // nil when focus leaves the form entirely and to the next case when
+            // it moves between rows, so the *old* value is the one to commit —
+            // which is why this reads the previous value rather than the new.
+            .onChange(of: focusedField) { previous, _ in
+                if let previous { commitField(previous, on: pgn) }
             }
         }
         .formStyle(.grouped)
-        .accessibilityIdentifier(AccessibilityID.getInfoGame)
+        .accessibilityIdentifier(AccessibilityID.getInfoGameDetails)
+    }
+
+    /// The date row, with its own "no date" arm.
+    ///
+    /// A bare `DatePicker` cannot express nil, and nil is a real and common
+    /// state here — D24′ writes `????.??.??` for it and D31′'s sibling rule
+    /// says an absent value is not a zero. So the row is a picker plus a Clear
+    /// button when there is a date, and a Set button when there is not, which
+    /// keeps "this game doesn't say" reachable in both directions.
+    @ViewBuilder
+    private func dateRow(_ pgn: PGN) -> some View {
+        if let bound = draftDate {
+            LabeledContent("Date") {
+                HStack {
+                    DatePicker(
+                        "",
+                        selection: Binding(
+                            get: { bound },
+                            set: { draftDate = $0; commitField(.date, on: pgn) }
+                        ),
+                        displayedComponents: .date
+                    )
+                    .labelsHidden()
+
+                    Button("Clear") {
+                        draftDate = nil
+                        commitField(.date, on: pgn)
+                    }
+                }
+            }
+            .accessibilityIdentifier(AccessibilityID.getInfoGameField("date"))
+        } else {
+            LabeledContent("Date") {
+                Button("Set Date…") {
+                    draftDate = Date()
+                    commitField(.date, on: pgn)
+                }
+            }
+            .accessibilityIdentifier(AccessibilityID.getInfoGameField("date"))
+        }
+    }
+
+    /// A seat row, plus the sentence that keeps it from being mistaken for the
+    /// player tab's field.
+    ///
+    /// **These two rows are the most dangerous thing in this window and they
+    /// look like the least.** Editing White here rewrites *this game's* tag —
+    /// `applyEdit` re-resolves the seat afterwards, so the game moves to a
+    /// different player, possibly minting one. Editing the field on the player
+    /// tab rewrites *every* game that player appears in (D37′). Same-looking
+    /// text field, same-looking name, blast radius of one versus forty. The
+    /// derived display line beneath is the only thing on screen that hints the
+    /// value is a tag, so it is not decoration either.
+    private func seatRow(
+        _ label: String,
+        text: Binding<String>,
+        field: GameField,
+        on pgn: PGN
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            TextField(label, text: text)
+                .focused($focusedField, equals: field)
+                .onSubmit { commitField(field, on: pgn) }
+
+            // Only while it says something different from the field, so the
+            // ordinary "Bera" case does not carry a line repeating itself.
+            if PlayerName.displayForm(of: text.wrappedValue) != text.wrappedValue {
+                Text("Shown as \(PlayerName.displayForm(of: text.wrappedValue))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .accessibilityIdentifier(AccessibilityID.getInfoGameField(label.lowercased()))
+    }
+
+    /// Result, as a picker over the enum, checked against the final position on
+    /// change (D57′).
+    ///
+    /// `*` is deliberately **not** offered. Decision #3 says it is never a
+    /// finished result, `MovetextEdit.validate` refuses it outright, and the
+    /// import door is the only thing that ever puts one in the Library. The
+    /// recorded consequence: an imported `*` game can be *decided* here and
+    /// cannot be set back, which is the right asymmetry — un-deciding a game is
+    /// not a correction anyone needs, and offering the case would put a state
+    /// on the menu that the validator one line down always rejects.
+    private func resultRow(_ pgn: PGN) -> some View {
+        Picker(
+            "Result",
+            selection: Binding(
+                get: { pgn.result },
+                set: { commitResult($0, on: pgn) }
+            )
+        ) {
+            ForEach(GameResult.allCases.filter { $0 != .ongoing }, id: \.self) { result in
+                Text(result.rawValue).tag(result)
+            }
+        }
+        .accessibilityIdentifier(AccessibilityID.getInfoGameField("result"))
+    }
+
+    /// Everything the app knows about the row that the reader did not write
+    /// (D57′) — read-only throughout, by the authorship split `gameForm`
+    /// states.
+    ///
+    /// Four sections, and the grouping is the one the reader would ask in: when
+    /// did this arrive and what is it called; what does it dedupe as; what did
+    /// the classifier make of it; how far did the engine get.
+    ///
+    /// (Five until the D57′ amendment moved Equipment to Details. Worth the
+    /// parenthesis because the count is the kind of number this project has
+    /// watched decay repeatedly, and it decayed here within a day of being
+    /// written.)
+    ///
+    /// **Hash and identifier are `.textSelection(.enabled)` and monospaced**,
+    /// which is the whole reason they are worth showing: an MD5 you cannot copy
+    /// answers no question. Both are the strings you would paste into a `log
+    /// stream` predicate or a `grep` over an export folder while working out why
+    /// two games did or did not dedupe (D24′, and the one-hash invariant).
+    ///
+    /// Rows that can be absent print `RosterSummary.displayUnknown` rather than
+    /// being hidden, so the section's shape is constant and a nil reads as an
+    /// answer instead of as a missing row — the tag block's rule (D24′'s
+    /// "always all nine tags"), applied to a panel.
+    private func fileTab(_ pgn: PGN) -> some View {
+        Form {
+            Section("Library") {
+                // D58′, and this row is what the old read-only form's comment
+                // reserved a place for — "if `PGN` ever grows a stored library
+                // index, this section is where it surfaces". It observed rather
+                // than promised, correctly, and the observation turned out to
+                // name the right section.
+                //
+                // Above Name, because it is the stronger half of what this game
+                // is *called* on disk: the ordinal is the part that identifies,
+                // and the players are the part that describes.
+                LabeledContent(
+                    "Index",
+                    value: pgn.libraryIndex.map(String.init) ?? RosterSummary.displayUnknown
+                )
+                LabeledContent("Name", value: pgn.name)
+                LabeledContent("Imported", value: Self.stamp(pgn.importedAt))
+                LabeledContent("Plies", value: "\(pgn.moves.count)")
+                LabeledContent(
+                    "Moves",
+                    value: pgn.moves.isEmpty ? RosterSummary.displayUnknown
+                                             : "\((pgn.moves.count + 1) / 2)"
+                )
+            }
+
+            Section("Identity") {
+                LabeledContent("Content Hash") {
+                    Text(pgn.contentHash)
+                        .font(.caption.monospaced())
+                        .textSelection(.enabled)
+                }
+                // The seats as *resolved*, which is a different question from
+                // the seats as *tagged* one tab over — and the only place in
+                // the app the difference is visible. A game whose tag says
+                // "Senol, Bera" and whose link says nothing is a row the
+                // backfill has not reached, and that is worth being able to
+                // see rather than infer from a player missing in Players.
+                LabeledContent(
+                    "White Player",
+                    value: pgn.whitePlayer?.name ?? RosterSummary.displayUnknown
+                )
+                LabeledContent(
+                    "Black Player",
+                    value: pgn.blackPlayer?.name ?? RosterSummary.displayUnknown
+                )
+            }
+
+            Section("Classification") {
+                LabeledContent("ECO", value: pgn.opening?.code ?? RosterSummary.displayUnknown)
+                LabeledContent("Family", value: pgn.ecoFamily ?? RosterSummary.displayUnknown)
+                LabeledContent("Variation", value: pgn.ecoVariation ?? RosterSummary.displayUnknown)
+                LabeledContent(
+                    "Mate Pattern",
+                    value: pgn.specialCheckmate?.displayName ?? RosterSummary.displayUnknown
+                )
+            }
+
+            Section("Analysis") {
+                // One spelling of "analyzed?", `AnalysisGlyph`'s — the same
+                // predicate the glyphs, the toolbar aggregate and the search
+                // chips read. A bare `evaluations.isEmpty` here would be a
+                // second opinion about the one question this app asks most.
+                LabeledContent(
+                    "Analyzed",
+                    value: AnalysisGlyph.isAnalyzed(pgn) ? "Yes" : "No"
+                )
+                LabeledContent("Evaluated Plies", value: Self.evaluatedPlies(pgn))
+                LabeledContent("Best For White", value: Self.extreme(pgn, white: true))
+                LabeledContent("Best For Black", value: Self.extreme(pgn, white: false))
+            }
+
+            // An `Equipment` section stood here for one evening, holding `board`
+            // and `timeControl`. Both moved to Details in the D57′ amendment:
+            // they are two of D24′'s nine exported tags, and this tab's rule is
+            // that nothing on it is a value a person holds an opinion about.
+            // They were the two rows that failed that rule, which is why they
+            // were also the two this tab's doc had to describe as "equipment
+            // facts" rather than as derived truth.
+        }
+        .formStyle(.grouped)
+        .accessibilityIdentifier(AccessibilityID.getInfoGameFile)
     }
 
     /// The live game's roster. No index and no library facts: it has neither
     /// until it archives, and showing empty rows for them would describe the
     /// archived game this one is going to become rather than the one on the
     /// board.
+    ///
+    /// **No tabs, and no File tab in particular** (D57′). A live game has no
+    /// row, no import stamp, no hash and no classification — a File tab here
+    /// would be five sections of em dashes describing the archived game this
+    /// one is going to become, which is the same argument this form's existing
+    /// doc already makes about the Library section it does not have. It is also
+    /// still read-only: the live roster's editor is `EditLiveGameDetailsSheet`,
+    /// reached from the live inspector, and it writes through the session and
+    /// the draft sidecar rather than through `PGNStore`. Different target,
+    /// different door.
     private func liveForm(_ live: LiveGame) -> some View {
         let roster = RosterSummary(live.roster, result: live.result)
         return Form {
@@ -515,6 +932,220 @@ extension GetInfoWindow {
     /// (D39′) would accept that second one silently, which is exactly why it
     /// is worth stopping here — "nothing happened" and "everything was
     /// rewritten to the same bytes" look identical from the outside.
+    /// Commits one roster field through `PGNStore.applyEdit` (D57′).
+    ///
+    /// **One field per transaction, and the two guards ahead of the door are
+    /// the point.** An unchanged value returns before reaching the store: the
+    /// door itself would accept it silently — re-resolve, recompute the same
+    /// MD5, write the same bytes — and "nothing happened" and "everything was
+    /// rewritten identically" look identical from outside, which is exactly the
+    /// argument `commitRename` makes one method down. And an emptied Event or
+    /// Site reverts rather than storing `""`: D24′'s tag block always prints
+    /// all nine tags and an unknown is `?`, so an empty string would be the one
+    /// value that exports as neither a name nor an unknown.
+    ///
+    /// Seats and Round are the two that may legitimately empty. A seat clears
+    /// to `?`, which is PGN's own unknown and what `resolvePlayer` reads as "no
+    /// player" (D9′) — so clearing a seat unlinks the game rather than minting
+    /// a player named `?`. Round clears to nil, which D31′ already spells as an
+    /// exported `?`.
+    ///
+    /// `applyEdit` does the rest and is unchanged: the closure writes, both
+    /// seats re-resolve unconditionally, `refreshHash` recomputes and saves,
+    /// one transaction (D18′). Re-resolving on an Event edit is a documented
+    /// no-op rather than waste — it is what makes this door unable to rot the
+    /// links, which is the invariant `PGN.whitePlayer` names.
+    fileprivate func commitField(_ field: GameField, on pgn: PGN) {
+        let store = PGNStore(modelContext: modelContext)
+        do {
+            switch field {
+            case .event:
+                let proposed = draftEvent.trimmingCharacters(in: .whitespaces)
+                guard !proposed.isEmpty else { draftEvent = pgn.event; return }
+                guard proposed != pgn.event else { return }
+                try store.applyEdit(to: pgn) { $0.event = proposed }
+
+            case .site:
+                let proposed = draftSite.trimmingCharacters(in: .whitespaces)
+                guard !proposed.isEmpty else { draftSite = pgn.site; return }
+                guard proposed != pgn.site else { return }
+                try store.applyEdit(to: pgn) { $0.site = proposed }
+
+            case .round:
+                let trimmed = draftRound.trimmingCharacters(in: .whitespaces)
+                // Non-numeric text reverts rather than clearing: D31′ makes nil
+                // mean "no round", and reading "quarterfinal" as nil would
+                // silently discard what was typed under the same spelling an
+                // intentional clear uses.
+                let proposed: Int? = trimmed.isEmpty ? nil : Int(trimmed)
+                guard trimmed.isEmpty || proposed != nil else {
+                    draftRound = pgn.round.map(String.init) ?? ""
+                    return
+                }
+                guard proposed != pgn.round else { return }
+                try store.applyEdit(to: pgn) { $0.round = proposed }
+
+            case .white:
+                let proposed = seatValue(draftWhite)
+                guard proposed != pgn.white else { return }
+                try store.applyEdit(to: pgn) { $0.white = proposed }
+                draftWhite = proposed
+
+            case .black:
+                let proposed = seatValue(draftBlack)
+                guard proposed != pgn.black else { return }
+                try store.applyEdit(to: pgn) { $0.black = proposed }
+                draftBlack = proposed
+
+            case .date:
+                guard draftDate != pgn.date else { return }
+                try store.applyEdit(to: pgn) { $0.date = draftDate }
+
+            // Both clear to nil rather than reverting, unlike Event and Site
+            // and for a reason visible in the model: these are `String?`, and
+            // D24′ already writes an absent one as `?` / `-`. "No board" and
+            // "no time control" are values a game can honestly have, where
+            // "no event" is not — PGN's roster is mandatory and its unknown is
+            // spelled `?`, which the tag block prints for an empty `event`
+            // anyway. So the empty field means different things in the two
+            // sections, and the model is what makes that non-arbitrary.
+            case .board:
+                let proposed = optionalValue(draftBoard)
+                guard proposed != pgn.board else { return }
+                try store.applyEdit(to: pgn) { $0.board = proposed }
+
+            case .timeControl:
+                let proposed = optionalValue(draftTimeControl)
+                guard proposed != pgn.timeControl else { return }
+                try store.applyEdit(to: pgn) { $0.timeControl = proposed }
+            }
+        } catch {
+            Self.logger.error(
+                "Info edit failed to persist: \(error.localizedDescription, privacy: .public)"
+            )
+            seedGameDrafts(from: pgn)
+        }
+    }
+
+    /// An emptied seat becomes PGN's own unknown rather than `""` — see
+    /// `commitField`. Written back into the draft after a commit so the field
+    /// shows the `?` it stored, rather than staying blank and inviting a second
+    /// identical commit.
+    /// An emptied optional-backed field is nil, not `""` — see `commitField`'s
+    /// `.board` arm. Separate from `seatValue` because they map the same
+    /// gesture to different values (`?` versus nil) for different columns, and
+    /// one shared helper would have to take a flag saying which.
+    private func optionalValue(_ draft: String) -> String? {
+        let trimmed = draft.trimmingCharacters(in: .whitespaces)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func seatValue(_ draft: String) -> String {
+        let trimmed = draft.trimmingCharacters(in: .whitespaces)
+        return trimmed.isEmpty ? RosterSummary.unknownTag : trimmed
+    }
+
+    /// Commits a result change, refusing what the final position disproves
+    /// (D57′).
+    ///
+    /// **Reuses `MovetextEdit.validate` rather than restating its rules**, and
+    /// that is the whole design: the stored moves are already canonical and
+    /// legal, so replaying them can only fail on the result arms — the trailing
+    /// `#` check, Decision #3, checkmate-forces-the-winner, stalemate-forces-a
+    /// draw. Writing a second, smaller "is this result plausible" check here
+    /// would be two spellings of one question, and the smaller one would be the
+    /// one that drifts. The cost is a full replay per result change, which at
+    /// personal scale is a few dozen plies against an alert nobody wants to be
+    /// wrong.
+    ///
+    /// What it deliberately still allows: a resignation, a draw by agreement, a
+    /// win on time — anything a non-terminal final position cannot disprove.
+    /// That is D18′'s rule verbatim and it is most of the real corrections.
+    fileprivate func commitResult(_ proposed: GameResult, on pgn: PGN) {
+        guard proposed != pgn.result else { return }
+
+        switch MovetextEdit.validate(pgn.moves, claimedResult: proposed) {
+        case .success:
+            do {
+                try PGNStore(modelContext: modelContext)
+                    .applyEdit(to: pgn) { $0.result = proposed }
+            } catch {
+                Self.logger.error(
+                    "Result edit failed to persist: \(error.localizedDescription, privacy: .public)"
+                )
+            }
+        case .failure(let rejection):
+            resultRefusal = ResultRefusal(message: Self.resultMessage(rejection))
+        }
+    }
+
+    /// The refusal, in the reader's terms.
+    ///
+    /// Exhaustive over `MovetextEdit.Rejection` on purpose, `present(_:)`'s
+    /// reason: a future case arrives as a compile error rather than as a
+    /// swallowed refusal. Three of the five arms are unreachable from *this*
+    /// caller — the moves are stored canonical, so they cannot be illegal,
+    /// spliced, or claim a mate the position lacks — and they are spelled
+    /// anyway rather than folded into a default, because "unreachable from here"
+    /// is a fact about this call site that a `default` would hide the day a
+    /// second caller appears.
+    private static func resultMessage(_ rejection: MovetextEdit.Rejection) -> String {
+        switch rejection {
+        case .checkmateResultMismatch(let expected, _):
+            "The game ends in checkmate, so the result must be \(expected.rawValue)."
+        case .stalemateRequiresDraw:
+            "The final position is stalemate, so the result must be a draw."
+        case .resultRequiresDecision:
+            "An archived game needs a decided result."
+        case .claimsCheckmateButPositionIsNot(let san):
+            "The last move (\(san)) is written as checkmate but the position is not."
+        case .illegalMove(let index, let san, _):
+            "The stored moves don’t replay — ply \(index + 1) (\(san)) is illegal."
+        case .splicedGames(let token):
+            "The stored movetext contains more than one game (at “\(token)”)."
+        }
+    }
+
+    // MARK: File Tab Formatters
+
+    /// Date *and* time, unlike every other date in the app.
+    ///
+    /// `RosterSummary.displayDate` is the app's one short-date rendering (D22′)
+    /// and it is deliberately not used here: that formats a game's **playing**
+    /// date, which is a day, while this is a filesystem-ish stamp where the
+    /// time is the informative half — two imports of the same PGN minutes apart
+    /// are exactly what this row exists to tell apart.
+    private static func stamp(_ date: Date) -> String {
+        date.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    /// "48 of 58" — how much of the game the engine actually scored.
+    ///
+    /// The two numbers differ more often than the glyph suggests: a skipped or
+    /// cancelled batch leaves a partial array, and `AnalysisGlyph.isAnalyzed`
+    /// answers yes for *any* non-nil entry. This is the row that says how much.
+    private static func evaluatedPlies(_ pgn: PGN) -> String {
+        let scored = pgn.evaluations.count { $0 != nil }
+        guard scored > 0 else { return RosterSummary.displayUnknown }
+        return "\(scored) of \(pgn.moves.count)"
+    }
+
+    /// The best evaluation either side reached, in the bar's own grammar.
+    ///
+    /// Rendered through `EvaluationBarReading.label` rather than formatted here,
+    /// so this panel and the bar cannot disagree about what "+1.3" or "M4"
+    /// looks like — D33′ pinned that grammar and D46′'s window already reuses
+    /// it rather than restating it.
+    private static func extreme(_ pgn: PGN, white: Bool) -> String {
+        let scored = pgn.evaluations.compactMap { $0 }
+        guard !scored.isEmpty else { return RosterSummary.displayUnknown }
+        let best = white
+            ? scored.max(by: { $0.whiteWinProbability < $1.whiteWinProbability })
+            : scored.min(by: { $0.whiteWinProbability < $1.whiteWinProbability })
+        guard let best else { return RosterSummary.displayUnknown }
+        return EvaluationBarReading(best).label
+    }
+
     fileprivate func commitRename(for player: Player) {
         let proposed = draftTag.trimmingCharacters(in: .whitespaces)
         guard !proposed.isEmpty else {
@@ -581,14 +1212,75 @@ extension GetInfoWindow {
         .environment(DGTLiveSession())
 }
 
-/// The live form, which is the one content branch a canvas *can* reach: its
-/// subject comes from the session rather than the store, so seeding it is one
-/// object rather than a container round trip.
+/// The game form, both tabs, on a fixture built to make the File tab say
+/// something (D57′).
+///
+/// **This preview exists because the argument against it expired.** The head
+/// doc said the game form was "deliberately not previewed: reaching them means
+/// inserting a model and letting `resolve()` fetch it, which witnesses
+/// SwiftData rather than this view's layout." That was right about a form of
+/// seven `LabeledContent` rows. It is wrong about a form with two tabs, six
+/// text fields, a `DatePicker` with its own no-date arm, a `Picker`, and a
+/// second tab of five sections — that is layout, it is heterogeneous, and the
+/// canvas is the only place it can be looked at. The container round trip is
+/// the price rather than the subject.
+///
+/// The fixture is deliberately *rich*: evaluations that stop short of the last
+/// ply (so "Evaluated Plies" reads `12 of 20` rather than agreeing with the
+/// total and hiding the distinction that row exists for), a classification, a
+/// board, and a time control. A fixture where every optional is nil would
+/// render five sections of em dashes and witness nothing.
+///
+/// Classification is assigned directly here, which `PGNStore.classify` is
+/// otherwise the single door for (D34′). A preview fixture is not a second
+/// door — it never runs in the app — but it is worth naming, because the
+/// reason those fields are absent from `PGN.init` is exactly to make this
+/// assignment visible when it happens.
+#Preview("Game — Details & File") {
+    let container = try! ModelContainer(
+        for: PGN.self,
+        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+    )
+    let pgn = PGN(
+        event: "DGT USB eBoard",
+        site: "Hasselt, Limburg BEL",
+        round: 47,
+        white: "Senol, Bera",
+        black: "Heylen, Christophe",
+        moves: ["e4", "d5", "exd5", "Qxd5", "Nc3", "Qa5", "d4", "Nf6",
+                "Nf3", "c6", "Bc4", "Bf5", "Bd2", "e6", "Qe2", "Bb4",
+                "O-O-O", "Nbd7", "Kb1", "O-O"],
+        result: .blackWins
+    )
+    container.mainContext.insert(pgn)
+    pgn.libraryIndex = 47
+    pgn.date = Date(timeIntervalSince1970: 1_773_000_000)
+    pgn.board = "DGT 3000448278"
+    pgn.timeControl = "600+5"
+    pgn.ecoCode = "B01"
+    pgn.ecoFamily = "Scandinavian Defense"
+    pgn.ecoVariation = "Main Line, Mieses Variation"
+    // Twelve of twenty, on purpose — see the doc above.
+    pgn.evaluations = (0..<20).map { ply in
+        ply < 12 ? Evaluation.centipawns((ply % 5) * 40 - 60) : nil
+    }
+
+    return GetInfoWindow(request: .game(pgn.persistentModelID))
+        .frame(width: 460, height: 560)
+        .modelContainer(container)
+        .environment(DGTLiveSession())
+}
+
+/// The live form — the one content branch a canvas can reach without a
+/// container: its subject comes from the session, so seeding it is one object.
 ///
 /// It is also the branch with no automated witness anywhere else — the game
 /// and player forms are `RosterSummary` and `Player` rows that other suites
 /// cover, while this one is the only place `LiveGame.Roster`'s projection is
-/// rendered outside the live inspector.
+/// rendered outside the live inspector. **And it is the tabless one**, which
+/// this canvas is now the standing witness for: a live game has no file, and
+/// a Recording window that grew a File tab would be showing five rows of em
+/// dashes about a row that does not exist yet.
 #Preview("Recording") {
     let session = DGTLiveSession()
     session.startNewGame(

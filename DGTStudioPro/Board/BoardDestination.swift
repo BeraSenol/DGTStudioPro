@@ -84,7 +84,6 @@ internal struct BoardDestination: View {
     /// exclusive by construction: both require `boardPGN`, and a click can
     /// only ask for one. Two booleans would hand the window's single modal
     /// slot a second way to be asked twice, for no gain.
-    @State private var activeEditor: BoardEditor?
     
     /// The connect dialog, lifted out of `DGTConnectionToolbarModifier` with
     /// the button. It was always one of the sheets contending for the window's
@@ -99,22 +98,18 @@ internal struct BoardDestination: View {
     /// back would give the menu a value it has no way to use.
     @State private var getInfoRequested = false
 
-    /// Nested and private: this is presentation state for one destination's
-    /// inspector, not a shared vocabulary.
-    ///
-    /// **Down to one case since M10 took the movetext editor off this
-    /// destination**, and kept as an enum rather than collapsed to a `Bool`
-    /// for the reason the `activeEditor` doc above gives: `.sheet(item:)`
-    /// makes "which editor" and "is a sheet up" one value, where a `Bool`
-    /// plus a subject is the pairing class the 2027 SDK's `.alert(item:)`
-    /// exists to retire. A second editor is one case away; a second boolean
-    /// would be a second way to be asked twice.
-    private enum BoardEditor: String, Identifiable {
-        case info
+    // `BoardEditor` and `activeEditor` are gone with D57′, and the enum's own
+    // doc is why this is worth a comment rather than a silent deletion. It
+    // argued for staying an enum at one case, on the grounds that "a second
+    // editor is one case away". The traffic went the other way: M10 took the
+    // movetext arm, D57′ took the info arm, and the type reached zero cases
+    // without ever reaching two. Kept as a note because the argument was
+    // sound — `.sheet(item:)` really is better than a `Bool` plus a subject —
+    // and only the forecast was wrong.
+    //
+    // This destination presents no editor now. The live branch's sheets
+    // (new-game, archive) are separate state and unaffected.
 
-        var id: String { rawValue }
-    }
-    
     // MARK: Body
     
     internal var body: some View {
@@ -182,49 +177,21 @@ internal struct BoardDestination: View {
                 || session.resumableDraft != nil
             )
         }
-        // The review inspector's metadata editor (the surface a loaded
-        // archived game never had), at body level rather than in the
-        // inspector: D15′ keeps modals as destination furniture, and the write
-        // needs `modelContext` and the store door. The inspector only
-        // requests.
+        // The review inspector's metadata editor stood here from M-lib until
+        // D57′, and it is the third and last editing surface this destination
+        // has shed. M10 took the live movetext pencil, D54′ recorded why the
+        // review one went with it, and D57′ takes Edit Info: an archived game's
+        // roster is edited in Get Info's Details tab, reached by ⌘I from any
+        // row or from the Game menu rather than from a header control on a
+        // panel the reader has to already have open.
         //
-        // **The movetext editor was the other arm here until M10** and is now
-        // the Library's, wholly — read-only on this destination in both
-        // branches. Live was always the stranger of the two: Decision #1 says
-        // the physical board is truth and the live game is append-only, so an
-        // editor that could rewrite movetext mid-game was the one surface that
-        // could contradict the board it mirrors. Review is the weaker case and
-        // points the same way — a game on the board is a game being *read*,
-        // and the Library is where its bytes are managed. `applyEditedMovetext`
-        // went with it; nothing here rebuilds the cached `Game` any more,
-        // because nothing here can change the moves underneath it.
+        // The through-line across all three is D53′'s, and it is worth stating
+        // once now that it has finished: the Board is a *reading* surface. It
+        // renders a position, a curve and a move list, and every verb that
+        // rewrites bytes has moved to the thing being rewritten.
         //
-        // The sheet is guarded by a loaded PGN, so it stays mutually exclusive
-        // with the live new-game/archive sheets by branch.
-        .sheet(item: $activeEditor) { editor in
-            if let pgn = tabState.boardPGN {
-                switch editor {
-                case .info:
-                    EditLiveGameDetailsSheet(
-                        // Tag form in, unmodified: the sheet's own initializer
-                        // folds "?" placeholders to empty fields, the same
-                        // boundary conversion `EditGameInfoSheet` performs.
-                        // `applyEditedInfo` is the existing door — one
-                        // transaction, hash refreshed, player links
-                        // re-resolved, default name kept in step.
-                        initialRoster: LiveGame.Roster(
-                            event: pgn.event,
-                            site:  pgn.site,
-                            date:  pgn.date,
-                            round: pgn.round,
-                            white: pgn.white,
-                            black: pgn.black
-                        ),
-                        onSave: { roster in applyEditedInfo(roster, to: pgn) }
-                    )
-                }
-            }
-        }
+        // `applyEditedInfo` stays — the live and archive paths are its other
+        // two callers, and they write through the same door.
         // Phase 11: publish the active game so GameNavigationCommands' arrow
         // keys can scrub it.
         .focusedSceneValue(\.activeGame, tabState.boardGame)
@@ -403,8 +370,7 @@ internal struct BoardDestination: View {
                 moves: pgn.moves,
                 currentMoveIndex: game.currentPly > 0 ? game.currentPly - 1 : nil,
                 style: boardStyle,
-                onMoveTapped: { index in game.jump(to: index + 1) },
-                onEditInfo:   { activeEditor = .info }
+                onMoveTapped: { index in game.jump(to: index + 1) }
             )
             .inspectorColumnWidth(min: 310, ideal: 310, max: 400)
         }

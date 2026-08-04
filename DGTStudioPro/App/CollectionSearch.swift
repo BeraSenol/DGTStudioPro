@@ -127,7 +127,7 @@ internal enum LibrarySearchToken: Hashable, Identifiable, CaseIterable {
         switch self {
         case .result(.whiteWins): "White Wins (1-0)"
         case .result(.blackWins): "Black Wins (0-1)"
-        case .result(.draw):      "Draw (1/2-1/2)"
+        case .result(.draw):      "Draw (1/2)"
         case .result(.ongoing):   "Ongoing (*)"
         case .analyzed:           "Analyzed"
         case .unanalyzed:         "Not Analyzed"

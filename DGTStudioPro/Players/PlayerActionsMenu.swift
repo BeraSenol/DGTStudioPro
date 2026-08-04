@@ -62,7 +62,14 @@ internal struct PlayerActionsMenu: View {
 
     // MARK: Body
     internal var body: some View {
+        GetInfoMenuItem(
+            request: .player(key: key),
+            identifier: AccessibilityID.getInfoMenuItem(Destination.players.rawValue)
+        )
+
         if let onShowInLibrary {
+            Divider()
+            
             Button {
                 onShowInLibrary(key)
             } label: {
@@ -75,11 +82,6 @@ internal struct PlayerActionsMenu: View {
             .keyboardShortcut("l", modifiers: [.command, .shift])
             .accessibilityIdentifier(AccessibilityID.contextShowInLibrary)
         }
-
-        GetInfoMenuItem(
-            request: .player(key: key),
-            identifier: AccessibilityID.getInfoMenuItem(Destination.players.rawValue)
-        )
     }
 }
 

@@ -122,6 +122,86 @@ struct PGNSerializerTests {
         )
     }
 
+    // MARK: Library Index — The Reader Half (D58′)
+
+    /// The real shape this exists for: the folder on disk numbers every game,
+    /// and uses **full display names** where the app's writer uses given names.
+    /// Both must read, which is why only the ordinal is parsed.
+    @Test func readsTheOrdinalOffTheFolderConvention() {
+        #expect(
+            PGNSerializer.libraryIndex(
+                fromFileName: "47. Bera Senol vs Christophe Heylen.pgn"
+            ) == 47
+        )
+        #expect(
+            PGNSerializer.libraryIndex(fromFileName: "1. Bera vs Reinaud.pgn") == 1
+        )
+        #expect(
+            PGNSerializer.libraryIndex(
+                fromFileName: "1284. Bera Senol vs Lorenzo Reinaud.pgn"
+            ) == 1284
+        )
+    }
+
+    /// The writer and the reader are one convention, so this asserts the reader
+    /// against **the writer's own output** rather than against a literal.
+    ///
+    /// A literal would keep passing while the two drifted — the exact failure
+    /// the assert-against-the-shared-source rule exists for, and the one that
+    /// matters most here because these two functions sit twenty lines apart and
+    /// look independent. Walks a range rather than sampling: the parse reads a
+    /// digit *prefix*, so a one-digit case cannot catch a boundary a four-digit
+    /// case would.
+    @Test func writerAndReaderRoundTripAcrossMagnitudes() {
+        for index in [1, 9, 10, 99, 100, 1_284, 10_000] {
+            let name = PGNSerializer.fileName(
+                white: "Senol, Bera", black: "Heylen, Christophe", index: index
+            )
+            #expect(
+                PGNSerializer.libraryIndex(fromFileName: name) == index,
+                "round trip broke at \(index) via '\(name)'"
+            )
+        }
+    }
+
+    /// No ordinal is a fact about the file, not an error — and the period is
+    /// what separates the two "no ordinal" cases from a real one.
+    ///
+    /// `1961 Candidates.pgn` is the case the guard exists for: digits with no
+    /// period after them are a *year in a title*, and reading it as game 1961
+    /// would silently file a whole tournament's games under invented numbers
+    /// near the top of the run.
+    @Test func unnumberedFilesReadAsNil() {
+        #expect(PGNSerializer.libraryIndex(fromFileName: "Carlsen-Nepo.pgn") == nil)
+        #expect(PGNSerializer.libraryIndex(fromFileName: "1961 Candidates.pgn") == nil)
+        #expect(PGNSerializer.libraryIndex(fromFileName: ".pgn") == nil)
+        #expect(PGNSerializer.libraryIndex(fromFileName: "") == nil)
+    }
+
+    /// A game carrying an index exports under **it**, not under its position in
+    /// the batch; a game without one falls back to the position (D58′).
+    ///
+    /// The pair is the point: asserting only the first would pass on an
+    /// implementation that ignored the parameter entirely.
+    @Test func exportNameUsesTheLibraryIndexWhenThereIsOne() {
+        let numbered = PGN(
+            white: "Senol, Bera", black: "Heylen, Christophe", result: .whiteWins
+        )
+        numbered.libraryIndex = 47
+        #expect(numbered.exportFileName(index: 2) == "47. Bera vs Christophe.pgn")
+
+        let unnumbered = PGN(
+            white: "Senol, Bera", black: "Heylen, Christophe", result: .whiteWins
+        )
+        #expect(unnumbered.exportFileName(index: 2) == "2. Bera vs Christophe.pgn")
+    }
+
+    // (The hash-exclusion pin is deliberately *not* here. `contentHash(for:)`
+    // is private to `PGNStore`, and reaching it would mean widening a door to
+    // suit a test. It lives in `PGNStoreRetagTests` as the behaviour instead —
+    // two differently-numbered copies of one game dedupe — which is the
+    // stronger claim anyway: it asserts the consequence rather than the digest.)
+
     // MARK: The Constant Nine-Tag Shape
 
     /// A game that knows nothing still exports all nine tag lines — PGN's

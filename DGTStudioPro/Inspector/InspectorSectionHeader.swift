@@ -223,8 +223,15 @@ extension InspectorSectionHeader where Actions == EmptyView {
                 "Reviewing 7. Magnus Carlsen vs Ian Nepomniachtchi"
             ) {
                 InspectorEditButtonView(
-                    label: "Edit Info",
-                    identifier: AccessibilityID.boardEditInfoButton,
+                    // Was "Edit Info" / `board.editInfo` until D57′ removed
+                    // that affordance. Repointed at the Library's Edit Moves
+                    // pencil rather than left citing a deleted identifier —
+                    // and the app's *one* surviving `InspectorEditButtonView`
+                    // is the honest thing for this canvas to show, since a
+                    // preview witnessing an arrangement the app has retired
+                    // reads as evidence the arrangement is still checked.
+                    label: "Edit Moves",
+                    identifier: AccessibilityID.libraryEditMovesButton,
                     action: {}
                 )
             }
@@ -277,8 +284,15 @@ extension InspectorSectionHeader where Actions == EmptyView {
         } header: {
             InspectorSectionHeader("Lone Pencil") {
                 InspectorEditButtonView(
-                    label: "Edit Info",
-                    identifier: AccessibilityID.boardEditInfoButton,
+                    // Was "Edit Info" / `board.editInfo` until D57′ removed
+                    // that affordance. Repointed at the Library's Edit Moves
+                    // pencil rather than left citing a deleted identifier —
+                    // and the app's *one* surviving `InspectorEditButtonView`
+                    // is the honest thing for this canvas to show, since a
+                    // preview witnessing an arrangement the app has retired
+                    // reads as evidence the arrangement is still checked.
+                    label: "Edit Moves",
+                    identifier: AccessibilityID.libraryEditMovesButton,
                     action: {}
                 )
             }

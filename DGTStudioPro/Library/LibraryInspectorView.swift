@@ -36,7 +36,10 @@ internal struct LibraryInspectorView: View {
     /// `LibraryDestination` (D15′ — modals are destination furniture); this
     /// view only asks, which is what keeps it renderable in a canvas.
     ///
-    /// Optional and defaulted, `BoardInspectorView.onEditInfo`'s precedent, so
+    /// Optional and defaulted, on `BoardInspectorView.onEditInfo`'s precedent
+    /// — which D57′ has since removed, leaving this the pattern's one instance
+    /// rather than its second; the shape is unchanged and the citation is kept
+    /// as provenance — so
     /// the previews render without a destination and the pencil simply doesn't
     /// draw. That is also the honest shape for a *host* capability: an
     /// affordance that cannot act does not exist rather than sitting greyed

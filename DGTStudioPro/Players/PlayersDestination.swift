@@ -534,6 +534,7 @@ internal struct PlayersDestination: View {
     /// `InspectorToggleContent` contract).
     @ToolbarContentBuilder
     private func toolbarContent(orphans: [Player]) -> some ToolbarContent {
+        ToolbarSpacer(.fixed)
         ToolbarItem {
             // D48′'s one new control: rank order is the default read, name
             // order is for finding someone. A menu picker rather than a
@@ -541,13 +542,16 @@ internal struct PlayersDestination: View {
             // read as one broken one.
             Picker("Sort", selection: $sortOrder) {
                 ForEach(PlayersSortOrder.allCases) { order in
-                    Text(order.displayName).tag(order)
+                    Text(order.displayName)
+                        .tag(order)
                 }
             }
+            .padding(.horizontal, 6)
             .pickerStyle(.menu)
             .help("Order players by rank or by name")
             .accessibilityIdentifier(AccessibilityID.playersSortPicker)
         }
+//        ToolbarSpacer(.fixed)
         ToolbarItem {
             // D40′'s surface, and the only affordance in the app that can reach
             // an orphaned player. Before the spacer: it acts on content, so it
@@ -570,7 +574,7 @@ internal struct PlayersDestination: View {
                   : "\(orphans.count) unused player row(s) can be removed")
             .accessibilityIdentifier(AccessibilityID.playersMaintenanceMenu)
         }
-        ToolbarSpacer()
+        ToolbarSpacer(.fixed)
         ToolbarItem {
             // Same macOS segmented-picker caveat as the Library's: the
             // identifier tags the container — macOS exposes the segments

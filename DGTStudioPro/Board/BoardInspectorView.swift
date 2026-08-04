@@ -32,8 +32,16 @@ internal struct BoardInspectorView: View {
     /// read-only here and the 4 Aug review found it wired to nothing. It is
     /// not coming back as a seam: the Library owns that editor now, so a
     /// closure here would be a request no destination is prepared to answer.
-    internal var onEditInfo: (() -> Void)? = nil
-    
+    // `onEditInfo` was the last of these and went with D57′. Get Info's Details
+    // tab edits an archived game's roster now, reached by ⌘I from anywhere
+    // rather than from a pencil on a panel you have to already be looking at —
+    // D53′'s argument, arriving at the surface it had exempted. Not kept as a
+    // seam, for the reason the paragraph above gives about `onEditMoves`: a
+    // closure no destination answers is the thing that finding was about.
+    //
+    // This inspector now requests nothing. It is a reading surface, which is
+    // what D54′ already called the Board in as many words.
+
     internal var body: some View {
         List {
             metadataSection
@@ -54,18 +62,14 @@ internal struct BoardInspectorView: View {
     /// same place as the live inspector's Edit Details, so the two metadata
     /// surfaces read as one idea in two states.
     private var metadataSection: some View {
+        // The action slot is empty since D57′ and the section keeps it, because
+        // `SevenTagRosterSection`'s slot is a `@ViewBuilder` every host fills
+        // differently — an empty one here is the honest statement that this
+        // host has no verb, not a leftover parameter.
         SevenTagRosterSection(
             roster: pgn.map { RosterSummary($0) },
             headline: headline
-        ) {
-            if let onEditInfo {
-                InspectorEditButtonView(
-                    label: "Edit Info",
-                    identifier: AccessibilityID.boardEditInfoButton,
-                    action: onEditInfo
-                )
-            }
-        }
+        )
     }
     
     /// D20′ — "Reviewing 1. Magnus Carlsen vs Ian Nepomniachtchi". Falls
@@ -79,9 +83,11 @@ internal struct BoardInspectorView: View {
     }
     
     /// The magnifier renders only over a game the Library knows about, and it
-    /// simply doesn't exist otherwise — `onEditInfo`'s rule (an affordance that
-    /// can't act now shouldn't sit there greyed out), applied to the same
-    /// condition. A live game has no `PGN` until it archives, so there is
+    /// simply doesn't exist otherwise — the rule `onEditInfo` used to carry
+    /// here (an affordance that can't act now shouldn't sit there greyed out),
+    /// applied to the same condition. That closure went with D57′ and the rule
+    /// outlived it, which is why this sentence names the rule rather than
+    /// citing the symbol. A live game has no `PGN` until it archives, so there is
     /// nothing for the window to resolve; the bar and the inspector graph are
     /// still there, which is what a live game's evaluation surface was anyway.
     private var evaluationSection: some View {
@@ -170,8 +176,7 @@ internal struct BoardInspectorView: View {
         ],
         currentMoveIndex: 14,
         style: .walnut,
-        onMoveTapped: { _ in },
-        onEditInfo: {}
+        onMoveTapped: { _ in }
     )
     .frame(width: 300, height: 600)
     .environment(InspectorSectionCollapse.preview)

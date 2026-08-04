@@ -26,20 +26,32 @@ internal struct PlayersListView: View {
 
     var body: some View {
         Table(players, selection: $selectedKeys, columnCustomization: $columnCustomization) {
-            // Rank and Player are both never hideable, and for the same reason
-            // with two different costs. Each carries an accessibility
-            // identifier no other cell can serve — `rankingRow` pins the
-            // computed ladder order, `playerRow` addresses rows for the
-            // rename, merge and sweep flows — and a hidden column's element
-            // does not exist, so the tests would report the players missing
-            // rather than the column.
+            // Rank and Player were both pinned visible until 5 Aug 2026, each
+            // carrying an identifier no other cell can serve — `rankingRow`
+            // pins the computed ladder order, `playerRow` addresses rows for
+            // the rename and sweep flows — on the reasoning that a hidden
+            // column's element does not exist, so a suite would report the
+            // players missing rather than the column.
             //
-            // Rank is the one that costs something real: with D48′'s name
-            // ordering, a column of ranks in alphabetical order is exactly the
-            // thing a reader would want gone, and it is the one column that
-            // cannot go. Recorded rather than quietly pinned, because if that
-            // want ever bites, the answer is to move `rankingRow` off this
-            // cell — a breaking accessibility change that should travel alone.
+            // **Unpinned with the Library's White column, under the
+            // collection-destination parity invariant and for its reason**: the
+            // suite those identifiers served was deleted by D51′, so what
+            // remained was a live restriction paid for a consumer that does not
+            // exist. Keeping the identifiers costs nothing and is the
+            // registry's stated bet; pinning a column is a different trade, and
+            // D51′ already ruled on that class.
+            //
+            // **This entry predicted its own ending, which is why it is worth
+            // keeping rather than replacing.** It said: "Rank is the one that
+            // costs something real — with D48′'s name ordering, a column of
+            // ranks in alphabetical order is exactly the thing a reader would
+            // want gone, and it is the one column that cannot go. Recorded
+            // rather than quietly pinned, because if that want ever bites…"
+            // The want bit, from the Library side first. What the note got
+            // wrong was only the remedy: it expected to move `rankingRow` to
+            // another cell, and the actual answer was that no cell is a
+            // guaranteed address once any column can be hidden — so the pin
+            // goes and the identifier stays where it is.
             TableColumn("Rank") { player in
                 // The rank cell carries the order-pinning identifier
                 // (`rankingRow.1.Liren Ding`) — minted so the ladder UITest
@@ -60,13 +72,11 @@ internal struct PlayersListView: View {
             }
             .width(52)
             .customizationID("rank")
-            .disabledCustomizationBehavior(.visibility)
             TableColumn("Player") { player in
                 Text(player.stats.name)
                     .accessibilityIdentifier(AccessibilityID.playerRow(player.stats.name))
             }
             .customizationID("player")
-            .disabledCustomizationBehavior(.visibility)
             TableColumn("Games") { player in
                 Text("\(player.stats.games)").foregroundStyle(.secondary)
             }

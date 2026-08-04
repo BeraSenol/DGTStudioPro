@@ -58,7 +58,9 @@ internal struct LibraryIconsView: View {
     // MARK: Stored Properties
     let games: [PGN]
     @Binding var selectedPGNs: Set<PGN.ID>
-    let onOpen: (PGN) -> Void
+    /// Takes the set since D56′ — see `open(_:)` for the rule this grid
+    /// applies before calling it.
+    let onOpen: ([PGN]) -> Void
     let onAnalyze: (PGN) -> Void
     let onExport: (PGN) -> Void
     let onDelete: (PGN) -> Void
@@ -89,7 +91,7 @@ internal struct LibraryIconsView: View {
                             game: game,
                             isSelected: selectedPGNs.contains(game.id),
                             onSelect:  { select(game) },
-                            onOpen:    { onOpen(game) },
+                            onOpen:    { open(game) },
                             onAnalyze: { onAnalyze(game) },
                             onExport:  { onExport(game) },
                             onDelete:  { onDelete(game) }
@@ -162,6 +164,32 @@ internal struct LibraryIconsView: View {
         selectedPGNs = [game.id]
         anchorID = game.id
         isFocused = true
+    }
+
+    /// Finder's double-click rule, which `LibraryListView` gets free from
+    /// `primaryAction` and this grid has to spell (D56′): double-clicking a card
+    /// that is **part of a multi-selection** opens the whole selection;
+    /// double-clicking anything else opens just it.
+    ///
+    /// Spelled rather than skipped because the alternative is the divergence
+    /// this project keeps finding — right-clicking a rubber-banded sweep and
+    /// choosing "Open 6 in Board" would open six while double-clicking inside
+    /// that same sweep opened one, which is two answers to one question in one
+    /// view mode.
+    ///
+    /// The membership test is what keeps it honest: a double-click on an
+    /// *unselected* card is not a bulk gesture, and `LibraryGameCardView`'s
+    /// simultaneous select-then-open means the selection has already collapsed
+    /// to that card by the time this runs — so the `contains` check reads true
+    /// only when the sweep genuinely survived the click.
+    ///
+    /// Ordered off `games`, not off the `Set`, because that is tab order.
+    private func open(_ game: PGN) {
+        if selectedPGNs.count > 1, selectedPGNs.contains(game.id) {
+            onOpen(games.filter { selectedPGNs.contains($0.id) })
+        } else {
+            onOpen([game])
+        }
     }
 
     /// Sweeping replaces the selection with the crossed cards — Finder's

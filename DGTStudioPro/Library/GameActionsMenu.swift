@@ -40,9 +40,12 @@ import SwiftUI
 /// Every item carries one, and four of the five are borrowed rather than
 /// invented: **⌘O** open and **⌘I** info are Finder's exact keys for the exact
 /// same questions about a selected row; **⌘E** is export's near-universal
-/// mnemonic and this app has no eject to collide with; **⌘⌫** is Move to Trash,
-/// mirroring the plain ⌫ that `LibraryDestination.onDeleteCommand` already
-/// answers, so the destructive verb has the same two spellings Finder gives it.
+/// mnemonic and this app has no eject to collide with; **⌘⌫** is Move to Trash.
+/// That last one mirrored a plain ⌫ handled by `LibraryDestination` until 5 Aug
+/// 2026, when ⌫ alone was retired by request — its failure mode is a
+/// multi-selection you had forgotten about, reachable by a finger already
+/// resting nearby. The live copy of ⌘⌫ is the toolbar Delete button's now; this
+/// is its mirror in the menu.
 /// Only **⌘R** for Analyze had no convention to borrow — it reads as *Run*,
 /// which is what an engine pass is, and it was taken over the more mnemonic
 /// ⇧⌘A because that sits one slipped modifier from the select-all this
@@ -73,10 +76,16 @@ internal struct GameActionsMenu: View {
     /// right-clicked, otherwise just the one under the pointer.
     internal let games: [PGN]
 
-    /// Single-game only, and that is a product decision rather than a
-    /// limitation: one window per game, so "Open" over a selection of nine
-    /// would mean nine windows or an arbitrary pick.
-    internal let onOpen: (PGN) -> Void
+    /// Every closure here takes the set, as of D56′.
+    ///
+    /// This one said "single-game only, and that is a product decision rather
+    /// than a limitation: one window per game, so Open over a selection of nine
+    /// would mean nine windows or an arbitrary pick." Both halves of that
+    /// sentence were true and it drew the wrong conclusion from them — nine
+    /// windows is what Finder does, and the arbitrary pick was the thing to
+    /// avoid. D56′ has the argument and the threshold that keeps ⌘A ⌘O from
+    /// being a mistake you cannot undo.
+    internal let onOpen: ([PGN]) -> Void
     internal let onAnalyze: ([PGN]) -> Void
     internal let onExport: ([PGN]) -> Void
     internal let onDelete: ([PGN]) -> Void
@@ -84,22 +93,35 @@ internal struct GameActionsMenu: View {
     // MARK: Body
     internal var body: some View {
         if !games.isEmpty {
+            // Get Info stays singular, and after D56′ it is the **only** item
+            // that is — which makes it the one place worth saying why. Open
+            // widened because N windows is a coherent answer to "open these";
+            // Get Info cannot, because its window resolves one subject and a
+            // set has no roster, no opening and no result to show. That is a
+            // fact about D53′'s window rather than a leftover of the rule
+            // Open just left behind.
             if games.count == 1, let game = games.first {
-                Button {
-                    onOpen(game)
-                } label: {
-                    Label("Open in Board", systemImage: "checkerboard.rectangle")
-                }
-                // Finder's key for the same verb. Only ever present in the
-                // singular arity, which is the product decision above rendered
-                // as a fact about the keyboard too: there is no ⌘O over nine
-                // games because there is no Open over nine games.
-                .keyboardShortcut("o", modifiers: .command)
                 GetInfoMenuItem(
                     request: .game(game.persistentModelID),
                     identifier: AccessibilityID.getInfoMenuItem(Destination.library.rawValue)
                 )
+
+                Divider()
             }
+
+            Button {
+                onOpen(games)
+            } label: {
+                Label(
+                    games.count > 1 ? "Open \(games.count) in Board" : "Open in Board",
+                    systemImage: "checkerboard.rectangle"
+                )
+            }
+            // Finder's key for the same verb, and since D56′ it is present at
+            // every arity — the counted plural is what makes ⌘O over nine games
+            // legible before you press it. The destination's threshold, not
+            // this menu, is what stops ⌘A ⌘O being unrecoverable.
+            .keyboardShortcut("o", modifiers: .command)
 
             Button {
                 onAnalyze(games)
@@ -122,6 +144,8 @@ internal struct GameActionsMenu: View {
             // over ⇧⌘A for the reason in the type's doc.
             .keyboardShortcut("r", modifiers: .command)
 
+            Divider()
+
             Button {
                 onExport(games)
             } label: {
@@ -132,6 +156,14 @@ internal struct GameActionsMenu: View {
             }
             .keyboardShortcut("e", modifiers: .command)
             .accessibilityIdentifier(AccessibilityID.libraryExport)
+            // A second `.keyboardShortcut("r")` sat here until D56′ — a leftover
+            // from moving Get Info above Open, which put Analyze's key on
+            // Export. The outer modifier wins, so Export *was* ⌘R and ⌘E did
+            // nothing, with both items drawing a glyph. Worth a comment rather
+            // than a silent deletion: two `.keyboardShortcut`s on one control
+            // compile, render one, and give no warning — the last-wins rule is
+            // the whole failure, and a menu is where it is least visible
+            // because every item shows a key whether or not it owns it.
 
             Divider()
 
@@ -143,10 +175,17 @@ internal struct GameActionsMenu: View {
                     systemImage: "trash"
                 )
             }
-            // Finder's Move to Trash. The plain ⌫ is already live through
-            // `LibraryDestination.onDeleteCommand`, so this is the second
-            // spelling of one verb rather than a new door — and both land on
-            // the same confirmation, which is what makes two spellings safe.
+            // Finder's Move to Trash.
+            //
+            // **This comment said the opposite until 5 Aug 2026** — that plain
+            // ⌫ was "already live through `LibraryDestination.onDeleteCommand`,
+            // so this is the second spelling of one verb rather than a new
+            // door". Both halves were true when written and neither is now: ⌫
+            // was retired by request, precisely because being live was the
+            // problem (one keystroke from a focused row, and its failure mode
+            // is a multi-selection you forgot about). The live copy of ⌘⌫ is
+            // the toolbar Delete button's; this one mirrors it in the menu,
+            // and both land on the same confirmation.
             .keyboardShortcut(.delete, modifiers: .command)
         }
     }
@@ -160,11 +199,18 @@ internal struct GameActionsMenu: View {
 /// pulls the same `body` down where it can be read.
 ///
 /// The three arities are the whole point of this type and the reason there are
-/// three rows: **one** game shows Open and Get Info, **many** shows neither
-/// and counts everything else, and **none** renders an empty menu rather than
-/// a menu of no-ops. That last one is the branch a host reaches by
-/// right-clicking empty space in a table, and it is the one the three
-/// hand-written menus each answered differently before this type existed.
+/// three rows: **one** game shows Get Info and the singular labels, **many**
+/// drops Get Info alone and counts every remaining item including Open, and
+/// **none** renders an empty menu rather than a menu of no-ops. That last one
+/// is the branch a host reaches by right-clicking empty space in a table, and
+/// it is the one the three hand-written menus each answered differently before
+/// this type existed.
+///
+/// *(This paragraph read "one game shows Open and Get Info, many shows neither"
+/// until D56′ widened Open. Corrected here in the same change, per the
+/// two-homes rule — and the Two Games row is now the one that would have caught
+/// the regression, because it is where a still-singular Open would render as an
+/// absence nobody notices.)*
 ///
 /// The analyzed/unanalyzed split rides along on the singular row: `Analyze`
 /// versus `Re-analyze` is `AnalysisGlyph.isAnalyzed`'s aggregate rule, and
@@ -203,6 +249,6 @@ internal struct GameActionsMenu: View {
     }
     .menuStyle(.borderlessButton)
     .padding()
-    .frame(width: 260)
+    .frame(width: 200)
     .modelContainer(for: PGN.self, inMemory: true)
 }

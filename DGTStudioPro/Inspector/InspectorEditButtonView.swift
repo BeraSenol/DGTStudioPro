@@ -100,8 +100,11 @@ internal struct InspectorEditButtonView: View {
             headline: "Reviewing 7. Magnus Carlsen vs Ian Nepomniachtchi"
         ) {
             InspectorEditButtonView(
-                label: "Edit Info",
-                identifier: AccessibilityID.boardEditInfoButton,
+                // See the twin note in `InspectorSectionHeader`'s previews:
+                // `board.editInfo` went with D57′, and the Library's Edit Moves
+                // is the app's one remaining pencil.
+                label: "Edit Moves",
+                identifier: AccessibilityID.libraryEditMovesButton,
                 action: {}
             )
         }

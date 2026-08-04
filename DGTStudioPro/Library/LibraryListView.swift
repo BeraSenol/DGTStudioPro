@@ -11,7 +11,8 @@ import SwiftUI
 internal struct LibraryListView: View {
     let games: [PGN]
     @Binding var selectedPGNs: Set<PGN.ID>
-    let onOpen: (PGN) -> Void
+    /// Takes the set since D56′, like every other action here.
+    let onOpen: ([PGN]) -> Void
     let onAnalyzeIDs: (Set<PGN.ID>) -> Void
     let onExportIDs: (Set<PGN.ID>) -> Void
     let onDeleteIDs: (Set<PGN.ID>) -> Void
@@ -38,20 +39,59 @@ internal struct LibraryListView: View {
 
     var body: some View {
         Table(games, selection: $selectedPGNs, columnCustomization: $columnCustomization) {
-            // Never hideable: this cell carries the row identifier the
-            // Library UITests addressed a game by (suite retired, D51′;
-            // the identifier stays per the registry's bet). Hiding the
-            // column wouldn't fail anything — it would make the element
-            // cease to exist, and a future test would report "no such
-            // game" about a Library that has it. Reordering and resizing
-            // stay on; only visibility is contract-bearing, because an
-            // identifier rides the cell wherever the column sits.
+            // D58′ — the ordinal the game's file carries on disk, leading the
+            // table because that is where a filing number reads.
+            //
+            // Hideable, like every column in this table as of 5 Aug 2026 —
+            // this comment drew a contrast with White until White stopped
+            // being the exception. See its note below for why.
+            //
+            // Em dash for nil rather than an empty cell, which is the opposite
+            // of the ECO column's call one screen down and deliberately so: an
+            // absent ECO means "we could not name this opening", a fact about
+            // the game that a blank states fine. An absent index means "this
+            // game did not come from a numbered file", which is a fact about
+            // the *column's* premise — and a blank there reads as a rendering
+            // failure in a column of otherwise unbroken numbers.
+            TableColumn("#") { game in
+                Text(game.libraryIndex.map(String.init) ?? RosterSummary.displayUnknown)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+            .width(min: 34, ideal: 44, max: 64)
+            .customizationID("index")
+
+            // This cell carries the row identifier — `gameRow(name)`, the
+            // address a test would reach a game by — and it is **hideable
+            // anyway** as of 5 Aug 2026.
+            //
+            // It was pinned visible until then, on the reasoning that hiding
+            // the column would not *fail* anything but would make the element
+            // cease to exist, so a future suite would report "no such game"
+            // about a Library that has it. That was sound while a suite
+            // existed. D51′ deleted the target, and what survived was a live
+            // restriction on the app paid for a consumer that does not — the
+            // same shape as a preview witnessing an arrangement the app has
+            // retired, and it surfaced the way those do: someone tried to use
+            // the thing and found it greyed out.
+            //
+            // The registry's own bet (see `AccessibilityID`'s header) is that
+            // identifiers are worth *keeping* against a future suite. Keeping
+            // strings in a file costs nothing. Pinning a column is a different
+            // trade, and D51′ already ruled on that class: the suite's costs
+            // outweighed its protection. If a suite returns, "unhide the White
+            // column" is a line in its setup, not a permanent constraint here.
+            //
+            // Not relocated to another cell, and the reason is worth stating
+            // because it was the obvious next move: **every** column is
+            // hideable now, so no cell can be a guaranteed address. Moving the
+            // identifier to `#` would trade one hideable host for another, and
+            // that one renders an em dash for every game imported before D58′.
             TableColumn("White") { game in
                 Text(game.whiteDisplayName)
                     .accessibilityIdentifier(AccessibilityID.gameRow(game.name))
             }
             .customizationID("white")
-            .disabledCustomizationBehavior(.visibility)
             TableColumn("Black") { Text($0.blackDisplayName) }
                 .customizationID("black")
             TableColumn("Result") { game in
@@ -123,9 +163,19 @@ internal struct LibraryListView: View {
             // Fires on row double-click *and* on Return when a row is
             // focused — both routes converge here so we don't need a
             // separate `.onSubmit` or key-press handler.
-            if let id = ids.first, let game = games.first(where: { $0.id == id }) {
-                onOpen(game)
-            }
+            //
+            // **Opens the whole set since D56′, and this is where the old
+            // arbitrary pick lived.** It read `ids.first`, which over a
+            // multi-selection meant "some row, in `Set` order" — a game wearing
+            // another game's face, the exact defect `selectedPGN(in:)` refuses
+            // one file over. `primaryAction` hands over the selection when a
+            // *selected* row is double-clicked and the single row otherwise, so
+            // Finder's rule arrives for free and the menu's ⌘O and this gesture
+            // now answer the same question the same way.
+            //
+            // Resolved through `games` rather than passed as ids: that filter
+            // is what puts them in display order, which is tab order.
+            onOpen(games.filter { ids.contains($0.id) })
         }
     }
 }

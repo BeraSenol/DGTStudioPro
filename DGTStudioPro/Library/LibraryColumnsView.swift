@@ -33,7 +33,11 @@ internal struct LibraryColumnsView: View {
     internal let games: [PGN]
     @Binding internal var selectedPGNs: Set<PGN.ID>
     internal let boardStyle: BoardStyle
-    internal let onOpen: (PGN) -> Void
+    /// Takes the set since D56′. Deliberately **not** adapted with a
+    /// `forEach` the way `onAnalyze` and friends are below: those fan out to a
+    /// per-game door, while Open's door owns the count threshold, and a host
+    /// that called it N times would walk straight past the guard.
+    internal let onOpen: ([PGN]) -> Void
     internal let onAnalyze: (PGN) -> Void
     internal let onExport: (PGN) -> Void
     internal let onDelete: (PGN) -> Void
@@ -281,7 +285,10 @@ internal struct LibraryColumnsView: View {
 
             HStack(spacing: 12) {
                 Button {
-                    onOpen(game)
+                    // Singular by construction: the detail pane renders only
+                    // for a count-of-one selection, so this button never has a
+                    // set to open even though the door now takes one.
+                    onOpen([game])
                 } label: {
                     Label("Open", systemImage: "arrow.up.forward.square")
                 }

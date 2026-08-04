@@ -102,6 +102,37 @@ internal enum PGNSerializer {
     internal static func fileName(white: String, black: String, index: Int) -> String {
         "\(index). \(givenName(white)) vs \(givenName(black)).pgn"
     }
+
+    /// The reader half of `fileName(white:black:index:)` — the ordinal out of
+    /// `47. Bera Senol vs Christophe Heylen.pgn` (D58′).
+    ///
+    /// **Here rather than in `PGNParser` because this is the filename
+    /// convention, and the writer of a convention owns both halves.** That is
+    /// the rule `RosterSummary` already follows in the other direction, reaching
+    /// into `PGNParser.pgnDateString` for the writer half of the parser's one
+    /// date formatter: one convention, one home, two directions. Putting this in
+    /// the parser would split the filename shape across two types, and the next
+    /// person to change the separator would change one of them.
+    ///
+    /// **Reads the ordinal and nothing else, deliberately.** The rest of the
+    /// name is not verified against the game's seats, and must not be: the app
+    /// writes *given* names (`1. Bera vs Reinaud.pgn`) while the folder this was
+    /// built for uses full display names (`1. Bera Senol vs Christophe
+    /// Heylen.pgn`), so a round-trip check would reject exactly the files this
+    /// exists to read. The ordinal is the only part both conventions agree on,
+    /// and it is the only part being claimed.
+    ///
+    /// Nil for anything that does not begin with digits followed by a period —
+    /// a file called `Carlsen-Nepo.pgn` has no ordinal, which is a fact about
+    /// that file rather than an error. Requires the period specifically so that
+    /// `1961 Candidates.pgn` reads as unnumbered rather than as game 1961.
+    internal static func libraryIndex(fromFileName name: String) -> Int? {
+        let digits = name.prefix { $0.isNumber }
+        guard !digits.isEmpty,
+              name.dropFirst(digits.count).first == "."
+        else { return nil }
+        return Int(digits)
+    }
     
     /// The leading token of the display form — "Senol, Bera" → "Bera Senol"
     /// → "Bera"; a single-token tag is its own given name. An empty or

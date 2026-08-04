@@ -114,6 +114,54 @@ struct PGNStoreRetagTests {
         Player.normalizedKey(for: PlayerName.displayForm(of: tag))
     }
 
+    // MARK: Library Index — D58′
+
+    /// The index is filing, not identity: one game filed under two different
+    /// numbers is one game, so the second import is refused as a duplicate.
+    ///
+    /// **Asserted as the behaviour rather than as a digest comparison**, which
+    /// is both the stronger claim and the only one available — `contentHash`
+    /// is private to the store, and widening it to suit a test would trade the
+    /// one-hash invariant's encapsulation for a weaker assertion.
+    ///
+    /// Checked on the *identifier* rather than on the bare fact of a throw, the
+    /// `renamedGameExportRoundTrips` rule: a refusal naming some other game
+    /// would satisfy a weaker test while meaning the opposite.
+    ///
+    /// This is the field most likely to be folded into the hash by a future
+    /// reader, because unlike `board` and `timeControl` it *looks* like an
+    /// identifier. If it ever is, this test is what says so.
+    @Test("A game filed under two different numbers is still one game")
+    func theLibraryIndexIsOutsideTheContentHash() throws {
+        let store = try Self.store()
+        let first = try store.importPGN(text: Self.pgnText(), libraryIndex: 47)
+
+        #expect(first.libraryIndex == 47)
+
+        do {
+            _ = try store.importPGN(text: Self.pgnText(), libraryIndex: 1_284)
+            Issue.record("expected the re-filed copy to be refused")
+        } catch let error as PGNStore.Error {
+            guard case .duplicate(let existingID, _) = error else {
+                Issue.record("expected .duplicate, got \(error)")
+                return
+            }
+            #expect(existingID == first.persistentModelID)
+        }
+    }
+
+    /// An import with no ordinal keeps none — nil is a real answer, and the
+    /// door must not invent one to fill the column.
+    ///
+    /// The negative half of the pair above, and the one that would fail if
+    /// somebody "helpfully" defaulted the parameter to a running count.
+    @Test("A game imported without a filename ordinal keeps none")
+    func textImportCarriesNoIndex() throws {
+        let store = try Self.store()
+        let game = try store.importPGN(text: Self.pgnText())
+        #expect(game.libraryIndex == nil)
+    }
+
     // MARK: Rename — D37′
 
     /// The decision itself: a rename reaches the stored seat tag, not just the

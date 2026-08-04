@@ -157,7 +157,16 @@ internal enum AccessibilityID {
     /// All are reachable in a boardless run — a loaded PGN needs no hardware —
     /// so a future XCUITest can harden them; for now the validator and store
     /// suites are the contract.
-    internal static let boardEditInfoButton    = "board.editInfo"
+    // **`board.editInfo` is removed** (D57′), with the affordance it named —
+    // the review inspector's Edit Info pencil. Successor: the
+    // `getinfo.game.field.*` family, since the verb did not disappear but
+    // moved and split into seven rows.
+    //
+    // This is the third removal in this group and they rhyme: `board.editMoves`
+    // (M10, successor `library.editMoves`), `players.inspector.rename` (D53′,
+    // successor `getinfo.player.tag`), and now this. All three are a pencil on
+    // a panel giving way to a door on the thing itself, which is what makes
+    // them one decision arriving in instalments rather than three cleanups.
     internal static let libraryEditMovesButton = "library.editMoves"
     internal static let movetextEditorSheet    = "movetext.editor"
     internal static let movetextEditorField    = "movetext.editor.field"
@@ -187,16 +196,43 @@ internal enum AccessibilityID {
     /// than against a built item, which the 4 Aug review caught; the Game menu
     /// carries it now.
     ///
-    /// `getinfo.player.tag` is the one *editable* control in the window, which
-    /// is why it is the only form field here: the game and live forms are
-    /// `LabeledContent` throughout, so their form-level identifier is all
-    /// there is to address.
+    /// ~~`getinfo.player.tag` is the one *editable* control in the window~~ —
+    /// **false since D57′**, which made the seven roster tags editable and gave
+    /// them `getInfoGameField(_:)`. The sentence is corrected rather than
+    /// deleted because it dated precisely: it was written at M10 as a
+    /// description of the code and was true for one day.
+    ///
+    /// `getinfo.game` now names the **tab container**, with
+    /// `getinfo.game.details` and `getinfo.game.file` naming the two tabs
+    /// beneath it. That is a widening rather than a rename — the old identifier
+    /// still resolves to the game form's root — so it takes no successor entry,
+    /// unlike the removals below.
+    ///
+    /// The live form stays `LabeledContent` throughout and keeps a single
+    /// form-level identifier, which is all there is to address on it.
     internal static let getInfoGame          = "getinfo.game"
+    internal static let getInfoGameDetails   = "getinfo.game.details"
+    internal static let getInfoGameFile      = "getinfo.game.file"
     internal static let getInfoLive          = "getinfo.live"
     internal static let getInfoPlayer        = "getinfo.player"
     internal static let getInfoPlayerTagField = "getinfo.player.tag"
     internal static let getInfoEmpty         = "getinfo.empty"
     internal static let getInfoBoardMenuItem = "getinfo.menuitem.board"
+
+    /// One editable roster row on the Details tab (D57′).
+    ///
+    /// A function over the tag name rather than seven constants, the
+    /// `getInfoMenuItem` shape: these are one control repeated per tag, and the
+    /// tag is what distinguishes them. Takes a raw lowercased `String` for the
+    /// reason the file's header gives — and note the call sites pass
+    /// `SevenTagRoster`-shaped words without passing the enum itself, which is
+    /// that same rule holding under a case where the typed version would have
+    /// been easy and wrong: `Result` and `Date` are rows here but not text
+    /// fields, so the enum this would have taken (`GetInfoWindow.GameField`)
+    /// does not have a case for every identifier minted.
+    internal static func getInfoGameField(_ tag: String) -> String {
+        "getinfo.game.field.\(tag)"
+    }
 
     /// The context-menu item, per destination. A function rather than two
     /// constants because the item is one verb reached from two row types, and

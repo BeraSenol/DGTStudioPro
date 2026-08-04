@@ -216,7 +216,7 @@ internal struct LiveGameHUDView: View {
         switch result {
         case .whiteWins: "1–0 — White wins"
         case .blackWins: "0–1 — Black wins"
-        case .draw:      "½–½ — Draw"
+        case .draw:      "1/2-1/2 — Draw"
         case .ongoing:   "Game over"
         }
     }

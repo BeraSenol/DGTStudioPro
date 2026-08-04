@@ -12,7 +12,12 @@ internal struct LibraryGalleryView: View {
     let games: [PGN]
     @Binding var selectedPGNs: Set<PGN.ID>
     let boardStyle: BoardStyle
-    let onOpen: (PGN) -> Void
+    /// Takes the set since D56′, and this is the one host where that changes
+    /// nothing: a gallery selection is single by construction — every arm that
+    /// writes it (`move`, the thumbnail's `onSelect`) assigns exactly one id —
+    /// so Finder's open-the-selection rule degenerates to the card in hand and
+    /// `LibraryIconsView.open(_:)` has no counterpart here.
+    let onOpen: ([PGN]) -> Void
     let onAnalyze: (PGN) -> Void
     let onExport: (PGN) -> Void
     let onDelete: (PGN) -> Void
@@ -111,7 +116,7 @@ internal struct LibraryGalleryView: View {
             game: game,
             isSelected: selectedPGNs.contains(game.id),
             onSelect:  { selectedPGNs = [game.id]; isFocused = true },
-            onOpen:    { onOpen(game) },
+            onOpen:    { onOpen([game]) },
             onAnalyze: { onAnalyze(game) },
             onExport:  { onExport(game) },
             onDelete:  { onDelete(game) }

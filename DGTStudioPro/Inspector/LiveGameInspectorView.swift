@@ -72,10 +72,10 @@ internal struct LiveGameInspectorView: View {
             "Agree to a draw?",
             isPresented: $isConfirmingDraw
         ) {
-            Button("Agree Draw (½–½)", action: onAgreeDraw)
+            Button("Agree Draw (1/2-1/2)", action: onAgreeDraw)
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Both players agree — the game ends ½–½.")
+            Text("Both players agree — the game ends 1/2-1/2.")
         }
         .confirmationDialog(
             "Discard this game?",
@@ -138,7 +138,7 @@ internal struct LiveGameInspectorView: View {
             .listRowSeparator(.hidden)
         }
     }
-
+    
     /// `.lifecycle`, **not** `.roster`, despite the title being "Game". This is
     /// the section that made `InspectorSection` an enum rather than a key
     /// derived from the header: Resign / Agree Draw / Discard is a set of verbs
@@ -152,13 +152,13 @@ internal struct LiveGameInspectorView: View {
                     isChoosingResign = true
                 }
                 .accessibilityIdentifier(AccessibilityID.liveInspectorResign)
-
+                
                 Button("Agree Draw") {
                     isConfirmingDraw = true
                 }
                 .accessibilityIdentifier(AccessibilityID.liveInspectorDraw)
             }
-
+            
             Button("Discard Game", role: .destructive) {
                 isConfirmingDiscard = true
             }

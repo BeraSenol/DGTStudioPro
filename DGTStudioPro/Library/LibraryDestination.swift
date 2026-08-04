@@ -22,6 +22,24 @@ internal struct LibraryDestination: View {
         subsystem: "com.berasenol.dgtstudiopro",
         category: "library"
     )
+
+    /// Above this many, Open asks first (D56′).
+    ///
+    /// **A judgement call, not a derived number, and stated as one** — the
+    /// honest alternative to inventing a rationale for 10. What it is calibrated
+    /// against: the sets you actually mean to open are a rivalry, a round, a
+    /// morning's games, and those are single digits; the sets that arrive by
+    /// accident come from ⌘A or a smart tag and are the whole Library. There is
+    /// a wide empty gap between those two populations and the threshold sits in
+    /// it, which is why the exact value matters less than that one exists.
+    ///
+    /// Open is the only bulk action in this destination that confirms on
+    /// *count* rather than on consequence. Delete confirms because it destroys;
+    /// Analyze does not because the queue has a Stop All and a visible progress
+    /// item; Export does not because it writes into one folder you chose. Open
+    /// has neither property — windows are not a queue, there is no Stop All for
+    /// them, and closing four hundred tabs is manual work with no undo.
+    private static let openConfirmationThreshold = 10
     
     // MARK: Stored Properties
     internal let filter: LibraryFilter?
@@ -50,6 +68,11 @@ internal struct LibraryDestination: View {
     @State private var pendingDeletion: PGN?
     @State private var pendingDirtyDeletion: PGN?
     @State private var pendingBatchDeletion: [PGN]?
+
+    /// D56′'s speed bump, held between offer and confirmation — the
+    /// `pendingBatchDeletion` shape, deliberately, because it is the same
+    /// question ("you asked for this to happen to N things, did you mean N?").
+    @State private var pendingBatchOpen: [PGN]?
     @State private var selectedPGNs: Set<PGN.ID> = []
     @State private var importProgress: ImportProgress?
 
@@ -57,8 +80,10 @@ internal struct LibraryDestination: View {
     ///
     /// An item-sheet over the model rather than a `Bool` beside the selection:
     /// the sheet must edit the game it was opened on, and a selection can
-    /// change underneath a modal. `BoardDestination.activeEditor` makes the
-    /// same call for the same reason.
+    /// change underneath a modal. `BoardDestination.activeEditor` made the same
+    /// call for the same reason until D57′ removed it — that destination
+    /// presents no editor at all now, so this is the last item-sheet-over-a-
+    /// model in the app rather than one of two.
     ///
     /// **This is M10's other half.** The editor was the Board's until movetext
     /// went read-only there — live and review both — and the Library became
@@ -194,8 +219,9 @@ internal struct LibraryDestination: View {
     /// rather than a shortcut of this destination's invention.
     ///
     /// `.onCommand` puts the action in the responder chain, which is what both
-    /// enables the menu item and gives it its shortcut — the `.onDeleteCommand`
-    /// arrangement one chain up, same mechanism, and the reason ⌘A inside the
+    /// enables the menu item and gives it its shortcut — the mechanism
+    /// `.onDeleteCommand` used here until ⌫ was retired on 5 Aug 2026, and the
+    /// reason ⌘A inside the
     /// search field still selects *text*: the field is first responder and
     /// answers first. List and columns are `Table`s, so `NSTableView` answers
     /// there too and this never fires; the set it produces is identical,
@@ -316,9 +342,24 @@ internal struct LibraryDestination: View {
                     ))
                 }
             )
-            .onDeleteCommand {
-                requestDeleteSelection()
-            }
+            // `.onDeleteCommand { requestDeleteSelection() }` stood here until
+            // 5 Aug 2026, by request: **plain ⌫ no longer deletes.**
+            //
+            // The reason is asymmetry of cost. ⌫ is one keystroke from where
+            // your hands already are while a table row is focused, and its
+            // whole failure mode is a multi-selection you forgot you had — the
+            // gesture that used to be safest to hit by accident was the one
+            // that raised a confirmation over forty games. ⌘⌫ is Finder's key
+            // for the same verb and cannot be reached by a slipped finger.
+            //
+            // The shortcut moved to the toolbar's Delete button rather than
+            // being spelled here, and that placement is deliberate rather than
+            // convenient: a `keyboardShortcut` on a real, always-present,
+            // already-`disabled`-guarded control is live whenever this
+            // destination is showing, which the context menu's copy of ⌘⌫ is
+            // only known to *render*. Removing this line without giving the key
+            // a home that certain would have deleted the gesture rather than
+            // narrowed it.
             .onAppear {
                 backfillEmptyNames()
                 backfillPlayerLinks()
@@ -379,14 +420,37 @@ internal struct LibraryDestination: View {
             }
             .accessibilityIdentifier(AccessibilityID.libraryContent)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            // On the content group rather than beside `.onDeleteCommand` in
-            // `body`: the local `games` is the painted list this gesture is
-            // defined against (see `selectAll(_:)`), and `body`'s chain cannot
-            // see it. It also keeps the modifier off the chain whose
-            // type-check budget the third alert already blew.
+            // On the content group rather than in `body`: the local `games` is
+            // the painted list this gesture is defined against (see
+            // `selectAll(_:)`), and `body`'s chain cannot see it. It also keeps
+            // the modifier off the chain whose type-check budget the third
+            // alert already blew. (This said "rather than beside
+            // `.onDeleteCommand`" until that modifier was removed on 5 Aug
+            // 2026 — the placement argument never depended on it.)
             .onCommand(
                 #selector(NSStandardKeyBindingResponding.selectAll(_:)),
                 perform: selectAllAction
+            )
+            // D56′'s threshold, and it lands here rather than beside the three
+            // deletion alerts in `body` for the reason those three are already
+            // split out: that chain is the one whose type-check budget the
+            // third alert blew, and a fourth is exactly the straw the comment
+            // there warns about. This group carries four short modifiers.
+            //
+            // Not `role: .destructive` — opening destroys nothing. The dialog
+            // is about *volume*, which is why the message counts tabs rather
+            // than warning about consequences it does not have.
+            .alert(
+                "Open \(pendingBatchOpen?.count ?? 0) Games?",
+                isPresented: Binding(present: $pendingBatchOpen),
+                presenting: pendingBatchOpen,
+                actions: { games in
+                    Button("Open \(games.count) Games") { performOpen(games) }
+                    Button("Cancel", role: .cancel) {}
+                },
+                message: { games in
+                    Text("Each opens in its own tab. Games already open will come forward rather than open again, so this may end up fewer than \(games.count).")
+                }
             )
         }
         .navigationTitle(filter?.displayName ?? "Library")
@@ -500,7 +564,7 @@ internal struct LibraryDestination: View {
             LibraryIconsView(
                 games: games,
                 selectedPGNs: $selectedPGNs,
-                onOpen:    openGame,
+                onOpen:    openGames,
                 onAnalyze: requestAnalysis,
                 onExport:  requestExport,
                 onDelete:  { pendingDeletion = $0 }
@@ -510,7 +574,7 @@ internal struct LibraryDestination: View {
             LibraryListView(
                 games: games,
                 selectedPGNs: $selectedPGNs,
-                onOpen:       openGame,
+                onOpen:       openGames,
                 onAnalyzeIDs: { requestAnalysis(ids: $0) },
                 onExportIDs:  { requestExport(ids: $0) },
                 onDeleteIDs:  { requestDelete(ids: $0) }
@@ -521,7 +585,7 @@ internal struct LibraryDestination: View {
                 games: games,
                 selectedPGNs: $selectedPGNs,
                 boardStyle: boardStyle,
-                onOpen:    openGame,
+                onOpen:    openGames,
                 onAnalyze: requestAnalysis,
                 onExport:  requestExport,
                 onDelete:  { pendingDeletion = $0 }
@@ -532,7 +596,7 @@ internal struct LibraryDestination: View {
                 games: games,
                 selectedPGNs: $selectedPGNs,
                 boardStyle: boardStyle,
-                onOpen:    openGame,
+                onOpen:    openGames,
                 onAnalyze: requestAnalysis,
                 onExport:  requestExport,
                 onDelete:  { pendingDeletion = $0 }
@@ -541,13 +605,33 @@ internal struct LibraryDestination: View {
         }
     }
     
-    /// Single resolution point for "open a game in its own window."
-    /// Threaded into every Library view as the `onOpen` callback so the
-    /// views stay window-system-unaware. macOS handles dedup, tabbing
-    /// (with "Prefer Tabs: Always"), and restoration.
-    private func openGame(_ pgn: PGN) {
-        Self.logger.info("Open requested: '\(pgn.name, privacy: .public)'")
-        openWindow(value: pgn.persistentModelID)
+    /// Single resolution point for "open these games in their own windows"
+    /// (D56′ — it took one `PGN` until then). Threaded into every Library view
+    /// as the `onOpen` callback so the views stay window-system-unaware. macOS
+    /// handles dedup, tabbing (with "Prefer Tabs: Always"), and restoration —
+    /// which is what makes the plural safe to offer at all: re-opening a game
+    /// that already has a tab *focuses* it rather than making a second, so a
+    /// set containing already-open games opens fewer windows than its count.
+    ///
+    /// Arrives in display order and stays in it, because here that order is
+    /// visible as **tab order** — the same reason `gamesInDisplayOrder` exists
+    /// for export's filenames. Every host resolves through its own `games`
+    /// array before calling, so no re-derivation is needed or wanted.
+    private func openGames(_ pgns: [PGN]) {
+        guard !pgns.isEmpty else { return }
+        if pgns.count > Self.openConfirmationThreshold {
+            pendingBatchOpen = pgns
+        } else {
+            performOpen(pgns)
+        }
+    }
+
+    /// The unguarded half, reached either directly or from the confirmation.
+    private func performOpen(_ pgns: [PGN]) {
+        Self.logger.info("Open requested: \(pgns.count) game(s)")
+        for pgn in pgns {
+            openWindow(value: pgn.persistentModelID)
+        }
     }
     
     /// Single-game entry (card context menus, the gallery, the one-row
@@ -805,6 +889,14 @@ internal struct LibraryDestination: View {
             } label: {
                 Label("Delete", systemImage: "trash")
             }
+            // The app's one live spelling of delete-by-keyboard since plain ⌫
+            // was retired (5 Aug 2026 — see the note where `.onDeleteCommand`
+            // used to sit). Finder's Move to Trash key, on a control that is
+            // always present and already guarded, so the shortcut inherits the
+            // guard: an empty selection disables the button, and a disabled
+            // button's key equivalent does nothing rather than raising an
+            // alert about zero games.
+            .keyboardShortcut(.delete, modifiers: .command)
             .disabled(selectedPGNs.isEmpty)
             .help(selectedPGNs.count > 1 ? "Delete \(selectedPGNs.count) selected games" : "Delete selected game")
             .accessibilityIdentifier(AccessibilityID.libraryDeleteButton)
@@ -988,7 +1080,9 @@ internal struct LibraryDestination: View {
         return lead + " " + clause + more
     }
 
-    /// Routes a delete request for the current selection (toolbar button, ⌫).
+    /// Routes a delete request for the current selection — the toolbar button
+    /// and, through its `keyboardShortcut`, ⌘⌫. (Plain ⌫ reached here until
+    /// 5 Aug 2026; see the note where `.onDeleteCommand` used to sit.)
     private func requestDeleteSelection() {
         requestDelete(ids: selectedPGNs)
     }

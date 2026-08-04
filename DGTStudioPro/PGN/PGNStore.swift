@@ -92,8 +92,13 @@ internal struct PGNStore {
     
     // MARK: Instance Methods
     @discardableResult
-    internal func importPGN(text: String) throws -> PGN {
+    /// `libraryIndex` is the ordinal the *file* carried, threaded from the URL
+    /// door below (D58′). Nil here rather than derived, because a game arriving
+    /// as text has no filing number and inventing one would put the app's
+    /// numbering beside the folder's.
+    internal func importPGN(text: String, libraryIndex: Int? = nil) throws -> PGN {
         let pgn = try parse(text)
+        pgn.libraryIndex = libraryIndex
         let hash = Self.contentHash(for: pgn)
         
         if let existing = try existingPGN(withHash: hash) {
@@ -123,7 +128,31 @@ internal struct PGNStore {
             throw Error.fileReadFailed(url, underlying: error)
         }
         
-        return try importPGN(text: text)
+        // The one place the filename is in scope, which is why the ordinal is
+        // read here and not deeper (D58′). `lastPathComponent`, not the whole
+        // path: a folder called `2024. Tournaments` would otherwise number every
+        // game inside it.
+        return try importPGN(
+            text: text,
+            libraryIndex: PGNSerializer.libraryIndex(fromFileName: url.lastPathComponent)
+        )
+    }
+
+    /// The highest ordinal the Library currently holds, or nil on a Library
+    /// that has none (D58′).
+    ///
+    /// Predicated and limited rather than fetched-and-scanned — `libraryIndex`
+    /// is a stored column, so "the largest one" is a question a
+    /// `FetchDescriptor` can answer whole, and the alternative materializes
+    /// every game with its full `moves` array to read one `Int`. The
+    /// `backfillClassifications` lesson, applied at minting.
+    internal func highestLibraryIndex() throws -> Int? {
+        var descriptor = FetchDescriptor<PGN>(
+            predicate: #Predicate { $0.libraryIndex != nil },
+            sortBy: [SortDescriptor(\.libraryIndex, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+        return try modelContext.fetch(descriptor).first?.libraryIndex
     }
     
     /// The second door (M5): archives a finished live game into the
@@ -152,6 +181,19 @@ internal struct PGNStore {
             // threading it can't perturb dedupe against pre-M2 archives.
             board: game.roster.board
         )
+        // D58′: a game played here has no file yet, so it takes the number the
+        // file it is *going* to become would carry — one past the highest the
+        // Library knows. That keeps the folder's run unbroken when it is
+        // exported, which is the whole point of adopting the folder's scheme
+        // rather than inventing one.
+        //
+        // The recorded cost: this is `max + 1`, not a high-water mark, so
+        // deleting the newest game hands its number to the next one. Accepted
+        // at one Mac and one filing system — the folder on disk is the
+        // authority, and a number reused there is a number the user themselves
+        // reused. A stored mark would be a second source of truth for a value
+        // whose first source is a directory listing.
+        pgn.libraryIndex = (try? highestLibraryIndex()).flatMap { $0 + 1 }
         let hash = Self.contentHash(for: pgn)
         
         if let existing = try existingPGN(withHash: hash) {

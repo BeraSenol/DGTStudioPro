@@ -101,6 +101,35 @@ internal final class PGN: Identifiable {
     internal var name: String = ""
     internal var importedAt: Date
     internal var contentHash: String
+
+    /// The ordinal this game's PGN file carries on disk — the `47` in
+    /// `47. Bera Senol vs Christophe Heylen.pgn` (D58′).
+    ///
+    /// **A second identity, and deliberately the weaker one.** `contentHash` is
+    /// what the app dedupes, links and reasons with; this is a human's filing
+    /// number, read off the filename at import rather than assigned here. That
+    /// direction is the whole decision: the folder on disk was numbering these
+    /// games before this app existed, so inventing a parallel numbering would
+    /// give one game two ordinals and make the app's the wrong one.
+    ///
+    /// Optional and often nil: a game pasted as text, dropped from a folder
+    /// that does not follow the convention, or imported before D58′ has no
+    /// ordinal to read and keeps none. Nil is a real answer, not an unmigrated
+    /// state — there is nothing to backfill it *from*, because the app never
+    /// stored the URL it imported through.
+    ///
+    /// **Outside the content hash, necessarily.** Two copies of one game filed
+    /// under different numbers are the same game, and folding this in would
+    /// un-dedupe the archive against itself — the `board` and `timeControl`
+    /// argument, with a sharper edge, since this value is *about* the filing
+    /// rather than about the play. Absent from `init` for the reason the
+    /// classification fields are: the doors assign it, and a caller that could
+    /// set it directly would be a second numbering.
+    ///
+    /// Not unique, and not enforced as such. Two files can legitimately carry
+    /// the same ordinal (two folders, two numbering runs), and refusing that
+    /// would make an import fail over a filename while the game itself is fine.
+    internal var libraryIndex: Int?
     
     /// Resolved player identities for the `white`/`black` tags (M-prs.1),
     /// maintained exclusively by `PGNStore` — both doors, the backfill,
