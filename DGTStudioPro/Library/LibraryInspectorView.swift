@@ -267,40 +267,23 @@ private struct LoadedSection: View {
     /// say. Side effect worth having: a serializer defect is now visible in
     /// the sidebar instead of only in an exported file nobody re-reads.
     ///
-    /// Last, and **open by default** — reversed 30 July from the M1
-    /// collapsed default by Bera's call: with the raw text a glance away,
-    /// having it visible beat protecting the first screenful. The
-    /// disclosure chevron keeps earning its place in the other direction
-    /// (hide the longest section when it's in the way).
+    /// Last, and **open by default** — reversed 30 July from the M1 collapsed
+    /// default: with the raw text a glance away, visible beat protecting the
+    /// first screenful. The chevron earns its place in the other direction,
+    /// hiding the longest section when it is in the way.
     ///
-    /// The collapse is a plain `if`, not `Section(isExpanded:)`. The platform
+    /// The collapse is a plain `if`, not `Section(isExpanded:)`: the platform
     /// control only appears on hover, and a section whose one affordance is
-    /// invisible until the pointer happens to cross it is a section that
-    /// reads as a truncated line of text — which is exactly how this one
-    /// read. That argument is now the app's, not this section's:
-    /// `InspectorSectionHeader` draws the chevron for every collapsible
-    /// section, so the reason survives the move intact.
+    /// invisible until the pointer crosses it reads as a truncated line of text
+    /// — which is exactly how this one read. Since D45′ that argument is the
+    /// app's rather than this section's, `InspectorSectionHeader` drawing the
+    /// chevron everywhere.
     ///
-    /// What did **not** survive is this paragraph's closing sentence, struck
-    /// here rather than quietly edited: it said "every other section in this
-    /// inspector is a plain `Section` with no disclosure chrome, so dropping
-    /// the binding leaves no native control to collide with the one drawn
-    /// here." That was a claim about the *neighbours*, and D45′ is in the
-    /// business of giving all of them the same control — so it was true when
-    /// written, load-bearing for the choice it justified, and false the moment
-    /// the milestone it survived into landed.
-    ///
-    /// Expansion **no longer resets per game** — that is D45′'s one behaviour
-    /// change here, and it is the price of there being one collapse mechanism
-    /// instead of two. The old flag was `@State` under `LoadedSection`'s
-    /// `.id(pgn.id)`, so it reset on every selection; the shared store is
-    /// app-wide and persisted, so a folded PGN section stays folded across
-    /// games and across launches. Recorded as a change rather than discovered
-    /// as a surprise: the earlier doc argued a reset was right because holding
-    /// it open "would mean lifting the flag above that `.id` and threading a
-    /// binding down, which is more machinery than the affordance earns". That
-    /// machinery now exists for nine other sections, so the argument that
-    /// justified the reset has been paid for elsewhere.
+    /// Expansion **no longer resets per game** — D45′'s one behaviour change
+    /// here, and the price of one collapse mechanism instead of two. The old
+    /// flag was `@State` under `LoadedSection`'s `.id(pgn.id)` and reset on
+    /// every selection; the shared store is app-wide and persisted, so a folded
+    /// PGN section stays folded across games and launches.
     private var pgnSection: some View {
         // `CollapsibleSection` does the gating the ternary used to, which still
         // matters for the reason it always did: this view's body re-runs on
@@ -365,40 +348,23 @@ private struct LoadedSection: View {
     // said, which changes this section's pixels — the copy glyph and the
     // chevron swap places.
     
-    /// Puts the exported bytes on the pasteboard, so a game reaches a mail
-    /// draft or an analysis site without a round trip through the
-    /// filesystem. In the header rather than beside the text so it works
-    /// while the section is collapsed.
-    ///
-    /// `NSPasteboard` because SwiftUI has no pasteboard-write API a button
-    /// action can call: `.copyable(_:)` routes through the system Copy
-    /// command and needs the view focused, which a sidebar section header
-    /// cannot promise. Not an `InspectorEditButtonView` — that type hardcodes
-    /// the pencil precisely so three inspectors' edit affordances cannot
-    /// drift, and widening it to take a symbol would turn a named affordance
-    /// into a generic icon button and lose exactly that guarantee. Extract
-    /// only if a second copy affordance appears.
     /// Review, as a glyph in the roster header — the same action as
-    /// `reviewButton` in the Evaluation section body, reachable when that
+    /// `reviewButton` in the Evaluation section body, reachable while that
     /// section is folded.
     ///
-    /// **This is D45′'s recorded cost, paid.** That decision noted that
-    /// collapsing the Library's Evaluation section also hides Review and
-    /// Analyze, and rejected promoting them "because it would put two more
-    /// glyphs beside a chevron to guard against a state the reader chose".
-    /// Two circumstances changed: the promotion is to a *different* header —
-    /// the roster, which is the section actually about the game — and that
-    /// header's actions slot emptied when M10 removed the rename pencil. So
-    /// this costs no crowding anywhere, which is the whole of what was
-    /// objected to.
+    /// **D45′'s recorded cost, paid.** That decision noted collapsing Evaluation
+    /// also hides Review and Analyze, and rejected promoting them "because it
+    /// would put two more glyphs beside a chevron". Two things changed: the
+    /// promotion is to a *different* header — the roster, the section actually
+    /// about the game — and that header's actions slot emptied when M10 removed
+    /// the rename pencil. So it crowds nothing, which was the whole objection.
     ///
-    /// **Not an `InspectorEditButtonView`**, for that type's own stated
-    /// reason: it hardcodes the pencil precisely so the remaining edit
-    /// affordances cannot drift, and widening it to take a symbol would turn a
-    /// named affordance into a generic icon button. The fourth open-coded
-    /// glyph beside Copy-PGN and the evaluation magnifier, sharing with them
-    /// the pair that must not drift — `.font(.body)`, and one label feeding
-    /// both `.help` and `.accessibilityLabel`.
+    /// **Not an `InspectorEditButtonView`**, for that type's own reason: it
+    /// hardcodes the pencil so the remaining edit affordances cannot drift, and
+    /// widening it to take a symbol would make it a generic icon button. The
+    /// fourth open-coded glyph beside Copy-PGN and the magnifier, sharing the
+    /// pair that must not drift — `.font(.body)`, and one label feeding both
+    /// `.help` and `.accessibilityLabel`.
     private var reviewGlyphButton: some View {
         Button {
             openWindow(value: pgn.persistentModelID)
@@ -412,6 +378,16 @@ private struct LoadedSection: View {
         .accessibilityIdentifier(AccessibilityID.libraryInspectorReviewGlyph)
     }
 
+    /// Puts the exported bytes on the pasteboard, so a game reaches a mail draft
+    /// or an analysis site without a round trip through the filesystem. In the
+    /// header rather than beside the text, so it works while the section is
+    /// collapsed.
+    ///
+    /// `NSPasteboard` because SwiftUI has no pasteboard-write API a button
+    /// action can call: `.copyable(_:)` routes through the system Copy command
+    /// and needs the view focused, which a sidebar section header cannot
+    /// promise. Not an `InspectorEditButtonView`, for that type's reason —
+    /// extract only if a second copy affordance appears.
     private var copyPGNButton: some View {
         Button {
             NSPasteboard.general.clearContents()

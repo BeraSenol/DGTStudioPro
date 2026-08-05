@@ -58,37 +58,28 @@ internal struct RosterSummary: Equatable, Sendable {
 
     // MARK: Display
     
-    /// The value for a tag, formatted. Reached by the section through
-    /// `SevenTagRoster.allCases`, so adding a case to that enum is a
-    /// compile error here — the roster can't quietly lose a tag.
-    /// Every unknown, on every display surface, is this. One glyph — an em
-    /// dash, not the PGN vocabulary and not a hyphen.
+    /// Every unknown, on every display surface, is this. One glyph — an em dash,
+    /// not the PGN vocabulary and not a hyphen (D55′).
     ///
-    /// The em dash is the app's existing house glyph rather than a new choice:
-    /// `OpeningSection` and `SevenTagRosterSection` already spelled "nothing to
-    /// show" this way, and the change here was never about which mark to use —
-    /// it was about there being *four* (`?`, `????.??.??`, `*`, `—`) on one
-    /// panel, reading as four different kinds of problem. A hyphen was tried
-    /// first, in this constant, for one revision; the em dash won because it is
-    /// visibly a placeholder rather than possibly a value, which matters most
-    /// in the one place a short mark could be mistaken for content — a Result
-    /// column beside `1-0`.
+    /// The em dash is the app's existing house glyph: `OpeningSection` and
+    /// `SevenTagRosterSection` already spelled "nothing to show" this way. The
+    /// change was never about which mark but about there being *four* — `?`,
+    /// `????.??.??`, `*`, `—` — on one panel, reading as four different kinds
+    /// of problem. A hyphen was tried for one revision and lost, because an em
+    /// dash is visibly a placeholder rather than possibly a value, which matters
+    /// most beside `1-0` in a Result column.
     ///
-    /// **This deliberately collapses a distinction D22′ drew on purpose**, and
-    /// the collapse is the decision rather than a side effect. That entry kept
-    /// two placeholders apart: `unknownTag` (`?`) meaning "this game doesn't
-    /// say", and the section's em dash meaning "there is no game to ask". Real,
-    /// and invisible in use — the reader sees one inspector at a time and
-    /// cannot tell which question a glyph is answering, while the four
-    /// spellings on one panel (`?`, `????.??.??`, `*`, `—`) read as four
-    /// different kinds of problem. One glyph says "nothing here" once.
+    /// **This collapses a distinction D22′ drew on purpose**, and the collapse
+    /// is the decision rather than a side effect. That entry kept `?` ("this
+    /// game doesn't say") apart from the em dash ("there is no game to ask") —
+    /// real, and invisible in use, since a reader sees one inspector at a time
+    /// and cannot tell which question a glyph is answering.
     ///
     /// **Display only.** `tagValue(for:)` is untouched and must stay that way:
     /// D24′ pins export to the reference files byte for byte, where an unknown
-    /// is `?`, a missing date is `????.??.??` and `*` is a real result token.
-    /// Folding this into the export path would put a hyphen in a file the
-    /// ecosystem reads as fact. The two functions below are the whole reason
-    /// that split exists.
+    /// *is* `?`, a missing date *is* `????.??.??`, and `*` is a real result
+    /// token. The two near-identical switches are exactly the duplication a
+    /// future reader would collapse, which is why the split has its own pin.
     internal static let displayUnknown = "—"
 
     /// A stored tag value as it should be *shown* — the PGN unknown folded to
@@ -98,6 +89,9 @@ internal struct RosterSummary: Equatable, Sendable {
         return trimmed.isEmpty || trimmed == unknownTag ? displayUnknown : raw
     }
 
+    /// The value for a tag, formatted for display. Reached by the section
+    /// through `SevenTagRoster.allCases`, so adding a case to that enum is a
+    /// compile error here — the roster cannot quietly lose a tag.
     internal subscript(tag: SevenTagRoster) -> String {
         switch tag {
         case .event:  Self.shown(event)

@@ -9,29 +9,25 @@ import SwiftUI
 /// header the affordance is adjacent to its subject, which is the arrangement
 /// every host now shares.
 ///
-/// (This paragraph cited `BoardInspectorView`'s Edit Moves as the precedent
-/// the roster header was moved into agreement *with*. M10 deleted that pencil
-/// and the 4 Aug review caught the citation outliving it — the argument never
-/// depended on the witness, so the argument stayed and the dead name went. The
-/// movetext editor's pencil now sits in the Library's PGN header, adjacent to
-/// the bytes it edits, which is the same rule reaching the same answer from a
-/// different destination.)
-///
-/// Shared rather than open-coded per host for `InspectorEmptyState`'s reason
+/// Shared rather than open-coded per host, for `InspectorEmptyState`'s reason
 /// (D26′): the chrome is small enough that each host would happily carry its
-/// own copy, and nothing would then hold two — soon three — pencils to the
-/// same glyph, size and hit target. What the host still owns is the part that
-/// genuinely differs: the action, the registry identifier, and the words.
+/// own copy, and nothing would then hold the pencils to one glyph, size and hit
+/// target. The host owns what genuinely differs — the action, the registry
+/// identifier, and the words.
 ///
-/// `label` feeds both `.help` and `.accessibilityLabel`, because a glyph-only
-/// button gives neither anything to fall back on — VoiceOver would otherwise
+/// `label` feeds both `.help` and `.accessibilityLabel`: a glyph-only button
+/// gives neither anything to fall back on, and VoiceOver would otherwise
 /// announce "pencil". One string, so tooltip and spoken label cannot disagree.
-/// It is a `LocalizedStringKey` for `InspectorEmptyState`'s reason: a `String`
-/// parameter silently resolves to the non-localizing overloads.
+/// A `LocalizedStringKey` for `InspectorEmptyState`'s reason — a `String`
+/// silently resolves to the non-localizing overloads.
 ///
 /// The identifier takes no default (the `dgtConnectionToolbar` lesson): a
-/// shared fallback would hand two inspectors' pencils the same identifier,
-/// while a required parameter makes forgetting one a compile error.
+/// shared fallback would hand two pencils the same identifier, while a required
+/// parameter makes forgetting one a compile error.
+///
+/// **One production consumer since D59′** — the live inspector's Edit Details.
+/// Not dead and not to be swept, but a shared component with a single caller is
+/// where "shared" starts describing history rather than structure.
 internal struct InspectorEditButtonView: View {
     
     // MARK: Stored Properties

@@ -2,26 +2,23 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// Hermetic coverage for `DGTConnection` — the class had zero automated
-/// tests because every seam was hard-bound to hardware (F9). Three
-/// injected seams make it testable without a board:
+/// Hermetic coverage for `DGTConnection`, which had none because every seam was
+/// hard-bound to hardware (F9). Three injected seams make it testable without a
+/// board:
 ///
-/// - `port` (a `DGTPortProviding` fake) scripts the event stream, records
-///   sent commands, and can end the stream *without* `close()` — which is
-///   exactly what a yanked USB cable looks like from the connection's side
-///   (F1: the real port closes itself on EOF and finishes the stream; the
-///   stream finishing is the contract, so the fake finishes the stream).
-/// - `enumerateDevices` scripts discovery, so the reconnect lap's "is it
-///   back yet?" probe is deterministic instead of walking the dev
-///   machine's real IORegistry.
-/// - `defaults` gets a throwaway suite, so `rememberDevice` never writes
-///   the developer's real preferences from the ⌘U host.
+/// - `port` (a `DGTPortProviding` fake) scripts the event stream, records sent
+///   commands, and can end the stream *without* `close()` — what a yanked USB
+///   cable looks like from the connection's side. The stream finishing is the
+///   contract, so the fake finishes the stream (F1).
+/// - `enumerateDevices` scripts discovery, so the reconnect lap's "is it back
+///   yet?" probe is deterministic rather than walking the real IORegistry.
+/// - `defaults` gets a throwaway suite, so `rememberDevice` never writes the
+///   developer's real preferences from the ⌘U host.
 ///
-/// Together with zeroed `initCommandStagger` and a milliseconds
+/// With a zeroed `initCommandStagger` and a milliseconds
 /// `reconnectRetryInterval`, the full unplug → reconnect loop runs in
-/// hundredths of a second. What these tests *can't* prove — termios
-/// configuration, EOF detection on a real fd — stays on the M7 hardware
-/// checklist, deliberately.
+/// hundredths of a second. What these cannot prove — termios configuration, EOF
+/// on a real fd — stays on the hardware checklist, deliberately.
 @MainActor
 @Suite("DGT Connection — Fake Port")
 struct DGTConnectionTests {

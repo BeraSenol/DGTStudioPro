@@ -92,13 +92,11 @@ struct SmartTagModelTests {
         #expect(tags["Checkmate"]?.matches(smothered) == true)
     }
     
-    /// A deliberate change-detector: the factory feeds both the production
-    /// seed and the UI-test seed, and the seed fires **once ever** per
-    /// install, so a casual edit here silently changes what a fresh install
-    /// gets and what the UITests find. Growing this list is a decision;
-    /// having to come back and edit this test is the decision being noticed.
-    /// (M4 appended "Smothered Mates" — appended, so the three existing
-    /// positions are undisturbed.)
+    /// A deliberate change-detector. The seed fires **once ever** per install,
+    /// so a casual edit here silently changes what a fresh install gets and
+    /// nothing else would notice. Growing this list is a decision; having to
+    /// come back and edit this test is the decision being noticed. (M4 appended
+    /// "Smothered Mates" — appended, so the existing positions are undisturbed.)
     @Test func defaultNamesAndColorsAreStable() {
         let tags = SmartTag.defaultTags()
         #expect(tags.map(\.name) == ["Checkmate", "Timed", "First Round", "Smothered Mates"])

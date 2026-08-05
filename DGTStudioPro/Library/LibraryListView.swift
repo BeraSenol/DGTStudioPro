@@ -109,34 +109,27 @@ internal struct LibraryListView: View {
             // address a test would reach a game by — and it is **hideable
             // anyway** as of 5 Aug 2026.
             //
-            // It was pinned visible until then, on the reasoning that hiding
-            // the column would not *fail* anything but would make the element
-            // cease to exist, so a future suite would report "no such game"
-            // about a Library that has it. That was sound while a suite
-            // existed. D51′ deleted the target, and what survived was a live
-            // restriction on the app paid for a consumer that does not — the
-            // same shape as a preview witnessing an arrangement the app has
-            // retired, and it surfaced the way those do: someone tried to use
-            // the thing and found it greyed out.
+            // Pinned visible until then so a future suite could not lose its
+            // address. Sound while a suite existed; D51′ deleted it, leaving a
+            // live restriction on the app paid for a consumer that does not
+            // exist. Found the way those always are — someone tried to hide the
+            // column and asked why it was greyed out.
             //
-            // The registry's own bet (see `AccessibilityID`'s header) is that
-            // identifiers are worth *keeping* against a future suite. Keeping
-            // strings in a file costs nothing. Pinning a column is a different
-            // trade, and D51′ already ruled on that class: the suite's costs
-            // outweighed its protection. If a suite returns, "unhide the White
-            // column" is a line in its setup, not a permanent constraint here.
+            // Keeping identifier strings in a file costs nothing and stands (see
+            // `AccessibilityID`'s header). Pinning a control the user reaches for
+            // is a different trade, and D51′ already ruled on that class.
             //
-            // Not relocated to another cell, and the reason is worth stating
-            // because it was the obvious next move: **every** column is
-            // hideable now, so no cell can be a guaranteed address. Moving the
-            // identifier to `#` would trade one hideable host for another, and
-            // that one renders an em dash for every game imported before D58′.
+            // Not relocated to another cell, which was the obvious next move:
+            // **every** column is hideable now, so no cell is a guaranteed
+            // address. Moving the identifier to `#` would swap one hideable host
+            // for another, and that one renders an em dash for every pre-D58′
+            // game besides.
+            //
             // Sorted on the **display** form, not the stored tag: the column
-            // shows "Magnus Carlsen" and sorting it by `[White "Carlsen,
-            // Magnus"]` would order by a surname the cell does not print. That
-            // is the right call for a table and the wrong one for a filing
-            // system, which is worth naming — if a by-surname order is ever
-            // wanted it is a *second* column, not a quiet swap of this key.
+            // shows "Magnus Carlsen", and sorting by `[White "Carlsen, Magnus"]`
+            // would order by a surname the cell does not print. Right for a
+            // table, wrong for a filing system — a by-surname order would be a
+            // *second* column, not a quiet swap of this key.
             TableColumn("White", value: \.whiteDisplayName) { game in
                 Text(game.whiteDisplayName)
                     .accessibilityIdentifier(AccessibilityID.gameRow(game.name))
@@ -153,49 +146,25 @@ internal struct LibraryListView: View {
             }
             .width(60)
             .customizationID("result")
-            // Code only, not the name: at column width the family alone
-            // truncates to "French Defe…", and the inspector's Opening
-            // section is one click away with all three rows. An
-            // unclassified game shows nothing rather than the inspector's
-            // em dash — a table cell is already an empty-when-absent
-            // surface, and a column of dashes is noise.
+            // Code only, not the name: at column width the family truncates to
+            // "French Defe…", and the inspector's Opening section is one click
+            // away with all three rows. An unclassified game shows nothing
+            // rather than an em dash — a column of dashes is noise.
             //
-            // Read through `opening`, not off `ecoCode` directly: that
-            // accessor is where the both-or-neither invariant is checked,
-            // and a row carrying a code without a family is exactly the
-            // shape a second writer would leave behind. Reaching past it
-            // here would make this the one surface that prints a code the
-            // rest of the app calls unclassified — which is the failure the
-            // invariant was written to surface, defeated by the reader.
-            // Sorted through `opening?.code`, **not** `ecoCode`, for the reason
-            // the display comment above gives: `opening` is where the
-            // both-or-neither invariant is checked, and a row carrying a code
-            // without a family prints nothing here. Keying the sort off the
-            // stored column would order that row by a code the cell does not
-            // show — the same "one surface reaching past the invariant" defect
-            // the reader was warned about, arriving through the comparator
-            // instead of the cell.
+            // Read *and* sorted through `opening`, never off `ecoCode` directly.
+            // That accessor is where the both-or-neither invariant is checked,
+            // so reaching past it would make this the one surface printing a
+            // code the rest of the app calls unclassified — the invariant
+            // defeated from the reader's side, whether through the cell or
+            // through the comparator.
             //
-            // The cost, named rather than discovered: `opening` rehydrates an
-            // `ECOOpening` per access, so this sorts with O(n log n) rehydrates
-            // instead of reading a stored string.
-            //
-            // **This comment first said the cost was "bounded by the sort being
-            // a user gesture rather than a per-render fold", and that was
-            // wrong** — corrected 5 Aug 2026, hours after being written. The
-            // sort is applied inside `filteredGames`, which *is* the per-render
-            // fold, so a reader sitting on this column pays the rehydrates on
-            // every render rather than once per click. The sentence was written
-            // from where the comparator is *declared* (a header, clicked
-            // rarely) instead of from where it is *applied*, which is the same
-            // mistake in the same pass as the Players toolbar comment that
-            // claimed three view modes ignored the sort. Both were claims about
-            // data flow made without following the data.
-            //
-            // Still not a reason to reach past the accessor: at personal-library
-            // scale it is invisible, it joins the known-costs census, and the
-            // alternative trades a real invariant for a hypothetical
-            // measurement.
+            // Named cost: `opening` rehydrates an `ECOOpening` per access, and
+            // the sort is applied inside `filteredGames`, which *is* the
+            // per-render fold — so a reader sitting on this column pays the
+            // rehydrates every render, not once per click. Invisible at
+            // personal-library scale, on the known-costs census, and still not a
+            // reason to reach past the accessor: that trades a real invariant
+            // for a hypothetical measurement.
             TableColumn("ECO", sortUsing: KeyPathComparator(\PGN.opening?.code)) { game in
                 Text(game.opening?.code ?? "").foregroundStyle(.secondary)
             }

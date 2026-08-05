@@ -29,30 +29,26 @@ internal struct PieceGlyph: View {
 /// M6 — every piece on the board, rendered in one identity-keyed layer above
 /// the square grid.
 ///
-/// The squares stopped drawing pieces when this landed: a square can only
-/// pop its content into existence, while a layer whose `ForEach` keys on
-/// `ResolvedPiece.key` gets the whole animation contract from identity
-/// alone — a persisting key whose square changes **glides**, a key that
-/// appears or vanishes **fades**. No case analysis, no animation flags: the
-/// resolver decides who persists (`PieceIdentity`), and this view merely
-/// obeys. A board dump re-keys everything and therefore fades; a proven move
-/// keeps its key and therefore glides; a lifted piece loses its square and
-/// therefore fades out where it stood, which is the truthful rendering of a
-/// piece in a hand.
+/// The squares stopped drawing pieces when this landed. A square can only pop
+/// its content into existence; a layer whose `ForEach` keys on
+/// `ResolvedPiece.key` gets the whole animation contract from identity alone —
+/// a persisting key whose square changes **glides**, a key that appears or
+/// vanishes **fades**. No case analysis, no animation flags: `PieceIdentity`
+/// decides who persists and this view obeys. A board dump re-keys everything
+/// and fades; a proven move keeps its key and glides; a lifted piece loses its
+/// square and fades where it stood, which is the truthful rendering of a piece
+/// in a hand.
 ///
-/// `matchedGeometryEffect` was the rejected mechanism: it pairs an insertion
-/// with a removal across two views, which means threading a namespace
-/// through 64 square cells and trusting the pairing to fire inside a clipped,
-/// overlaid grid — and it has no vocabulary for "this change must not
-/// animate", which the dump case needs and identity churn expresses for
-/// free.
+/// `matchedGeometryEffect` was rejected: it pairs an insertion with a removal
+/// across two views, meaning a namespace threaded through 64 clipped, overlaid
+/// cells — and it has no vocabulary for "this change must not animate", which
+/// the dump case needs and identity churn expresses for free.
 ///
-/// Geometry: the layer frames itself to the grid's exact side (8 squares)
-/// and converts each square to its visual cell with the same XOR
-/// `BoardView.square(visualRow:visualColumn:)` uses in the other direction —
-/// one mask, two directions, so the layer and the grid cannot disagree about
-/// where e4 is. Hit testing stays off: squares own interaction (they keep
-/// the accessibility identifiers too).
+/// Geometry: the layer frames itself to the grid's exact side and converts each
+/// square with the same XOR `BoardView.square(visualRow:visualColumn:)` uses in
+/// the other direction — one mask, two directions, so layer and grid cannot
+/// disagree about where e4 is. Hit testing stays off; squares own interaction
+/// and keep the accessibility identifiers.
 ///
 /// Reduce Motion honours the system setting by dropping the animation, not
 /// the layer: positions still update, nothing slides.

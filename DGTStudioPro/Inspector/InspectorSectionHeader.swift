@@ -34,40 +34,32 @@ internal struct InspectorSectionHeader<Actions: View>: View {
     /// How far the header's trailing edge sits from the inspector's, and so
     /// how far the outermost control sits from it.
     ///
-    /// It used to live on `InspectorEditButtonView` as `.padding(.trailing, 10)`
-    /// under a doc comment reading "stated here and nowhere else" — true of the
-    /// *number* and false of the *job*. That padding did two things at once:
-    /// inset the header's trailing control, and widen the pencil's hit target.
-    /// Those coincide only while the pencil is last, and M5's Players header put
-    /// a menu after it, at which point the edge inset silently transferred to a
-    /// control carrying none. Three distances from one edge resulted — 10 pt at
-    /// the four lone pencils, 8 pt at the Library's PGN glyph pair (which had
-    /// quietly added its own), and 0 pt at the actions menu.
+    /// It lived on `InspectorEditButtonView` as `.padding(.trailing, 10)` under
+    /// a doc reading "stated here and nowhere else" — true of the *number*,
+    /// false of the *job*. That padding both inset the header's trailing control
+    /// and widened the pencil's hit target, which coincide only while the pencil
+    /// is last. M5's Players header put a menu after it, and the edge inset
+    /// silently transferred to a control carrying none: three distances from one
+    /// edge — 10 pt at the lone pencils, 8 pt at the Library's PGN glyph pair
+    /// (which had quietly added its own), 0 pt at the actions menu.
     ///
-    /// Owning it here is what makes a host unable to get it wrong: whatever goes
-    /// into the actions slot, and however much of it, the outermost control is
-    /// this far from the edge. `InspectorEditButtonView` keeps the hit target,
-    /// which was the half that genuinely belonged to it.
+    /// Owning it here is what makes a host unable to get it wrong, whatever goes
+    /// into the actions slot and however much. `InspectorEditButtonView` keeps
+    /// the hit target, the half that genuinely belonged to it.
     ///
-    /// Stated trade-off: it is applied to the whole row, not to `actions()`, so
-    /// a header with *no* actions also gives up these 10 pt — a title long
-    /// enough to truncate now truncates 10 pt earlier. Taken deliberately over
-    /// insetting the slot alone, and the distinction is worth being precise
-    /// about because the trailing cluster below relies on its other half: a
-    /// **bare** `EmptyView` is flattened out of a `ViewBuilder` list and lays
-    /// nothing out, but an `EmptyView` **under a modifier** is a
-    /// `ModifiedContent` — a different type, and no longer the one SwiftUI
-    /// special-cases. So `actions().padding(…)` is a claim about layout nobody
-    /// here has checked, while `HStack(spacing: 12) { chevron; actions() }`
-    /// rests only on the flattening. One unconditional statement beats ten
-    /// points of a name nobody reads to the end.
+    /// Applied to the whole row rather than to `actions()`, so an actionless
+    /// header gives up these points too. Deliberate, and the distinction
+    /// matters: a **bare** `EmptyView` is flattened out of a `ViewBuilder` list
+    /// and lays nothing out, but an `EmptyView` **under a modifier** is a
+    /// `ModifiedContent` — a different type, no longer the one SwiftUI
+    /// special-cases. So `actions().padding(…)` would be a layout claim nobody
+    /// has checked, where `HStack(spacing: 12) { chevron; actions() }` rests
+    /// only on the flattening.
     ///
-    /// Computed, not stored, because this type is generic and **generic types
-    /// cannot have stored static properties**. `SevenTagRosterSection` records
-    /// the same constraint at `noGamePlaceholder`, for the same reason, in a
-    /// file this milestone edited on its way here — so the lesson was one
-    /// scroll away and got re-learned from the compiler anyway. It joins the
-    /// standing roll of pre-recorded lessons re-learned in anger.
+    /// Computed, not stored: this type is generic and **generic types cannot
+    /// have stored static properties**. `SevenTagRosterSection` records the same
+    /// constraint at `noGamePlaceholder` — one scroll away, and re-learned from
+    /// the compiler anyway.
     internal static var actionsInset: CGFloat { 12 }
     
     // MARK: Stored Properties

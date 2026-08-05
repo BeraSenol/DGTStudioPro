@@ -68,20 +68,15 @@ struct RankedPlayerSortTests {
     /// goes red, which is the point — a ladder whose default sort disagrees
     /// with its default ranking would open on a list that looks shuffled.
     ///
-    /// Two things make this able to fail, and both were deliberate:
-    ///
-    /// Sorted from a **shuffled** input rather than from `ladder()`'s output,
-    /// so it cannot pass by the array already being in order — which is how
-    /// this test would otherwise be green while doing nothing.
-    ///
-    /// And asserted against `PlayersDestination.defaultSortOrder` rather than
-    /// a locally-written comparator, which is the `EvaluationGraphReading`
-    /// rule: a literal keeps passing while the thing it was copied from
-    /// changes. Spelling `KeyPathComparator(\.rank)` here would prove that
-    /// *ascending rank* is the ladder — true, and not the claim. The claim is
-    /// that the order **Players opens in** is the ladder, and only the real
-    /// default can be wrong about that. Reverse it in the destination and this
-    /// test goes red; that is the point.
+    /// Two things make this able to fail, both deliberate. It sorts from a
+    /// **shuffled** input rather than from `ladder()`'s output, so it cannot
+    /// pass by the array already being in order. And it asserts against
+    /// `PlayersDestination.defaultSortOrder` rather than a locally-written
+    /// comparator — the `EvaluationGraphReading` rule, since a literal keeps
+    /// passing while the thing it was copied from changes. Spelling
+    /// `KeyPathComparator(\.rank)` here would prove *ascending rank is the
+    /// ladder*: true, and not the claim. The claim is that the order **Players
+    /// opens in** is the ladder, and only the real default can be wrong.
     @Test func defaultSortReproducesTheLadder() {
         let expected = ladder().map(\.stats.key)
 

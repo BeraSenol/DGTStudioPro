@@ -3,64 +3,41 @@ import SwiftUI
 
 /// The Library's context menu, once.
 ///
-/// **The divergence this closes was real and had already produced three
-/// different menus for five verbs.** `LibraryGameCardView` used `Label`s with
-/// symbols and put an accessibility identifier on Export; `LibraryColumnsView`
-/// used bare `Button("Open")` / `Button("Analyze")` / `Button("Export…")` with
-/// no symbols and no identifiers; `LibraryListView` used `Label`s plus counted
-/// plurals for a multi-selection. Same verbs, same destination, three
-/// renderings — and adding Get Info meant editing all three by hand, which is
-/// the moment it stopped being tolerable.
+/// Three hosts had three hand-written menus for the same five verbs — differing
+/// in symbols, identifiers and counted plurals — and adding Get Info meant
+/// editing all three. D26′'s argument applied to a menu instead of a glyph: the
+/// point is not that duplication is wasteful but that a divergence becomes a
+/// *compile-visible choice*.
 ///
-/// D26′'s argument, applied to a menu instead of a glyph: the point of a shared
-/// type is not that duplication is wasteful but that a divergence becomes a
-/// *compile-visible choice*. Three hand-written menus made "Columns has no
-/// symbols" invisible unless two view modes were open side by side, which is
-/// exactly the failure the shared-chrome family exists to prevent.
+/// **Built around the list's shape rather than the card's**, because the list's
+/// is the superset: it is the one host whose subject can be a set, and a menu
+/// that can count can always count to one. The single-game hosts pass a
+/// one-element array and get singular labels back.
 ///
-/// **Built around the list's shape rather than the card's**, because the
-/// list's is the superset: it is the one host whose subject can be a set, and
-/// a menu that can count can always count to one. The card and columns hosts
-/// pass a single-element array and get the singular labels back.
+/// The closures take `[PGN]` uniformly so each host adapts once at its call
+/// site. The rejected alternative, id-set closures here, would make the two
+/// single-game hosts build a `Set` to describe a game they already hold.
 ///
-/// The closures take `[PGN]` uniformly, so each host adapts once at its call
-/// site instead of this type carrying three shapes. That adaptation is a
-/// deliberate cost: the alternative — id-set closures here — would make the
-/// two single-game hosts build a `Set` to describe one game they already hold.
+/// # Keyboard shortcuts
 ///
-/// # Keyboard shortcuts (4 Aug 2026, late)
+/// Four of five are borrowed rather than invented: **⌘O** and **⌘I** are
+/// Finder's keys for the same questions about a selected row; **⌘E** is
+/// export's mnemonic against an app with no eject to collide with; **⌘⌫** is
+/// Move to Trash. Only **⌘R** for Analyze had no convention to borrow — *Run*,
+/// taken over the more mnemonic ⇧⌘A because that sits one slipped modifier from
+/// ⌘A, and the slip would queue a depth-18 pass over everything on screen.
 ///
-/// Every item carries one, and four of the five are borrowed rather than
-/// invented: **⌘O** open and **⌘I** info are Finder's exact keys for the exact
-/// same questions about a selected row; **⌘E** is export's near-universal
-/// mnemonic and this app has no eject to collide with; **⌘⌫** is Move to Trash.
-/// That last one mirrored a plain ⌫ handled by `LibraryDestination` until 5 Aug
-/// 2026, when ⌫ alone was retired by request — its failure mode is a
-/// multi-selection you had forgotten about, reachable by a finger already
-/// resting nearby. The live copy of ⌘⌫ is the toolbar Delete button's now; this
-/// is its mirror in the menu.
-/// Only **⌘R** for Analyze had no convention to borrow — it reads as *Run*,
-/// which is what an engine pass is, and it was taken over the more mnemonic
-/// ⇧⌘A because that sits one slipped modifier from the select-all this
-/// destination gained the same day, and the slip would queue a depth-18 pass
-/// over everything on screen.
+/// ⌘I lives on `GetInfoMenuItem`, not here.
 ///
-/// `GetInfoMenuItem` has carried ⌘I since M10 and is the precedent this follows
-/// rather than a fourth thing to keep in sync — the key lives on that type, not
-/// here.
-///
-/// **What is deliberately not claimed: that these keys fire when the menu is
-/// shut.** `.keyboardShortcut` inside a `.contextMenu` certainly *renders* — ⌘I
-/// has been visible on this menu since M10 — and whether SwiftUI also registers
-/// it while the menu is closed depends on whether it builds the content eagerly,
-/// which is a fact about the framework nobody here has measured. Three outcomes
-/// are possible and they are not equally good: dead keys (labels only, and the
-/// menu-bar `Commands` route is then owed); live and correct; or **live and
-/// ambiguous**, which is the one to watch for, because the icons grid renders
-/// one of these menus *per card* — N registrations of ⌘R over N different games
-/// is worse than none. The manual check in the instructions is written to tell
-/// the three apart, and this comment says "renders" rather than "works" until it
-/// has been run.
+/// **Not claimed: that these keys fire when the menu is shut.**
+/// `.keyboardShortcut` inside a `.contextMenu` certainly *renders*; whether
+/// SwiftUI also registers it while the menu is closed depends on whether it
+/// builds the content eagerly, which nobody here has measured. Three outcomes,
+/// not equally good: dead keys (the menu-bar `Commands` route is then owed);
+/// live and correct; or **live and ambiguous** — the one to watch for, since
+/// the icons grid renders one of these menus *per card*, and N registrations of
+/// ⌘R over N different games is worse than none. The manual check tells them
+/// apart; this says "renders" rather than "works" until it has been run.
 internal struct GameActionsMenu: View {
 
     // MARK: Stored Properties

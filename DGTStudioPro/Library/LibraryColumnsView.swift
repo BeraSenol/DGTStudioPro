@@ -113,36 +113,27 @@ internal struct LibraryColumnsView: View {
         } else {
             // A one-column `Table`, not a `List` (4 Aug 2026, Bera's call).
             //
-            // **The header is a known, accepted cost.** Shipping SwiftUI on
-            // macOS has no modifier to suppress a `Table` header — the
-            // compact-size-class collapse that hides it is an iOS behaviour
-            // macOS never enters, and `tableStyle` governs insets and row
-            // backgrounds, not header visibility. So this browser carries a
-            // column header Finder's does not, deliberately, in exchange for
-            // sharing `LibraryListView`'s row and selection machinery instead
-            // of maintaining a second one. Recorded rather than discovered: if
-            // the header ever becomes intolerable the answer is to revert this
-            // to a `List`, not to hunt for a modifier that doesn't exist.
+            // **The header is an accepted cost that turned into the feature.**
+            // Shipping SwiftUI on macOS has no modifier to suppress a `Table`
+            // header — the compact-size-class collapse is an iOS behaviour macOS
+            // never enters, and `tableStyle` governs insets, not header
+            // visibility. The trade was a header Finder's browser lacks in
+            // exchange for sharing `LibraryListView`'s row and selection
+            // machinery; since 5 Aug the header sorts, so it earns its place. If
+            // it ever becomes intolerable the answer is to revert to a `List`,
+            // not to hunt for a modifier that does not exist.
             //
             // **No `columnCustomization` binding, and that is load-bearing.**
             // `LibraryListView` persists its layout under a `StorageKeys` key;
             // binding the same one here would let hiding a column over there
-            // empty this view entirely. One column has nothing to customize,
-            // so the omission costs nothing and closes the hazard by
-            // construction.
-            // Sortable since 5 Aug 2026, sharing the destination's comparator
-            // with list mode. The header above was documented one screen up as
-            // an *accepted cost* — shipping SwiftUI on macOS cannot suppress
-            // it — so this is that cost turning into the feature: a header that
-            // had to be there anyway now does something.
+            // empty this view entirely. One column has nothing to customize.
             //
-            // One consequence worth naming: sorting here writes the same state
-            // list mode reads, so a sort made in either mode survives the
-            // switch to the other. What it cannot do is *show* a sort it did
-            // not set — order by Rating in list mode, come back here, and this
-            // header carries no direction chevron while the rows are in rating
-            // order. Honest rather than ideal: a one-column table has nowhere
-            // to display an ordering it does not own.
+            // Sorting here writes the state list mode reads, so a sort survives
+            // the switch either way. What it cannot do is *show* a sort it did
+            // not set: order by Rating in list mode, come back, and this header
+            // carries no chevron while the rows stay in rating order. A
+            // one-column table has nowhere to display an ordering it does not
+            // own.
             Table(games, selection: $selectedPGNs, sortOrder: $sortOrder) {
                 TableColumn("Name", value: \.name) { game in
                     row(for: game)

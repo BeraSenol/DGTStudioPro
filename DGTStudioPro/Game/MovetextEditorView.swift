@@ -12,19 +12,16 @@ import SwiftUI
 /// here: a result change is a metadata edit (`applyEdit`), a separate door, so
 /// this door validates against the result exactly as the store does.
 ///
-/// **Was `MovetextEditorSheet` until 5 Aug 2026.** It lost its sheet chrome —
-/// the title block, the frame, the `Cancel` button and the `dismiss`
-/// environment — when its one presenter went away: the Library inspector's
-/// pencil was the only thing that ever opened it, and with the door moved to
-/// Get Info's Move Text tab a sheet had nothing left to be presented *from*.
-/// Renamed rather than kept as a sheet wrapping a tab's content, because a
-/// type whose name says "sheet" and whose only host is a tab is the kind of
-/// stale label this project has repeatedly found reading as evidence that
-/// something was still true.
+/// **Was `MovetextEditorSheet` until D59′**, and lost its sheet chrome — title
+/// block, frame, `Cancel`, `dismiss` — when its one presenter went away. With
+/// the door moved to Get Info's Move Text tab a sheet has nothing to be
+/// presented *from*, and a type named "sheet" whose only host is a tab is the
+/// stale label this project keeps finding read as evidence something is true.
 ///
-/// What deliberately did **not** change: the validator, the accept-whole rule,
-/// the splice refusal, the per-ply error copy, and all five
-/// `movetext.editor.*` identifiers. Only the container moved.
+/// Unchanged: the validator, accept-whole, the splice refusal, the per-ply
+/// error copy, and all five `movetext.editor.*` identifiers. Only the container
+/// moved. `Cancel` became **Revert** — a sheet's Cancel meant "close without
+/// saving" and the closing did the work; a tab cannot close.
 internal struct MovetextEditorView: View {
 
     // MARK: Stored Properties
@@ -70,44 +67,36 @@ internal struct MovetextEditorView: View {
     /// 10.  O-O       Bd6
     /// ```
     ///
-    /// **This is safe because the move numbers are not data.**
-    /// `MovetextEdit.tokenize` splits on whitespace and drops a leading
-    /// `<digits><dots>` run before validating, so the numbers are a reading aid
-    /// the validator never sees. That has a consequence worth stating rather
-    /// than discovering: delete a ply in the middle and every number below it
-    /// is now wrong, and **nothing will complain**, because nothing is reading
-    /// them. Save re-renders from the accepted moves, so the sheet corrects
-    /// itself the moment the edit lands.
+    /// **Safe because the move numbers are not data.** `MovetextEdit.tokenize`
+    /// splits on whitespace and drops a leading `<digits><dots>` run before
+    /// validating, so the numbers are a reading aid the validator never sees.
+    /// The sharp edge, stated rather than discovered: delete a ply mid-game and
+    /// every number below it is wrong and **nothing complains**, because nothing
+    /// reads them. Save re-renders from the accepted moves, so the sheet
+    /// corrects itself when the edit lands.
     ///
-    /// **A formatted `TextEditor` rather than a grid of editable cells**, which
-    /// is the other reading of "two columns" and was rejected: D18′ accepts or
-    /// rejects movetext *whole*, a grid has no natural gesture for inserting a
-    /// ply mid-game, and pasting a whole game — the thing the splice refusal
-    /// exists to police — stops being possible. The score sheet buys the look
-    /// without giving up any of that.
+    /// **A formatted `TextEditor` rather than a grid of editable cells** — the
+    /// other reading of "two columns", rejected because D18′ accepts or rejects
+    /// whole, a grid has no gesture for inserting a ply mid-game, and pasting a
+    /// whole game (what the splice refusal exists to police) stops being
+    /// possible.
     ///
-    /// This is the app's **third** rendering of a move number and the second
-    /// display-only one: `PGNSerializer` owns what a number looks like on disk
-    /// (D24′, byte-pinned) and `EvaluationGraphReading` owns the single-ply
-    /// form ("12… Nf6"). Deliberately not shared — one is an interchange
-    /// contract and the other two answer different questions about layout.
+    /// Third rendering of a move number in the app, second display-only one:
+    /// `PGNSerializer` owns the on-disk form (D24′, byte-pinned) and
+    /// `EvaluationGraphReading` the single-ply form ("12… Nf6"). Not shared —
+    /// one is an interchange contract, the other two are layout questions.
     ///
-    /// Columns are padded with spaces and the font is monospaced, which is what
-    /// makes them line up; the tokenizer's whitespace-agnosticism is what makes
-    /// the padding free. Alignment drifts while you type and is restored on
-    /// Save — a text editor that re-flowed under the cursor would be worse than
-    /// one that waits.
+    /// Space padding plus a monospaced font is what lines the columns up, and
+    /// the tokenizer's whitespace-agnosticism is what makes the padding free.
+    /// Alignment drifts while you type and is restored on Save; a text editor
+    /// re-flowing under the cursor would be worse than one that waits.
     ///
-    /// **Tab separation was tried and reverted the same day** (5 Aug 2026). It
-    /// is the better *interchange* format — three real fields per line, so the
-    /// sheet pastes into a spreadsheet as number / White / Black, which padding
-    /// can never do. What it gives up is control: alignment becomes the text
-    /// view's tab stops, and a ply wider than one interval pushes its row's
-    /// Black column right of its neighbours'. SwiftUI's `TextEditor` exposes no
-    /// tab-stop API, so that interval is `NSTextView`'s default and not ours to
-    /// set. Padding aligns in any font at any size, which is worth more here
-    /// than pasteability. Recorded because it is a real trade and the next
-    /// reader will think of tabs too.
+    /// **Tabs were tried and reverted the same hour.** They are the better
+    /// *interchange* format — three real fields, so the sheet pastes into a
+    /// spreadsheet — and they hand alignment to `NSTextView`'s default tab
+    /// stops, which SwiftUI's `TextEditor` gives no way to set, so a wide ply
+    /// pushes its row's Black column out of line. Padding aligns at any font and
+    /// size. Recorded because the next reader will think of tabs too.
     internal nonisolated static func scoreSheet(_ moves: [String]) -> String {
         guard !moves.isEmpty else { return "" }
 

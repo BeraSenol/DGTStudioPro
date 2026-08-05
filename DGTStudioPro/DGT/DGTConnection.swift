@@ -8,39 +8,32 @@ import os
 /// same lifetime/sharing pattern as the shared `ModelContainer` and
 /// `OpenGamesRegistry`.
 ///
-/// It orchestrates the connection lifecycle:
-/// 1. `search()` enumerates serial devices (IOKit) for the connect dialog.
-/// 2. `connect(to:)` opens the port, then runs the staggered init sequence
-///    (reset → info queries → board dump → update-board) the DGT spec
-///    prescribes, logging which messages the board answers.
-/// 3. The decoded `DGTEvent` stream from the background `DGTSerialPort` actor
-///    is consumed here on the `@MainActor`, updating `boardInfo` and the live
-///    `physicalBoard` mirror.
+/// The lifecycle: `search()` enumerates serial devices (IOKit) for the connect
+/// dialog; `connect(to:)` opens the port then runs the staggered init sequence
+/// the DGT spec prescribes (reset → info queries → board dump → update-board),
+/// logging which messages the board answers; and the decoded `DGTEvent` stream
+/// from the background `DGTSerialPort` actor is consumed here on the
+/// `@MainActor`, updating `boardInfo` and the `physicalBoard` mirror.
 ///
-/// What D2 owns: the byte pipe, the connection state machine, and the live
-/// physical-board snapshot. What it deliberately does *not* own yet: rendering
-/// (D3), move reconstruction (D4), or any chess logic — `physicalBoard` is a
-/// raw mirror of detected pieces, nothing more.
+/// It owns the byte pipe, the connection state machine, and the physical-board
+/// snapshot — and deliberately not rendering, move reconstruction, or any chess
+/// logic. `physicalBoard` is a raw mirror of detected pieces, nothing more.
 ///
-/// Connection quality of life (M7): every successful connect remembers the
-/// device (M7.1); launch can silently reconnect to it behind a Settings
-/// toggle, failing *quietly* when it can't (M7.2, `autoConnectAtLaunch()`);
-/// and a board that vanishes mid-game enters `.reconnecting` — a timed retry
-/// loop that ends only in success, the game going away, or the player
-/// standing it down (M7.3). The decisions are pure (`DGTAutoConnectPolicy`)
-/// so they test without hardware; the machinery here around them does not.
+/// Connection QoL (M7): every successful connect remembers the device; launch
+/// can silently reconnect behind a Settings toggle, failing *quietly*; and a
+/// board that vanishes mid-game enters `.reconnecting`, a timed retry loop
+/// ending only in success, the game going away, or the player standing it down.
+/// The decisions are pure (`DGTAutoConnectPolicy`) and test without hardware;
+/// the machinery around them does not.
 ///
-/// Diagnostics: lifecycle milestones (connect, board identity, disconnect,
-/// failures, stream end) are mirrored into the optional `sessionLog`
-/// (`DGTSessionLog`) so the transport story sits in the same exportable
-/// timeline as the live-session events — when a desync is captured, the board
-/// identity and connection history that preceded it are right there above it.
-/// Existing Console logging is untouched; recorder writes use `capture`
-/// (buffer-only) to avoid double Console output.
+/// Lifecycle milestones mirror into the optional `sessionLog` so the transport
+/// story shares one exportable timeline with the live-session events — when a
+/// desync is captured, the board identity and connection history that preceded
+/// it sit right above it. Recorder writes use `capture` (buffer-only) to avoid
+/// double Console output.
 ///
-/// It can also opt into recording the live board stream (`startRecording()`)
-/// into a `DGTSessionRecording` for offline, hardware-free replay of
-/// reconstruction / recovery — see that type.
+/// It can also record the live board stream (`startRecording()`) into a
+/// `DGTSessionRecording` for hardware-free replay — see that type.
 @Observable
 @MainActor
 internal final class DGTConnection {

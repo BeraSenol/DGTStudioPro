@@ -81,11 +81,17 @@ internal struct PGNStore {
     }
     
     // MARK: Instance Methods
-    @discardableResult
+    /// The text import door: parse, dedupe by content hash, insert.
+    ///
+    /// **Throws `Error.duplicate` naming the existing game rather than returning
+    /// it** — worth reading off the declaration, because the name suggests
+    /// otherwise and this project has recorded getting it wrong.
+    ///
     /// `libraryIndex` is the ordinal the *file* carried, threaded from the URL
-    /// door below (D58′). Nil here rather than derived, because a game arriving
-    /// as text has no filing number and inventing one would put the app's
-    /// numbering beside the folder's.
+    /// door below (D58′). Nil here rather than derived: a game arriving as text
+    /// has no filing number, and inventing one would put the app's numbering
+    /// beside the folder's.
+    @discardableResult
     internal func importPGN(text: String, libraryIndex: Int? = nil) throws -> PGN {
         let pgn = try parse(text)
         pgn.libraryIndex = libraryIndex
@@ -250,28 +256,20 @@ internal struct PGNStore {
     /// *rejection* is a value, so the editor distinguishes "your move 14 is
     /// illegal" from "the write failed".
     ///
-    /// Re-validating here (the editor already validates for live feedback) is
-    /// deliberate — it makes "persisted movetext never bypasses the replayer"
-    /// structural rather than a caller's good manners, the `applyEdit`
-    /// philosophy applied to movetext.
+    /// Re-validating here — the editor already validates for live feedback —
+    /// makes "persisted movetext never bypasses the replayer" structural rather
+    /// than a caller's good manners.
     ///
-    /// On acceptance, one transaction (D18′): the canonical moves replace the
-    /// old, the parallel `evaluations` array is invalidated (its per-ply
-    /// indexing no longer describes these plies), and `refreshHash` recomputes
-    /// and saves. Seats are untouched by a movetext edit, so the player
-    /// re-resolution the transaction calls for on a *seat* edit is a no-op and
-    /// omitted (metadata edits route through `applyEdit`, which re-resolves).
-    /// A proposal that canonicalizes to the current game is a no-op —
-    /// evaluations, still valid by position, are preserved.
+    /// On acceptance, one transaction (D18′): canonical moves replace the old,
+    /// `evaluations` is invalidated (its per-ply indexing no longer describes
+    /// these plies), `refreshHash` recomputes and saves. Seats are untouched by
+    /// a movetext edit, so the re-resolution `applyEdit` does is omitted here. A
+    /// proposal that canonicalizes to the current game is a no-op — evaluations
+    /// stay, being still valid by position.
     ///
-    /// Correction (M4): this doc used to promise the classification fields
-    /// would *clear* here alongside the evaluations, "once they exist on the
-    /// model". They exist, and clearing turned out to be the wrong verb.
-    /// D34′ made classification engine-free, so the edited game can be
-    /// re-classified on the spot for the price of a dictionary probe — the
-    /// evaluations clear because recomputing them means a depth-18 search,
-    /// which is exactly the asymmetry that stopped applying once the opening
-    /// stopped needing an engine. A re-seated Ruy Lopez is a Ruy Lopez
+    /// Classification **re-derives** rather than clearing, which is D34′'s
+    /// asymmetry: an opening is a dictionary probe, while recomputing
+    /// evaluations means a depth-18 search. A re-seated Ruy Lopez is a Ruy Lopez
     /// before the transaction closes, not after the next Library visit.
     internal func applyMovetextEdit(
         to pgn: PGN,
@@ -505,36 +503,26 @@ internal struct PGNStore {
     /// lookup, so an archive full of already-analysed games should not have
     /// to re-run Stockfish to learn one.
     ///
-    /// The filter is `ecoCode == nil`, which deliberately conflates "not yet
-    /// classified" with "classified, and the table doesn't name this line".
-    /// The alternative is a third stored state — a flag or a timestamp saying
-    /// the question was already asked — and that state would have to be kept
-    /// true across every movetext edit and table update or it would lie.
+    /// The filter is `ecoCode == nil`, deliberately conflating "not yet
+    /// classified" with "classified, and the table doesn't name this line". The
+    /// alternative is a third stored state that would have to stay true across
+    /// every movetext edit and table update or it would lie.
     ///
-    /// The cost of conflating turns out to be close to nothing, and the
-    /// reason is a property of the shipped dataset worth writing down: it
-    /// names all twenty legal first moves, so **any game with a move at all
-    /// classifies to something**. The residue that gets re-asked each sweep
-    /// is therefore just moveless rows. Pinned by
-    /// `everyPlayedGameGetsAName` — if a future table trim breaks that
-    /// property, the sweep quietly stops converging, and that test is what
-    /// says so.
+    /// Conflating costs almost nothing because of a property of the shipped
+    /// dataset: it names all twenty legal first moves, so **any game with a move
+    /// classifies to something**, and the residue re-asked each sweep is
+    /// moveless rows. Pinned by `everyPlayedGameGetsAName` — if a table trim
+    /// ever breaks that, the sweep stops converging and that test says so.
     ///
-    /// Called from the Library's `onAppear` only, not from both
-    /// collection destinations the player backfills run at: Players reads
-    /// neither field, so running it there would double the scan to change
-    /// nothing. (Rankings was the third caller until D48′ merged it away.)
+    /// Library `onAppear` only: Players reads neither field, so running it there
+    /// would double the scan to change nothing.
     ///
     /// **Predicated, unlike its two neighbours, and the difference is the
     /// point.** `backfillPlayerLinks` fetches everything on purpose — a nil
-    /// `whitePlayer` on a `"?"` row is *correct*, not missing, so "needs
-    /// linking" isn't a predicate over the link alone. Here it is: `ecoCode`
-    /// is a plain stored column and `ecoCode == nil` is the whole filter, so
-    /// SQLite can answer it and the converged case fetches **zero rows**
-    /// instead of materializing every game in the Library — each of which
-    /// drags its full `moves` array along for a question about one optional
-    /// string. That happens on every Library appearance, which is what makes
-    /// it worth the predicate rather than a deferred measurement.
+    /// `whitePlayer` on a `"?"` row is *correct*, not missing. Here `ecoCode ==
+    /// nil` is the whole filter, so SQLite answers it and the converged case
+    /// fetches **zero rows** rather than materializing every game with its full
+    /// `moves` array, on every Library appearance.
     @discardableResult
     internal func backfillClassifications(
         using table: ECOClassifier = ECOTable.bundled
@@ -608,21 +596,16 @@ internal struct PGNStore {
     /// stored seat tag ever changes identity (D37′, D38′).
     ///
     /// **Why the games and not the registry.** `PGN.white` / `PGN.black` are
-    /// what export writes byte for byte (D24′) and what the content hash folds
-    /// (the one-hash invariant), while `Player.name` is *derived* from them
-    /// through `PlayerName.displayForm`. Renaming the registry row alone would
-    /// make `Player.name` a label that disagrees with every file the app
-    /// writes; rewriting the tags makes identity follow the tags, which is the
-    /// direction D23′ says names travel. The price, accepted at decision time:
-    /// seat tags are inside the hash, so every affected game's hash changes and
-    /// an export taken *before* the rename no longer dedupes against its own
-    /// game. That is not a leak — by the hash's own definition the players are
-    /// part of what identifies the game.
+    /// what export writes byte for byte (D24′) and what the hash folds, while
+    /// `Player.name` is *derived* from them. Renaming the registry alone would
+    /// make `Player.name` disagree with every file the app writes; rewriting the
+    /// tags makes identity follow the tags, D23′'s direction. Accepted price:
+    /// seat tags are inside the hash, so an export taken *before* a rename no
+    /// longer dedupes against its own game — not a leak, since by the hash's own
+    /// definition the players are part of what identifies the game.
     ///
     /// **`newTag` is tag form, not display form** — "Senol, Bera". D23′ forbids
-    /// the inverse transform, so the caller must supply the form that gets
-    /// stored; the rename surface edits the tag and shows the derived display
-    /// form beneath it.
+    /// the inverse, so the caller supplies what gets stored.
     ///
     /// Pre-flight and all-or-nothing (D39′): every prospective hash is checked
     /// against the Library *and* against the rest of the batch before a single
@@ -683,14 +666,11 @@ internal struct PGNStore {
         return Array(byGame.values)
     }
 
-    // `merge(_:into:)` lived here from M5 (D38′) until 4 Aug 2026 (D52′,
-    // surface simplicity by decree — the profile's ellipsis menu existed for
-    // this one item). What it knew survives where it matters: a duplicate
-    // spelling is fixed by *renaming* the misspelt player to the canonical
-    // tag — the same `retag` door merge called, which relinks by resolution
-    // and refuses collisions identically — and D38′'s finding that link
-    // surgery without tag rewriting is undone by `applyEdit`'s unconditional
-    // re-resolve stands recorded at the decision, because it constrains any
+    // `merge(_:into:)` lived here from D38′ until D52′ removed it. What it knew
+    // survives: a duplicate spelling is fixed by *renaming* the misspelt player
+    // to the canonical tag, through the same `retag` door merge called. D38′'s
+    // finding — link surgery without tag rewriting is undone by `applyEdit`'s
+    // unconditional re-resolve — stands at the anchor, where it constrains any
     // future door that moves players between rows.
 
     /// Deletes every registry row nothing points at (D60′).
@@ -741,33 +721,26 @@ internal struct PGNStore {
 
     /// The one spelling of "nothing points at this row" (D40′).
     ///
-    /// Three sites asked this question independently before the sweep landed —
-    /// this file's delete guard, `merge`'s post-retag assertion, and the
-    /// inspector's `canDelete` — the twin-read-site pattern wearing
-    /// behavioural clothes. The callers today: the sweep door's per-row
-    /// re-check and `PlayersDestination`'s `@Query` filter (merge's assertion
-    /// retired with merge, D52′; the per-player item with D40′).
+    /// Three sites asked it independently before D40′ — a delete guard,
+    /// `merge`'s post-retag assertion, and the inspector's `canDelete` — the
+    /// twin-read-site pattern in behavioural clothes. **One caller now**:
+    /// `collectOrphanedPlayers`. The sweep door and its `@Query` filter went
+    /// with D60′, merge's assertion with D52′.
     ///
-    /// Static and free of the context on purpose: `PlayersDestination` filters
-    /// its own `@Query` through it, so the *rule* is store-owned while the rows
-    /// stay reactive. A `func orphanedPlayers()` here was written first and
-    /// removed — it fetches, so the toolbar's count would not have refreshed
-    /// when the sweep itself deleted the rows.
+    /// Static and context-free on purpose, so the *rule* is store-owned while
+    /// whoever holds the rows stays free to fetch them their own way. A `func
+    /// orphanedPlayers()` here was written first and removed: it fetches, which
+    /// welds the rule to one way of getting the rows.
     ///
-    /// **Why a sweep rather than a per-player delete (D40′).** Orphans are
-    /// structurally invisible in the Players destination: its rows come from
-    /// `PlayerStats.index(of:)`, which folds `GameRecord`s whose sides are built
-    /// from the *resolved links* — so a linkless row contributes to no record,
-    /// appears in no view mode, and can never be selected. "Is in the list" and
-    /// "is deletable" were exact complements, which left M5's per-player Delete
-    /// disabled for every player it could ever be offered for.
+    /// **Orphans are structurally unselectable**, which is why they ever needed
+    /// a door of their own: Players renders `PlayerStats.index(of:)`, a fold
+    /// over `GameRecord`s built from *resolved links*, so a linkless row appears
+    /// in no view mode. "Is in the list" and "is deletable" were exact
+    /// complements — D40′'s finding, and the reason anything gated on a
+    /// *selected* orphan is dead code with a green build.
     ///
-    /// Deleting a player's last game *used* to be what minted one. It no
-    /// longer is — `delete(_ pgns:)` collects them at the source now — so the
-    /// sweep is the backstop for rows orphaned before that landed, plus
-    /// anything a future path strands. It stays strictly user-invoked either
-    /// way: D9′'s "no collector" is narrowed, not repealed, and nothing
-    /// sweeps the registry unasked.
+    /// D60′ answers that by having no door at all: collection is automatic on
+    /// every path that can strand a row.
     internal static func isOrphaned(_ player: Player) -> Bool {
         player.whiteGames.isEmpty && player.blackGames.isEmpty
     }
@@ -775,29 +748,24 @@ internal struct PGNStore {
     /// The players `pgns` would strand — `isOrphaned`'s **prospective twin**,
     /// asked before a single row is deleted.
     ///
-    /// One rule, two spellings, which is `contentHash`'s arrangement for
-    /// D39′'s pre-flight: the present-tense predicate reads live
-    /// relationships, and a pre-flight needs to know what would be true
-    /// *after* a write it hasn't performed. The alternative — delete the
-    /// games, then ask `isOrphaned` — bets on SwiftData having propagated the
-    /// inverse before `save()`, and **fails silently in the direction that
-    /// looks fine**: if the array still holds the tombstoned game the cascade
-    /// simply never fires, the build is green, no test crashes, and the
-    /// feature does nothing. That is D40′'s defect exactly, and it is why
-    /// this is a set question rather than a relationship read.
+    /// One rule, two spellings — `contentHash`'s arrangement for D39′'s
+    /// pre-flight. The present-tense predicate reads live relationships; a
+    /// pre-flight needs what would be true *after* a write it hasn't performed.
+    /// Deleting first and then asking `isOrphaned` bets on SwiftData having
+    /// propagated the inverse before `save()`, and **fails silently in the
+    /// direction that looks fine**: the array still holds the tombstoned game,
+    /// the cascade never fires, the build is green and the feature does nothing.
+    /// D40′'s defect exactly, which is why this is a set question.
     ///
-    /// A player goes iff every game linked to it is in the deletion set,
-    /// which handles the two cases a seat-wise reading gets wrong for free:
-    /// one player holding both seats of a deleted game (counted once, via
-    /// the identifier-keyed table), and a player whose games are spread
-    /// across several rows of one batch (each row alone would look
-    /// survivable). `allSatisfy` over an empty link array answers true, which
-    /// is the right answer for a stale link and the only way an already-
-    /// orphaned row could reach here at all.
+    /// A player goes iff every linked game is in the deletion set, which handles
+    /// two cases a seat-wise reading gets wrong for free: one player on both
+    /// seats of a deleted game (counted once, via the identifier-keyed table),
+    /// and a player whose games are spread across a batch (each row alone looks
+    /// survivable). `allSatisfy` over an empty array answers true — right for a
+    /// stale link, and the only way an already-orphaned row reaches here.
     ///
-    /// Sorted by name because the result is rendered — `LibraryDestination`
-    /// names these in the delete confirmation, and a `Dictionary`'s values
-    /// have no order to show them in.
+    /// Sorted by name because the result is rendered, and a `Dictionary`'s
+    /// values have no order to show them in.
     internal static func playersOrphaned(byDeleting pgns: [PGN]) -> [Player] {
         let doomed = Set(pgns.map(\.persistentModelID))
         var seated: [PersistentIdentifier: Player] = [:]
@@ -814,20 +782,14 @@ internal struct PGNStore {
             .sorted { $0.name < $1.name }
     }
 
-// `deleteOrphanedPlayers(_:)` was D40′'s write door — it took the rows the
-    // confirmation dialog had named, re-checked each against `isOrphaned`, and
-    // deleted them in one transaction. Removed 5 Aug 2026 with the sweep it
-    // served (D60′): collection is automatic and unasked now, so there is no
-    // snapshot held across a confirmation and nothing for a user-invoked door
-    // to do.
-    //
-    // Its one transferable lesson is kept at `collectOrphanedPlayers` above, in
-    // inverted form: that door re-checked because a list held across a dialog
-    // is stale by construction, and the new one needs no such guard precisely
-    // because it never holds a list — it fetches, filters and deletes inside a
-    // single synchronous pass with no user in the middle.
+    // `deleteOrphanedPlayers(_:)` was D40′'s write door, removed with the sweep
+    // it served (D60′). Its transferable lesson survives at
+    // `collectOrphanedPlayers` above, inverted: that door re-checked each row
+    // because a list held across a dialog is stale by construction, and the new
+    // one needs no such guard because it never holds a list — it fetches,
+    // filters and deletes in one pass with no user in the middle.
 
-    
+
     /// D39′'s pre-flight. Throws `.wouldCollide` naming every game whose
     /// rewritten hash would land on a row that isn't itself.
     ///

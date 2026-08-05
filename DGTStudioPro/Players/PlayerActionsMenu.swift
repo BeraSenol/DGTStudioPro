@@ -3,35 +3,27 @@ import SwiftUI
 /// The Players destination's context menu, once — `GameActionsMenu`'s twin,
 /// for its reason.
 ///
-/// Three hosts (the table, the columns browser, the card) had three hand-built
-/// copies of the same two items, which is how the Library's three drifted into
-/// three different renderings of five verbs. Two items is not much duplication;
-/// the point is that a divergence should be a compile-visible choice, and at
-/// three call sites it never is.
+/// Three hosts had three hand-built copies of the same two items, which is how
+/// the Library's three drifted into three renderings of five verbs. Two items is
+/// not much duplication; the point is that a divergence should be a
+/// compile-visible choice, and at three call sites it never is.
 ///
-/// **Single-subject, deliberately, where the Library's menu counts.** Both of
-/// these verbs act on one player: "Show in Library" filters to a name, and Get
-/// Info describes one row. A selection of nine has no meaning for either, so
-/// this takes the first key rather than growing counted plurals it would never
-/// use — the asymmetry with `GameActionsMenu` is the destinations', not an
-/// inconsistency between the two types.
+/// **Single-subject, deliberately, where the Library's menu counts.** Both verbs
+/// act on one player — "Show in Library" filters to a name, Get Info describes
+/// one row — so a selection of nine means nothing to either. The asymmetry with
+/// `GameActionsMenu` is the destinations', not an inconsistency between types.
 ///
-/// D9′ still holds underneath: the registry is machine-managed and players have
-/// no destructive actions, so there is no `Divider()` and nothing below it. If
-/// one ever arrives it arrives here, once.
+/// D9′ holds underneath: the registry is machine-managed and players have no
+/// destructive actions, so there is no `Divider()` and nothing below it.
 ///
-/// # Keyboard shortcuts (4 Aug 2026, late)
+/// Both items carry a shortcut, because collection-destination parity is an
+/// invariant and keys stopping at the destination boundary is the half-
+/// difference it exists to catch. Get Info keeps ⌘I from `GetInfoMenuItem`;
+/// Show in Library takes **⇧⌘L**, shifted because plain ⌘L is what a future
+/// find-or-filter verb will want and this is navigation, not a primary action.
 ///
-/// Both items carry one, because collection-destination parity is an invariant
-/// and a menu where the keys stop at the destination boundary is exactly the
-/// kind of half-difference that invariant exists to catch. Get Info keeps ⌘I
-/// from `GetInfoMenuItem`; Show in Library takes **⇧⌘L**, shifted because plain
-/// ⌘L is the sort of key a future find-or-filter verb will want and this one is
-/// a navigation, not a primary action.
-///
-/// `GameActionsMenu`'s doc carries the standing caveat for both types — these
-/// keys are known to *render* and are not yet known to fire with the menu shut,
-/// and the manual check is written to tell the outcomes apart.
+/// `GameActionsMenu`'s doc carries the standing caveat for both types: these
+/// keys are known to *render* and not yet known to fire with the menu shut.
 internal struct PlayerActionsMenu: View {
 
     // MARK: Stored Properties

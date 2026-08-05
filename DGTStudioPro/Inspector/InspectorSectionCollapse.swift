@@ -159,36 +159,27 @@ extension InspectorSectionCollapse {
     /// The instance every `#Preview` that renders an inspector section injects.
     ///
     /// `InspectorSectionHeader` reads this from the environment, and a
-    /// non-optional `@Environment` traps when read with nothing to find — the
-    /// "No Observable object of type … found" the App's own comment describes.
-    /// So every preview that renders an inspector section needs one, which is
-    /// exactly the recorded build lesson ("a new environment object breaks
-    /// every preview that doesn't inject it") arriving on schedule. Uncounted
-    /// on purpose: this sentence carried "thirty-one across fourteen files"
-    /// and was stale before the milestone that wrote it finished — the
-    /// enumerated-caller-list anti-pattern, decaying at exactly the rate a
-    /// preview census does.
+    /// non-optional `@Environment` traps when read with nothing to find, so
+    /// every preview rendering an inspector section needs one — the recorded
+    /// build lesson ("a new environment object breaks every preview that
+    /// doesn't inject it") arriving on schedule. Deliberately uncounted: this
+    /// sentence once carried a preview census and was stale before the
+    /// milestone that wrote it finished.
     ///
-    /// Named rather than spelled inline at each site — `SettingsView`'s inline
-    /// `SleepInhibitor(defaults:)` literal was the precedent and the shape this
-    /// improves on: one site can afford a literal, thirty-one would be
-    /// thirty-one chances to reach for `.standard` and edit the developer's own
-    /// settings from a canvas. (That literal moved to `SleepInhibitor.preview`
-    /// on 4 Aug 2026, adopting this accessor's wipe with it.)
+    /// Named rather than spelled inline at each site: one site can afford a
+    /// literal, dozens would be that many chances to reach for `.standard` and
+    /// edit the developer's own settings from a canvas.
     ///
-    /// Computed, not stored: a `static let` on a `@MainActor` type needs its
-    /// initializer isolated, and a fresh start per access is the *right*
-    /// behaviour here anyway — a preview that toggles a chevron should not
-    /// leave that state behind for the next canvas to inherit.
+    /// Computed, not stored — a `static let` on a `@MainActor` type needs its
+    /// initializer isolated, and a fresh start per access is right anyway: a
+    /// preview that toggles a chevron should not leave that state for the next
+    /// canvas to inherit.
     ///
-    /// The `removePersistentDomain` is what makes that sentence true — not
-    /// the freshness of the instance, which is what this doc claimed until
-    /// the 1 Aug review. A named suite is a real plist and `persist()` writes
-    /// every toggle into it, so a fresh instance alone reads the last
-    /// canvas's toggles straight back. The UI test seed wiped its own suite
-    /// for exactly this reason at exactly this kind of boundary; that seed is
-    /// gone, and `SleepInhibitor.preview` adopted the same wipe on 4 Aug 2026 —
-    /// two homes now, so this sentence stopped being a uniqueness claim.
+    /// **`removePersistentDomain` is what makes that true, not the freshness of
+    /// the instance** — this doc claimed otherwise until the 1 Aug review. A
+    /// named suite is a real plist and `persist()` writes every toggle into it,
+    /// so a fresh instance alone reads the last canvas's toggles straight back.
+    /// `SleepInhibitor.preview` carries the same wipe for the same reason.
     internal static var preview: InspectorSectionCollapse {
         let name = "preview"
         // `!` over a `?? .standard` fallback, `SettingsView`'s sibling

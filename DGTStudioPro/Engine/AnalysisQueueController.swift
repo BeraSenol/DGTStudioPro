@@ -9,38 +9,26 @@ import SwiftData
 ///
 /// Ownership decisions (numbered so the views can cite them):
 ///
-/// 1. **One analysis owner per tab.** This controller replaces the
-///    per-inspector `GameAnalysisDriver` as the only thing that runs the
-///    engine over Library games. The per-inspector design was rejected
-///    for the batch era for the same reason `requestAnalysis` once
-///    refused a second driver at the call site: two drivers racing over
-///    one `PGN.evaluations` report a status neither's controls reflect.
-///    Promoting the single driver here changes one behavior deliberately:
-///    selecting a different game no longer cancels a running pass —
-///    surviving browsing is the entire point of a queue. It also retires
-///    the `pendingAnalysisID` one-shot relay: toolbar and context-menu
-///    analyze only needed a routed request because the driver lived in a
-///    view's `@State`; with the controller reachable directly, they
-///    simply enqueue.
-/// 2. **Owned by `TabState`.** A batch must survive Board↔Library
-///    destination switches, and destination `@State` does not — the
-///    exact class of state `TabState` exists to preserve. Per-tab like
-///    everything on `TabState`: two tabs can still analyze the same game
-///    simultaneously, exactly as two per-inspector drivers always could.
-///    Unchanged, out of scope.
+/// 1. **One analysis owner per tab**, replacing the per-inspector
+///    `GameAnalysisDriver`: two drivers racing over one `PGN.evaluations`
+///    report a status neither's controls reflect. One behaviour changed
+///    deliberately — selecting a different game no longer cancels a running
+///    pass, since surviving browsing is the point of a queue.
+/// 2. **Owned by `TabState`.** A batch must survive Board↔Library switches and
+///    destination `@State` does not, which is the class of state `TabState`
+///    exists to preserve. Per-tab, so two tabs can analyze the same game at
+///    once, exactly as two per-inspector drivers always could.
 /// 3. **Continue on failure.** A game that fails (unparseable, deleted
-///    mid-queue) records its outcome and the run advances — one corrupt
-///    PGN must not strand the batch, mirroring the import loop's
-///    never-abort rule. A missing engine binary therefore fails each
-///    item with the same message rather than halting the run: noisier,
-///    but honest, visible in the popover, and only reachable through a
-///    developer-setup error (Engine_README.md).
-/// 4. **Engine released at drain.** The subprocess stays warm across the
-///    run — the driver reuses it game to game, paying the ~100ms UCI
-///    handshake once per batch — and shuts down when the queue empties.
-///    Tab close mid-run tears down via `shutdown()` from
-///    `ContentView.onDisappear`; app quit closes the engine's stdin,
-///    which a UCI engine treats as quit.
+///    mid-queue) records its outcome and the run advances — one corrupt PGN
+///    must not strand the batch, the import loop's never-abort rule. A missing
+///    engine binary therefore fails each item with the same message rather than
+///    halting: noisier but honest, visible in the popover, and reachable only
+///    through a developer-setup error (Engine_README.md).
+/// 4. **Engine released at drain.** The subprocess stays warm across the run,
+///    paying the ~100 ms UCI handshake once per batch, and shuts down when the
+///    queue empties. Tab close tears down via `shutdown()` from
+///    `ContentView.onDisappear`; app quit closes stdin, which a UCI engine
+///    treats as quit.
 @Observable
 @MainActor
 internal final class AnalysisQueueController {

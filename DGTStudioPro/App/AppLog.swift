@@ -4,87 +4,55 @@ import os
 /// The one place that decides whether the app logs, and the one place that
 /// says what a log line looks like.
 ///
-/// Twenty-five types held their own `Logger(subsystem:category:)`, which meant
-/// the subsystem string was written twenty-five times and the *policy* — emit
-/// or don't — was written nowhere, because there wasn't one. This is D25′'s
-/// rule applied to the last ownerless value in the app: where a value has an
-/// owning type, that type should hold it.
+/// D63′. Every type held its own `Logger(subsystem:category:)`, so the subsystem
+/// string was written once per type and the *policy* — emit or don't — was
+/// written nowhere. D25′'s rule applied to the last ownerless value in the app.
 ///
-/// # Suppression, and why `Logger?` rather than a wrapper
+/// # Suppression
 ///
 /// `logger(_:)` returns **nil** when logging is off, so a call site reads
-/// `Self.logger?.info("…")` and a suppressed run costs an optional check.
-/// Optional chaining short-circuits the whole postfix expression, so the
-/// message is never even interpolated — no `@autoclosure`, no wrapper type,
-/// no lost work.
+/// `Self.logger?.info("…")` and optional chaining short-circuits the whole
+/// postfix expression — a suppressed message is never even interpolated.
+/// Nil-means-silent is this project's own idiom rather than a new one:
+/// `sessionLog`, `onGameFinished`, `onDesync`, `boardIdentity` and
+/// `requestBoardResync` all work this way, under the invariant that *nil hooks
+/// mean unit tests run headless by construction*.
 ///
-/// Nil-means-silent is this project's own idiom rather than a new one: it is
-/// exactly what `sessionLog`, `onGameFinished`, `onDesync`, `boardIdentity`
-/// and `requestBoardResync` already do, and the invariant that names them
-/// says so in as many words — *nil hooks mean unit tests run headless by
-/// construction*. Logging was the one channel that had never been given the
-/// same treatment.
-///
-/// **The rejected alternative was a struct wrapping `Logger` with `String`
-/// parameters.** It reads better at the declaration and it would have cost
-/// the `privacy:` annotations: `OSLogMessage` is compiler-synthesized and
-/// cannot be forwarded, so every message would have flattened to an
-/// already-interpolated `String` and every `privacy: .public` in the app
-/// would have become decoration. That the app spells `.public` almost
-/// everywhere — one Mac, one user, nothing to redact — is what makes the loss
-/// look free, and it is the kind of free that is only free until the first
-/// site that wanted redaction.
+/// Rejected: a struct wrapping `Logger` with `String` parameters. It reads
+/// better at the declaration and it costs the `privacy:` annotations —
+/// `OSLogMessage` is compiler-synthesized and cannot be forwarded, so every
+/// message would flatten to an already-interpolated `String`. Free only until
+/// the first site that wants redaction.
 ///
 /// # The house grammar
 ///
 /// Written here because this is the only file every log line has in common.
-/// Before 5 Aug 2026 there were about forty different opening words across
-/// 164 sites, in three tenses, plus one leaked function name.
 ///
-/// 1. **One line, one fact.** If a sentence needs "and", it is two lines or
-///    it is one line with `key=value` details.
+/// 1. **One line, one fact.** A sentence needing "and" is two lines, or one
+///    line with `key=value` details.
 /// 2. **Past tense for something that happened** — `Archived`, `Created`,
 ///    `Imported`, `Deleted`, `Retagged`, `Classified`.
 /// 3. **Present participle for work begun, and the outcome must be
-///    discoverable** — a completion line or an error line on the failure
-///    path. `Connecting to …` is answered by `Connected: …`, `Shutting down
-///    engine` by `Engine shutdown complete`, `Deleting …` by the save's error
-///    arm. A participle whose failure path is silent is the defect to look
-///    for.
-///
-///    **This rule was very nearly the opposite**, and the correction is the
-///    useful part. The scatter looked like chaos from a distance — about
-///    forty opening words in three tenses — and the first draft of this rule
-///    flattened everything to past tense. Reading the call sites showed the
-///    tense was already tracking something real: participles log *before* the
-///    work, past tense logs *after* it. Flattening would have made half the
-///    lines claim a thing had happened at the moment it was attempted, which
-///    is worse than inconsistent — it is wrong, and only on the failure path,
-///    which is the one path anybody reads a log on.
+///    discoverable** — a completion line, or an error line on the failure path.
+///    `Connecting to …` is answered by `Connected: …`. **A participle whose
+///    failure path is silent is the defect to look for.** The two tenses are
+///    not interchangeable: participles log *before* the work and past tense
+///    *after* it, so flattening them would make half the lines claim a thing
+///    had happened at the moment it was attempted — wrong, and wrong only on
+///    the failure path, which is the one path anybody reads a log on.
 /// 4. **User data in single quotes** — `Created player 'Alice'`. Numbers and
-///    enum-ish values go bare; only strings that came from a human get quotes,
-///    so a quote mark in the log means "this text is not ours".
+///    enum-ish values go bare, so a quote mark means "this text is not ours".
 /// 5. **Structured facts trail as `key=value`**, space-separated, lowercase
-///    keys, no spaces around `=` — `plies=42 tags=9`. Prose first, data last,
-///    so the eye can skim the left column.
-/// 6. **No function names, no file names, no line numbers.** The category
-///    already says where a line came from and `os.Logger` carries the rest.
-///    Sixteen sites opened with one — `search():`, `loadIfNeeded:`,
-///    `analyze()`, `beginAnalysis`, `writeLine`, `open()`, `send()`,
-///    `commit`, `modelContext.save()` — which is the shape of a message
-///    written while looking at the function rather than at the log.
-///
-///    Two exceptions, both deliberate. `IOServiceMatching` and
-///    `IOServiceGetMatchingServices` are not *our* function names: they name
-///    the OS call that failed, which is the only useful thing an IOKit
-///    failure can say. And `recv:` / `send:` in the `uci` category stay
-///    lowercase and un-prosed, because they are wire-direction markers every
-///    UCI transcript in the world uses; capitalizing them would make this
-///    app's engine log the one that has to be translated.
-/// 7. **An error says what failed *and* what happened next** — `Archive
-///    failed: … — draft kept, new-game entry suppressed`. An error line that
-///    only names the failure makes the reader guess whether anything was
-///    lost, which is the one thing they actually want to know.
+///    keys, no spaces around `=` — `plies=42 tags=9`. Prose first, data last.
+/// 6. **No function names, no file names, no line numbers.** The category says
+///    where a line came from and `os.Logger` carries the rest. Two deliberate
+///    exceptions: `IOServiceMatching` / `IOServiceGetMatchingServices` name the
+///    *OS* call that failed, the only useful thing an IOKit failure can say;
+///    and `recv:` / `send:` in the `uci` category stay lowercase and un-prosed,
+///    being the wire-direction markers every UCI transcript uses.
+/// 7. **An error says what failed *and* what happened next** — `Archive failed:
+///    … — draft kept, new-game entry suppressed`. An error that only names the
+///    failure makes the reader guess whether anything was lost.
 internal enum AppLog {
 
     // MARK: Subsystem and categories

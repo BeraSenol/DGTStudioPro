@@ -16,21 +16,20 @@ import SwiftUI
 /// once.
 ///
 /// **Rubber band.** Cards report frames via `onGeometryChange` into an
-/// `IconGridFrameStore` — a reference box, not `@State`, because nothing
-/// in `body` renders from the frames and a write that invalidates the view
-/// re-enters layout. That loop is what Console's "Geometry action is
-/// cycling between duplicate values" was reporting, and it took two
-/// corrections to land here: re-anchoring the coordinate space from the
-/// viewport to the grid content (kept — a frame should be a fact about
-/// layout, not scroll offset) didn't end it, because the observer itself
-/// was the oscillator. The store the render pass can't see ends it
-/// structurally. The space, the drag's coordinates and the band overlay
-/// all speak the content system. Selection *replaces* while sweeping
-/// (Finder's plain drag). One honest limit, accepted: `LazyVGrid` only
-/// realizes cells near the viewport, so a sweep can only select cards that
-/// have existed — at personal scale the grid realizes generously, and the
-/// drag doesn't autoscroll, so the reachable cards are the realized ones
-/// anyway.
+/// `IconGridFrameStore` — a reference box, not `@State`, because nothing in
+/// `body` renders from the frames and a write that invalidates the view
+/// re-enters layout. That loop is what Console's "Geometry action is cycling
+/// between duplicate values" reported; re-anchoring the coordinate space from
+/// the viewport to the grid content did not end it (kept anyway — a frame
+/// should be a fact about layout, not scroll offset), because the observer
+/// itself was the oscillator. A store the render pass cannot see ends it
+/// structurally. The space, the drag's coordinates and the band overlay all
+/// speak the content system, and selection *replaces* while sweeping.
+///
+/// Accepted limit: `LazyVGrid` realizes only cells near the viewport, so a
+/// sweep reaches only cards that have existed. At personal scale the grid
+/// realizes generously and the drag does not autoscroll, so the reachable cards
+/// are the realized ones anyway.
 ///
 /// A click on empty grid space clears the selection — Finder again; card
 /// clicks never reach the container (child gestures win), and the drag

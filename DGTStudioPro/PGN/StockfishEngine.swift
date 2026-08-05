@@ -4,57 +4,38 @@ import os
 /// Manages a Stockfish chess engine subprocess and exposes analysis
 /// requests as `AsyncStream<Evaluation>` per call.
 ///
-/// The actor handles the UCI protocol handshake, subprocess lifecycle,
-/// stdout line buffering, and side-to-move-relative → white-relative
-/// score conversion. All UCI message parsing is delegated to the pure
-/// `UCIProtocol.parse(_:)` function (Phase 7.5a).
+/// The actor owns the UCI handshake, subprocess lifecycle, stdout line
+/// buffering, and side-to-move-relative → white-relative score conversion. All
+/// parsing is delegated to the pure `UCIProtocol.parse(_:)`.
 ///
-/// **Lifecycle:**
 /// ```
 /// let engine = StockfishEngine(binaryURL: StockfishEngine.defaultBinaryURL!)
 /// try await engine.start()
-///
-/// let stream = engine.analyze(fen: someFEN, depth: 18)
-/// for await evaluation in stream {
-///     // evaluation is white-relative; project for UI.
-///     updateUI(evaluation.whiteWinProbability)
+/// for await evaluation in engine.analyze(fen: someFEN, depth: 18) {
+///     updateUI(evaluation.whiteWinProbability)   // white-relative
 /// }
-///
 /// await engine.shutdown()
 /// ```
 ///
-/// **Startup failures (F4):** `start()` *throws* rather than suspending
-/// forever. Three exits guard the handshake: the process terminating
-/// before it's ready (a wrong-architecture or instantly-crashing binary),
-/// its stdout closing, or a handshake timeout (default 5 s — a binary
-/// that launches and never speaks UCI, e.g. not actually a UCI engine).
-/// The previous design awaited `uciok` on a non-throwing continuation
-/// with no timeout: a dead binary left `start()` suspended permanently,
-/// the caller's cancellation couldn't resume it, and the runtime logged a
-/// leaked-continuation warning while the analysis driver sat at
-/// "analyzing" forever. On any startup failure the half-started process
-/// is terminated and torn down, so a retry can `start()` fresh.
+/// **Startup failures (F4):** `start()` *throws* rather than suspending forever.
+/// Three exits guard the handshake — the process terminating before it is ready,
+/// its stdout closing, or a 5 s timeout for a binary that launches and never
+/// speaks UCI. The half-started process is torn down on any of them, so a retry
+/// can `start()` fresh.
 ///
 /// **Inbound pipeline (F2):** stdout chunks flow through one ordered
-/// `AsyncStream<Data>` consumed by a single actor task — the readability
-/// handler's serial callback queue yields in order, so line assembly can
-/// never see swapped chunks. (The previous design spawned one unstructured
-/// `Task` per chunk; separate tasks carry no ordering guarantee, which
-/// could interleave UCI lines under load.) Buffering as `Data` and
-/// splitting on `\n` also fixes a silent byte-drop: decoding each chunk to
-/// `String` up front returned nil — and discarded the chunk — whenever a
-/// read happened to split a multi-byte codepoint.
+/// `AsyncStream<Data>` consumed by a single actor task; the readability
+/// handler's serial queue yields in order, so line assembly can never see
+/// swapped chunks. Buffering as `Data` and splitting on `\n` is load-bearing
+/// too — decoding each chunk to `String` up front returns nil, and silently
+/// drops the chunk, whenever a read splits a multi-byte codepoint.
 ///
-/// **Cancellation:** if the Task consuming the stream is cancelled
-/// (e.g. the user navigates away from a game), the stream's
-/// `onTermination` handler sends `stop` to Stockfish to abort the
-/// search. A subsequent `analyze(...)` call can be issued immediately.
+/// **Cancellation:** the stream's `onTermination` sends `stop` to abort the
+/// search; a subsequent `analyze(...)` can be issued immediately.
 ///
-/// **Concurrent analyses:** the eval-only phase supports one active
-/// analysis at a time. Calling `analyze(...)` while a prior analysis
-/// is in flight cleanly aborts the prior search, finishes its stream,
-/// and begins the new one. The per-analysis UUID ensures the prior's
-/// termination handler doesn't disrupt the new analysis.
+/// **Concurrent analyses:** one at a time. Calling `analyze(...)` mid-flight
+/// aborts the prior search and finishes its stream; the per-analysis UUID is
+/// what keeps the prior's termination handler from disrupting the new one.
 internal actor StockfishEngine {
     
     // MARK: Static Constants

@@ -8,28 +8,25 @@ import Foundation
 ///
 /// Read off the files rather than off the standard; where they differ, the
 /// files win:
-/// - **Nine tags, fixed order** — the Seven Tag Roster, then `Board`, then
-///   `TimeControl`. Always all nine: a missing value prints PGN's own
-///   unknown vocabulary (`?`, `????.??.??`, `-`) rather than dropping the
-///   line, so the tag block is a constant shape and a diff between two
-///   exports is about the game, not about which tags happened to be set.
-/// - **LF line endings**, not CRLF. The reference files are LF, the app is
-///   macOS-only, and the parser accepts both (its own line-ending note), so
-///   the asymmetry costs nothing on re-import.
+/// - **Nine tags, fixed order** — the roster, then `Board`, then `TimeControl`.
+///   Always all nine: a missing value prints PGN's own unknown vocabulary
+///   (`?`, `????.??.??`, `-`) rather than dropping the line, so the tag block
+///   is a constant shape and a diff between two exports is about the game
+///   rather than about which tags happened to be set.
+/// - **LF line endings**, not CRLF. The parser accepts both, so the asymmetry
+///   costs nothing on re-import.
 /// - **One full move per line**, with a white-only final line when the game
 ///   ends on White's move. No 80-column wrapping.
 /// - **The result alone on the last line**, then a single trailing newline.
 ///
-/// Moves are emitted **verbatim**: the parser strips only `!`/`?`, so check
-/// and mate suffixes are already stored (`GameRecord.endedInMate` depends on
-/// it) and there is nothing to re-derive. Stored evaluations are deliberately
-/// **not** written — the reference shape has no `{[%eval ...]}` comments, and
-/// an export that grew them would stop matching the files this format exists
-/// to match.
+/// Moves are emitted **verbatim**: the parser strips only `!`/`?`, so check and
+/// mate suffixes are already stored (`GameRecord.endedInMate` depends on it).
+/// Stored evaluations are deliberately **not** written — the reference shape has
+/// no `{[%eval …]}` comments, and an export that grew them would stop matching
+/// the files this format exists to match.
 ///
 /// Rejected: emitting only the tags that carry values (shape becomes
-/// data-dependent), and the standard's 80-column export wrapping (the
-/// reference files don't wrap).
+/// data-dependent), and the standard's 80-column wrapping (the files don't).
 internal enum PGNSerializer {
     
     // MARK: Placeholders

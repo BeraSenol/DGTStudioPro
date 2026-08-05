@@ -38,33 +38,30 @@ private final class ActivityToken {
 /// capture and the M8.3 board-stream recorder), so the trigger needs no
 /// disambiguation.
 ///
-/// The deliberate non-goals, recorded with the decision:
-/// - **Display sleep is not inhibited.** A game has long think-times with
-///   the player away from the Mac; the physical board is truth and the
-///   mirror a glance — letting the panel dim is correct, and avoids hours
-///   of a static board on-screen.
-/// - **Logout/shutdown is not vetoed.** A user-initiated logout proceeds
-///   (macOS neither wants nor reliably lets an app veto it); the draft
-///   sidecar plus archive-first already make a mid-game logout safe.
+/// Deliberate non-goals:
+/// - **Display sleep is not inhibited.** Long think-times with the player away
+///   from the Mac; the physical board is truth and the mirror a glance, so
+///   letting the panel dim is correct. Structural rather than commented — it
+///   would take naming a second `ProcessInfo` option to break.
+/// - **Logout/shutdown is not vetoed.** A user-initiated logout proceeds; the
+///   draft sidecar plus archive-first already make one mid-game safe.
 ///
-/// D25′ — the preference is an observable property *here*, not an
-/// `@AppStorage` read: the gate has to participate in the tracking loop so
-/// that switching it off mid-game releases the assertion on that edge
-/// rather than on the next unrelated change. Settings binds to this same
-/// property, so the "absent reads as true" default lives exactly once (the
-/// initializer) — the first preference in the app with no twin read site.
-/// Rejected: KVO or `UserDefaults.didChangeNotification` (machinery to
-/// re-derive what Observation already does).
+/// D25′ — the preference is an observable property *here*, not an `@AppStorage`
+/// read: the gate must participate in the tracking loop so switching it off
+/// mid-game releases the assertion on that edge rather than on the next
+/// unrelated change. Settings binds to this same property, so the "absent reads
+/// as true" default lives exactly once, in the initializer — the first
+/// preference in the app with no twin read site.
 ///
-/// Rejected for the token itself: raw IOKit `IOPMAssertionCreateWithName`
-/// (lower-level, no Swift-native lifecycle) and a permanent assertion
-/// (drains power idling at the Library).
+/// Rejected: KVO / `UserDefaults.didChangeNotification` (re-deriving what
+/// Observation already does); raw IOKit `IOPMAssertionCreateWithName` (no
+/// Swift-native lifecycle); a permanent assertion (drains power idling at the
+/// Library).
 ///
-/// Waived in part, per the register: the token is transport and the
-/// predicate is a bare `&&`/`||` with nothing to extract. The preference's
-/// default and persistence are *not* waived — `SleepInhibitorPreferenceTests`
-/// pins them. The hardware checklist remains the witness for inhibition
-/// itself; `pmset -g assertions` shows the held activity by its reason.
+/// Waived in part: the token is transport and the predicate has nothing to
+/// extract. The preference's default and persistence are *not* waived —
+/// `SleepInhibitorPreferenceTests` pins them. `pmset -g assertions` shows the
+/// held activity by its reason string.
 @MainActor
 @Observable
 internal final class SleepInhibitor {

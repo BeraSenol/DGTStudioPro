@@ -6,33 +6,27 @@
 /// keeps only the transport (model resolution, the Stockfish walk,
 /// run-task plumbing) around these calls.
 ///
-/// This is also the M9 answer for the `GameAnalysisDriver` audit line:
-/// the analysis pipeline finally grew branching worth owning when it grew
-/// a queue, and this type is where that branching lives — pure, so the
-/// driver and controller stay thin transport and take the waiver.
+/// Generic over the id rather than bound to `PersistentIdentifier` so the suite
+/// runs hermetically on plain strings; the controller instantiates
+/// `AnalysisQueue<PersistentIdentifier>`.
 ///
-/// Generic over the id rather than bound to `PersistentIdentifier` so the
-/// test suite runs hermetically on plain strings; the controller
-/// instantiates `AnalysisQueue<PersistentIdentifier>`.
-///
-/// Semantics worth stating (each is pinned by a test):
+/// Semantics, each pinned by a test:
 /// - **FIFO.** `enqueue` appends in the order given — callers pass display
 ///   order — and `startNext` pops the head.
-/// - **Dedupe on entry.** An id already waiting or currently running is
-///   skipped (its in-flight pass *is* the analysis); an id with a
-///   recorded outcome re-queues — that is the re-analyze path — and its
-///   old outcome is dropped so `status(of:)` never reports a stale result
-///   for a game back in line.
-/// - **A fresh batch resets the log.** `enqueue` onto a fully-idle queue
-///   clears the finished log first, so "3 of 7" counts the batch the user
-///   just started, not history. Enqueueing *during* a run extends the
-///   same batch — the totals grow, which is correct: more work was added.
-/// - **Outcomes are recorded, never inferred.** `finishCurrent` appends to
-///   the log in completion order; `failures` filters it for the popover.
+/// - **Dedupe on entry.** An id already waiting or running is skipped, its
+///   in-flight pass *being* the analysis. An id with a recorded outcome
+///   re-queues (the re-analyze path) and its old outcome is dropped, so
+///   `status(of:)` never reports a stale result for a game back in line.
+/// - **A fresh batch resets the log.** `enqueue` onto a fully-idle queue clears
+///   the finished log, so "3 of 7" counts the batch just started rather than
+///   history. Enqueueing *during* a run extends the same batch, and the totals
+///   grow — correct, since more work was added.
+/// - **Outcomes are recorded, never inferred.** `finishCurrent` appends in
+///   completion order; `failures` filters it for the popover.
 /// - **The queue owns the line; the controller owns the engine.**
-///   `removeWaiting` and `clearWaiting` never touch `current` — stopping
-///   the running pass is the controller's job (`skipCurrent`/`stopAll`),
-///   which reports back through `finishCurrent(.cancelled)`.
+///   `removeWaiting` and `clearWaiting` never touch `current` — stopping the
+///   running pass is `skipCurrent`/`stopAll`, reporting back through
+///   `finishCurrent(.cancelled)`.
 internal struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
     
     // MARK: Outcomes

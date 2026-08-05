@@ -8,33 +8,23 @@ import SwiftUI
 /// until a board is connected), which is the M1 raw-mirror surface. There
 /// is no landing/error card; the board is always on screen.
 ///
-/// The live branch is the M3 live-play surface: the live game's
-/// last-move/check highlights overlaid on the mirrored physical position,
-/// the new-game dialog (auto-offered on start-position detection, or
-/// requested from the sidebar's session panel — all status messaging
-/// re-homed there by D15′; the stage above the board stays clear), and
-/// the live inspector
-/// (`LiveGameInspectorView`). From M4 it also presents the crash-safety
-/// resume offer: when the session finds a draft at launch
-/// (`session.pendingDraft`), an alert forks between Resume and Delete —
-/// Decision #3's only two options — with a delete-only variant for a
-/// corrupt draft file. It also overlays a 50%-opacity ghost rook on
-/// `session.castlingGhostSquare` during a mid-castle (king moved, rook not
-/// yet). The PGN-replay branch deliberately has none of this — live
-/// surfaces are about the *physical* board vs the live game's state, which
-/// is orthogonal to scrubbing a finished PGN.
+/// The live branch carries the live game's last-move and check highlights over
+/// the mirrored physical position, the new-game dialog (auto-offered on
+/// start-position detection, or requested from the sidebar's session panel —
+/// D15′ re-homed all status messaging there so the stage above the board stays
+/// clear), the live inspector, the crash-safety resume offer forking Resume /
+/// Delete on `session.pendingDraft`, and a 50%-opacity ghost rook on
+/// `session.castlingGhostSquare` mid-castle. The PGN-replay branch deliberately
+/// has none of it: live surfaces compare the *physical* board against the live
+/// game's state, which is orthogonal to scrubbing a finished PGN.
 ///
-/// `loadedGameID` is bound to the enclosing tab's `WindowGroup` value,
-/// so each native tab has its own game (or none). Switching to Library
-/// in the sidebar doesn't clear the loaded game — it stays "loaded" in
-/// the tab and reappears when the user returns to Board.
+/// `loadedGameID` is bound to the enclosing tab's `WindowGroup` value, so each
+/// native tab holds its own game or none. Switching to Library does not clear
+/// it — the game stays loaded and reappears on return.
 ///
-/// Per-tab state (resolved PGN/Game, perspective, inspector visibility)
-/// lives on the enclosing `ContentView`'s `TabState`, NOT on this view.
-/// This destination is recreated by SwiftUI every time the sidebar
-/// switches to and from `.board`; storing live state on `@State` here
-/// would lose scrub position, perspective, and inspector toggle on every
-/// destination round-trip.
+/// **Per-tab state lives on `ContentView`'s `TabState`, not on this view.**
+/// SwiftUI recreates this destination on every sidebar round-trip, so `@State`
+/// here would lose scrub position, perspective and inspector toggle each time.
 internal struct BoardDestination: View {
     
     // MARK: Static Constants

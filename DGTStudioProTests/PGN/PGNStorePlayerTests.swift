@@ -268,19 +268,15 @@ struct PGNStorePlayerTests {
     /// The relationship sibling of the one-hash rule: editing a tag through the
     /// funnel relinks — **and collects the player it displaced** (D60′).
     ///
-    /// **This test asserted the opposite until 5 Aug 2026**, under the title
-    /// `applyEditRelinksAndKeepsOrphanedPlayer`, with the message "Magnus
-    /// Carlsen should linger unreferenced". It was pinning D9′'s no-GC rule and
-    /// it was right to, for as long as that rule held. Reversed rather than
-    /// deleted, because the interesting claim has not changed — "what happens
-    /// to the registry when a seat is re-spelled" — only its answer has.
+    /// Asserted the opposite until D60′, as
+    /// `applyEditRelinksAndKeepsOrphanedPlayer` — "Magnus Carlsen should linger
+    /// unreferenced" — pinning D9′'s no-GC rule, correctly, for as long as it
+    /// held. Reversed rather than deleted: the interesting claim is unchanged,
+    /// only its answer.
     ///
-    /// Worth keeping the old wording visible for one more reason: **this is the
-    /// exact path that generated the orphans D60′ was minted for.** Every
-    /// distinct spelling committed to a seat mints a row, and before the
-    /// collector each correction left the previous one behind forever. This
-    /// test described that as deliberate, which it was — the reversal is a
-    /// change of mind, not a bug fix.
+    /// **This is the exact path that generated the orphans D60′ was minted
+    /// for.** Every distinct spelling committed to a seat mints a row, and
+    /// before the collector each correction left the previous one behind.
     @Test func applyEditRelinksAndCollectsTheDisplacedPlayer() throws {
         let context = try Self.makeContext()
         let store = PGNStore(modelContext: context)
@@ -300,18 +296,13 @@ struct PGNStorePlayerTests {
     
     /// Deleting a game takes the players it strands with it.
     ///
-    /// **This test used to assert the opposite** — `playerCount == 2`, under
-    /// the title `deletingGameEmptiesInverseWithoutDeletingPlayer`, pinning
-    /// D9′'s "orphans linger, there is no collector". The behaviour reversed
-    /// for game deletion specifically (`PGNStore.delete(_ pgns:)`), so the pin
-    /// reverses with it rather than being deleted: the interesting claim is
-    /// still "what happens to the registry when a game goes", and it now has a
-    /// different answer. That sentence has now been overtaken twice: it went on
-    /// to say "the rest of D9′ is untouched — nothing collects the registry
-    /// unasked, and the D40′ sweep is still the only door for rows stranded some
-    /// other way". D60′ repealed both halves. Every door collects now, and the
-    /// sweep is gone. Kept as a record of how a correctly-scoped claim decays:
-    /// it was true when written, and what changed was the surrounding rule.
+    /// Asserted the opposite until D50′, as
+    /// `deletingGameEmptiesInverseWithoutDeletingPlayer`, pinning D9′'s
+    /// "orphans linger, there is no collector". Its replacement then scoped
+    /// itself to game deletion — "nothing collects the registry unasked, the
+    /// D40′ sweep is the only other door" — and D60′ repealed both halves.
+    /// Twice overtaken by the surrounding rule rather than by being wrong,
+    /// which is how a correctly-scoped claim decays.
     ///
     /// Note what is *not* asserted: the surviving player's inverse array. That
     /// would be a read of a relationship whose update timing is SwiftData's

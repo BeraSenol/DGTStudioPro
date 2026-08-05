@@ -6,40 +6,34 @@ import Foundation
 /// value arrays on a `@Model`).
 ///
 /// Value storage is deliberately flat — `text`, `number`, `date`,
-/// `gameResult` slots, with the field's kind deciding which one is live.
-/// An associated-value enum would be tighter, but the editor binds
-/// controls per slot, and dead slots cost a few bytes while enum
-/// bindings cost real friction. Boolean fields need no slot at all: the
-/// comparison (`isTrue`/`isFalse`) *is* the value.
+/// `gameResult` slots, with the field's kind deciding which is live. An
+/// associated-value enum would be tighter, but the editor binds controls per
+/// slot: dead slots cost a few bytes, enum bindings cost real friction. Boolean
+/// fields need no slot — the comparison (`isTrue`/`isFalse`) *is* the value.
 ///
 /// Matching rules, recorded:
 /// - String comparisons fold **both sides** through `PlayerName.folded` +
-///   `lowercased()` (D30′) — the identity philosophy exactly (case and
-///   whitespace runs folded, diacritics preserved), not locale collation.
-///   Before D30′ the needle trimmed `.whitespaces` only and the subject
-///   folded nothing, so a double-spaced tag escaped its own rule; aligning
-///   changes matching for already-saved tags, accepted at decision time.
+///   `lowercased()` (D30′) — the identity philosophy (case and whitespace runs
+///   folded, diacritics preserved), not locale collation. This changed matching
+///   for already-saved tags, accepted at decision time.
 /// - A string rule with empty/whitespace text matches **nothing** — the
-///   row-level sibling of "zero rules matches nothing"; without it, a
-///   freshly added `contains ""` row would match the whole Library.
-/// - `player` means either seat; seats are the *resolved* display names,
-///   so an unresolved `"?"` seat is simply absent.
-/// - Unknowns never match: a nil `round` fails numeric rules, an undated
-///   game fails date rules (its `importedAt` fallback orders folds; it
-///   doesn't answer "when was this played").
-/// - **Negation included** (D30′, closing the 29 July correction): an
-///   unknown single subject — an unresolved `white`/`black` seat, a `""`
-///   or `"?"` `event`/`site` — fails `.notEquals` too. "White is not X"
-///   means *the white player is known and isn't X*; a game that doesn't
-///   say can neither prove nor disprove it, same as `.player`. Positive
-///   comparisons are deliberately untouched: "Event is ?" still finds
-///   ?-event games — explicit is different from accidental.
-/// - The M4 pair (D34′) inherits both rules rather than inventing any:
-///   `opening` is an ordinary string field over the full opening name, so an
-///   unclassified game presents `""` and fails negation like any other
-///   unknown; `checkmateType` is the first field whose subject is an optional
-///   *enum*, and it guards nil the same way — see the switch arm for why
-///   that is less obvious than it sounds.
+///   row-level sibling of "zero rules matches nothing"; without it a freshly
+///   added `contains ""` row would match the whole Library.
+/// - `player` means either seat, and seats are the *resolved* display names, so
+///   an unresolved `"?"` seat is simply absent.
+/// - Unknowns never match: a nil `round` fails numeric rules, an undated game
+///   fails date rules (`importedAt` orders folds; it does not answer "when was
+///   this played").
+/// - **Negation included** (D30′): an unknown single subject fails `.notEquals`
+///   too. "White is not X" means *White is known and isn't X*; a game that
+///   doesn't say can neither prove nor disprove it. Positive comparisons are
+///   deliberately untouched — "Event is ?" still finds ?-event games, because
+///   explicit is different from accidental.
+/// - D34′'s pair inherits both rules rather than inventing any: `opening` is an
+///   ordinary string field over the full name, so an unclassified game presents
+///   `""` and fails negation like any other unknown; `checkmateType` is the
+///   first field whose subject is an optional *enum* and guards nil the same
+///   way — see the switch arm for why that is less obvious than it sounds.
 internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
     
     // MARK: Field

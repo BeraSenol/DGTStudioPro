@@ -13,21 +13,20 @@ import Foundation
 ///
 /// ## Timing note
 ///
-/// `boardChanged(_:)` arms a quiescence `Task` (`session.quiescence`, 300 ms
-/// in production); `settle` runs only when it fires. In the **synchronous**
-/// tests below, that task is scheduled but never executes (the test holds the
-/// main actor straight through, so `settle` can't interleave) — the
-/// assertions are therefore deterministic, observing state set by the
-/// synchronous lifecycle calls alone. The tests that genuinely need `settle`
-/// are grouped under "Timer-Driven Settle": they shrink `quiescence` to
-/// 10 ms and `await settled(_:)` — awaiting the armed quiescence task
-/// itself — so every assertion observes a settle that has definitely
-/// run. (F7's full history, kept so it isn't relived: fixed 450 ms
-/// sleeps raced the scheduler under parallel-suite load; the 2 s poll
-/// that replaced them flaked the same way, as did its 5 s successor —
-/// and a poll that returns silently on timeout passes vacuously, which
-/// this suite did for a while without anyone noticing. Awaiting the
-/// task needs no ceiling at all, so there is nothing left to re-guess.)
+/// `boardChanged(_:)` arms a quiescence `Task` (`session.quiescence`, 300 ms in
+/// production) and `settle` runs only when it fires. In the **synchronous**
+/// tests that task is scheduled but never executes — the test holds the main
+/// actor straight through, so `settle` cannot interleave — making the
+/// assertions deterministic over state set by the lifecycle calls alone.
+///
+/// The tests that genuinely need `settle` are grouped under "Timer-Driven
+/// Settle": they shrink `quiescence` to 10 ms and `await settled(_:)`, awaiting
+/// the armed task itself, so every assertion observes a settle that definitely
+/// ran. F7's history, kept so it is not relived: fixed 450 ms sleeps raced the
+/// scheduler under parallel-suite load, the 2 s poll that replaced them flaked
+/// the same way, and so did its 5 s successor — **a poll that returns silently
+/// on timeout passes vacuously**, which this suite did for a while unnoticed.
+/// Awaiting the task needs no ceiling, so there is nothing left to re-guess.
 @MainActor
 @Suite("DGT Live Session")
 struct DGTLiveSessionTests {

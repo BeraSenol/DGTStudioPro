@@ -22,24 +22,19 @@ internal struct RankedPlayer: Identifiable, Hashable {
 }
 
 // `PlayersSortOrder` lived here until 5 Aug 2026 — D48′'s two orderings as a
-// persisted enum behind a toolbar menu picker. It is gone, along with its
-// `StorageKeys.playersSortOrder` key and the `playersSortPicker` identifier,
-// because the list's column headers now sort and its two positions were the
-// Rank and Player columns spelled a second way.
+// persisted enum behind a toolbar picker — with its `StorageKeys` key and the
+// `playersSortPicker` identifier. Gone because the column headers sort now, and
+// its two positions were the Rank and Player columns spelled a second way.
 //
-// Recorded rather than deleted quietly, because it reverses part of a numbered
-// decision and because the *reason* is not "columns are nicer": it is that two
-// controls answering one question is the twin-read-site shape this project
-// keeps re-recording, and the enum could not grow to nine orderings without
-// becoming a menu nobody would read. What D48′ decided that still stands is
-// the part that mattered — rank is the default read, and rank renders in every
-// ordering because it is a fact about the player rather than a position in the
-// current sort.
+// Recorded rather than deleted quietly: it reverses part of a numbered
+// decision, and the reason is not "columns are nicer" but that two controls
+// answering one question is the twin-read-site shape. What D48′ decided still
+// stands — rank is the default read, and renders in every ordering because it
+// is a fact about the player rather than a position in the current sort.
 //
-// The one thing genuinely lost: the picker's choice survived a relaunch and
-// the column sort does not. Accepted deliberately (5 Aug 2026) — a sort is the
-// question being asked now, not a standing preference, and the default is
-// stated in code below instead of in `UserDefaults`.
+// Genuinely lost: the picker's choice survived a relaunch and the column sort
+// does not. Accepted — a sort is the question being asked now, not a standing
+// preference, and the default is stated in code below rather than in defaults.
 
 /// The Players destination (M-prs.3; absorbed Rankings in D48′): the four
 /// `CollectionViewMode`s over the ranked ladder, in rank order by default
@@ -518,26 +513,17 @@ internal struct PlayersDestination: View {
             .help("Ranked by \(ranking.shortName) — changes what rank 1 means, not the row order")
             .accessibilityIdentifier(AccessibilityID.playersRankingPicker)
         }
-        // D48′'s sort picker stood here until 5 Aug 2026. It is gone rather
-        // than disabled: the list's column headers sort now, and its two
-        // positions were the Rank and Player columns under another name. The
-        // toolbar keeps only what the columns cannot reach.
+        // D48′'s sort picker stood here until 5 Aug 2026 — gone rather than
+        // disabled, since the column headers sort now and its two positions
+        // were the Rank and Player columns under another name. The toolbar
+        // keeps only what the columns cannot reach.
         //
-        // One consequence, named because it is the honest cost: the other three
-        // view modes have no headers, so they can no longer *change* the order.
-        // They still **obey** it — `displayed` sorts before `coreContent` fans
-        // out, so a sort made in list mode survives a switch to gallery for the
-        // rest of the session. Read/write split rather than a loss of function,
-        // and accepted at one reader: those three are browsing surfaces where
-        // rank order is the point. If changing it from them ever bites, the
-        // answer is a control those modes own, not this one restored.
-        //
-        // (The first draft of this comment claimed those modes "always render
-        // the ladder", which is what it looked like from the toolbar and is
-        // wrong — the sort is applied one function up from where the modes
-        // branch. Left visible: it is a claim about data flow written without
-        // following the data, which is this project's most-recorded species,
-        // and it was caught by grepping for the picker rather than by care.)
+        // Honest cost: the other three view modes have no headers, so they can
+        // no longer *change* the order. They still **obey** it — `displayed`
+        // sorts before `coreContent` fans out, so a sort made in list mode
+        // survives a switch to gallery. A read/write split rather than a loss
+        // of function, accepted at one reader; if changing it from those modes
+        // ever bites, the answer is a control they own, not this one restored.
         // D40′'s Maintenance menu stood here until 5 Aug 2026, holding one
         // item — Delete Unused Players… — disabled when there were none.
         //

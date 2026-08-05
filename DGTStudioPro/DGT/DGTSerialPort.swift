@@ -36,27 +36,23 @@ internal protocol DGTPortProviding: Actor {
 ///
 /// The readability handler runs on a *serial* dispatch queue and `yield`s each
 /// chunk into an `AsyncStream<Data>`; consecutive yields from one thread reach
-/// the stream in call order, and a single long-lived actor task consumes it —
-/// so chunk order is preserved end to end. (The previous design spawned one
-/// unstructured `Task` per chunk to hop onto the actor; separate unstructured
-/// tasks carry no ordering guarantee, and two swapped chunks would corrupt the
-/// framer's state machine mid-frame — a desync indistinguishable from flaky
-/// hardware.)
+/// the stream in call order and a single long-lived actor task consumes it, so
+/// chunk order is preserved end to end. Load-bearing: two swapped chunks would
+/// corrupt the framer's state machine mid-frame, producing a desync
+/// indistinguishable from flaky hardware.
 ///
 /// ## Device removal (F1)
 ///
-/// The handler reads with raw `read(2)` rather than `availableData`: on a dead
-/// descriptor — the USB adapter unplugged mid-session — `availableData` can
-/// raise an Objective-C exception, which inside a GCD callback is a crash.
-/// `read` just returns 0 (EOF) or -1 (`ENXIO`/`EIO`), which the handler turns
-/// into the one signal that matters: it removes itself and finishes the byte
-/// stream, the read loop ends, and the port closes itself — finishing the
-/// *event* stream that `DGTConnection.handleStreamEnd()` keys on to route
-/// between the failure banner and the M7.3 reconnect loop. (The previous
-/// design returned on empty data without finishing anything: the event stream
-/// never ended, `handleStreamEnd()` never ran, auto-reconnect was unreachable
-/// from a real unplug — and the level-triggered read source kept re-firing at
-/// EOF, busy-spinning its queue.)
+/// Raw `read(2)` rather than `availableData`: on a dead descriptor — the USB
+/// adapter unplugged mid-session — `availableData` can raise an Objective-C
+/// exception, which inside a GCD callback is a crash. `read` returns 0 (EOF) or
+/// -1 (`ENXIO`/`EIO`), and the handler turns that into the one signal that
+/// matters — it removes itself and finishes the byte stream, the read loop ends,
+/// the port closes itself, and the *event* stream finishes, which is what
+/// `DGTConnection.handleStreamEnd()` keys on to route between the failure banner
+/// and the reconnect loop. Finishing the stream is the part that matters:
+/// without it auto-reconnect is unreachable from a real unplug, and a
+/// level-triggered read source busy-spins its queue at EOF.
 ///
 /// Port configuration is raw Darwin `termios`: **9600 baud, 8N1, raw mode, no
 /// flow control** — the parameters confirmed for the piece-detecting DGT

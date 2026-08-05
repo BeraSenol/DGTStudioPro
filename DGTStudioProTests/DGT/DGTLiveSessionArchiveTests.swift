@@ -3,30 +3,22 @@ import Foundation
 import SwiftData
 @testable import DGTStudioPro
 
-/// Coverage for the M5 archive flow on `DGTLiveSession`: the Library save
-/// fires on the `isFinished` transition itself — from the auto-detected
-/// result in settle, from `resign`/`agreeDraw`, and from resuming an
-/// already-decided draft (the self-heal). Success (fresh or deduplicated)
-/// retires the draft; failure keeps it and suppresses new-game entry until
-/// `retryArchive()` succeeds or the player explicitly discards. A nil
-/// `onGameFinished` hook means headless: no archive, the draft stays the
-/// safety net — which is exactly why the pre-M5 suite still passes
-/// unchanged.
+/// The M5 archive flow: the Library save fires on the `isFinished` transition
+/// itself — from settle's auto-detected result, from `resign`/`agreeDraw`, and
+/// from resuming an already-decided draft. Success retires the draft; failure
+/// keeps it and suppresses new-game entry until `retryArchive()` succeeds or the
+/// player discards. A nil `onGameFinished` means headless: no archive, the draft
+/// stays the safety net, which is why the pre-M5 suite still passes unchanged.
 ///
-/// Most tests wire a *real* `PGNStore` over an in-memory container, so the
-/// session→store seam is exercised end to end; the failure tests use
-/// `FlakyArchiveDoor` because a genuine SwiftData save failure can't be
-/// forced deterministically.
+/// Most tests wire a *real* `PGNStore` over an in-memory container so the
+/// session→store seam runs end to end; the failure tests use `FlakyArchiveDoor`
+/// because a genuine SwiftData save failure cannot be forced deterministically.
 ///
-/// Timing note: same convention as `DGTLiveSessionTests` — synchronous
-/// tests hold the main actor so the quiescence `Task` never runs. The
-/// settle-driven test shrinks `session.quiescence` to 10 ms (F7) and
-/// *polls* for each commit (`poll(timeout:until:)`) rather than sleeping a
-/// fixed interval: a fixed wait races the quiescence timer under
-/// parallel-suite CPU load (the Perft suites saturate every core), and
-/// losing that race cancels the pending settle and coalesces two moves
-/// into an illegal diff — a test-only flake that looks exactly like a
-/// session bug.
+/// Timing: `DGTLiveSessionTests`' convention. The settle-driven test shrinks
+/// `quiescence` to 10 ms and *polls* rather than sleeping — a fixed wait races
+/// the quiescence timer under parallel-suite load (the Perft suites saturate
+/// every core), and losing that race coalesces two moves into an illegal diff,
+/// a test-only flake that looks exactly like a session bug.
 @MainActor
 @Suite("DGT Live Session — Archive (M5)")
 struct DGTLiveSessionArchiveTests {

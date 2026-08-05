@@ -3,22 +3,24 @@ import Foundation
 import SwiftData
 @testable import DGTStudioPro
 
-/// M5's store door: rename, merge and delete over `Player` (D37′, D38′, D39′).
+/// M5's store door: rename and delete over `Player` (D37′, D39′).
 ///
-/// The claims worth pinning are the ones that are cheap to get wrong and
-/// invisible once wrong: that a rename reaches the *games'* stored tags rather
-/// than the registry row (D37′, which is what makes export tell the truth);
-/// that merge survives `applyEdit`'s unconditional re-resolve (D38′, the trap
-/// that forced merge and rename onto one door); that a rewrite which would
-/// collide two games' content hashes is refused **before** anything is written
-/// (D39′); and that a self-play row — the same player on both sides — is one
-/// rewrite with both seats, not two half-rewrites whose prospective hashes the
-/// game never actually reaches.
+/// The claims worth pinning are the ones cheap to get wrong and invisible once
+/// wrong: that a rename reaches the *games'* stored tags rather than the
+/// registry row (D37′, which is what makes export tell the truth); that a
+/// rewrite which would collide two games' content hashes is refused **before**
+/// anything is written (D39′); and that a self-play row — one player on both
+/// sides — is a single rewrite carrying both seats, not two half-rewrites whose
+/// prospective hashes the game never reaches.
+///
+/// Merge was the third verb until D52′ removed it. Its four pins went with the
+/// door; D38′'s finding survives at the anchor, where it constrains any future
+/// door that moves players between rows.
 ///
 /// `@MainActor`: fronts `PGNStore` and realized `@Model`s, matching the other
 /// store suites.
 @MainActor
-@Suite("PGN Store — Player Retag, Merge and Delete")
+@Suite("PGN Store — Player Retag and Delete")
 struct PGNStoreRetagTests {
 
     // MARK: Helpers
@@ -56,11 +58,9 @@ struct PGNStoreRetagTests {
         PGNStore(modelContext: try makeContext())
     }
 
-    /// The sweep's two halves live on either side of the view/store line
-    /// (D40′) — `PGNStore.isOrphaned` is the rule, a `@Query` supplies the rows
-    /// — so its pins need the context too, and compose it exactly the way
-    /// `PlayersDestination` does rather than through a convenience the app
-    /// doesn't have.
+    /// The collection pins need the context as well as the store, and compose it
+    /// the way a caller would rather than through a convenience the app does not
+    /// have.
     private static func storeAndContext() throws -> (PGNStore, ModelContext) {
         let context = try makeContext()
         return (PGNStore(modelContext: context), context)
@@ -79,10 +79,10 @@ struct PGNStoreRetagTests {
     /// here, which is what lets the collection tests have a subject at all.
     ///
     /// Through `resolvePlayer`, not `context.insert(Player(...))`: D9′'s single
-    /// creation door is the whole reason a row exists at all, and a fixture
-    /// that constructs one directly would pin the sweep against a shape the app
-    /// cannot produce. The explicit `save` is not ceremony — the door inserts
-    /// without saving by contract, and these suites fetch.
+    /// creation door is the whole reason a row exists, and a fixture building one
+    /// directly would pin the collector against a shape the app cannot produce.
+    /// The explicit `save` is not ceremony — the door inserts without saving by
+    /// contract, and these suites fetch.
     private static func orphanedRow(
         _ store: PGNStore,
         in context: ModelContext,

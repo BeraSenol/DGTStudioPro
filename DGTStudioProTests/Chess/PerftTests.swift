@@ -1,25 +1,15 @@
 import Testing
 @testable import DGTStudioPro
 
-/// Perft (performance test) is the standard integrity check for chess
-/// move generators: count the number of leaf nodes reachable through
-/// legal moves at a fixed depth and compare against published reference
-/// values. A mismatch points at a specific class of bug — Kiwipete
-/// exercises castling and pins; Position 3 exercises EP and discovered
-/// attacks; Position 4 exercises promotion edge cases under both
-/// kingside-and-queenside castling rights; Position 5 stresses
-/// promotion-with-capture; Position 6 stresses high branching factor
-/// and middlegame positional complexity.
+/// Perft counts leaf nodes reachable through legal moves at a fixed depth and
+/// compares against the canonical reference values. A mismatch points at a
+/// specific class of bug: Kiwipete exercises castling and pins; Position 3, EP
+/// and discovered attacks; Position 4, promotion under both castling rights;
+/// Position 5, promotion-with-capture; Position 6, high branching factor.
 ///
-/// Reference values are the canonical Perft-suite numbers (chess-
-/// programming.org), used by virtually every open-source engine to
-/// certify move generation. The suite must run green before Phase 7's
-/// move-generator portion is considered complete.
-///
-/// The `perft` counter and the six reference FENs now live in
-/// `Support/ChessTestSupport.swift` (the `Chess` namespace). `PerftDeepTests`
-/// keeps its own self-contained copy on purpose; this shallow suite reads
-/// them from the shared fixtures.
+/// The `perft` counter and the six reference FENs live in
+/// `Support/ChessTestSupport.swift`. `PerftDeepTests` keeps its own
+/// self-contained copy on purpose; this shallow suite reads the shared ones.
 @Suite("Perft Move Generation Integrity")
 struct PerftTests {
     

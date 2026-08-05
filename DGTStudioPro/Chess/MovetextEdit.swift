@@ -6,23 +6,18 @@
 /// result is forced. Accept-whole-or-reject-whole: a rejection names the
 /// first offending ply and nothing partially applies.
 ///
-/// Result-consistency rules (D18′'s deferred "exact consistency rules pinned
-/// by the suite", recorded here):
-/// - **Checkmate forces the mating side's win.** The board position is a
-///   stronger authority than an annotation a human may simply have omitted,
-///   so the terminal state decides and a `#` is never taken on trust. A final
-///   checkmate with any result but the mated side's loss is rejected.
-///   (Not, as an earlier revision of this comment claimed, because the parser
-///   discards `#`: `PGNParser.stripAnnotations` removes only `!` and `?`, and
-///   `GameRecord.endedInMate` depends on `#` surviving import. The suffix is
-///   discarded by `GameState.parseSAN`'s own cleaning step, one layer down.)
-/// - **A trailing `#` must actually mate** — writing `Qd2#` on a non-mate is
-///   a lie the parser would silently swallow; caught here against reality.
+/// Result-consistency rules:
+/// - **Checkmate forces the mating side's win.** The position outranks an
+///   annotation a human may simply have omitted, so the terminal state decides
+///   and a `#` is never taken on trust.
+/// - **A trailing `#` must actually mate** — `Qd2#` on a non-mate is a lie the
+///   parser would silently swallow, caught here against reality.
 /// - **Stalemate forces a draw** — the only other position-forced result.
 /// - **`*` is never a finished result** (Decision #3).
-/// Anything a final position can't *disprove* — a draw by agreement, a win by
-/// resignation from a non-terminal position — is accepted; the board can't
-/// refute it. That is the "where claimable" boundary.
+///
+/// Anything a final position cannot *disprove* — a draw by agreement, a win by
+/// resignation from a non-terminal position — is accepted. That is the "where
+/// claimable" boundary.
 ///
 /// Accepted movetext is returned **canonicalized** (`san(for:)` per ply):
 /// storage stays uniform with app-generated games, and — the load-bearing

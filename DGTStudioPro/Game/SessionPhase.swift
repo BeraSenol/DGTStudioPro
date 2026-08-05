@@ -5,22 +5,17 @@ extension LiveGameHUDView.Phase {
     /// The one resolution of "what is the session doing right now", shared by
     /// the sidebar's status card and the Board's toolbar subtitle.
     ///
-    /// **Why this moved out of `SessionSidebarPanel`.** It was a private
-    /// computed property on that view, which was correct while the card was
-    /// the only consumer. The subtitle is the second, and re-deriving the
-    /// ordering at the toolbar would have made it the third spelling of
-    /// session state in the app — the exact defect D15′ recorded catching in
-    /// `RecoveryGuidance`, where two *computations* were the decision and two
-    /// *spellings* of it were not. This deliberately mirrors that fix down to
-    /// the signature: `current(session:connection:)`, `@MainActor`, an
-    /// extension beside the type it produces.
+    /// **Moved out of `SessionSidebarPanel`** when the subtitle became a second
+    /// consumer: re-deriving the ordering at the toolbar would have made it a
+    /// third spelling of session state, which is the defect D15′ caught in
+    /// `RecoveryGuidance` — two *computations* were the decision, two
+    /// *spellings* were not. Mirrors that fix down to the signature.
     ///
     /// **The ordering is the content.** Session flags overlap — a game can be
-    /// finished *and* the archive failed, a board can be disconnected *while*
-    /// a recovery is pending — and both consumers must resolve the overlap
-    /// identically or the sidebar and the toolbar will disagree in front of
-    /// the user. Reading top to bottom, each `return` outranks everything
-    /// below it:
+    /// finished *and* the archive failed, a board disconnected *while* a
+    /// recovery is pending — and both consumers must resolve the overlap
+    /// identically or the sidebar and the toolbar disagree in front of the
+    /// user. Each `return` outranks everything below it:
     ///
     /// 1. **Reconnecting** outranks everything, including a pending recovery:
     ///    with no live port there is nothing to reconcile against.
@@ -33,12 +28,11 @@ extension LiveGameHUDView.Phase {
     ///    finished banner — the player must Retry or discard before anything
     ///    else (M5).
     ///
-    /// Not a pure core in the D10′ sense, and deliberately so: every input is
-    /// a member of one of the two `@MainActor` app-global observables, and
-    /// funnelling them through a snapshot value would buy testability the
-    /// `@MainActor` session suites already have while adding a type whose
-    /// only job is to be copied. `RecoveryGuidance.current` made the same
-    /// call, and this stands beside it.
+    /// Deliberately not a pure core in the D10′ sense: every input is a member
+    /// of one of the two `@MainActor` app-global observables, and funnelling
+    /// them through a snapshot would buy testability the `@MainActor` session
+    /// suites already have, in exchange for a type whose only job is to be
+    /// copied. `RecoveryGuidance.current` made the same call.
     @MainActor
     internal static func current(
         session: DGTLiveSession,

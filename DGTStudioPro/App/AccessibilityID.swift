@@ -1,58 +1,40 @@
-//  TARGET MEMBERSHIP: DGTStudioPro only, since 3 Aug 2026. This file used to
-//  compile into DGTStudioProUITests as well — the dual membership was the
-//  entire point (F8): identifiers were a tested contract, and the contract
-//  only held at compile time if both sides read the same constants. The UI
-//  suite was deleted, so the second membership went with it.
+//  TARGET MEMBERSHIP: DGTStudioPro only since D51′. This file used to compile
+//  into DGTStudioProUITests too, and the dual membership was the entire point
+//  (F8) — identifiers were a tested contract, and it held at compile time only
+//  if both sides read the same constants. The suite went; the membership with it.
 //
-//  **Two consequences, and the first one is a live trap.**
+//  Two consequences.
 //
-//  1. The `String`-only signatures below are now unenforced. Every function
-//     here takes a raw value rather than an app type — `sidebarDestination`
-//     takes a `Destination.rawValue`, not a `Destination` — because a
-//     signature naming an app type compiled in the app and broke the UI test
-//     target. That target is gone, so nothing stops someone "improving" these
-//     signatures now. Left as they are on purpose: the shape is harmless, and
-//     changing sixteen signatures to buy type safety nothing checks is churn.
-//     Recorded because a constraint obeyed by every instance and explained by
-//     none reads as taste — which is exactly how this one got broken once
-//     before.
+//  1. The `String`-only signatures below are unenforced now. Every function
+//     takes a raw value rather than an app type, because a signature naming an
+//     app type compiled in the app and broke the UI test target. Left alone on
+//     purpose: changing sixteen signatures to buy type safety nothing checks is
+//     churn. Recorded because a constraint obeyed by every instance and
+//     explained by none reads as taste — which is how it got broken once.
 //
-//  2. **These identifiers currently have no automated consumer at all.** They
-//     are still applied throughout the view layer, and nothing reads them:
-//     `accessibilityIdentifier` is not surfaced to VoiceOver (that is
-//     `accessibilityLabel`, which the app sets separately and which is still
-//     live). They were kept rather than swept because removing the whole
-//     registry and its call sites across the view layer is a large mechanical
-//     diff for no functional gain, and
-//     because they are what a future UI suite — or an accessibility audit
-//     tool — would need on day one. That is a stated bet, not an oversight.
+//  2. **These identifiers have no automated consumer at all.** They are applied
+//     across the view layer and nothing reads them — `accessibilityIdentifier`
+//     is not surfaced to VoiceOver; that is `accessibilityLabel`, set
+//     separately and still live. Kept because sweeping the registry and its
+//     call sites is a large mechanical diff for no functional gain, and because
+//     they are what a future UI suite or accessibility audit needs on day one.
+//     A stated bet, not an oversight.
 //
-//     The two counts this paragraph used to carry — a constant count and a
-//     file count — are gone deliberately, and the deletion is the point
-//     rather than tidying: D42′ moved the registry's size into a grep
-//     precisely so it could not go stale in prose, and it had gone stale in
-//     three places at once, each disagreeing with the other two and with the
-//     file. The size is not what this argument needs; "large" is.
+//     No count appears here: D42′ moved the registry's size into a grep so it
+//     could not go stale in prose, and it had gone stale in three places at
+//     once. The grep is not quoted here either — it counts declaration keywords
+//     in this file, so pasting it here adds a match to its own result. D42′
+//     owns the command.
 //
-//     The grep itself deliberately does NOT appear here, and that omission
-//     is load-bearing rather than lazy. It counts declaration keywords in
-//     this file, so writing it in this file adds a match to its own result —
-//     which is what happened when this note was first drafted: the count
-//     went up by one the moment the command explaining the count was pasted
-//     beside it. D42′ owns the command; read it there.
+//  The rot this fixed was real and is why the discipline exists: the UI suite
+//  once asserted the *absence* of "board.error" while the app shipped the
+//  banner as "board.loaderror". An absence assertion against a stale name
+//  passes forever while guarding nothing.
 //
-//  The rot the registry originally fixed was real, and is worth keeping as
-//  the reason the naming discipline exists: the UI suite once asserted the
-//  *absence* of "board.error" while the app shipped the banner as
-//  "board.loaderror" — an absence assertion against a stale name passes
-//  forever while guarding nothing.
-//
-//  A raw identifier string in a view remains a defect, and a grep for the
-//  modifier followed by a quote, over production sources, is the enforcement.
-//
-//  Named rather than spelled, per D43′: writing that token verbatim here
-//  would make this file a permanent hit in the grep it is describing, and a
-//  check whose output always contains noise is a check being read past.
+//  A raw identifier string in a view is still a defect; the enforcement is a
+//  grep for the modifier followed by a quote, over production sources. Named
+//  rather than spelled, per D43′ — the token verbatim would make this file a
+//  permanent hit in the grep it describes.
 //
 
 /// The app's accessibility-identifier registry. Dotted lowercase throughout.
@@ -141,61 +123,32 @@ internal enum AccessibilityID {
     
     // MARK: Movetext Editor (M-lib.3, D18′)
 
-    /// The edit affordances and the sheets they request. `board.editInfo` is
-    /// the entry `SevenTagRosterSection`'s doc predicted: the review side's
-    /// own identifier rather than borrowing the live inspector's
-    /// `live.inspector.editdetails`, since two buttons in two inspectors are
-    /// not one button.
+    /// The movetext editor's five controls. Never Board-specific: they name the
+    /// editor's *contents*, the same from whichever door opens it — today Get
+    /// Info's Move Text tab, whose host identifier is `getinfo.game.movetext`.
     ///
-    /// **`board.editMoves` is removed**, with the affordance it named. M10
-    /// made movetext read-only on the Board — live *and* review — and the
-    /// editor now opens from the Library inspector's PGN section instead, so
-    /// the identifier moved rather than died: `library.editMoves` is its
-    /// successor. Recorded rather than done quietly, per the rule D40′ set at
-    /// `players.inspector.deleteItem` and D45′ repeated at
-    /// `library.inspector.pgn.disclosure` — a removal is as breaking as a
-    /// rename, and this one is a rename wearing a removal's clothes.
+    /// **Four removals rhyme through this group, and they are one decision
+    /// arriving in instalments** — a pencil on a panel giving way to a door on
+    /// the thing itself: `board.editMoves` (M10 → `library.editMoves`),
+    /// `players.inspector.rename` (D53′ → `getinfo.player.tag`),
+    /// `board.editInfo` (D57′ → the `getinfo.game.field.*` family), and
+    /// `library.editMoves` (D59′, one day after being minted as a successor).
+    /// Recorded rather than done quietly: a removal is as breaking as a rename.
     ///
-    /// The `movetext.editor.*` five are unchanged and were never Board-
-    /// specific: they name the sheet, which is the same sheet from whichever
-    /// door opens it. For the length of one commit in M10 they named controls
-    /// that could not render at all — the 4 Aug review's finding, and the
-    /// reason the registry's referenced-grep is not a reachability check.
+    /// The fourth has **no successor control**, which is the finding. The other
+    /// three swapped one control's identifier for another's; this one is
+    /// reached by selecting a tab, so the addressable part is these five
+    /// contents — which never moved. The group shrank by one without losing
+    /// coverage, because the pencil was only the way in.
     ///
-    /// All are reachable in a boardless run — a loaded PGN needs no hardware —
-    /// so a future XCUITest can harden them; for now the validator and store
-    /// suites are the contract.
-    // **`board.editInfo` is removed** (D57′), with the affordance it named —
-    // the review inspector's Edit Info pencil. Successor: the
-    // `getinfo.game.field.*` family, since the verb did not disappear but
-    // moved and split into seven rows.
-    //
-    // This is the third removal in this group and they rhyme: `board.editMoves`
-    // (M10, successor `library.editMoves`), `players.inspector.rename` (D53′,
-    // successor `getinfo.player.tag`), and now this. All three are a pencil on
-    // a panel giving way to a door on the thing itself, which is what makes
-    // them one decision arriving in instalments rather than three cleanups.
-    // `libraryEditMovesButton` ("library.editMoves") was **removed** 5 Aug
-    // 2026 — the fourth in the rhyme above, one day after it was minted as the
-    // successor to `board.editMoves`. The Library's PGN-header pencil is gone
-    // and the movetext door is Get Info's Move Text tab, whose host identifier
-    // is `getinfo.game.movetext`.
-    //
-    // **A successor at the tab, not at the button, and the difference is the
-    // finding.** The three removals above each swapped one control's
-    // identifier for another control's. This one has no replacement control:
-    // the editor is now reached by selecting a tab, and the five
-    // `movetext.editor.*` identifiers below — which never moved — are how you
-    // address what it opens. So the group shrank by one without losing
-    // coverage, because the *contents* were always the addressable part and
-    // the pencil was only the way in.
-    //
-    // Consequence worth stating: `InspectorEditButtonView` is down to **one**
-    // production consumer, the live inspector's Edit Details. The type is not
-    // dead and should not be swept — but it is now a shared component with a
-    // single caller, which is the state where "shared" starts describing
-    // history rather than structure. Named here so the next sweep reads it as
-    // measured rather than as something nobody noticed.
+    /// Consequence, named so the next sweep reads it as measured rather than
+    /// missed: `InspectorEditButtonView` is down to **one** production consumer,
+    /// the live inspector's Edit Details. Not dead and not to be swept, but a
+    /// shared component with a single caller is where "shared" starts describing
+    /// history rather than structure.
+    ///
+    /// All five are reachable in a boardless run, so a future XCUITest can
+    /// harden them; for now the validator and store suites are the contract.
     internal static let movetextEditorSheet    = "movetext.editor"
     internal static let movetextEditorField    = "movetext.editor.field"
     internal static let movetextEditorStatus   = "movetext.editor.status"

@@ -6,45 +6,30 @@ import os
 /// `DGTReconstructor` against the running `LiveGame`, and commits recognized
 /// moves. App-global and `@Observable`, injected like `DGTConnection`.
 ///
-/// The quiescence window (300 ms in production; see `quiescence`) is the one
-/// piece of timing the pure engine
-/// can't own: a single move arrives as several field updates, so the session
-/// restarts a timer on every board change and only attempts reconstruction
-/// once the board has been still long enough that the player's hand has left
-/// it. This is the boundary the roadmap draws — "the live model owns all
-/// mutable state," the classifier stays pure.
+/// The quiescence window (300 ms; see `quiescence`) is the one piece of timing
+/// the pure engine cannot own: a single move arrives as several field updates,
+/// so the session restarts a timer on every board change and only attempts
+/// reconstruction once the board has been still long enough that the player's
+/// hand has left it. That is the boundary — the live model owns all mutable
+/// state, the classifier stays pure.
 ///
 /// ## State model
 ///
-/// The session is a small state machine. Its mutually-exclusive live-tracking
-/// modes are a single private `Mode` enum (the single source of truth), and
-/// the published flags the UI reads (`liveGame`, `awaitingPhysicalSetup`,
-/// `needsRecovery`) are *derived* from it, so they can never contradict each
-/// other. (The previous design tracked these as independent
-/// booleans/optionals, which permitted nonsense like "recovering AND awaiting
-/// setup," let recovery be entered with no way to leave it, and kept running
-/// reconstruction after a desync.)
+/// A small state machine. The mutually-exclusive live-tracking modes are one
+/// private `Mode` enum — the single source of truth — and the published flags
+/// the UI reads are *derived* from it, so they cannot contradict each other.
+/// The previous design tracked them as independent booleans, which permitted
+/// "recovering AND awaiting setup", let recovery be entered with no way out,
+/// and kept reconstruction running after a desync.
 ///
-/// What it exposes for the UI: `liveGame` (the running game),
-/// `shouldOfferNewGame` (start position seen with no game → present the
-/// new-game dialog), `castlingGhostSquare` + `castlingGhostPiece` (render a
-/// 50%-ghost piece here mid-castle), `needsRecovery` (the board can't be
-/// explained → D6 takes over), and `awaitingPhysicalSetup` (a new game has
-/// been started but the pieces don't match its starting position yet — the UI
-/// should prompt for setup rather than show recovery). From M4 it also
-/// exposes `pendingDraft` — a crash-safety draft found on disk at launch,
-/// awaiting the player's Resume / Delete decision — and persists the running
-/// game through `draftStore` after every committed ply and every
-/// result/roster change. From M5 a finished game archives into the Library
-/// on the `isFinished` transition itself (archive-first, before any UI) via
-/// the `onGameFinished` hook; `archiveOutcome` publishes how it went, and a
-/// failed archive keeps the draft and suppresses new-game entry until Retry
-/// or an explicit Discard — a finished game is never lost.
+/// A finished game archives into the Library on the `isFinished` transition
+/// itself — archive-first, before any UI — and a failed archive keeps the draft
+/// and suppresses new-game entry until Retry or an explicit Discard. A finished
+/// game is never lost.
 ///
-/// Diagnostics: settle outcomes, lifecycle transitions, and — critically — a
-/// full-context desync capture are routed into the optional `sessionLog`
-/// (`DGTSessionLog`), the same additive settable-hook pattern as
-/// `DGTConnection.onBoardChanged`. Existing Console logging is unchanged.
+/// Settle outcomes, lifecycle transitions and full-context desync captures route
+/// into the optional `sessionLog`, the settable-hook pattern
+/// `DGTConnection.onBoardChanged` uses.
 @Observable
 @MainActor
 internal final class DGTLiveSession {

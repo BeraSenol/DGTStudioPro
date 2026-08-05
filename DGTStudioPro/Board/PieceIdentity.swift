@@ -28,47 +28,36 @@ internal struct ResolvedPiece: Equatable, Hashable, Sendable, Identifiable {
     internal var id: Key { key }
 }
 
-/// Resolves which identity every rendered piece animates under — the
-/// tracker-parity work that `PieceTracker`'s doc spent four months calling
-/// "the work that would make the physical mirror safe to animate" (M6).
+/// Resolves which identity every rendered piece animates under (M6, D47′).
 ///
-/// **The output's occupancy is the rendered position, verbatim, always.**
-/// The resolver decides *keys*, never *presence*: every occupied square of
-/// the input position produces exactly one entry, and no unoccupied square
-/// produces any. That is the mirror invariant ("the mirror renders the
-/// physical board — always") restated as a property of a pure function, and
-/// `PieceIdentityTests` pins it across every fixture rather than trusting
-/// this sentence.
+/// **The output's occupancy is the rendered position, verbatim, always.** The
+/// resolver decides *keys*, never *presence*: every occupied square produces
+/// exactly one entry, no unoccupied square produces any. The mirror invariant
+/// restated as a property of a pure function, and `PieceIdentityTests` pins it
+/// across every fixture rather than trusting this sentence.
 ///
 /// **Identity is proven or absent, never guessed.** Three sources, in order:
 ///
-/// 1. **Parity.** A square where the physical piece equals the game's last
-///    committed position vouches for the tracker's identity there. Checked
-///    per square, not per board, so one lifted piece doesn't strip the other
-///    thirty-one of their identities mid-move.
-/// 2. **Early reconstruction.** For the squares parity can't explain, the
-///    resolver runs the *same* `DGTReconstructor.reconstruct` the session
-///    will settle with — full-position verification included — and keys a
-///    recognized move's landing square(s) with the **origin's** tracker
-///    identity. This is what lets a slid or quickly-played move glide before
-///    the session commits it, and it is proof rather than speculation
-///    because the reconstructor only answers when exactly one legal move
-///    explains the whole board. The session's own commit 300 ms later
-///    re-derives the same answer; nothing here touches the game.
-/// 3. **Anonymous.** Everything else keys on `(square, piece)` — stable
-///    while the piece stays put, incapable of gliding, which is exactly the
-///    right amount of capability for a piece nobody can name. A board dump
-///    at connect re-keys wholesale, so thirty-two pieces fade in rather
-///    than fly in from wherever they last stood.
+/// 1. **Parity.** A square whose physical piece equals the game's last committed
+///    position vouches for the tracker's identity there. Per square, not per
+///    board, so one lifted piece does not strip the other thirty-one.
+/// 2. **Early reconstruction.** For what parity cannot explain, the resolver
+///    runs the *same* `DGTReconstructor.reconstruct` the session will settle
+///    with — full-position verification included — and keys a recognized move's
+///    landing squares with the **origin's** identity. Proof rather than
+///    speculation: the reconstructor answers only when exactly one legal move
+///    explains the whole board, and the session's commit re-derives the same
+///    answer 300 ms later. Nothing here touches the game.
+/// 3. **Anonymous.** Everything else keys on `(square, piece)` — stable while
+///    the piece stands still, incapable of gliding, exactly the right capability
+///    for a piece nobody can name. A connect-time board dump re-keys wholesale,
+///    so thirty-two pieces fade in rather than fly in.
 ///
-/// Why the identity upgrade at commit is invisible, recorded because it is
-/// the detail the whole design balances on: when the session commits the
-/// recognized move, `LiveGame`'s tracker applies it — and `applyMove` puts
-/// the *origin's* identity on the destination square, which is the identity
-/// source 2 already handed out. The key at the proven render and the key at
-/// the parity render after the commit are the same value, so the hand-off
-/// from "proven early" to "vouched by parity" re-keys nothing and the eye
-/// sees one uninterrupted piece.
+/// **The hand-off at commit is invisible, and the design balances on it.** When
+/// the session commits, `LiveGame`'s tracker `applyMove` puts the *origin's*
+/// identity on the destination — the identity source 2 already handed out. The
+/// proven render and the post-commit parity render carry the same key, so the
+/// eye sees one uninterrupted piece.
 internal enum PieceIdentity {
 
     /// The review arm: the rendered position *is* the game's position, so

@@ -15,20 +15,16 @@ internal struct LibraryDestination: View {
 
     /// Above this many, Open asks first (D56′).
     ///
-    /// **A judgement call, not a derived number, and stated as one** — the
-    /// honest alternative to inventing a rationale for 10. What it is calibrated
-    /// against: the sets you actually mean to open are a rivalry, a round, a
-    /// morning's games, and those are single digits; the sets that arrive by
-    /// accident come from ⌘A or a smart tag and are the whole Library. There is
-    /// a wide empty gap between those two populations and the threshold sits in
-    /// it, which is why the exact value matters less than that one exists.
+    /// **A judgement call, stated as one** rather than given an invented
+    /// rationale. Calibrated against two populations with a wide gap between
+    /// them: the sets you mean to open are a rivalry, a round, a morning, all
+    /// single digits; the sets that arrive by accident come from ⌘A and are the
+    /// whole Library. That one exists matters more than its exact value.
     ///
-    /// Open is the only bulk action in this destination that confirms on
-    /// *count* rather than on consequence. Delete confirms because it destroys;
-    /// Analyze does not because the queue has a Stop All and a visible progress
-    /// item; Export does not because it writes into one folder you chose. Open
-    /// has neither property — windows are not a queue, there is no Stop All for
-    /// them, and closing four hundred tabs is manual work with no undo.
+    /// Open is the only bulk action here that confirms on *count* rather than
+    /// consequence. Delete confirms because it destroys; Analyze has a Stop All;
+    /// Export writes into one folder you chose. Open has none of those —
+    /// windows are not a queue, and closing four hundred tabs has no undo.
     private static let openConfirmationThreshold = 10
     
     // MARK: Stored Properties
@@ -66,18 +62,11 @@ internal struct LibraryDestination: View {
     @State private var selectedPGNs: Set<PGN.ID> = []
     @State private var importProgress: ImportProgress?
 
-    // `editingMovetext` was here until 5 Aug 2026 — the `.sheet(item:)` subject
-    // that drove D18′'s editor, held as an item-sheet over the model rather
-    // than a `Bool` because a selection can change underneath a modal.
-    // Removed with the sheet: the editor is a *tab* in Get Info now, so there
-    // is no presentation state for this destination to hold.
-    //
-    // Its doc called this "M10's other half" and noted it was the app's last
-    // item-sheet-over-a-model, `BoardDestination.activeEditor` having gone with
-    // D57′ the day before. That count is now zero, which is worth keeping: the
-    // pattern is not deprecated, there is simply nothing left presenting a
-    // modal over a model, and a future one has both precedents in the history
-    // rather than a live example to copy.
+    // `editingMovetext` was here until D59′ — the `.sheet(item:)` subject
+    // driving D18′'s editor. Gone with the sheet: the editor is a Get Info tab
+    // now, so this destination holds no presentation state for it. Nothing in
+    // the app presents a modal over a model any more; the pattern is not
+    // deprecated, there is just no live example left to copy.
     @State private var isQueuePopoverPresented = false
     
     // MARK: Search & Filters (2 Aug 2026 — native `.searchable`, restored
@@ -87,82 +76,57 @@ internal struct LibraryDestination: View {
     @State private var searchText = ""
     /// The non-text facets, as chips inside the search field (3 Aug 2026).
     ///
-    /// Was a `GameResult?` / `Bool?` pair driven by the toolbar menu alone.
-    /// Two things were wrong with that and only one was visible: the filters
-    /// were single-valued, so "decisive games" could not be expressed at all;
-    /// and an active filter was announced only by a filled toolbar glyph,
-    /// which says *that* something is narrowing the list and never *what*.
-    /// A chip says both and carries its own remove button.
+    /// Replaced a `GameResult?` / `Bool?` pair driven by the toolbar menu, which
+    /// was wrong twice over: single-valued, so "decisive games" was
+    /// inexpressible; and announced only by a filled glyph, which says *that*
+    /// something narrows the list and never *what*. A chip says both and carries
+    /// its own remove button.
     ///
-    /// The toolbar menu stays as the way to add one — `suggestedTokens` only
-    /// surface while the field is focused, so the menu remains the discoverable
-    /// entry point, and its filled/unfilled glyph now tracks `!tokens.isEmpty`.
+    /// The menu stays the discoverable entry point — `suggestedTokens` surface
+    /// only while the field is focused — and its glyph tracks `!tokens.isEmpty`.
     @State private var searchTokens: [LibrarySearchToken] = []
 
     /// The list mode's column sort (5 Aug 2026).
     ///
-    /// **Defaults to `#` descending — highest ordinal first** (by request,
-    /// 5 Aug 2026). The Library opens on the most recently filed games, which
-    /// is what `importedAt` descending was reaching for and never quite said:
-    /// import time is when *this app* first saw a file, while the ordinal is
-    /// the number the folder on disk has been keeping since before the app
-    /// existed (D58′). Re-importing an old game moves it to the top under the
-    /// old default and leaves it in place under this one, which is the
-    /// difference that matters.
+    /// **Defaults to `#` descending** — the ordinal the folder on disk has kept
+    /// since before the app existed (D58′), rather than `importedAt`, which is
+    /// only when *this app* first saw a file. Re-importing an old game moves it
+    /// to the top under the old default and leaves it in place under this one.
     ///
-    /// **One comparator, not two, and that is deliberate.** A hidden
-    /// tiebreaker would make the launch order a state no click can return to —
-    /// as it stands, `#` twice reproduces the default exactly, so the opening
-    /// view is a position on the ladder of orderings rather than a private
-    /// one. The cost is that ties are unordered by contract: `libraryIndex` is
-    /// documented **not unique** at its declaration (two folders, two
-    /// numbering runs), and `sorted(using:)` is not guaranteed stable. In
-    /// practice it is deterministic — same array, same comparator, same result
-    /// — and the array arrives in the `@Query`'s `importedAt` order, so ties
-    /// fall out newest-first. Relied on for *display*, never for anything that
-    /// must be reproducible; D10′'s total-tiebreak rule governs the pure
-    /// folds, and this is not one.
+    /// **One comparator, not two**: `#` twice reproduces the launch order
+    /// exactly, where a hidden tiebreaker would make it a state no click can
+    /// return to. The cost is that ties are unordered by contract —
+    /// `libraryIndex` is documented not unique, and `sorted(using:)` is not
+    /// guaranteed stable. Deterministic in practice, and relied on for
+    /// *display* only; D10′'s total-tiebreak rule governs the pure folds.
     ///
-    /// Un-indexed games (anything imported before D58′) sort to the **bottom**,
-    /// which is `Optional`'s ordering under a reversed comparator and is also
-    /// the right answer: a column of numbers should not open on the rows that
-    /// have none.
+    /// Un-indexed games sort to the **bottom** — `Optional`'s ordering under a
+    /// reversed comparator, and the right answer besides.
     ///
-    /// **Owned here rather than in `LibraryListView`, which is the whole point
-    /// of the change.** `filteredGames` applies it as the last narrowing
-    /// stage, so every downstream consumer — the subtitle census, the
-    /// inspector's resolution, and above all `gamesInDisplayOrder` — sees the
-    /// order the reader is looking at. Left inside the table, a sort would
-    /// reorder pixels while D24′ numbered exported files, the analysis queue
-    /// picked its running order, and D56′ opened tabs, all three from the
-    /// *unsorted* array. Nothing would fail; the filenames would simply stop
-    /// matching the screen, which is the kind of disagreement this project has
-    /// twice recorded as invisible until someone opens two things at once.
+    /// **Owned here rather than in `LibraryListView`**, which is the point of
+    /// the change: `filteredGames` applies it as the last narrowing stage, so
+    /// D24′'s export numbering, the analysis queue's running order and D56′'s
+    /// tab order all see what the reader sees. Left inside the table, the sort
+    /// would reorder pixels while those three read the *unsorted* array —
+    /// nothing fails, the filenames just stop matching the screen.
     ///
-    /// `@State` and not `TabState`: a sort is not a fact about the window it
-    /// was made in, and it deliberately does not survive a relaunch either —
-    /// see the binding's doc in `LibraryListView` for that argument. Since the
-    /// default is now a real ordering rather than "unsorted", not persisting
-    /// means every launch opens on `#` descending, which is the point.
+    /// `@State`, not `TabState`, and deliberately not persisted: every launch
+    /// opens on `#` descending.
     @State private var sortOrder: [KeyPathComparator<PGN>] = Self.defaultSortOrder
 
     /// The launch order, stated **once**.
     ///
-    /// Extracted the moment it was written, because the first spelling put it
-    /// in the `@State` initializer above and the seven previews across this
-    /// file's two mode views each repeated it — eight statements of one
-    /// default, which is exactly the twin-read-site shape D25′ names and the
-    /// eval bar's 20-vs-16 already cost this project a month of quiet
-    /// disagreement. A preview drifting from the shipped default is the
-    /// harmless-looking version of that: the canvas stops showing what the app
-    /// opens on, and nothing fails.
+    /// The `@State` initializer above and the previews across this file's mode
+    /// views would otherwise each repeat it — D25′'s twin-read-site shape. A
+    /// preview drifting from the shipped default is its harmless-looking
+    /// version: the canvas stops showing what the app opens on, and nothing
+    /// fails.
     ///
-    /// **Computed rather than stored**, the `SevenTagRosterSection.noGamePlaceholder`
-    /// spelling — and `nonisolated` because `View` conformance would otherwise
-    /// infer `@MainActor` onto it (the lesson `BoardPieceLayer` records at its
-    /// own statics), which would stop previews and any future nonisolated
-    /// caller from reaching it for no reason. `KeyPathComparator` is `Sendable`
-    /// by `SortComparator`'s own refinement, so nothing here needs an opt-out.
+    /// **Computed rather than stored** (`noGamePlaceholder`'s spelling), and
+    /// `nonisolated` because `View` conformance would otherwise infer
+    /// `@MainActor` onto it and lock out previews for no reason.
+    /// `KeyPathComparator` is `Sendable` by `SortComparator`'s refinement, so
+    /// nothing here needs an opt-out.
     internal nonisolated static var defaultSortOrder: [KeyPathComparator<PGN>] {
         [KeyPathComparator(\PGN.libraryIndex, order: .reverse)]
     }
@@ -180,22 +144,19 @@ internal struct LibraryDestination: View {
     
     // MARK: Computed Properties
     
-    /// Sidebar filter → search → menu filters, in that order — narrowing
-    /// only, so the stages compose without caring about each other. Every
-    /// downstream consumer (`selectedPGN`, `gamesInDisplayOrder`, and
-    /// therefore batch analyze/export/delete) reads the same narrowed list,
-    /// which is exactly how the tag filter already behaved: a hidden game
-    /// is out of every bulk action, never silently included.
+    /// Sidebar filter → search → menu filters → sort, narrowing only, so the
+    /// stages compose without caring about each other. Every downstream
+    /// consumer (`selectedPGN`, `gamesInDisplayOrder`, and therefore batch
+    /// analyze/export/delete) reads the same narrowed list: a hidden game is
+    /// out of every bulk action, never silently included.
     ///
     /// **Render reads it once; actions re-derive it fresh.** `coreContent`
-    /// folds this a single time per pass and threads the result to the empty
-    /// gate, the subtitle census, the mode view, and the inspector's
-    /// resolution — `PlayersDestination`'s fold-once arrangement, arriving
-    /// here 4 Aug 2026 after the walk was found running three to four times
-    /// a render, each one a full tag-match + search pass over every game.
-    /// `gamesInDisplayOrder` still calls it directly on purpose: an action
-    /// fires long after the fold that painted the screen, and a stale
-    /// narrowed list is exactly what bulk actions must not act on.
+    /// folds this a single time per pass and threads the result onward
+    /// (`PlayersDestination`'s arrangement, adopted after the walk was found
+    /// running three to four times a render). `gamesInDisplayOrder` calls it
+    /// directly on purpose — an action fires long after the fold that painted
+    /// the screen, and a stale narrowed list is what bulk actions must not act
+    /// on.
     private var filteredGames: [PGN] {
         var result = games
         if let filter {
@@ -226,38 +187,28 @@ internal struct LibraryDestination: View {
                 )
             }
         }
-        // Sorting is the LAST stage, after every narrowing, and it is the stage
-        // that makes "display order" mean what the reader sees. Note the
-        // asymmetry with the stages above, which is deliberate: those *remove*
-        // rows and compose in any order; this one only permutes. It has to come
-        // last regardless, because sorting a set you are about to filter is
-        // work thrown away.
+        // Sorting is the LAST stage, and the one that makes "display order" mean
+        // what the reader sees. The stages above *remove* rows and compose in
+        // any order; this only permutes, and must come last regardless — sorting
+        // a set you are about to filter is work thrown away.
         //
-        // **Unconditional since the default became a real ordering** (5 Aug
-        // 2026). This read `sortOrder.isEmpty ? result : …` while empty meant
-        // "unsorted" and was the common case. `#` descending is the default
-        // now, nothing in `Table`'s header behaviour ever empties the array,
-        // and a branch whose condition cannot be produced is the `.disabled(…)`
-        // shape D40′ names — so it goes rather than sitting here reading as a
-        // considered fast path. `PlayersDestination` made the same call one
-        // file over, for the same reason, an hour earlier.
+        // Unconditional rather than `sortOrder.isEmpty ? result : …`: `#`
+        // descending is the default now and nothing in `Table`'s header
+        // behaviour empties the array, so that branch's condition cannot be
+        // produced — the `.disabled(…)` shape D40′ names.
         //
-        // The honest cost of removing it: this fold runs once per render, so
-        // the Library now sorts every render instead of only when sorted. For
-        // `#` that is an `Int?` compare and invisible. For **ECO** it is not —
-        // that comparator goes through `opening`, which rehydrates — so a
-        // reader sitting on the ECO column pays a rehydrate per comparison per
-        // render. On the known-costs census, not optimized ahead of M7.
+        // Cost, accepted: the Library sorts every render. Invisible for `#`, an
+        // `Int?` compare; not for **ECO**, whose comparator goes through
+        // `opening` and rehydrates per comparison. Known-costs census, not
+        // optimized ahead of M7.
         return result.sorted(using: sortOrder)
     }
     
     /// The model side of the `LibraryFilter` split: the pure matcher takes
-    /// strings, this maps a game into its searchable ones. Every field,
-    /// always — the scope picker that once narrowed this set
-    /// (`LibrarySearchScope`) was retired 2 Aug 2026, because a query
-    /// already names its field: "1-0" is a result, "C60" is an opening, a
-    /// surname is a player. The result's raw value is included on purpose
-    /// for exactly that reason.
+    /// strings, this maps a game into its searchable ones. Every field, always —
+    /// the scope picker that once narrowed this set was retired because a query
+    /// already names its field ("1-0" is a result, "C60" an opening, a surname a
+    /// player), which is also why the result's raw value is included.
     private func searchFields(of game: PGN) -> [String] {
         [game.name, game.whiteDisplayName, game.blackDisplayName,
          game.event, game.site, game.result.rawValue,
@@ -295,44 +246,29 @@ internal struct LibraryDestination: View {
     /// ⌘A over all four view modes, as the system's own Edit ▸ Select All
     /// rather than a shortcut of this destination's invention.
     ///
-    /// `.onCommand` puts the action in the responder chain, which is what both
-    /// enables the menu item and gives it its shortcut — the mechanism
-    /// `.onDeleteCommand` used here until ⌫ was retired on 5 Aug 2026, and the
-    /// reason ⌘A inside the
-    /// search field still selects *text*: the field is first responder and
-    /// answers first. List and columns are `Table`s, so `NSTableView` answers
-    /// there too and this never fires; the set it produces is identical,
-    /// because the table was built from the same narrowed array. Icons and
-    /// gallery have no such responder, and for them this is the whole
-    /// implementation.
+    /// `.onCommand` puts the action in the responder chain, which both enables
+    /// the menu item and gives it its shortcut. Three things fall out of that
+    /// rather than being designed: ⌘A inside the search field still selects
+    /// *text*, because the field answers first; list and columns are `Table`s,
+    /// so `NSTableView` answers and this never fires — producing the identical
+    /// set, since the table was built from the same narrowed array; and icons
+    /// and gallery have no such responder, so for them this is the whole
+    /// feature.
     ///
-    /// **Selects what the render painted, deliberately not what `filteredGames`
-    /// would answer at action time** — the opposite of `gamesInDisplayOrder`'s
-    /// rule directly above, for the opposite reason. That one re-derives
-    /// because a destructive action firing against a stale list is the failure
-    /// to prevent; this one *is* the visible state, so "select all" has to mean
-    /// the rows on screen or it means something the user cannot check. The
-    /// narrowing itself is unchanged either way: a game hidden by a smart tag,
-    /// a query or a chip is not selected, so it stays out of every bulk action
-    /// exactly as it always has.
+    /// **Selects what the render painted, not what `filteredGames` would answer
+    /// at action time** — the opposite of `gamesInDisplayOrder` above, for the
+    /// opposite reason. That re-derives because a destructive action against a
+    /// stale list is the failure to prevent; this one *is* the visible state, so
+    /// "select all" must mean the rows on screen. The narrowing is unchanged
+    /// either way: a hidden game stays out of every bulk action.
     ///
-    /// Nil on an empty list rather than a closure assigning an empty set: a nil
-    /// action leaves Edit ▸ Select All disabled, and both arms of that guard
-    /// are producible — the check D40′ taught this project to run *at minting*
-    /// rather than at the next sweep.
+    /// Nil on an empty list rather than a closure assigning an empty set, so the
+    /// system disables Edit ▸ Select All — both arms producible, the D40′ check
+    /// run at minting.
     ///
-    /// Not reached, and named so it isn't read as an oversight: the icons
-    /// grid's `anchorID`, which is `@State` a destination cannot touch. After a
-    /// ⌘A the next arrow steps from the last card clicked, or from the first
-    /// card if none — Finder anchors at the last click too, so the divergence
-    /// is only that ours has no anchor to inherit from a keyboard gesture.
-    ///
-    /// Takes the list rather than reading the property, and is a method rather
-    /// than a closure factory, for one reason each: the parameter is what makes
-    /// "the painted list" a fact about the call site instead of a promise; and
-    /// a `@MainActor` type returning an escaping `() -> Void` is a shape this
-    /// codebase has never needed, where `Button { delete(game) }` — a literal
-    /// formed in place, calling a member — is the shape on every page of it.
+    /// Not reached, named so it isn't read as an oversight: the icons grid's
+    /// `anchorID` is `@State` a destination cannot touch, so after ⌘A the next
+    /// arrow steps from the last card *clicked*.
     private func selectAll(_ games: [PGN]) {
         selectedPGNs = Set(games.map(\.id))
     }
@@ -396,24 +332,18 @@ internal struct LibraryDestination: View {
                     ))
                 }
             )
-            // `.onDeleteCommand { requestDeleteSelection() }` stood here until
-            // 5 Aug 2026, by request: **plain ⌫ no longer deletes.**
+            // `.onDeleteCommand` stood here until 5 Aug 2026: **plain ⌫ no
+            // longer deletes.** Asymmetry of cost — ⌫ sits one keystroke from
+            // where your hands already are with a row focused, and its failure
+            // mode is a multi-selection you forgot you had. ⌘⌫ is Finder's key
+            // for the verb and no slipped finger reaches it.
             //
-            // The reason is asymmetry of cost. ⌫ is one keystroke from where
-            // your hands already are while a table row is focused, and its
-            // whole failure mode is a multi-selection you forgot you had — the
-            // gesture that used to be safest to hit by accident was the one
-            // that raised a confirmation over forty games. ⌘⌫ is Finder's key
-            // for the same verb and cannot be reached by a slipped finger.
-            //
-            // The shortcut moved to the toolbar's Delete button rather than
-            // being spelled here, and that placement is deliberate rather than
-            // convenient: a `keyboardShortcut` on a real, always-present,
-            // already-`disabled`-guarded control is live whenever this
-            // destination is showing, which the context menu's copy of ⌘⌫ is
-            // only known to *render*. Removing this line without giving the key
-            // a home that certain would have deleted the gesture rather than
-            // narrowed it.
+            // The shortcut moved to the toolbar's Delete button, not here: a
+            // `keyboardShortcut` on an always-present, already-`disabled`-guarded
+            // control is live whenever this destination shows, where the context
+            // menu's copy of ⌘⌫ is only known to *render*. Removing this line
+            // without a home that certain would have retired the gesture rather
+            // than narrowed it.
             .onAppear {
                 backfillEmptyNames()
                 backfillPlayerLinks()
@@ -1102,24 +1032,18 @@ internal struct LibraryDestination: View {
     /// The confirmation's body: the lead sentence, plus a clause naming any
     /// players the deletion would take with it.
     ///
-    /// **Appended only when there are any**, so the ordinary delete — which is
-    /// nearly all of them — reads exactly as it did before the cascade landed.
-    /// A line that says "and no players will be removed" on every deletion is
-    /// the `.DS_Store` shape: text that is always there is text that stops
-    /// being read, and the one time it matters would scroll past with the
-    /// rest.
+    /// **Appended only when there are any**, so the ordinary delete reads as it
+    /// did before the cascade. A line saying "and no players will be removed"
+    /// on every deletion is the `.DS_Store` shape — text that is always there
+    /// stops being read, and the one time it matters scrolls past with the rest.
     ///
-    /// Named rather than counted, D40′'s reason narrowed: the sweep names its
-    /// rows because they are strangers the user has never seen. These are the
-    /// opponent of the game on screen, so the argument is weaker — but the
-    /// *effect* still lands in a destination the user isn't looking at, and
-    /// the New Game seat menu quietly losing a name is exactly the kind of
-    /// thing that reads as a bug six months later. Capped at five, matching
-    /// the sweep, because it is the same list.
+    /// Named rather than counted (D40′'s reason, weakened but still standing:
+    /// the effect lands in a destination the user isn't looking at, and a seat
+    /// menu quietly losing a name reads as a bug six months later). Capped at
+    /// five, matching the sweep, because it is the same list.
     ///
-    /// Advisory, not authoritative: `PGNStore.delete(_:)` recomputes this at
-    /// write time. A snapshot held across a confirmation is stale by
-    /// construction — the lesson `deleteOrphanedPlayers` already carries — so
+    /// Advisory, not authoritative — `PGNStore.delete(_:)` recomputes at write
+    /// time. A snapshot held across a confirmation is stale by construction, so
     /// the message asks and the door decides.
     private static func deletionMessage(for games: [PGN], lead: String) -> String {
         let stranded = PGNStore.playersOrphaned(byDeleting: games)
