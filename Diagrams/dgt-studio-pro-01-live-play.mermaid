@@ -1,0 +1,138 @@
+%% DGT Studio Pro — 01 live play: serial bytes to archived game
+%% Authored 5 Aug 2026 against the tree at 75a02d3, read from source
+%% (DGTLiveSession.settle / settlePlaying / escalateOrResync / enterRecovery /
+%%  archiveFinishedGame, DGTConnection.requestBoardResync, BoardPieceLayer).
+
+flowchart TD
+
+    PLAY0(("Board connected")) --> B1["Resume the live loop<br/>bytes arrive on the serial port"]
+
+    subgraph STREAM["Transport - waived as transport, decisions extracted pure"]
+        B1 --> B2["DGTFramer - MSB resync<br/>the stream is NOT lossless: adapters drop<br/>bytes, and that is the whole reason D49′ exists"]
+        B2 --> B3["DGTDecoder -> DGTEvent"]
+        B3 --> B4{"Which event?"}
+        B4 -->|"field update"| B5["Apply one square to physicalBoard"]
+        B4 -->|"board dump 0x86"| B5D["Replace physicalBoard WHOLESALE"]
+        B5 --> B6["connection.onBoardChanged - publish"]
+        B5D --> B6
+    end
+
+    B6 --> Q1["session.boardChanged<br/>cancel the in-flight quiescence task<br/>and restart it - reconstruction only runs<br/>once updates STOP"]
+
+    Q1 --> Q2["Sleep 300 ms, then settle<br/>long enough to outlast a hand crossing<br/>the board, short enough to feel instant"]
+
+    Q2 --> S0{"Mode?"}
+
+    S0 -->|"idle"| NG0["offerNewGameIfAtStart"]
+    S0 -->|"awaitingSetup"| AS0{"Board equals the new<br/>game's start position?"}
+    S0 -->|"recovering"| RC0{"Board restored to the<br/>last legal position?"}
+    S0 -->|"playing"| PF0{"Game already finished?"}
+
+    AS0 -->|"no"| WAIT["Still being set up - NOT a desync,<br/>NOT a move. No reconstruction runs"]
+    AS0 -->|"yes"| TOPLAY["mode = playing"]
+    WAIT --> B1
+    TOPLAY --> B1
+
+    RC0 -->|"no"| RCWAIT["Stay in recovery.<br/>While recovering NO reconstruction and NO<br/>commit run - the pre-fix design kept<br/>committing and never left"]
+    RC0 -->|"yes"| RCOUT["mode = playing, clearGhost<br/>D6 owns the presentation, this owns<br/>the exit condition"]
+    RCWAIT --> B1
+    RCOUT --> B1
+
+    PF0 -->|"yes"| NG0
+    PF0 -->|"no"| SP0["settlePlaying"]
+
+    NG0 --> NG1["Offer New Game when the board reads the<br/>start position. A pending RESUME offer<br/>outranks it: both at once would let a fresh<br/>start silently overwrite the very draft<br/>being offered"]
+    NG1 --> NG2["The seat fields are PICKERS over known players<br/>D16′, free text still allowed. They insert the<br/>remembered TAG form D29′, never a derived<br/>inverse. resolvePlayer stays the only creation<br/>door and fires at ARCHIVE time, never here.<br/>Once both seats resolve, Round prefills from the<br/>pairing history - matched as a SET, so a<br/>late-imported old game cannot wind the rivalry<br/>counter backwards"]
+    NG2 --> B1
+
+    subgraph SETTLE["settlePlaying - reconstruction dispatch"]
+        SP0 --> SP1["clearPlayingOverlays - ghost and correction<br/>are mutually exclusive and recomputed each<br/>settle: clear both, then one branch re-sets"]
+        SP1 --> SP2["DGTReconstructor.reconstruct<br/>from currentState against physical"]
+        SP2 --> SP3["Any outcome the board CAN explain retires<br/>the one-shot resync debt D49′"]
+        SP3 --> R0{"Outcome?"}
+    end
+
+    R0 -->|"noChange"| RLOG["Log only"]
+    R0 -->|"inProgress"| RLOG2["Pieces lifted, none placed<br/>reconstruction returns inProgress BEFORE<br/>generating moves"]
+    R0 -->|"castlingInProgress"| RGHOST["setGhost - the piece still in the hand,<br/>rook in king-first, king when the rook lands first"]
+    R0 -->|"correctable"| RCORR["setCorrection - a legal move recognised, one<br/>physical correction outstanding.<br/>A nudge, not a desync: stay in playing"]
+    R0 -->|"move"| CM0{"game.commit accepts<br/>the reconstructed move?"}
+    R0 -->|"unresolved"| E0["escalateOrResync"]
+
+    RLOG --> B1
+    RLOG2 --> B1
+    RGHOST --> B1
+    RCORR --> B1
+
+    CM0 -->|"no - F5"| F5["Commit REFUSED a verified move:<br/>an internal logic divergence.<br/>Fail loudly on the spot rather than log a<br/>commit that never happened"]
+    F5 --> RV0
+
+    CM0 -->|"yes"| CM5["Committed. Debt retired.<br/>Append SAN, ply count up"]
+    CM5 --> GO1{"game.isFinished?"}
+
+    GO1 -->|"no"| SD["saveDraft - Decision 2: the sidecar never<br/>trails the game by more than one event"]
+    SD --> B1
+
+    GO1 -->|"yes"| AR2["archiveFinishedGame - the archive-first<br/>choke point, fired on the isFinished<br/>transition itself, BEFORE any UI reacts"]
+
+    subgraph ESCALATE["D49′ - one dump before recovery earns it"]
+        E0 --> E1{"requestBoardResync<br/>hook wired?"}
+        E1 -->|"nil - headless"| RV0
+        E1 -->|"wired"| E2{"Debt already spent for<br/>this divergence?"}
+        E2 -->|"yes"| E2B["Clear the debt and escalate for real -<br/>a board the DUMP could not explain either.<br/>Recovery is ALWAYS reachable"]
+        E2B --> RV0
+        E2 -->|"no"| EDEBT["ARM the debt: resyncAttempted = true"]
+        EDEBT --> E3["connection.requestBoardResync -> sendBoard<br/>fire and forget. sendBoard does not change the<br/>board's mode, which is what makes this free"]
+        E3 --> E4["The dump returns as an ORDINARY inbound<br/>message on the same 0x86 arm - so the mirror<br/>publishes and a fresh quiescence settles.<br/>There is no private path back into settle"]
+    end
+
+    E4 --> B5D
+
+    RV0["enterRecovery - the ONE door into recovering"]
+    RV0 --> RV1["onDesync fires here D13′, so the cue rides the<br/>mode transition and cannot drift from the<br/>derived flags. Gated by the preference;<br/>NSSound.beep, the user's own alert sound"]
+    RV1 --> RV2["recordDesync: last legal FEN, physical board,<br/>the exact diff, recent SAN"]
+    RV2 --> RV3["Sidebar checklist guides the restore D15′"]
+    RV3 --> B1
+
+    subgraph ARCHIVE["Archive-first, exactly once, never lost"]
+        AR2 --> AR4{"Already archived?<br/>a stray repeat call"}
+        AR4 -->|"yes"| ARSKIP["Nothing to do"]
+        AR4 -->|"no"| AR5{"onGameFinished wired?"}
+        AR5 -->|"nil"| ARDRAFT["Draft simply stays current -<br/>it remains the safety net"]
+        AR5 -->|"wired"| AR6["PGNStore.archive - dedupe by content hash,<br/>stamp the Board tag D28′, resolve players"]
+            AR6 --> AR6B["The inspector headline is a pure formatter<br/>carrying the PAIRING, not the game's name D20′ -<br/>Recording 101. White vs Black while live,<br/>Reviewing 1. … once archived"]
+        AR6B --> AR7{"Outcome?"}
+        AR7 -->|"archived or deduplicated"| AR8["Retire the draft - the game is safe"]
+        AR7 -->|"failed"| AR9["Keep the draft AND update it so it carries<br/>the decided result: a crash before Retry<br/>still self-heals at the next launch.<br/>Suppress new-game entry"]
+    end
+
+    AR8 --> POST(("Archived - in the Library"))
+    AR9 --> ATTN(("Attention: Retry offered,<br/>the draft survives, nothing is lost"))
+    ARSKIP --> B1
+    ARDRAFT --> B1
+
+    AR2 -.-> STAR
+    STAR["INVARIANT, not a live branch. Decision 3 says<br/>no star result ever archives, and BOTH doors<br/>spell the guard. On THIS path it can never fire:<br/>LiveGame.isFinished IS defined as result not<br/>ongoing, so the second clause is tautological.<br/>Kept structural on purpose. The reachable<br/>source of a star is the IMPORT door - diagram 02"]
+
+    LOSS["INTERRUPT, not an entry point: cable pull or<br/>port error at any point above. Mid-game it<br/>auto-reconnects silently rather than showing<br/>the failure banner - shouldAutoReconnect is<br/>re-asked every lap, so a discard stands it down"]
+    STREAM -.-> LOSS
+
+    SP2 -.-> MIRROR
+    MIRROR["THE MIRROR RENDERS THE PHYSICAL BOARD. ALWAYS.<br/>Since D47′ this is a tested property, not a<br/>sentence: PieceIdentity's output occupancy is<br/>the rendered position verbatim. A piece glides<br/>only under a PROVEN identity - parity, or the<br/>reconstructor's own full-position verification.<br/>Everything else is anonymous and can only fade,<br/>which is the CORRECT rendering of a piece in<br/>a hand, not a degraded one"]
+
+    MIRROR -.-> GLIDE
+    GLIDE["Glide duration is a PREFERENCE since 2 Aug 2026,<br/>clamped to 0.1-1.0 s on every read, default 0.22.<br/>It does NOT clamp under the 300 ms quiescence:<br/>above 0.3 s a glide can still be in flight when<br/>the settle confirms the move. Visual only - the<br/>animation retargets mid-flight and nothing about<br/>commit timing reads it. Accepted price of<br/>making the speed a preference"]
+
+    %% ---- shared class vocabulary: identical block in all five files ----
+    classDef act   fill:#e8eef7,stroke:#5b7fb0,color:#12243d
+    classDef dec   fill:#fdf0d5,stroke:#c9a227,color:#3d2f04
+    classDef bad   fill:#fbe4e4,stroke:#c0504d,color:#4a1210
+    classDef note  fill:#efe6f7,stroke:#8064a2,color:#2c1b3d
+    classDef drill fill:#e3f2e3,stroke:#4f8a4f,color:#123312
+    classDef term  fill:#2f3640,stroke:#1b1f24,color:#ffffff
+
+    class B1,B2,B3,B5,B5D,B6,Q1,Q2,SP0,SP1,SP2,SP3,NG0,NG1,NG2,WAIT,TOPLAY,RCWAIT,RCOUT,RLOG,RLOG2,RGHOST,RCORR,CM5,SD,AR2,AR6,AR6B,AR8,ARSKIP,ARDRAFT,E0,EDEBT,E3,E4,E2B,RV0,RV1,RV2,RV3 act
+    class B4,S0,AS0,RC0,PF0,R0,CM0,GO1,E1,E2,AR4,AR5,AR7 dec
+    class F5,AR9 bad
+    class STAR,LOSS,MIRROR,GLIDE note
+    class PLAY0,POST,ATTN term

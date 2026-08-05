@@ -1,0 +1,63 @@
+%% DGT Studio Pro — 00 master: launch to destinations
+%% Authored 5 Aug 2026 against the tree at 75a02d3, read from source.
+%% Legend and class vocabulary: DIAGRAMS.md. Shared style block at the foot.
+%% (Spelled around deliberately: writing the directive's name here put a false
+%%  positive into the very audit that reads these files. The project's own
+%%  "never write a prohibited token verbatim in a comment" rule, self-inflicted.)
+
+flowchart TD
+
+    LAUNCH(("Launch")) --> INIT["App.init - runs EXACTLY once<br/>the content closure runs once per tab,<br/>so nothing here may live there"]
+
+    subgraph WIRING["Construct and wire - DGTStudioProApp.init"]
+        INIT --> MAKE["Construct the three app-global observables:<br/>DGTSessionLog, DGTConnection, DGTLiveSession"]
+
+        MAKE --> HOOKS["Wire all seven settable hooks, in order:<br/>sessionLog x2, onBoardChanged, boardIdentity D28′,<br/>requestBoardResync D49′, shouldAutoReconnect,<br/>onDesync D13′, draftStore, onGameFinished<br/>A NIL hook is what makes unit tests headless"]
+
+        HOOKS --> STORE["onGameFinished -> PGNStore.archive<br/>wired BEFORE loadPendingDraft, so a draft<br/>resumed this run always has the door"]
+
+        STORE --> DRAFT["session.loadPendingDraft<br/>turns a relaunch into Resume / Delete on the HUD"]
+
+        DRAFT --> INHIB["SleepInhibitor.observe session, connection<br/>D14′ / D25′ - re-entry guarded"]
+    end
+
+    INHIB --> HERMETIC{"XCTest host?<br/>XCTestConfigurationFilePath or<br/>XCTestSessionIdentifier present"}
+
+    HERMETIC -->|"yes"| SKIP["Skip auto-connect ONLY<br/>the hooks above stay wired and the inhibitor<br/>stays armed - the guard is NARROW.<br/>What it prevents is serial I/O and real board<br/>traffic on the main actor during a run,<br/>competing with the 300 ms quiescence window"]
+
+    HERMETIC -->|"no"| AUTO["Task - connection.autoConnectAtLaunch<br/>a Task from a main-actor init runs after init<br/>returns, so first render is not held hostage<br/>to IOKit plus the serial handshake"]
+
+    SKIP --> SCENES
+    AUTO --> SCENES
+
+    SCENES["Declare scenes: THREE WindowGroups keyed by<br/>DISTINCT value types, plus Settings, plus three<br/>Commands scenes<br/>DRILL-DOWN: diagram 04"]
+
+    SCENES --> CONTENT["ContentView per tab<br/>injects openGames, dgtConnection, dgtSession,<br/>sessionLog, inspectorCollapse<br/>ALL FOUR registries or a destination traps"]
+
+    CONTENT --> SIDEBAR["Sidebar: destination list, smart tags D12′,<br/>and the session panel pinned by safeAreaInset<br/>D15′ - the stage above the board stays clear"]
+
+    SIDEBAR --> DEST{"Which destination?"}
+
+    DEST -->|"Board"| BOARD["Board - live play and review<br/>DRILL-DOWN: diagram 01"]
+    DEST -->|"Library"| LIB["Library - import, browse, analyse<br/>DRILL-DOWN: diagram 02"]
+    DEST -->|"Players"| PLAY["Players - the D11′ ladder is the default sort<br/>DRILL-DOWN: diagram 03"]
+
+    BOARD -.-> TABS
+    LIB -.-> TABS
+    PLAY -.-> TABS
+
+    TABS["ONE WindowGroup for PersistentIdentifier is what<br/>lets Library and Board tab together - macOS only<br/>tabs windows from the SAME group.<br/>defaultLaunchBehavior presented forces a first<br/>window: a value-based group otherwise opens none<br/>on a clean launch"]
+
+    %% ---- shared class vocabulary: identical block in all five files ----
+    classDef act   fill:#e8eef7,stroke:#5b7fb0,color:#12243d
+    classDef dec   fill:#fdf0d5,stroke:#c9a227,color:#3d2f04
+    classDef bad   fill:#fbe4e4,stroke:#c0504d,color:#4a1210
+    classDef note  fill:#efe6f7,stroke:#8064a2,color:#2c1b3d
+    classDef drill fill:#e3f2e3,stroke:#4f8a4f,color:#123312
+    classDef term  fill:#2f3640,stroke:#1b1f24,color:#ffffff
+
+    class INIT,MAKE,HOOKS,STORE,DRAFT,INHIB,SKIP,AUTO,CONTENT,SIDEBAR act
+    class HERMETIC,DEST dec
+    class TABS note
+    class SCENES,BOARD,LIB,PLAY drill
+    class LAUNCH term

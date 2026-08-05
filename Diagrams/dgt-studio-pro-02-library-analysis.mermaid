@@ -1,0 +1,118 @@
+%% DGT Studio Pro — 02 library and analysis
+%% Authored 5 Aug 2026 against the tree at 75a02d3, read from source
+%% (LibraryDestination.filteredGames / selectAll / gamesInDisplayOrder,
+%%  PGNStore.importPGN / delete / applyMovetextEdit / classify).
+
+flowchart TD
+
+    ENTER(("Library destination")) --> WARM["On appear: backfillPlayerLinks,<br/>backfillPlayerTagNames, then<br/>backfillClassifications - the last one carries<br/>a Predicate, so the converged case fetches<br/>ZERO rows instead of every game with its<br/>full moves array"]
+
+    WARM --> QUERY["Query PGN sorted by importedAt, reverse<br/>- the array's ARRIVAL order. Since 5 Aug 2026 a<br/>sort always runs downstream, so this shows<br/>through only as the tie order among equal<br/>ordinals, which are legal: D58′ does not make<br/>the index unique"]
+
+    subgraph IMPORT["Import - the one door that admits a star result"]
+        IMP0["Choose files, or paste PGN text"] --> IMP1["PGNParser - annotations stripped to ! and ?<br/>check and mate suffixes survive verbatim"]
+        IMP1 --> IMP2{"Required tags present<br/>and well formed?"}
+        IMP2 -->|"no"| IMP3["Refused: missingRequiredTags<br/>or malformedPGN"]
+        IMP2 -->|"yes"| IMP4["Compute the content hash - MD5 over the<br/>normalised recipe. ONE recipe, two spellings"]
+        IMP4 --> IMP5{"A row already<br/>carries that hash?"}
+        IMP5 -->|"yes"| IMP6["THROWS duplicate, carrying the existing id<br/>and name. It does NOT return the existing row -<br/>do not infer the contract from the name"]
+        IMP5 -->|"no"| IMP7["Insert, then resolvePlayers D9′ - the ONE<br/>creation door, identity folded to lowercase with<br/>whitespace collapsed, diacritics PRESERVED.<br/>Then classify D34′ - engine-free, ECO and the<br/>mate motif together, the name split into family<br/>and variation at the first colon D35′.<br/>The ordinal is read off the FILENAME D58′"]
+    end
+
+    IMP7 --> QUERY
+    IMP3 --> ENTER
+    IMP6 --> ENTER
+
+    IMP0 -.-> STAR2
+    STAR2["This is the REACHABLE source of a star result.<br/>importPGN admits it deliberately; Decision 3 is<br/>enforced at the ARCHIVE door only - diagram 01"]
+
+    subgraph NARROW["Narrowing - sidebar, then search, then chips. Narrowing ONLY, so the stages compose"]
+        QUERY --> N1["Sidebar smart-tag filter D12′<br/>matching is an in-memory fold over TagRule,<br/>never a Predicate: a stored Codable rule<br/>array cannot be queried in the store"]
+        N1 --> N2["Search text - SearchMatch.Query folded ONCE<br/>per pass, matched per game. Every field,<br/>always: a query already names its own field"]
+        N2 --> N3["Token chips - result and analysis facets.<br/>OR within a facet, AND across facets.<br/>Analysed? is spelled by AnalysisGlyph.isAnalyzed,<br/>the one spelling the glyphs also use"]
+    end
+
+    N3 --> N4["Column sort - LAST stage, after every narrowing.<br/>Defaults to the ORDINAL descending D58′, so the<br/>Library opens on the highest-numbered file and<br/>un-numbered games sit at the bottom. Session-only,<br/>so every launch opens there. Click any header to<br/>change it: once ascending, twice descending"]
+
+    N4 -.-> SORTNOTE
+    SORTNOTE["Why the sort lives in the DESTINATION and not<br/>in the table: three things downstream read<br/>DISPLAY ORDER rather than the screen. D24′<br/>numbers exported filenames from it, the analysis<br/>queue crunches top-to-bottom as shown, and D56′<br/>makes it tab order - all through<br/>gamesInDisplayOrder. Sorting inside the table<br/>would reorder pixels while all three kept<br/>numbering from the unsorted array. Nothing would<br/>fail; the filenames would simply stop matching<br/>the screen"]
+
+    N4 --> FG["filteredGames<br/>ONE walk per render, threaded to the empty<br/>gate, the subtitle census, the mode view and<br/>the inspector"]
+
+    FG --> EMPTY{"Anything left?"}
+    EMPTY -->|"no, and narrowed"| E1["No matches - clear the search or the chips"]
+    EMPTY -->|"no, and not narrowed"| E2["No games - import some"]
+    EMPTY -->|"yes"| MODE{"View mode?<br/>ONE shared AppStorage key across<br/>both collection destinations"}
+
+    E1 --> ENTER
+    E2 --> IMP0
+
+    MODE -->|"list"| MD1["Table"]
+    MODE -->|"columns"| MD2["Finder-flat: list plus detail pane"]
+    MODE -->|"icons"| MD3["Grid - rubber band plus arrow keys"]
+    MODE -->|"gallery"| MD4["Filmstrip - left/right steps it"]
+
+    MD1 --> PAINTED
+    MD2 --> PAINTED
+    MD3 --> PAINTED
+    MD4 --> PAINTED
+
+    PAINTED["Rows painted"]
+    PAINTED -->|"click, or rubber band"| SEL
+    PAINTED -->|"Cmd-A"| CMDA
+
+    SEL["Selection"]
+
+    CMDA["The SYSTEM's Edit, Select All via onCommand on<br/>the responder chain - not a keyboardShortcut of<br/>our own. Takes the NARROWED list, which is<br/>filteredGames' standing contract rather than a<br/>new one"] --> SEL
+
+    CMDA -.-> CMDANOTE
+    CMDANOTE["Three behaviours fall out of the MECHANISM,<br/>and they are why onCommand beat a shortcut:<br/>1. Cmd-A inside the search field selects TEXT -<br/>the field is first responder and answers first.<br/>2. List and columns are Tables, so NSTableView<br/>answers and this handler never runs - the set<br/>is identical because the table was built from<br/>the same narrowed array.<br/>3. A nil action on an empty list leaves the menu<br/>item DISABLED by the system.<br/>Icons and gallery have no such responder, and<br/>for them this is the whole implementation"]
+
+    SEL -.-> CMDACOST
+    CMDACOST["Cmd-A selects what the render PAINTED,<br/>deliberately not what filteredGames would answer<br/>at action time - the opposite of the rule below,<br/>for the opposite reason. Select All must mean the<br/>rows on screen or it means something the user<br/>cannot check.<br/>KNOWN COST: the icons grid's anchorID is out of<br/>reach, so an arrow after Cmd-A steps from the<br/>last card CLICKED, not from the selection"]
+
+    SEL --> ACT{"Action?"}
+
+    ACT -->|"Open - D56′"| OP0{"More than ten games?"}
+    OP0 -->|"yes"| OP1["Confirm first - the ONE bulk action that<br/>confirms on count rather than on destruction"]
+    OP0 -->|"no"| OP2["One window per game, in DISPLAY order,<br/>because that order is visible as TAB order"]
+    OP1 --> OP2
+    OP2 --> DONE
+
+    ACT -->|"Export - D24′"| EX0["gamesInDisplayOrder - re-derived FRESH,<br/>because an action fires long after the fold<br/>that painted the screen"]
+    EX0 --> EX1["PGNSerializer - byte-pinned to the DGT<br/>reference files. LF endings, nine tags in fixed<br/>order, tag-form names, one full move per line.<br/>Classification is NOT written: derived truth<br/>is not interchange"]
+    EX1 --> EX2["Batch writes one numbered file per game and<br/>OVERWRITES same-named files silently D32′ -<br/>the export is a pure function of the rows"]
+    EX2 --> DONE
+
+    ACT -->|"Analyse"| AN0["Enqueue - a pure queue plus a per-tab<br/>controller plus a toolbar popover"]
+    AN0 --> AN1["Bundled Stockfish over UCI.<br/>Teardown must complete even when the<br/>surrounding work is cancelled, and must<br/>strand no waiter"]
+    AN1 --> AN2["Per-ply evaluations stored on the game"]
+    AN2 --> DONE
+
+    ACT -->|"Edit Moves"| MV0["NOT HERE since D59′. The Library inspector's<br/>PGN section shows the movetext and no longer<br/>offers to edit it - the pencil D54′ put there<br/>lasted one day. The door is Get Info's<br/>MOVE TEXT tab<br/>DRILL-DOWN: diagram 04"]
+
+    ACT -->|"Delete"| DL0["Confirm - whichever route reaches it:<br/>toolbar, Cmd-Delete, or the row menu.<br/>Plain Delete does NOTHING since 5 Aug 2026"]
+    DL0 --> DL1["Compute the stranded players BEFORE the first<br/>delete D50′ - asking afterwards bets on SwiftData<br/>having already propagated the nullify"]
+    DL1 --> DL2["One transaction: delete the games, then the<br/>players their deletion stranded.<br/>Deleting the GAME takes its seat tags with it,<br/>so nothing is left to re-resolve"]
+    DL2 --> DONE
+
+    ACT -->|"Get Info - Cmd-I"| GI0["Get Info WINDOW, not a sheet<br/>DRILL-DOWN: diagram 04"]
+
+    ACT -->|"Open in a tab"| REV["Review on the Board<br/>DRILL-DOWN: diagram 01"]
+
+    DONE(("Back to the collection"))
+
+    %% ---- shared class vocabulary: identical block in all five files ----
+    classDef act   fill:#e8eef7,stroke:#5b7fb0,color:#12243d
+    classDef dec   fill:#fdf0d5,stroke:#c9a227,color:#3d2f04
+    classDef bad   fill:#fbe4e4,stroke:#c0504d,color:#4a1210
+    classDef note  fill:#efe6f7,stroke:#8064a2,color:#2c1b3d
+    classDef drill fill:#e3f2e3,stroke:#4f8a4f,color:#123312
+    classDef term  fill:#2f3640,stroke:#1b1f24,color:#ffffff
+
+    class WARM,QUERY,IMP0,IMP1,IMP4,IMP7,N1,N2,N3,N4,FG,MD1,MD2,MD3,MD4,PAINTED,SEL,CMDA,E1,E2,OP1,OP2,EX0,EX1,EX2,AN0,AN1,AN2,DL0,DL1,DL2 act
+    class IMP2,IMP5,EMPTY,MODE,ACT,OP0 dec
+    class IMP3,IMP6 bad
+    class STAR2,SORTNOTE,CMDANOTE,CMDACOST note
+    class GI0,REV,MV0 drill
+    class ENTER,DONE term

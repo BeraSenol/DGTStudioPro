@@ -1,0 +1,13 @@
+# The check script needs a local install (see DIAGRAMS.md), which is a
+# developer-machine artifact rather than part of the delivery.
+node_modules/
+package-lock.json
+package.json
+
+# Rendered output — regenerate with `node check.mjs`, never commit.
+svg/
+
+# FUSE mount leftovers: files deleted while still open. They appear only when
+# the folder is edited through a mounted sandbox and are not repo content.
+.fuse_hidden*
+.DS_Store
