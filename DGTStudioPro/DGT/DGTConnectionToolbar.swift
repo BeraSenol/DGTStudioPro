@@ -7,8 +7,8 @@ import SwiftUI
 /// made item order an accident of modifier nesting.
 ///
 /// The button's icon and tint reflect the app-global `DGTConnection` status —
-/// green antenna when connected, red-tinted slash on failure, a small spinner
-/// mid-handshake or mid-reconnect — so the toolbar doubles as a live
+/// green cable when connected, red-tinted slashed cable on failure, a small
+/// spinner mid-handshake or mid-reconnect — so the toolbar doubles as a live
 /// connection indicator. The sheet is the host's `@State`; this only flips it.
 internal struct DGTConnectionToolbarContent: ToolbarContent {
     
@@ -60,8 +60,8 @@ internal struct DGTConnectionToolbarContent: ToolbarContent {
     /// glyph is ever wanted, it goes back here.
     private var symbol: String {
         switch status {
-        case .connected: "antenna.radiowaves.left.and.right"
-        default:         "antenna.radiowaves.left.and.right.slash"
+        case .connected: "cable.connector"
+        default:         "cable.connector.slash"
         }
     }
     

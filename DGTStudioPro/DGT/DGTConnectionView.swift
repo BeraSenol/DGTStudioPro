@@ -135,7 +135,7 @@ internal struct DGTConnectionView: View {
     /// constant, so "not found" always means the same cable.
     private var notFoundPanel: some View {
         ContentUnavailableView {
-            Label("Board Not Found", systemImage: "antenna.radiowaves.left.and.right.slash")
+            Label("Board Not Found", systemImage: "cable.connector.slash")
         } description: {
             Text("Nothing is attached at \(DGTConnection.onlyBoardPath). Plug the board in, then try again.")
         }
