@@ -61,11 +61,91 @@ internal struct MovetextEditorView: View {
     internal init(pgn: PGN, onCommit: @escaping ([String]) -> Void) {
         self.pgn = pgn
         self.onCommit = onCommit
-        // One move per line reads better for scanning and fixing a typo than a
-        // single wrapped paragraph; the tokenizer is whitespace-agnostic.
-        let seeded = pgn.moves.joined(separator: "\n")
+        let seeded = Self.scoreSheet(pgn.moves)
         _text = State(initialValue: seeded)
         _seed = State(initialValue: seeded)
+    }
+
+    // MARK: Score sheet
+
+    /// Renders plies as a numbered two-column score sheet — the shape a player
+    /// reads (5 Aug 2026, by request).
+    ///
+    /// ```
+    ///  1.  e4        e5
+    ///  2.  Nf3       Nc6
+    /// 10.  O-O       Bd6
+    /// ```
+    ///
+    /// **This is safe because the move numbers are not data.**
+    /// `MovetextEdit.tokenize` splits on whitespace and drops a leading
+    /// `<digits><dots>` run before validating, so the numbers are a reading aid
+    /// the validator never sees. That has a consequence worth stating rather
+    /// than discovering: delete a ply in the middle and every number below it
+    /// is now wrong, and **nothing will complain**, because nothing is reading
+    /// them. Save re-renders from the accepted moves, so the sheet corrects
+    /// itself the moment the edit lands.
+    ///
+    /// **A formatted `TextEditor` rather than a grid of editable cells**, which
+    /// is the other reading of "two columns" and was rejected: D18′ accepts or
+    /// rejects movetext *whole*, a grid has no natural gesture for inserting a
+    /// ply mid-game, and pasting a whole game — the thing the splice refusal
+    /// exists to police — stops being possible. The score sheet buys the look
+    /// without giving up any of that.
+    ///
+    /// This is the app's **third** rendering of a move number and the second
+    /// display-only one: `PGNSerializer` owns what a number looks like on disk
+    /// (D24′, byte-pinned) and `EvaluationGraphReading` owns the single-ply
+    /// form ("12… Nf6"). Deliberately not shared — one is an interchange
+    /// contract and the other two answer different questions about layout.
+    ///
+    /// Columns are padded with spaces and the font is monospaced, which is what
+    /// makes them line up; the tokenizer's whitespace-agnosticism is what makes
+    /// the padding free. Alignment drifts while you type and is restored on
+    /// Save — a text editor that re-flowed under the cursor would be worse than
+    /// one that waits.
+    ///
+    /// **Tab separation was tried and reverted the same day** (5 Aug 2026). It
+    /// is the better *interchange* format — three real fields per line, so the
+    /// sheet pastes into a spreadsheet as number / White / Black, which padding
+    /// can never do. What it gives up is control: alignment becomes the text
+    /// view's tab stops, and a ply wider than one interval pushes its row's
+    /// Black column right of its neighbours'. SwiftUI's `TextEditor` exposes no
+    /// tab-stop API, so that interval is `NSTextView`'s default and not ours to
+    /// set. Padding aligns in any font at any size, which is worth more here
+    /// than pasteability. Recorded because it is a real trade and the next
+    /// reader will think of tabs too.
+    internal nonisolated static func scoreSheet(_ moves: [String]) -> String {
+        guard !moves.isEmpty else { return "" }
+
+        let lastNumber = (moves.count + 1) / 2
+        let numberWidth = String(lastNumber).count
+        // The widest ply governs the column, so "Qa1xd4#" does not push its
+        // own row's black move out of line with every other row's.
+        let sanWidth = moves.reduce(2) { max($0, $1.count) }
+
+        return stride(from: 0, to: moves.count, by: 2).map { index -> String in
+            let number = index / 2 + 1
+            let label = String(number) + "."
+            let gutter = String(repeating: " ", count: numberWidth - String(number).count)
+            let white = moves[index]
+
+            guard index + 1 < moves.count else {
+                // A game ending on White's move gets a white-only final line —
+                // the same shape D24′ writes to disk, arrived at independently
+                // because it is simply what a score sheet does.
+                return gutter + label + "  " + white
+            }
+            // Stdlib padding rather than `String.padding(toLength:withPad:_:)`:
+            // that one is Foundation, and this target enables
+            // `MemberImportVisibility`, so it would not arrive through
+            // SwiftUI's transitive import. It also counts UTF-16 units where
+            // this counts Characters — irrelevant for ASCII SAN, and the wrong
+            // habit to leave lying around.
+            let padded = white + String(repeating: " ", count: max(0, sanWidth - white.count))
+            return gutter + label + "  " + padded + "  " + moves[index + 1]
+        }
+        .joined(separator: "\n")
     }
 
     // MARK: Derived
@@ -145,6 +225,16 @@ internal struct MovetextEditorView: View {
                 // tab beside a multi-line editor it is not.
                 Button("Save") {
                     onCommit(check.tokens)
+                    // Re-render from the **accepted** moves, not from what was
+                    // typed: `Accepted.moves` is the canonical SAN the store is
+                    // about to persist, so this is the one moment the editor
+                    // can show exactly what landed. It also re-aligns the
+                    // columns and renumbers, which is what makes a mid-game
+                    // insertion tidy itself up instead of leaving a sheet whose
+                    // numbers are quietly wrong.
+                    if case .success(let accepted) = check.validation {
+                        text = Self.scoreSheet(accepted.moves)
+                    }
                     seed = text
                 }
                 .buttonStyle(.borderedProminent)
