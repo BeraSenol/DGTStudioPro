@@ -13,37 +13,28 @@ internal struct PlayersInspectorView: View {
     internal let history: [Glicko1.Sample]
     internal let recentGames: [PGN]
 
-    /// How many players the destination's selection holds (2 Aug 2026 —
-    /// the selection went multi with the Library's model). `ranked`
-    /// arrives nil for empty *and* plural selections, so without the count
-    /// this view could not tell "select someone" from "you selected five
-    /// people". Defaulted so previews and the empty state read unchanged;
-    /// the destination always passes it.
+    /// How many players the selection holds. `ranked` arrives nil for empty
+    /// *and* plural selections, so without this the view cannot tell "select
+    /// someone" from "you selected five people". Defaulted so previews read
+    /// unchanged; the destination always passes it.
     internal var selectionCount: Int = 0
 
-    // `onRename` lived here from M5 until M10 and is gone with the seam it
-    // named. The header's three controls went one at a time and the sequence
-    // is worth one comment rather than three: D40′ took Delete to the toolbar,
-    // D52′ took Merge and the ellipsis menu holding it, and M10 took the
-    // pencil to Get Info. What is left is a chevron.
+    // The header's three controls left one at a time — D40′ took Delete to the
+    // toolbar, D52′ took Merge and the ellipsis menu holding it, M10 took the
+    // pencil to Get Info — and `onRename` outlived all of them, surviving D52′
+    // documented as "the one left" and M10 as the seam Get Info would plug
+    // into. The 4 Aug review found it wired to nothing from either end. The
+    // lesson is not that keeping a seam is wrong: a seam with no caller and no
+    // *test* is indistinguishable from dead code, and only a sentence separated
+    // them. What is left here is a chevron.
     //
-    // The property outlived every one of them. It survived D52′ documented as
-    // "the one left", and M10 kept it deliberately as the seam Get Info would
-    // plug into — a comment that called itself "a deadline, not a
-    // description". The 4 Aug review found it wired to nothing from either
-    // end. The lesson is not that keeping a seam is wrong; it is that a seam
-    // with no caller and no *test* is indistinguishable from dead code, and
-    // the only thing separating them was a sentence.
-    //
-    // **Delete is deliberately not here (D40′)** and this paragraph stays,
-    // because the argument outlives the property it was attached to. M5 put a
-    // per-player "Delete Player" in the menu below, guarded by
-    // `recentGames.isEmpty`, and that guard could never be true: this view is
-    // only ever handed a row the stats index emitted, the index folds
-    // `GameRecord`s, and a record's sides are built from the resolved links —
-    // so every selectable player has at least one game. Orphans, the only
-    // rows the store's delete accepts, appear in no view mode at all. Any
-    // future player-scoped operation belongs on the destination's toolbar or
+    // **Delete is deliberately not here (D40′)**, and this outlives the property
+    // it was attached to. M5's per-player Delete was guarded by
+    // `recentGames.isEmpty`, which could never be true: this view is only handed
+    // rows the stats index emitted, the index folds `GameRecord`s, and a
+    // record's sides come from resolved links — so every selectable player has
+    // a game. Orphans, the only rows the store's delete accepts, appear in no
+    // view mode. Any future player-scoped operation belongs on the toolbar or
     // in Get Info, never gated on the *selected* player lacking games.
 
     // MARK: Body

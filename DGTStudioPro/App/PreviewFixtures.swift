@@ -1,7 +1,7 @@
 #if DEBUG
 import Foundation
 
-/// Shared preview fixtures for the Players/Rankings surfaces.
+/// Shared preview fixtures for the Players surfaces.
 ///
 /// Why records rather than memberwise `PlayerStats`: the stats and ladder
 /// are *derived* (D10′), so previews build them through the same pure folds

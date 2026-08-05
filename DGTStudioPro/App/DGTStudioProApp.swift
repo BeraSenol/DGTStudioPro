@@ -9,17 +9,14 @@ internal struct DGTStudioProApp: App {
     /// Shared `ModelContainer` for the whole app. Multiple tabs share
     /// one container so `PersistentIdentifier`s round-trip correctly.
     ///
-    /// Always the persistent store now. This used to branch on the
-    /// `-uiTestSeed` launch argument into an in-memory container pre-seeded
-    /// with sample games; the UI test suite was deleted 3 Aug 2026 and the
-    /// branch went with it, along with `UITestSeed` itself. What remains is
-    /// the plain path that every real launch always took.
+    /// Always the persistent store. This branched on a `-uiTestSeed` argument
+    /// into a pre-seeded in-memory container until D51′ deleted the suite; what
+    /// remains is the path every real launch always took.
     private let sharedContainer: ModelContainer = {
         do {
-            // Player joins the schema explicitly (M-prs.1), SmartTag in
-            // M-prs.5 — SmartTag has no relationships, so inference would
-            // NOT pull it in; listing all three is load-bearing now, not
-            // just documentation.
+            // All three listed explicitly, which is load-bearing rather than
+            // documentation: `SmartTag` has no relationships, so schema
+            // inference from `PGN` would never pull it in.
             let container = try ModelContainer(
                 for: PGN.self, Player.self, SmartTag.self,
                 configurations: ModelConfiguration()
@@ -39,20 +36,16 @@ internal struct DGTStudioProApp: App {
     
     // The three app-global DGT observables.
     //
-    // ALL FOUR registries (these three plus `openGames`) must be injected
-    // into the WindowGroup content below, or any destination that reads one
-    // traps at runtime with "No Observable object of type … found."
-    // `BoardDestination` reads `dgtConnection` AND `dgtSession`, so the Board
-    // destination — and opening any game in a tab, which starts on Board —
-    // depends on both being present. (This is exactly the injection that was
-    // missing: ghost-rook rendering was "preview-correct" but the real app
-    // crashed the moment Board was shown, because the previews injected these
-    // and the App did not.)
+    // Every registry — these plus `openGames` — must be injected into the
+    // `WindowGroup` below, or a destination reading one traps at runtime with
+    // "No Observable object of type … found". That was a real crash, not a
+    // hypothetical: previews injected them and the App did not, so ghost-rook
+    // rendering was preview-correct while the app died the moment Board showed.
     //
-    // They are constructed and wired in `init()` rather than inline in the
-    // content closure, because that closure runs once per window/tab — an
-    // inline `connection.onBoardChanged = …` would re-point the hook on every
-    // new tab. `App.init()` runs exactly once.
+    // Constructed and wired in `init()` rather than inline in the content
+    // closure, because that closure runs once per tab — an inline
+    // `connection.onBoardChanged = …` would re-point the hook on every new one.
+    // `App.init()` runs exactly once.
     @State private var dgtConnection: DGTConnection
     @State private var dgtSession: DGTLiveSession
     @State private var sessionLog: DGTSessionLog

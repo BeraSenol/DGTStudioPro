@@ -5,7 +5,7 @@ import Foundation
 /// The counting rules of D10′/D11′, pinned (nonisolated — pure fold):
 /// per-color splits, ongoing-counts-as-appearance-only, mate credit to
 /// the winner, effective-date first/last, unresolved sides ignored, and
-/// the recorded Rankings comparator with its full tiebreak chain.
+/// the recorded ladder comparator with its full tiebreak chain (D11′).
 @Suite("Player Stats")
 struct PlayerStatsTests {
     

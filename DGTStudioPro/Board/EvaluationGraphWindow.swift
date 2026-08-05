@@ -26,25 +26,21 @@ internal struct EvaluationGraphRequest: Codable, Hashable, Sendable {
 /// read-out under the pointer.
 ///
 /// **A window rather than a popover or a sheet**, chosen for what the enlarged
-/// graph is actually *for*: reading the curve while stepping through the game
-/// beside it. A popover dismisses the moment you click the board, and a sheet
-/// takes the window over — both are right for "glance bigger, dismiss fast"
-/// and both make the one use that needed more room impossible. The app already
-/// opens games this way, so the gesture is not a new idea here.
+/// graph is *for*: reading the curve while stepping through the game beside it.
+/// A popover dismisses the moment you click the board and a sheet takes the
+/// window over — both right for "glance bigger, dismiss fast", both fatal to the
+/// one use that needed more room.
 ///
-/// That paragraph is no longer only an argument: on 4 Aug 2026 the popover
-/// was built and lived for part of a day — Library first, then both hosts —
-/// and the window returned the same night. The dismiss-on-step price read
-/// fine on paper and was not livable in use, which is the strongest
-/// justification this decision will ever have. The anchor records the round
-/// trip; what the day-trip paid for stayed (`EvaluationGraphContent`, cut to
-/// scope pointer invalidation, renders this window's body).
+/// **Field-tested, not merely argued**: the popover was built on 4 Aug 2026 and
+/// reverted the same night. The dismiss-on-step price read fine on paper and was
+/// unlivable in use, which is the strongest justification this decision will
+/// have. What the day-trip paid for stayed — `EvaluationGraphContent`, which
+/// scopes pointer invalidation and renders this body.
 ///
-/// **Hover read-outs are the affordance the small graph cannot afford.** A
-/// 100 pt strip in a sidebar has no room to say which ply is which; at window
-/// size the curve is legible enough that "which move was that?" becomes the
-/// obvious next question. That is the whole argument for the feature — not
-/// that bigger is better, but that bigger makes a different question askable.
+/// **Hover read-outs are what the small graph cannot afford.** A 100 pt sidebar
+/// strip has no room to say which ply is which; at window size the curve is
+/// legible enough that "which move was that?" becomes the obvious next question.
+/// Bigger does not make it better — bigger makes a different question askable.
 internal struct EvaluationGraphWindow: View {
 
     // MARK: Static Constants

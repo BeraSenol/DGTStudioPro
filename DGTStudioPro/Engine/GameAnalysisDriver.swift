@@ -2,25 +2,19 @@ import Foundation
 import os
 import SwiftData
 
-/// Drives a full-game engine analysis pass: walks each ply of a ``PGN``,
-/// asks the bundled Stockfish engine for an evaluation at the requested
-/// depth, streams progressive-deepening results into
-/// ``PGN/evaluations`` so the inspector graph animates as the search
-/// deepens, and saves the model context once per ply so partial progress
-/// survives a crash or quit.
+/// Drives a full-game engine pass: walks each ply of a ``PGN``, asks Stockfish
+/// for an evaluation at the requested depth, streams progressive-deepening
+/// results into ``PGN/evaluations`` so the graph animates as the search deepens,
+/// and saves once per ply so partial progress survives a crash.
 ///
-/// The driver is `@MainActor` so all SwiftData mutation happens on the
-/// model context's actor — the AsyncStream from the engine bridges back
-/// to MainActor at each emission. The engine subprocess work itself runs
-/// on the actor inside ``StockfishEngine`` without blocking MainActor.
+/// `@MainActor` so all SwiftData mutation happens on the context's actor — the
+/// engine's `AsyncStream` bridges back at each emission, while the subprocess
+/// work runs inside ``StockfishEngine`` without blocking.
 ///
-/// Lifecycle: one driver per `AnalysisQueueController` — one per tab.
-/// The queue is the single analysis owner since M-batch (its decision 1);
-/// views no longer instantiate drivers. The engine starts lazily on the
-/// first ``analyze(pgn:depth:modelContext:)`` call and stays alive until
-/// ``shutdown()`` is invoked (the controller releases it when the queue
-/// drains, and at tab teardown). Successive games in a batch reuse the
-/// warmed-up engine, saving the ~100ms UCI handshake per game.
+/// One driver per `AnalysisQueueController`, one controller per tab; views no
+/// longer instantiate drivers. The engine starts lazily on the first `analyze`
+/// and lives until ``shutdown()``, so successive games in a batch reuse it and
+/// pay the ~100 ms UCI handshake once.
 @Observable
 @MainActor
 internal final class GameAnalysisDriver {
@@ -29,12 +23,9 @@ internal final class GameAnalysisDriver {
     private static let logger = AppLog.logger(.analysis)
     
     // MARK: Status
-    /// Coarse-grained pass state, read only by `AnalysisQueueController`:
-    /// `.analyzing` supplies `currentProgress`, and the terminal case maps
-    /// to an `AnalysisQueue.Outcome` when the awaited pass returns. No view
-    /// reads this — since M-batch the inspector's control row switches on
-    /// `queue.status(of:)` (`AnalysisQueue.ItemStatus`), which knows about
-    /// waiting and queue position and this type does not.
+    /// Coarse pass state, read only by `AnalysisQueueController`. **No view
+    /// reads it** — the inspector's control row switches on `queue.status(of:)`,
+    /// which knows about waiting and queue position where this does not.
     internal enum Status: Equatable {
         case idle
         case analyzing(progress: Double)
@@ -50,11 +41,10 @@ internal final class GameAnalysisDriver {
     
     // MARK: Public API
     
-    /// Runs one full-game analysis pass and returns the terminal status —
-    /// `.done`, `.failed`, or `.idle` after a ``stop()`` — awaitable so
-    /// the queue controller knows when to advance to the next game.
-    /// No-op returning the current status if a pass is already in flight;
-    /// the controller serializes calls, so that guard is belt and braces.
+    /// Runs one full-game pass and returns the terminal status — awaitable, so
+    /// the controller knows when to advance. A no-op returning the current
+    /// status if a pass is already in flight; the controller serializes calls,
+    /// so that guard is belt and braces.
     @discardableResult
     internal func analyze(
         pgn: PGN,

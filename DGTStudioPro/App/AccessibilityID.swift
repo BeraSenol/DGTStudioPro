@@ -520,18 +520,13 @@ internal enum AccessibilityID {
     /// window that now owns the verb. Nothing is left in this group but the
     /// section identifiers below.
 
-    /// The destination's maintenance menu and its one item (D40′), on the
-    /// toolbar rather than in the inspector: orphaned players contribute to no
-    /// `GameRecord`, so they appear in no view mode and can never be selected —
-    /// which is the finding the decision came from. A toolbar affordance is the
-    /// only kind that can reach them.
     /// D62′ — the ladder's ordering method. Not a sort control: it changes the
     /// rank badge, where the column headers change the row sequence.
     ///
-    /// The first identifier minted since two removals in a row left none — see
-    /// the note below. Worth one line: an affordance that a person points at is
-    /// exactly what this registry is for, and the run of "replaced by something
-    /// that is not an affordance" turned out to be a run rather than a trend.
+    /// The first identifier minted after two consecutive removals left none —
+    /// see the note below. Worth one line: an affordance a person points at is
+    /// what this registry is for, and the run of "replaced by something that is
+    /// not an affordance" turned out to be a run rather than a trend.
     internal static let playersRankingPicker = "players.rankingPicker"
 
     // `playersMaintenanceMenu` and `playersSweepOrphansItem` were **removed**

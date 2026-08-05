@@ -3,30 +3,25 @@ import SwiftUI
 /// A sidebar section header that names the thing the section is about, with
 /// the action on that thing trailing it.
 ///
-/// Extracted from `SevenTagRosterSection` the moment a second family of
-/// inspectors wanted the same header: Library's roster header is the game's
-/// name, Players' is the player's, Rankings' is the ranked player's. Left
-/// inline it would have been copied three times, and the copies would agree
-/// only while someone remembered — `InspectorEmptyState`'s argument (D26′)
-/// one layer up.
+/// Extracted from `SevenTagRosterSection` the moment a second inspector wanted
+/// the same header. Left inline it would have been copied per host, and the
+/// copies would agree only while someone remembered — `InspectorEmptyState`'s
+/// argument (D26′) one layer up.
 ///
-/// `title` is a `String`, not a `LocalizedStringKey`, and that is the whole
-/// point of the type: these headers carry *data* — a game's name, a player's
-/// name, a formatted headline — not copy. A `LocalizedStringKey` would send a
-/// player's name through the strings table looking for a translation.
+/// `title` is a `String`, not a `LocalizedStringKey`, and that is the point of
+/// the type: these headers carry *data* — a game's name, a player's name, a
+/// formatted headline — not copy. A `LocalizedStringKey` would send a player's
+/// name through the strings table looking for a translation.
 ///
-/// One line, truncating: a header with a control pinned beside it must have a
-/// settled height, and every title here is either a name that also appears in
-/// the rows below or a headline whose parts do (White and Black). Truncation
-/// costs nothing that isn't a glance away.
+/// One line, truncating: a header with a control pinned beside it needs a
+/// settled height, and every title here is a name that also appears in the rows
+/// below, or a headline whose parts do.
 ///
-/// The action is a `@ViewBuilder` slot rather than an `onEdit` closure so each
-/// host keeps its own identifier, wording and action. No single control is
-/// "what hosts pass" any more — this doc said `InspectorEditButtonView` was,
-/// which M5's menu and M8's glyph pair each quietly outgrew — and the slot's
-/// real range is witnessed by the *Actions — Every Arity* preview below: a
-/// lone pencil, a glyph, a pencil plus a menu, and nothing at all, in which
-/// case the host gets a plain heading.
+/// The action is a `@ViewBuilder` slot rather than an `onEdit` closure, so each
+/// host keeps its own identifier, wording and action. No single control is "what
+/// hosts pass" — this doc claimed `InspectorEditButtonView` was, which a menu
+/// and a glyph pair each outgrew. The slot's real range is witnessed by the
+/// *Actions — Every Arity* preview below.
 internal struct InspectorSectionHeader<Actions: View>: View {
     
     // MARK: Type Properties
