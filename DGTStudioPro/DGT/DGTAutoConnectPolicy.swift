@@ -1,10 +1,3 @@
-//
-//  DGTAutoConnectPolicy.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 07/07/2026.
-//
-
 /// Pure decisions behind M7's connection quality of life, extracted from
 /// `DGTConnection` so the interesting choices are unit-testable without
 /// hardware — the roadmap's "if retry policy grows logic worth testing,

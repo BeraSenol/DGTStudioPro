@@ -1,10 +1,3 @@
-//
-//  PlayersInspectorView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 12/04/2026.
-//
-
 import SwiftData
 import SwiftUI
 

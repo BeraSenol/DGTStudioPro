@@ -1,10 +1,3 @@
-//
-//  GameAnalysisDriver.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 18/05/2026.
-//
-
 import Foundation
 import os
 import SwiftData

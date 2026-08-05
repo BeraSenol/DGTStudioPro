@@ -1,10 +1,3 @@
-//
-//  MovetextEdit.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 21/07/2026.
-//
-
 /// Validates a proposed movetext for an edit to an archived game (M-lib.3,
 /// D18′). No new legality algorithm — the chess core already is one, so the
 /// proposed SAN is replayed ply-by-ply from the standard start position

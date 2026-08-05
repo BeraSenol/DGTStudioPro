@@ -1,10 +1,3 @@
-//
-//  DGTFramer.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 25/05/2026.
-//
-
 /// One fully-received DGT message, sliced out of the byte stream by
 /// `DGTFramer`. The framer is deliberately semantics-free: it carries the raw
 /// message byte (even one we don't recognize) and the payload bytes that

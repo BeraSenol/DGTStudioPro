@@ -1,10 +1,3 @@
-//
-//  Square.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 24/03/2026.
-//
-
 internal typealias Square = Int
 
 internal enum Squares {

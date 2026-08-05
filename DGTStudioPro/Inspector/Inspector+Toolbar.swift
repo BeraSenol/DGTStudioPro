@@ -1,10 +1,3 @@
-//
-//  Inspector+Toolbar.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 29/04/2026.
-//
-
 import SwiftUI
 
 /// The toggle as `ToolbarContent`, so a host composes it into its **own**

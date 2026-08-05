@@ -1,10 +1,3 @@
-//
-//  BoardView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 06/04/2026.
-//
-
 import SwiftUI
 
 internal struct BoardView: View {

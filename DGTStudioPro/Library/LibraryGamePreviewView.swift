@@ -1,10 +1,3 @@
-//
-//  LibraryGamePreviewView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 03/05/2026.
-//
-
 import SwiftData
 import SwiftUI
 

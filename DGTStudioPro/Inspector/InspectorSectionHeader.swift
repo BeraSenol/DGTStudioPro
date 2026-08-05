@@ -1,10 +1,3 @@
-//
-//  InspectorSectionHeader.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 27/07/2026.
-//
-
 import SwiftUI
 
 /// A sidebar section header that names the thing the section is about, with

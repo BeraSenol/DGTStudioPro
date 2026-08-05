@@ -1,10 +1,3 @@
-//
-//  PGNParser.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 19/04/2026.
-//
-
 import Foundation
 import os
 

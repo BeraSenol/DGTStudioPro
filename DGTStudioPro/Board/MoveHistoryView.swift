@@ -1,10 +1,3 @@
-//
-//  MoveHistoryView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 13/04/2026.
-//
-
 import SwiftUI
 
 internal struct MoveHistoryView: View {

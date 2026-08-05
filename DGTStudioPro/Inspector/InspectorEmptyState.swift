@@ -1,41 +1,22 @@
-//
-//  InspectorEmptyState.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 27/07/2026.
-//
-
 import SwiftUI
 
 /// The one "nothing selected" surface every inspector renders (D26′).
 ///
-/// Not a wrapper for its own sake. Board filled its column with a centred
-/// `ContentUnavailableView`; Library and Players put the same view *inside*
-/// a `List`, where it becomes a top-aligned row with sidebar chrome behind
-/// it; Rankings rendered a bare secondary `Text` under a section header with
-/// no symbol at all. Centred-and-filling is the platform idiom and the one
-/// Board already had, so it wins.
-///
-/// The trap this closes: an empty state is the one part of an inspector with
-/// no data to shape it, so nothing forces the four to agree — they agree only
-/// while someone remembers. A shared type makes it structural: D22′'s move,
-/// applied to the empty case.
+/// The trap it closes: an empty state has no data to shape it, so nothing
+/// forces the hosts to agree — they agree only while someone remembers.
+/// Centred-and-filling is the platform idiom and the one Board already had.
 ///
 /// Hosts must render this **outside** their `List`. Inside one it is a row
 /// again and the divergence returns.
 ///
-/// D46′ gave it its first host that is not an inspector — the evaluation
-/// magnifier's window, whose empty state is the same shape and the same
-/// question. Left here rather than renamed: the contract this type enforces is
-/// about *layout* (centred, filling, outside the `List`), which is as true of a
-/// window as of a sidebar, and a rename would be a breaking change to five call
-/// sites to relabel a thing that hasn't changed. Noted so the name is read as
-/// where it came from rather than as where it may be used.
+/// D46′ gave it its first non-inspector host, the magnifier window. Not
+/// renamed: the contract is about *layout* — centred, filling, outside the
+/// `List` — which is as true of a window as of a sidebar. Read the name as
+/// where it came from rather than where it may be used.
 ///
-/// Copy is `LocalizedStringKey`, not `String`: the call sites pass literals,
-/// and a `String` parameter would silently resolve to
-/// `ContentUnavailableView`'s non-localizing overload instead — an opt-out
-/// nobody decided.
+/// Copy is `LocalizedStringKey`, not `String`: call sites pass literals, and a
+/// `String` would silently resolve to `ContentUnavailableView`'s
+/// non-localizing overload — an opt-out nobody decided.
 ///
 /// The identifier takes no default (the `dgtConnectionToolbar` lesson): a
 /// shared fallback would hand two inspectors the same identifier, while a
@@ -57,8 +38,8 @@ internal struct InspectorEmptyState: View {
         )
         // Stated, not inherited: `ContentUnavailableView` centres within
         // whatever it is handed, and what it is handed is the host's choice.
-        // This frame is what makes the answer "the inspector column" at all
-        // four call sites rather than three.
+        // This frame is what makes the answer "the inspector column" at every
+        // call site rather than most of them.
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier(identifier)
     }

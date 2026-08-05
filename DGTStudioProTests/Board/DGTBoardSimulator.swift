@@ -1,10 +1,3 @@
-//
-//  DGTBoardSimulator.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 26/05/2026.
-//
-
 @testable import DGTStudioPro
 
 /// A hardware-free stand-in for a physical DGT board, used to drive the

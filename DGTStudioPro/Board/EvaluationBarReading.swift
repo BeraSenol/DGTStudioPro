@@ -1,10 +1,3 @@
-//
-//  EvaluationBarReading.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 30/07/2026.
-//
-
 import Foundation
 
 /// The vertical evaluation bar's pure mapping (M3, D33′): one `Evaluation?`

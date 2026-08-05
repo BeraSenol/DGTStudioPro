@@ -1,10 +1,3 @@
-//
-//  PlayersIconsView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 20/07/2026.
-//
-
 import SwiftUI
 
 /// The Players icons grid, with the Library grid's two Finder gestures

@@ -1,10 +1,3 @@
-//
-//  GameState+MoveGeneration.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 06/05/2026.
-//
-
 extension GameState {
     
     // MARK: Entry Point

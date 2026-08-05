@@ -1,10 +1,3 @@
-//
-//  IconGridSelectionTests.swift
-//  DGTStudioProTests
-//
-//  Created by Supreme Leader on 02/08/2026.
-//
-
 import SwiftUI
 import Testing
 @testable import DGTStudioPro

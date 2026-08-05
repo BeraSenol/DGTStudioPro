@@ -1,10 +1,3 @@
-//
-//  DGTSessionLog.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 28/05/2026.
-//
-
 import AppKit
 import Foundation
 import os

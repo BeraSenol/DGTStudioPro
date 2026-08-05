@@ -1,10 +1,3 @@
-//
-//  GameRecord.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 20/07/2026.
-//
-
 import Foundation
 
 /// A Library game projected to the pure value the M-prs cores consume

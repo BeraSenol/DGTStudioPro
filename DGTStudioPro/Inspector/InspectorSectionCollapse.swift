@@ -1,10 +1,3 @@
-//
-//  InspectorSectionCollapse.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 01/08/2026.
-//
-
 import Foundation
 import Observation
 import os

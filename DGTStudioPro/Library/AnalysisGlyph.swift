@@ -1,10 +1,3 @@
-//
-//  AnalysisGlyph.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 02/08/2026.
-//
-
 import SwiftUI
 
 /// The analysis-state glyph (2 Aug 2026, retiring the state-blind

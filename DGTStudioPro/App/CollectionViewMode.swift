@@ -1,10 +1,3 @@
-//
-//  CollectionViewMode.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 28/04/2026.
-//
-
 import SwiftUI
 
 internal enum CollectionViewMode: String, CaseIterable, Identifiable {

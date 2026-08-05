@@ -1,10 +1,3 @@
-//
-//  EvaluationBarView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 30/07/2026.
-//
-
 import SwiftUI
 
 /// The vertical evaluation bar beside the review board (M3, D33′). Dumb by

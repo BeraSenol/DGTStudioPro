@@ -1,10 +1,3 @@
-//
-//  DestinationSubtitle.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 03/08/2026.
-//
-
 // MARK: Destination Subtitle
 
 /// The toolbar subtitle grammar for all three destinations — a pure

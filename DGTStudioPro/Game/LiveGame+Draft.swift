@@ -1,10 +1,3 @@
-//
-//  LiveGame+Draft.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 13/06/2026.
-//
-
 import Foundation
 
 /// Draft conversion for the live model (M4): `draftSnapshot` projects the

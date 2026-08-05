@@ -1,10 +1,3 @@
-//
-//  TabState.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 21/05/2026.
-//
-
 import Foundation
 import SwiftData
 

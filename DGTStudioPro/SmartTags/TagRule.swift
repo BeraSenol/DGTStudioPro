@@ -1,10 +1,3 @@
-//
-//  TagRule.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 20/07/2026.
-//
-
 import Foundation
 
 /// One row of a smart tag (M-prs.5, D12′): field + comparison + value,

@@ -1,10 +1,3 @@
-//
-//  EvaluationGraphReading.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 01/08/2026.
-//
-
 import Foundation
 
 /// The evaluation graph's one mapping between a ply and a horizontal position.

@@ -1,10 +1,3 @@
-//
-//  GameState+SAN.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 09/05/2026.
-//
-
 import Foundation
 
 extension GameState {

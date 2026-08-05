@@ -1,10 +1,3 @@
-//
-//  PGN+Export.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 24/07/2026.
-//
-
 import Foundation
 
 /// The export seam (D17′/D24′) — the model's side of `PGNSerializer`, kept

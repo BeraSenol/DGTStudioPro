@@ -1,10 +1,3 @@
-//
-//  RosterSummary.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 23/07/2026.
-//
-
 import Foundation
 
 /// One game's Seven Tag Roster, ready for a sidebar (D22′).

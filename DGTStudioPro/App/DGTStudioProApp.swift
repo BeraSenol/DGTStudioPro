@@ -1,10 +1,3 @@
-//
-//  DGTStudioProApp.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 24/03/2026.
-//
-
 import AppKit
 import SwiftData
 import SwiftUI
@@ -267,15 +260,12 @@ internal struct DGTStudioProApp: App {
         // only tabs windows from the same group, which is exactly what this one
         // must *not* do with the game windows above.
         //
-        // Keyed on `EvaluationGraphRequest` and not on `PersistentIdentifier`:
-        // `openWindow(value:)` routes by value type, the group above already
-        // claims that type, and three call sites depend on it. See the request
-        // type for the full reason — the short version is that the routing is
-        // now a fact about the type system rather than about which scene was
-        // declared first.
+        // Keyed on `EvaluationGraphRequest`, not `PersistentIdentifier`: the
+        // group above claims that type and `openWindow(value:)` routes by type.
+        // Full reason at the request type.
         //
-        // (This scene spent part of 4 Aug 2026 deleted, the graph a popover;
-        // reverted the same night — the D46′ anchor records the round trip.)
+        // (Deleted for part of 4 Aug 2026, the graph a popover; reverted the
+        // same night — the D46′ anchor records the round trip.)
         WindowGroup("Evaluation", for: EvaluationGraphRequest.self) { $request in
             EvaluationGraphWindow(request: request)
         }
@@ -295,10 +285,8 @@ internal struct DGTStudioProApp: App {
         // tabbed behind a board is a window you lost.
         //
         // Keyed on `GetInfoRequest` for the reason D46′ established one scene
-        // up: `openWindow(value:)` routes by value type, the first group above
-        // claims `PersistentIdentifier`, and five call sites depend on that.
-        // The enum pays that cost once for three subjects instead of three
-        // times.
+        // up, and the enum pays that cost once for three subjects rather than
+        // three times. D53′.
         //
         // Deliberately *not* `.windowLevel(.floating)`, unlike the graph. The
         // graph floats because it is read while the board underneath is

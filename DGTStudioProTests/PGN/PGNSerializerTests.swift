@@ -1,10 +1,3 @@
-//
-//  PGNSerializerTests.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 29/07/2026.
-//
-
 import Testing
 import Foundation
 @testable import DGTStudioPro

@@ -1,10 +1,3 @@
-//
-//  UCIProtocol.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 14/05/2026.
-//
-
 import Foundation
 
 /// Parses the line-based UCI (Universal Chess Interface) protocol that

@@ -1,10 +1,3 @@
-//
-//  BoardPieceLayer.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 02/08/2026.
-//
-
 import SwiftUI
 
 /// One piece, drawn — the glyph, its aspect fit, and the 6% breathing room,

@@ -1,10 +1,3 @@
-//
-//  DGTBoardDiff.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 26/05/2026.
-//
-
 /// The difference between two board positions, expressed as the squares that
 /// lost a piece and the squares that now hold one. Pure value type.
 ///

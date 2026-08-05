@@ -1,10 +1,3 @@
-//
-//  AnalysisQueueController.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 19/07/2026.
-//
-
 import Foundation
 import os
 import SwiftData

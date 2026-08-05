@@ -1,10 +1,3 @@
-//
-//  FEN.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 30/03/2026.
-//
-
 internal struct FEN: Equatable, Sendable {
     
     // MARK: Static Constants

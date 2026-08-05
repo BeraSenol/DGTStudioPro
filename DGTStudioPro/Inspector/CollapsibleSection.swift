@@ -1,40 +1,22 @@
-//
-//  CollapsibleSection.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 01/08/2026.
-//
-
 import SwiftUI
 
 /// A `Section` whose header carries the D45′ chevron and whose body obeys it.
 ///
-/// **This type exists to make one specific defect unrepresentable.** A
-/// collapsible section is two facts that must agree — which section the chevron
-/// toggles, and which section the body checks before rendering — and written by
-/// hand at fifteen call sites they are two arguments that can differ. Nothing
-/// would catch `.moves` in the header and `.evaluation` in the guard: it
-/// compiles, it renders, and it fails only when a reader collapses one section
-/// and watches a different one disappear.
+/// **Exists to make one defect unrepresentable.** A collapsible section is two
+/// facts that must agree — which section the chevron toggles, and which one the
+/// body checks — and hand-written they are two arguments that can differ.
+/// `.moves` in the header with `.evaluation` in the guard compiles, renders,
+/// and fails only when a reader folds one section and watches another
+/// disappear. D40′'s "one predicate, called twice" in its structural form:
+/// **one argument, used twice, by a type the host cannot route around.**
 ///
-/// M5 wrote the general form of this as an agreement — *a guard that exists in
-/// two places must be computed from one source* — and D40′ sharpened it after
-/// two guards agreed perfectly on a value neither could ever produce. The
-/// remedy recorded there was "one predicate, called twice". This is the
-/// structural version: **one argument, used twice, by a type the host cannot
-/// route around.**
+/// It also keeps the environment out of the hosts — two files hold it, this one
+/// gating the body and `InspectorSectionHeader` drawing the chevron. A host
+/// holding the store is a host that can be tempted to write to it.
 ///
-/// It also keeps the environment read out of the hosts: two files hold it —
-/// this one gating the body, `InspectorSectionHeader` drawing the chevron —
-/// instead of nine. Without it, seven inspector hosts would each need
-/// `@Environment(InspectorSectionCollapse.self)` for no reason other than to
-/// write the same `if` — and a host holding the store is a host that can be
-/// tempted to write to it.
-///
-/// `InspectorSectionHeader.section` is the parameter this drives, and it has no
-/// other intended caller. A header constructed with a `section:` outside this
-/// type gets a chevron that toggles state nothing reads, which is the defect
-/// above wearing its other face.
+/// `InspectorSectionHeader.section` is the parameter this drives and has no
+/// other intended caller: a header given a `section:` outside this type gets a
+/// chevron toggling state nothing reads — the same defect, other face.
 internal struct CollapsibleSection<Content: View, Actions: View>: View {
 
     // MARK: Stored Properties

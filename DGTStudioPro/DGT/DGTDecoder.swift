@@ -1,10 +1,3 @@
-//
-//  DGTDecoder.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 25/05/2026.
-//
-
 import Foundation
 
 /// A decoded, semantically-meaningful DGT board event. This is the output of

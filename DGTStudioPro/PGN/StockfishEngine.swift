@@ -1,10 +1,3 @@
-//
-//  StockfishEngine.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 15/05/2026.
-//
-
 import Foundation
 import os
 

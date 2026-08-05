@@ -1,10 +1,3 @@
-//
-//  InspectorEditButtonView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 27/07/2026.
-//
-
 import SwiftUI
 
 /// The pencil that edits what a section header names.

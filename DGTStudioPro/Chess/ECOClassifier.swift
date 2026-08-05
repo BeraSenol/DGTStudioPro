@@ -1,10 +1,3 @@
-//
-//  ECOClassifier.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 30/07/2026.
-//
-
 /// One named opening from the bundled ECO table (D19′, D34′).
 ///
 /// The name arrives from the source as a single string in lichess's

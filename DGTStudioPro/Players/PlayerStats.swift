@@ -1,10 +1,3 @@
-//
-//  PlayerStats.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 20/07/2026.
-//
-
 import Foundation
 
 /// Per-player aggregates over a set of `GameRecord`s, plus the two

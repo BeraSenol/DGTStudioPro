@@ -1,10 +1,3 @@
-//
-//  SquareView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 01/04/2026.
-//
-
 import SwiftUI
 
 internal struct SquareView: View {

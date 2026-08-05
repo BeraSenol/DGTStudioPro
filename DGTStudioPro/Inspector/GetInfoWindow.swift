@@ -1,10 +1,3 @@
-//
-//  GetInfoWindow.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 04/08/2026.
-//
-
 import os
 import SwiftData
 import SwiftUI
@@ -13,27 +6,17 @@ import SwiftUI
 
 /// What a Get Info gesture asks for: one subject, named by what it is.
 ///
-/// **An enum rather than three request types, and a wrapper rather than a bare
-/// `PersistentIdentifier` — both for the same reason, which is worth stating
-/// once here because it is the trap this whole file is arranged around.**
-/// `openWindow(value:)` routes by the value's *type*. The app's main
-/// `WindowGroup` is already declared `for: PersistentIdentifier.self` with five
-/// call sites relying on it, and `EvaluationGraphRequest` (D46′) exists purely
-/// because a second group over that type would have made all five ambiguous —
-/// "open a game from the Library" silently becoming "open a graph".
+/// **An enum, and a wrapper rather than a bare `PersistentIdentifier` — the
+/// trap this whole file is arranged around.** `openWindow(value:)` routes by
+/// the value's *type*, and the main `WindowGroup` already claims
+/// `PersistentIdentifier`; a second group over it would silently turn "open a
+/// game from the Library" into "open a graph" (D46′, first instance). One enum
+/// and one scene rather than three of each pays that cost once and tabs the
+/// three info windows with each other rather than behind a board.
 ///
-/// Three subjects could have been three request structs and three scenes. One
-/// enum and one scene is better twice over: it pays D46′'s cost once instead of
-/// three times, and it makes the three Get Info windows *one group*, so macOS
-/// tabs them with each other and not with the game windows. Two info windows
-/// side by side is a comparison; an info window tabbed behind a board is a
-/// window you lost.
-///
-/// `.live` carries nothing because a live game is not in the store — it has no
-/// `PersistentIdentifier` to carry until it archives. That asymmetry is real
-/// rather than an oversight, and it is why this is an enum and not a struct
-/// with an optional identifier: an optional would make "no game" and "the live
-/// game" the same value.
+/// `.live` carries nothing — a live game has no identifier until it archives.
+/// Hence an enum and not a struct with an optional id, which would make "no
+/// game" and "the live game" the same value. D53′.
 internal enum GetInfoRequest: Codable, Hashable, Sendable {
 
     /// An archived game, from the Library or the Board's review branch.
@@ -45,16 +28,10 @@ internal enum GetInfoRequest: Codable, Hashable, Sendable {
 
     /// A player, named by `Player.normalizedName`.
     ///
-    /// **A key and not a `PersistentIdentifier`, unlike the game case, and the
-    /// asymmetry is the destination's rather than this type's.** Players'
-    /// view modes render `PlayerStats` — a fold over `GameRecord`s whose
-    /// `ID` *is* the normalized key — so no row on that screen holds a
-    /// `Player` model to take an identifier from. Requiring one would make
-    /// every call site fetch a model in order to name something it can
-    /// already name.
-    ///
-    /// D40′'s consequence rides along for free: a linkless registry row
-    /// appears in no view mode, so no key reaching here can name an orphan.
+    /// A key, not a `PersistentIdentifier`: Players' view modes render
+    /// `PlayerStats`, whose `ID` *is* the normalized key, so no row on that
+    /// screen holds a `Player` to take an identifier from. D40′ rides along —
+    /// a linkless row appears in no view mode, so no key here names an orphan.
     case player(key: String)
 }
 
@@ -62,26 +39,18 @@ internal enum GetInfoRequest: Codable, Hashable, Sendable {
 
 /// The Get Info menu item, everywhere it appears.
 ///
-/// **One type rather than a line per context menu, and this is D26′'s
-/// argument applied to a verb instead of a glyph.** There are six context
-/// menus across the Library's and Players' view modes, and a hand-written item
-/// in each is six chances to disagree about the label, the symbol, the
-/// keyboard shortcut, or — worst and least visible — which subject the request
-/// names. `InspectorEditButtonView` hardcodes the pencil so five edit
-/// affordances cannot drift; this hardcodes the verb so six doors cannot.
+/// **One type rather than a line per context menu** — D26′'s argument applied
+/// to a verb instead of a glyph. A hand-written item in each of the six context
+/// menus is six chances to disagree about label, symbol, shortcut, or — worst
+/// and least visible — which subject the request names.
 ///
-/// It owns `openWindow` itself rather than taking a closure, which is the
-/// arrangement `PlayersInspectorView` and `PlayersColumnsView` already use for
-/// the game-window route. Six new closure parameters threaded from two
-/// destinations would be the same wiring with more places to get it wrong.
+/// It owns `openWindow` rather than taking a closure, the arrangement
+/// `PlayersInspectorView` and `PlayersColumnsView` already use for the
+/// game-window route.
 ///
-/// ⌘I is attached here so the shortcut travels with the item. The Board's copy
-/// lives in `GameNavigationCommands`, which is why this type has two doors
-/// rather than one: a `Commands` scene has no `openWindow`, so the menu-bar
-/// item can only *ask* a view to open it (`SmartTagCommands`' trigger-binding
-/// shape). Both spellings render the same label, symbol and shortcut, which is
-/// the whole point — the alternative was a hand-written seventh item in the
-/// Game menu, drifting from the six this type exists to keep identical.
+/// Two doors because a `Commands` scene has no `openWindow`: the menu-bar item
+/// can only *ask* a view to open one (`SmartTagCommands`' trigger-binding
+/// shape). ⌘I is attached here so the shortcut travels with the item.
 internal struct GetInfoMenuItem: View {
 
     // MARK: Door
@@ -105,10 +74,7 @@ internal struct GetInfoMenuItem: View {
 
     // MARK: Initializers
 
-    /// The context-menu form: this item owns the window route, the same
-    /// arrangement `PlayersInspectorView` and `PlayersColumnsView` use for the
-    /// game-window one. Six closure parameters threaded from two destinations
-    /// would be the same wiring with more places to get it wrong.
+    /// The context-menu form: this item owns the window route.
     internal init(request: GetInfoRequest, identifier: String) {
         self.door = .opens(request)
         self.identifier = identifier
@@ -147,55 +113,38 @@ internal struct GetInfoMenuItem: View {
 
 /// M10 — one gesture on the thing itself, and the app's rename door.
 ///
-/// **Scope, stated first because the earlier version of this comment did not
-/// and was wrong for it.** This window called itself "the one editable surface
-/// behind every inspector's subject" while every row in all three forms was a
-/// `LabeledContent`. It edits exactly one thing today: a player's tag name.
-/// The game and live forms are read-only, and that is a current fact rather
-/// than a permanent one — but a doc that describes the destination instead of
-/// the code is the comment-asserting-a-guarantee shape this project keeps
-/// catching itself in, so it describes the code.
+/// **Scope, because an earlier version of this comment got it wrong:** it edits
+/// exactly one thing, a player's tag name. The game and live forms are
+/// read-only — a current fact rather than a permanent one, but a doc describing
+/// the destination instead of the code is the shape this project keeps
+/// catching itself in.
 ///
-/// **Why this replaces five pencils rather than joining them.** D26′ bought a
-/// guarantee by hardcoding the pencil: five edit affordances could not drift
-/// apart because they were one type. What it could not do is make them one
-/// *surface* — Edit Info, Edit Details and Rename Player opened three
-/// different editors reached three different ways, all of them a header
-/// control on a panel the reader had to already be looking at. Get Info is one
-/// gesture on the thing itself, which is what lets rename stop being a special
-/// case: it is not a pencil rehomed, it is the Players instance of the same
-/// verb the Library and Board already have.
+/// **It replaces five pencils rather than joining them.** D26′ kept five edit
+/// affordances from drifting by making them one type; what it could not do is
+/// make them one *surface*. Get Info is one gesture on the subject itself,
+/// which is what lets rename stop being a special case rather than a pencil
+/// rehomed.
 ///
-/// **The rename machinery moved here whole rather than being reached from
-/// here.** `RenamePlayerSheet`, `RenameRequest` and `PlayersDestination`'s
-/// `beginRename` are gone: a sheet opened *from* this window would be a modal
-/// over a companion window, and leaving the door in the destination while the
-/// field lives here would be two surfaces for one write. What survived intact
-/// is D37′'s argument, because the player form already had its exact shape —
-/// tag above, derived display form below, game count in the next section —
-/// and only needed the top row to become a field.
+/// The rename machinery moved here **whole**: a sheet opened from this window
+/// would be a modal over a companion window, and a door left in the destination
+/// with the field here would be two surfaces for one write. D37′'s argument
+/// survived intact — the player form already had that shape and only needed its
+/// top row to become a field.
 ///
-/// **A window, not a popover or a sheet**, and this is D46′'s finding taken as
-/// settled rather than re-argued. That decision built a popover on 4 Aug, lived
-/// with it for a day, and reverted to the window the same night: a companion
-/// surface that dismisses when you click the thing it describes is not a
-/// companion. Get Info is that shape exactly — you edit an event name while
-/// reading the board, or compare two games' rosters side by side, and both
-/// need the window to survive a click elsewhere.
+/// **A window, not a popover or sheet** — D46′ taken as settled, having been
+/// field-tested against a popover and reverted inside a day. You edit an event
+/// name while reading the board, so this must survive a click elsewhere.
 ///
-/// Resolution is `@State` written by `.task(id:)` rather than a computed
-/// property: a store lookup does not belong on a render path, and this body
-/// should re-run when the request or the resolved subject changes, not when a
-/// text field does. `EvaluationGraphWindow`'s arrangement, for its reason.
+/// Resolution is `@State` written by `.task(id:)` rather than computed: a store
+/// lookup does not belong on a render path, and this body should re-run when
+/// the request or subject changes, not when a text field does.
 internal struct GetInfoWindow: View {
 
     // MARK: Static Constants
 
-    /// The three HIG-derived numbers `DGTConnectionView.Metrics` names, cited
-    /// by name and reason rather than imported — the third dialog to do so,
-    /// after the rename and merge sheets that M10 and D52′ retired. Two
-    /// dialogs' two decisions that agree today; a shared constant would claim
-    /// they must agree forever.
+    /// Borrowed from `DGTConnectionView.Metrics` by name and reason rather than
+    /// imported: two dialogs' two decisions that agree today, where a shared
+    /// constant would claim they must agree forever.
     private static let contentPadding: CGFloat = 20
 
     /// `players`, not a category of this window's own: the retag lines this
@@ -217,26 +166,20 @@ internal struct GetInfoWindow: View {
 
     /// The registry, for the Details tab's seat menus (5 Aug 2026).
     ///
-    /// A `@Query` here where `EditGameInfoSheet` takes strings, and the
-    /// difference is not inconsistency: that type is deliberately
-    /// container-free so its previews can build it, while this window already
-    /// has a `modelContainer` on its scene and already resolves a `Player`
-    /// through `modelContext` for the `.player` subject. Querying gets
-    /// reactivity for free — rename a player in one info window and the other's
-    /// seat menu updates — which a snapshot passed at construction would not.
-    ///
-    /// Sorted by `name`, matching both other seat menus, so all three list
-    /// players in the same order.
+    /// A `@Query` here where `EditGameInfoSheet` takes strings, and that is not
+    /// inconsistency: the sheet is deliberately container-free so its previews
+    /// can build it, while this window already carries a container. Querying
+    /// buys reactivity a passed snapshot would not. Sorted by `name`, matching
+    /// both other seat menus. D59′.
     @Query(sort: \Player.name) private var knownPlayers: [Player]
 
     @State private var subject: Subject?
 
     /// The tag being edited, seeded by `resolve()` and committed on Return.
     ///
-    /// A draft rather than a binding straight onto `Player.tagName`, for the
-    /// reason D37′ gives the sheet it replaces: a rename is not a label change
-    /// but a rewrite across every linked game, each with an MD5 and a
-    /// re-resolve. Writing on every keystroke would run that per character.
+    /// A draft rather than a binding onto `Player.tagName` (D37′): a rename is
+    /// a rewrite across every linked game, each with an MD5 and a re-resolve,
+    /// and a binding would run that per keystroke.
     @State private var draftTag = ""
 
     /// D39′'s refusal, held for the alert. Nil is the normal state; a value
@@ -248,16 +191,14 @@ internal struct GetInfoWindow: View {
     /// The six text-shaped roster tags, held as drafts and committed one at a
     /// time — the player tab's arrangement, widened.
     ///
-    /// Drafts rather than bindings straight onto the model for the reason the
-    /// tag field gives: a commit is `PGNStore.applyEdit`, which re-resolves
-    /// **both** seats and recomputes the MD5 in one transaction, and binding a
-    /// `TextField` to `pgn.event` would run that per keystroke.
+    /// Drafts rather than bindings onto the model: a commit is
+    /// `PGNStore.applyEdit`, which re-resolves both seats and recomputes the
+    /// MD5, and a binding would run that per keystroke.
     ///
-    /// Six `@State`s rather than a draft struct, because the field being
-    /// committed is the unit of work: `commitField(_:on:)` writes exactly the
-    /// one property its case names, so a stray edit in one row cannot ride
-    /// along with another row's Return. A struct would make "which of these
-    /// changed?" a diff, which is the shape D18′ already rejected at
+    /// Separate `@State`s rather than a draft struct, because the field is the
+    /// unit of work — `commitField(_:on:)` writes exactly the property its case
+    /// names, so a stray edit cannot ride along with another row's Return. A
+    /// struct would make "which changed?" a diff, the shape D18′ rejected at
     /// `applyEdit`.
     @State private var draftEvent = ""
     @State private var draftSite = ""
@@ -276,12 +217,11 @@ internal struct GetInfoWindow: View {
     /// Which row holds the keyboard, so a commit can fire on focus loss as
     /// well as on Return.
     ///
-    /// **Focus loss commits here and deliberately does not on the player tab**,
-    /// which is the one place the two tabs' rules differ and the difference is
-    /// the blast radius. A game edit writes one row; a rename rewrites every
-    /// game the player appears in, so committing that because the window lost
-    /// focus would turn clicking away into a forty-game rewrite nobody asked
-    /// for. Same window, two rules, stated at both sites.
+    /// **Focus loss commits here and deliberately does not on the player tab.**
+    /// The difference is blast radius: a game edit writes one row, a rename
+    /// rewrites every game the player appears in, so committing that on focus
+    /// loss would make clicking away a forty-game rewrite. Two rules in one
+    /// window, stated at both sites. D57′.
     @FocusState private var focusedField: GameField?
 
     /// A refused field edit, held for its alert. Two causes reach it: a result
@@ -304,11 +244,9 @@ internal struct GetInfoWindow: View {
         .task(id: request) { resolve() }
         // Re-resolves when the live game ends, which `.task(id: request)`
         // cannot: a `.live` request never changes, so without this the window
-        // would keep rendering a retained `LiveGame` under "Recording" long
-        // after it archived. The unavailable state's doc claims to cover "a
-        // live game that ended" — this is what makes that claim true rather
-        // than merely plausible, and it was written for a branch nothing could
-        // reach until the Board grew its own Get Info door.
+        // keeps rendering a retained `LiveGame` under "Recording" long after it
+        // archived. This is what makes the unavailable state's "a live game
+        // that ended" claim reachable rather than merely plausible.
         .onChange(of: session.liveGame == nil) { _, _ in
             if case .live = request { resolve() }
         }
@@ -319,12 +257,9 @@ internal struct GetInfoWindow: View {
             actions: { _ in Button("OK", role: .cancel) {} },
             message: { refusal in Text(Self.refusalMessage(refusal.collisions)) }
         )
-        // D57′. A separate alert from the rename refusal rather than one
-        // widened to carry both: they are refusals from two different doors
-        // about two different things, and the one thing a refusal alert must do
-        // is name what it refused. `RetagRefusal.Operation` was minted to make
-        // one alert serve two doors on 4 Aug and retired the same evening with
-        // the second door (D52′) — the lesson stuck.
+        // D57′. Separate from the rename refusal rather than one alert widened
+        // to carry both: two doors refusing two different things, and the one
+        // thing a refusal must do is name what it refused.
         .alert(
             fieldRefusal?.title ?? "",
             isPresented: Binding(present: $fieldRefusal),
@@ -341,11 +276,10 @@ extension GetInfoWindow {
 
     /// The editable roster rows, as focus identities and as commit targets.
     ///
-    /// Deliberately **not** `SevenTagRoster`: that enum is the *display* order
-    /// of seven tags including Result, and Result is a `Picker` with no focus
-    /// state and no draft. Reusing it would give this enum a case that can
-    /// never be focused and no field to commit, which is the "a guard that can
-    /// never be true" shape one type over. Six cases, all of them real.
+    /// Deliberately **not** `SevenTagRoster`: that is the *display* order of
+    /// seven tags including Result, and Result is a `Picker` with no focus state
+    /// and no draft. Reusing it would mint a case that can never be focused —
+    /// the "guard that can never be true" shape. Every case here is real.
     fileprivate enum GameField: Hashable {
         case event, site, round, white, black, date
         case board, timeControl
@@ -353,16 +287,13 @@ extension GetInfoWindow {
 
     /// A per-field edit this form refused, rendered as an alert.
     ///
-    /// Carries the rendered sentence rather than the underlying rejection,
-    /// because the alert needs one string and the mapping from cause to prose
-    /// belongs beside the switch that is exhaustive over it.
+    /// Carries the rendered sentence rather than the underlying rejection: the
+    /// alert needs one string, and cause-to-prose belongs beside the switch
+    /// that is exhaustive over it.
     ///
-    /// **Gained a `title` in D61′**, when a second field started refusing. It
-    /// was `ResultRefusal` with a hard-coded "Can't Change Result" at the alert;
-    /// a seat refusal is the same shape with a different heading, and two
-    /// structs of one field plus two alerts on one view is more machinery than
-    /// one struct of two fields. Not a rename for tidiness — the second caller
-    /// is what made the title a value rather than a literal.
+    /// The `title` is a value rather than a literal because D61′ added a second
+    /// refusing field — one struct of two fields beats two structs of one plus
+    /// two alerts on one view.
     fileprivate struct FieldRefusal: Identifiable {
         let title: String
         let message: String
@@ -377,10 +308,9 @@ extension GetInfoWindow {
     /// The resolved counterpart of `GetInfoRequest` — what the window found
     /// when it looked, as opposed to what it was asked for.
     ///
-    /// Separate from the request rather than the request carrying its own
-    /// model, because a request is `Codable` scene state that outlives the
-    /// launch it was made in, and a `@Model` is never `Sendable` and never
-    /// survives one. The same split `Error.duplicate` makes for the same
+    /// Separate from the request because a request is `Codable` scene state
+    /// that outlives the launch it was made in, and a `@Model` is never
+    /// `Sendable` and never survives one. `Error.duplicate`'s split, same
     /// reason.
     fileprivate enum Subject {
         case game(PGN)
@@ -391,20 +321,17 @@ extension GetInfoWindow {
     /// A refused retag, rendered as an alert.
     ///
     /// Holds the store's `Sendable` collision payload — identifiers and names,
-    /// never models — so the alert can name the games without resolving
-    /// anything. `Identifiable` off the first collision's game identifier: a
-    /// refusal is always about at least one pair. Moved here with the rename
-    /// door it belongs to; `PlayersDestination` kept nothing of it.
+    /// never models — so the alert names the games without resolving anything.
+    /// `Identifiable` off the first collision: a refusal always has one pair.
     fileprivate struct Refusal: Identifiable {
         let collisions: [PGNStore.HashCollision]
         var id: PersistentIdentifier { collisions[0].gameID }
     }
 
     /// The cast paired with an `isDeleted` check, per the standing invariant:
-    /// `model(for:)` hands back a tombstone for a row deleted while this
-    /// window was open, and every property read on one traps. The window then
-    /// shows its unavailable state, which is the truth — the thing it was
-    /// opened to describe is gone.
+    /// `model(for:)` hands back a tombstone for a row deleted while this window
+    /// was open, and every property read on one traps. Falling to the
+    /// unavailable state is the truth — the subject is gone.
     private func resolve() {
         switch request {
         case .game(let id):
@@ -416,10 +343,8 @@ extension GetInfoWindow {
             subject = .game(pgn)
 
         case .live:
-            // Resolved from the session rather than carried in the request:
-            // the live game is a singleton the session owns, and a request
-            // holding it would be a second reference to a `@MainActor` class
-            // inside `Codable` scene state.
+            // From the session rather than the request: a request holding it
+            // would put a `@MainActor` class inside `Codable` scene state.
             guard let live = session.liveGame else {
                 subject = nil
                 return
@@ -427,10 +352,9 @@ extension GetInfoWindow {
             subject = .live(live)
 
         case .player(let key):
-            // Predicated rather than fetched-and-scanned: identity is a
-            // stored column, so this is one of the questions a
-            // `FetchDescriptor` can answer whole. `normalizedName` is the
-            // D9′ identity key, so at most one row can match.
+            // Predicated rather than fetched-and-scanned: identity is a stored
+            // column, so a `FetchDescriptor` answers this whole.
+            // `normalizedName` is D9′'s key, so at most one row matches.
             var descriptor = FetchDescriptor<Player>(
                 predicate: #Predicate { $0.normalizedName == key }
             )
@@ -439,13 +363,11 @@ extension GetInfoWindow {
                 subject = nil
                 return
             }
-            // Seeded with the stored **tag** form — `tagName ?? name`, the
-            // seat picker's fallback (D29′) for a pre-schema row. Seeding with
-            // `name` instead would put a display form in a field that stores a
+            // Stored **tag** form — `tagName ?? name`, D29′'s fallback. Seeding
+            // from `name` would put a display form in a field that stores a
             // tag, and the first commit would write "Bera Şenol" into every
-            // affected game's `[White]`. D37′'s trap, one keystroke away, and
-            // it is the reason this seeding lives beside the fetch rather than
-            // in the form where the field is drawn.
+            // affected game's `[White]`. D37′'s trap, one keystroke away; it is
+            // why the seeding lives beside the fetch, not in the form.
             draftTag = player.tagName ?? player.name
             subject = .player(player)
 
@@ -454,23 +376,17 @@ extension GetInfoWindow {
         }
     }
 
-    /// Seeds the six drafts from stored state, beside the fetch rather than in
-    /// the form — the player tab's placement, for the reason its comment gives
-    /// about seeding a tag field from a display name.
+    /// Seeds the drafts from stored state, beside the fetch rather than in the
+    /// form — the player tab's placement, for its reason.
     ///
-    /// **Tag form in, verbatim**, including the `?` placeholders: these fields
-    /// edit what export writes byte for byte (D24′), so the field must show the
-    /// stored string and not `RosterSummary`'s rendering of it. That is the one
-    /// place this form parts company with the read-only version it replaces —
-    /// the old rows went through `RosterSummary`'s subscript, which folds
+    /// **Tag form in, verbatim**, `?` placeholders included: these fields edit
+    /// what export writes byte for byte (D24′), so they must show the stored
+    /// string rather than `RosterSummary`'s rendering of it, which folds
     /// "Senol, Bera" to "Bera Senol" and every unknown to an em dash (D55′).
-    /// Seeding from that would put a display form in a field that stores a tag,
-    /// and the first commit would write it into `[White]`. D37′'s trap, in a
-    /// second place.
+    /// D37′'s trap in a second place.
     ///
-    /// Round is a `String` draft rather than an `Int?` binding because the
-    /// empty field has to mean "no round" (D31′ — a sub-round imports as nil
-    /// and exports as `?`), and a numeric `TextField` with a nil formatter
+    /// Round is a `String` draft, not an `Int?` binding: the empty field has to
+    /// mean "no round" (D31′), and a numeric `TextField` with a nil formatter
     /// makes empty and zero the same gesture.
     private func seedGameDrafts(from pgn: PGN) {
         draftEvent = pgn.event
@@ -480,10 +396,8 @@ extension GetInfoWindow {
         draftBlack = pgn.black
         draftDate = pgn.date
         // Empty string for nil, not the export's `?` / `-`: those are what the
-        // *file* says when there is no value, and a field pre-filled with `-`
-        // invites editing around a placeholder rather than typing a value.
-        // The commit maps the empty field back to nil, so the round trip is
-        // nil → "" → nil.
+        // *file* says, and a field pre-filled with `-` invites editing around a
+        // placeholder. The commit maps empty back to nil — nil → "" → nil.
         draftBoard = pgn.board ?? ""
         draftTimeControl = pgn.timeControl ?? ""
     }
@@ -514,53 +428,25 @@ extension GetInfoWindow {
     /// An archived game: what you can change, and what the app knows about the
     /// row (D57′).
     ///
-    /// **Two tabs, and the split is by *authorship* rather than by topic.**
-    /// Details is everything the reader wrote or can rewrite — which is exactly
-    /// D24′'s **nine** exported tags: the Seven Tag Roster, then Board, then
-    /// TimeControl. File is everything the app derived, stamped or measured:
-    /// when it arrived, what it hashes to, what the classifier made of it, how
-    /// far the engine got. That line is also why File has no edit affordance
-    /// anywhere on it and needs no comment saying so — nothing there is a value
-    /// a person holds an opinion about.
+    /// Three tabs since D59′, and **the split is by *authorship*, not topic.**
+    /// **Details** is what the reader wrote and can rewrite — exactly D24′'s
+    /// nine exported tags (the roster, then Board, then TimeControl). **Move
+    /// Text** is what the reader *played*, rewritable under D18′'s validator.
+    /// **File** is what the app derived, stamped or measured, and nobody
+    /// rewrites it — which is why no row there needs a read-only comment.
     ///
-    /// **The line moved once, and the correction is worth keeping.** For one
-    /// evening this doc claimed "the nine tags" while the tab held seven, with
-    /// `board` and `timeControl` on File under an argument that called them
-    /// "equipment facts the archive door stamps". That is true of `board` on a
-    /// game played here and true of neither on a game imported from a file that
-    /// carried them — and either way they are *exported tags*, so a window that
-    /// lets you rewrite what lands on disk should hold all nine. Nothing caught
-    /// this: the sentence and its own next sentence disagreed, both read well,
-    /// and it took a reader looking at the running app. The transferable part is
-    /// that a doc stating a *set* ("the nine tags") beside code enumerating a
-    /// different one is checkable by counting, and nobody counts a number that
-    /// arrives inside a sentence they just agreed with.
+    /// Move Text sits in the middle because it is content; File is last because
+    /// it is the only tab about the row rather than the game.
     ///
-    /// `TabView` with `.tabItem`, not the 2027 `Tab(role:)` spelling, which is
-    /// beta (D27′).
-    /// **Three tabs since 5 Aug 2026**, and the third is where D18′'s movetext
-    /// editor now lives — moved off the Library inspector's PGN header, which
-    /// had held it for exactly one day (D54′).
+    /// **Named "Move Text", not "PGN"** — a PGN tab beside a Details tab holding
+    /// the nine tags claims to be the whole file while showing half of it.
+    /// D54′'s "Edit Moves rather than Edit PGN", one level up.
     ///
-    /// The order is authorship again, extended one step: **Details** is what
-    /// the reader wrote and can rewrite (the nine exported tags), **Move Text**
-    /// is what the reader *played* and can rewrite under a validator, **File**
-    /// is what the app derived and nobody rewrites. Move Text sits in the
-    /// middle rather than last because it is content, and File is the only tab
-    /// that is about the row rather than the game.
+    /// Move Text is on the game form only: a live game has no stored movetext
+    /// and Decision #1 forbids the concept, so the absence expresses the locked
+    /// decision as a missing tab rather than a disabled one.
     ///
-    /// **Named "Move Text" and deliberately not "PGN".** The Library section it
-    /// came from is called PGN and shows exactly this, so the shorter name was
-    /// available — and it is the one that would go stale, because a tab labelled
-    /// PGN beside a Details tab holding the nine tags claims to be the whole
-    /// file while showing half of it. `MovetextEdit` is what this door is, and
-    /// the label now says so.
-    ///
-    /// This tab is on the **game** form only. A live game has no stored
-    /// movetext to edit and Decision #1 forbids the concept — the physical
-    /// board is truth and the game is append-only — so the absence is the
-    /// locked decision expressed as a missing tab rather than a disabled one. A
-    /// player has no movetext at all.
+    /// `.tabItem`, not the 2027 `Tab(role:)` spelling — beta (D27′).
     private func gameForm(_ pgn: PGN) -> some View {
         TabView {
             detailsTab(pgn)
@@ -579,20 +465,16 @@ extension GetInfoWindow {
     /// D18′'s editor, hosted rather than reimplemented.
     ///
     /// **The commit model differs from Details' and that is not an
-    /// inconsistency to iron out.** Details commits per field on Return or
-    /// focus loss, because each of the nine tags is independently valid. A
-    /// movetext edit is accept-whole-or-reject-whole by D18′ — the whole line
-    /// replays or none of it does — so it takes an explicit Save that is gated
-    /// on the validator. Two commit models in one window, each matching what
-    /// its subject can promise; making them agree would mean either committing
-    /// half-typed movetext or making the reader press Save to change an Event.
+    /// inconsistency to iron out.** Details commits per field because each of
+    /// the nine tags is independently valid; movetext is
+    /// accept-whole-or-reject-whole (D18′), so it takes an explicit Save gated
+    /// on the validator. Making them agree would mean either committing
+    /// half-typed movetext or pressing Save to change an Event.
     ///
-    /// The `.id(pgn.persistentModelID)` is load-bearing rather than tidy: the
-    /// editor seeds its text in `init`, so without it, opening Get Info on a
-    /// second game while this window is alive would keep the first game's moves
-    /// in the field under the second game's title. That is the same staleness
-    /// D53′ found in the `.live` arm, arriving through view identity instead of
-    /// through a request that never changes.
+    /// The `.id(pgn.persistentModelID)` is load-bearing: the editor seeds its
+    /// text in `init`, so without it a second game opened while this window
+    /// lives would keep the first game's moves under the second game's title.
+    /// D53′'s `.live` staleness, arriving through view identity instead.
     private func moveTextTab(_ pgn: PGN) -> some View {
         MovetextEditorView(pgn: pgn) { proposed in
             applyMovetext(proposed, to: pgn)
@@ -601,21 +483,19 @@ extension GetInfoWindow {
         .accessibilityIdentifier(AccessibilityID.getInfoGameMoveText)
     }
 
-    /// The seven tags, editable (D57′).
+    /// D24′'s nine exported tags, editable: the roster in one section, Board and
+    /// Time Control in another (D57′).
     ///
     /// Each row is the native control for what the tag *is* rather than a text
-    /// field for all seven: a date is a `DatePicker`, a result is a `Picker`
-    /// over `GameResult`, a round is a numeric field. That is not decoration —
-    /// it is what makes the invalid states unreachable rather than validated.
-    /// A `Picker` cannot produce a result outside the enum, and a `DatePicker`
-    /// cannot produce 2026-02-31, so the only rule left to *check* is the one
-    /// no widget can know, which is whether the position agrees with the
-    /// result.
+    /// field throughout. Not decoration — it makes invalid states unreachable
+    /// rather than validated: a `Picker` cannot produce a result outside the
+    /// enum, a `DatePicker` cannot produce 2026-02-31. The only rule left to
+    /// *check* is the one no widget can know, whether the position agrees with
+    /// the result.
     ///
-    /// The rows read off drafts and commit one at a time — see `commitField`.
-    /// The two non-text rows have no draft and no focus: a `Picker` and a
-    /// `DatePicker` have no Return and no editing session, so their commit
-    /// point is the change itself.
+    /// Rows read off drafts and commit one at a time — see `commitField`. The
+    /// non-text rows have no draft and no focus: a `Picker` and a `DatePicker`
+    /// have no Return, so their commit point is the change itself.
     private func detailsTab(_ pgn: PGN) -> some View {
         Form {
             Section("Seven Tag Roster") {
@@ -642,24 +522,15 @@ extension GetInfoWindow {
                 resultRow(pgn)
             }
 
-            // The other two of D24′'s **nine**, in the order the exported tag
-            // block writes them: the roster, then Board, then TimeControl.
+            // The other two of D24′'s nine, in the order the exported tag block
+            // writes them. They are *exported tags*, so whatever this window
+            // lets you rewrite should be the set that lands on disk — seven of
+            // nine is a split with no rule behind it.
             //
-            // These sat on the File tab for the length of one evening, under an
-            // argument that read well and was wrong — "equipment facts the
-            // archive door stamps", true of `board` on a game played here and
-            // true of neither on a game imported from a file that carried them.
-            // What settles it is that they are *exported tags*: whatever this
-            // window lets you rewrite should be the set that lands on disk, and
-            // seven of nine is a split with no rule behind it. D57′'s own text
-            // said "the nine tags" while the tab held seven, which is the
-            // clearest evidence available that nine was the intended line.
-            //
-            // Their own section rather than seven-plus-two in one, because the
-            // Seven Tag Roster is a *named standard* (D22′ renders it from
-            // `SevenTagRoster.allCases` precisely so it cannot quietly grow) and
-            // these two are the app's additions to it. One section would make
-            // the roster look like it has nine members.
+            // Their own section rather than nine in one, because the Seven Tag
+            // Roster is a *named standard* (D22′ renders it from
+            // `SevenTagRoster.allCases` precisely so it cannot quietly grow).
+            // One section would make the roster look like it has nine members.
             Section("Equipment") {
                 TextField("Board", text: $draftBoard)
                     .focused($focusedField, equals: .board)
@@ -671,10 +542,9 @@ extension GetInfoWindow {
                     .onSubmit { commitField(.timeControl, on: pgn) }
                     .accessibilityIdentifier(AccessibilityID.getInfoGameField("timecontrol"))
             }
-            // Commits whichever row the keyboard just left. `focusedField` goes
-            // nil when focus leaves the form entirely and to the next case when
-            // it moves between rows, so the *old* value is the one to commit —
-            // which is why this reads the previous value rather than the new.
+            // Commits whichever row the keyboard just left, which is why it
+            // reads `previous`: `focusedField` goes nil leaving the form and to
+            // the next case between rows, so the old value is the one to write.
             .onChange(of: focusedField) { previous, _ in
                 if let previous { commitField(previous, on: pgn) }
             }
@@ -685,11 +555,10 @@ extension GetInfoWindow {
 
     /// The date row, with its own "no date" arm.
     ///
-    /// A bare `DatePicker` cannot express nil, and nil is a real and common
-    /// state here — D24′ writes `????.??.??` for it and D31′'s sibling rule
-    /// says an absent value is not a zero. So the row is a picker plus a Clear
-    /// button when there is a date, and a Set button when there is not, which
-    /// keeps "this game doesn't say" reachable in both directions.
+    /// A bare `DatePicker` cannot express nil, and nil is real and common here —
+    /// D24′ writes `????.??.??` for it. Picker plus Clear when there is a date,
+    /// a Set button when there is not, so "this game doesn't say" stays
+    /// reachable in both directions.
     @ViewBuilder
     private func dateRow(_ pgn: PGN) -> some View {
         if let bound = draftDate {
@@ -726,14 +595,12 @@ extension GetInfoWindow {
     /// A seat row, plus the sentence that keeps it from being mistaken for the
     /// player tab's field.
     ///
-    /// **These two rows are the most dangerous thing in this window and they
-    /// look like the least.** Editing White here rewrites *this game's* tag —
-    /// `applyEdit` re-resolves the seat afterwards, so the game moves to a
-    /// different player, possibly minting one. Editing the field on the player
-    /// tab rewrites *every* game that player appears in (D37′). Same-looking
-    /// text field, same-looking name, blast radius of one versus forty. The
-    /// derived display line beneath is the only thing on screen that hints the
-    /// value is a tag, so it is not decoration either.
+    /// **The most dangerous rows in this window, and they look like the least.**
+    /// Editing White here rewrites *this game's* tag — `applyEdit` re-resolves
+    /// afterwards, so the game moves to a different player and may mint one.
+    /// The same-looking field on the player tab rewrites *every* game that
+    /// player appears in (D37′). Blast radius of one versus forty. The derived
+    /// line beneath is the only thing on screen saying the value is a tag.
     private func seatRow(
         _ label: String,
         text: Binding<String>,
@@ -764,22 +631,17 @@ extension GetInfoWindow {
     /// `LiveGameRosterForm.playerMenu`'s shape, deliberately reproduced rather
     /// than shared.
     ///
-    /// **Why not extract the two into one type.** The other menu fills a
-    /// `Roster` draft that is committed wholesale when a sheet's Save is
-    /// pressed; this one fills a field that commits *itself*, immediately,
-    /// through `PGNStore.applyEdit`. Same six lines of SwiftUI, two different
-    /// contracts about when the value lands — and a shared type would have to
-    /// take a commit closure to paper over that, which is more machinery than
-    /// six lines of `Menu` are worth. This is the `OpeningSection` em-dash
-    /// call: two surfaces that agree today, each owning its own reason.
+    /// **Not extracted into one shared type**: the other menu fills a `Roster`
+    /// draft committed wholesale on a sheet's Save; this one fills a field that
+    /// commits *itself* through `applyEdit`. Same six lines of SwiftUI, two
+    /// contracts about when the value lands, and sharing them would need a
+    /// commit closure to paper over it. The `OpeningSection` em-dash call —
+    /// two surfaces that agree today, each owning its reason.
     ///
-    /// **Picking commits, and that is the whole reason this is not just a
-    /// field-filler here.** On the sheet, choosing a name and then closing
-    /// without saving changes nothing. On this form there is no Save, so a
-    /// choice that only filled the field would sit uncommitted until the row
-    /// happened to lose focus — the same value looking committed and not being
-    /// it. So the menu writes the draft *and* calls `commitField`, which is
-    /// also what makes it agree with `onSubmit` one line up.
+    /// **Picking commits.** On the sheet, choosing a name and closing without
+    /// saving changes nothing; here there is no Save, so a choice that only
+    /// filled the field would look committed without being it. The menu writes
+    /// the draft *and* calls `commitField`, agreeing with `onSubmit` above.
     ///
     /// Hidden when the registry is empty, so a fresh install shows a plain
     /// field rather than a menu of nothing. Free text always works: the menu
@@ -1050,60 +912,20 @@ extension GetInfoWindow {
 
 extension GetInfoWindow {
 
-    /// D37′. Every consequence — the rewrite across linked games, the
-    /// re-resolve, the rehash, D39′'s refusal — belongs to the store door;
-    /// this is transport plus the two failure sinks, which are deliberately
-    /// different: a refusal is a *value* the reader must see, a save failure
-    /// is a logged error. The same split `applyMovetextEdit` draws.
-    ///
-    /// Two no-op guards ahead of the door, both cheap and both load-bearing.
-    /// An empty tag is refused by the store as `.emptyTag`, and letting it
-    /// reach there would turn a stray ⌫-then-Return into an alert; an
-    /// unchanged tag would spend a full rehash across every linked game to
-    /// write what is already stored. The store's own fold-equivalence check
-    /// (D39′) would accept that second one silently, which is exactly why it
-    /// is worth stopping here — "nothing happened" and "everything was
-    /// rewritten to the same bytes" look identical from the outside.
-    /// Commits one roster field through `PGNStore.applyEdit` (D57′).
-    ///
-    /// **One field per transaction, and the two guards ahead of the door are
-    /// the point.** An unchanged value returns before reaching the store: the
-    /// door itself would accept it silently — re-resolve, recompute the same
-    /// MD5, write the same bytes — and "nothing happened" and "everything was
-    /// rewritten identically" look identical from outside, which is exactly the
-    /// argument `commitRename` makes one method down. And an emptied Event or
-    /// Site reverts rather than storing `""`: D24′'s tag block always prints
-    /// all nine tags and an unknown is `?`, so an empty string would be the one
-    /// value that exports as neither a name nor an unknown.
-    ///
-    /// Seats and Round are the two that may legitimately empty. A seat clears
-    /// to `?`, which is PGN's own unknown and what `resolvePlayer` reads as "no
-    /// player" (D9′) — so clearing a seat unlinks the game rather than minting
-    /// a player named `?`. Round clears to nil, which D31′ already spells as an
-    /// exported `?`.
-    ///
-    /// `applyEdit` does the rest and is unchanged: the closure writes, both
-    /// seats re-resolve unconditionally, `refreshHash` recomputes and saves,
-    /// one transaction (D18′). Re-resolving on an Event edit is a documented
-    /// no-op rather than waste — it is what makes this door unable to rot the
-    /// links, which is the invariant `PGN.whitePlayer` names.
     /// The movetext write door, moved here from `LibraryDestination` with the
-    /// affordance (5 Aug 2026).
+    /// affordance (D59′).
     ///
     /// `applyMovetextEdit` re-validates internally, so the `.rejected` arm is
     /// reachable only if this window's Save gate and the store's validator
-    /// disagree — which they cannot, since both call `MovetextEdit.validate`
-    /// with the same result. Logged rather than surfaced for exactly that
-    /// reason: it is an internal-divergence breadcrumb, not a user-facing
-    /// state, and the settle machine's F5 guard is the precedent for treating
-    /// "the two halves of one rule disagreed" as something to shout about in
-    /// the log rather than explain in a dialog.
+    /// disagree — which they cannot, both calling `MovetextEdit.validate`.
+    /// Logged rather than surfaced for that reason: an internal-divergence
+    /// breadcrumb, not a user-facing state. The settle machine's F5 guard is
+    /// the precedent.
     ///
     /// **What this does not do, which its Board ancestor did:** rebuild a
-    /// cached on-board `Game`. Neither this window nor the Library holds one.
-    /// The recorded cost carried over unchanged from D54′: a Board window
-    /// already reviewing this game keeps rendering the pre-edit moves until it
-    /// reloads. Accepted at one Mac and one reader.
+    /// cached on-board `Game` — neither this window nor the Library holds one.
+    /// D54′'s recorded cost carries over: a Board window already reviewing this
+    /// game shows pre-edit moves until it reloads.
     fileprivate func applyMovetext(_ proposed: [String], to pgn: PGN) {
         do {
             let outcome = try PGNStore(modelContext: modelContext)
@@ -1120,6 +942,25 @@ extension GetInfoWindow {
         }
     }
 
+    /// Commits one roster field through `PGNStore.applyEdit` (D57′).
+    ///
+    /// **One field per transaction, and the two guards ahead of the door are
+    /// the point.** An unchanged value returns before reaching the store, which
+    /// would otherwise accept it silently — re-resolve, recompute the same MD5,
+    /// write the same bytes — and "nothing happened" and "everything was
+    /// rewritten identically" look identical from outside. An emptied Event or
+    /// Site reverts rather than storing `""`: D24′ always prints all nine tags
+    /// and an unknown is `?`, so `""` exports as neither a name nor an unknown.
+    ///
+    /// Seats and Round may legitimately empty. A seat clears to `?`, which
+    /// `resolvePlayer` reads as no player (D9′), so clearing unlinks rather
+    /// than minting a player named `?`. Round clears to nil — D31′'s exported
+    /// `?`.
+    ///
+    /// `applyEdit` does the rest unchanged: the closure writes, both seats
+    /// re-resolve unconditionally, `refreshHash` recomputes and saves, one
+    /// transaction (D18′). Re-resolving on an Event edit is a documented no-op
+    /// rather than waste — it is what keeps this door from rotting the links.
     fileprivate func commitField(_ field: GameField, on pgn: PGN) {
         let store = PGNStore(modelContext: modelContext)
         do {
@@ -1356,6 +1197,17 @@ extension GetInfoWindow {
         return EvaluationBarReading(best).label
     }
 
+    /// D37′. Every consequence — the rewrite across linked games, the
+    /// re-resolve, the rehash, D39′'s refusal — belongs to the store door. This
+    /// is transport plus two deliberately different failure sinks: a refusal is
+    /// a *value* the reader must see, a save failure is a logged error. The
+    /// split `applyMovetextEdit` draws.
+    ///
+    /// Two no-op guards ahead of the door, both load-bearing. An empty tag
+    /// would reach the store as `.emptyTag`, turning a stray ⌫-then-Return into
+    /// an alert; an unchanged tag would spend a full rehash across every linked
+    /// game to write what is already stored. D39′'s fold-equivalence check
+    /// would accept that second one silently, which is why it is stopped here.
     fileprivate func commitRename(for player: Player) {
         let proposed = draftTag.trimmingCharacters(in: .whitespaces)
         guard !proposed.isEmpty else {

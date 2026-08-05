@@ -1,10 +1,3 @@
-//
-//  GameState.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 06/05/2026.
-//
-
 internal struct GameState: Equatable, Sendable {
     
     // MARK: Static Constants

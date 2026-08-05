@@ -1,10 +1,3 @@
-//
-//  BoardPieceLayerTests.swift
-//  DGTStudioProTests
-//
-//  Created by Supreme Leader on 02/08/2026.
-//
-
 import Testing
 @testable import DGTStudioPro
 

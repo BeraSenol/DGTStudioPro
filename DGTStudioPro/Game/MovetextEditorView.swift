@@ -1,10 +1,3 @@
-//
-//  MovetextEditorView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 21/07/2026.
-//
-
 import SwiftUI
 
 /// Edits an archived game's movetext (M-lib.3, D18′). The field seeds with the

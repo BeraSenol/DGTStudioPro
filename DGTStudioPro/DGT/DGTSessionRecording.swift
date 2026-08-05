@@ -1,10 +1,3 @@
-//
-//  DGTSessionRecording.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 31/05/2026.
-//
-
 import Foundation
 
 // MARK: Recording

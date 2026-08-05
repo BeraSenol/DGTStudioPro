@@ -1,10 +1,3 @@
-//
-//  SpecialCheckmate.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 22/07/2026.
-//
-
 /// A recognised checkmate *pattern*, computed at analysis time and stored on
 /// the game (M-lib.4, D19′). Pure `Position`/`GameState` predicates over the
 /// final position — no engine, and no last move needed (the recognised

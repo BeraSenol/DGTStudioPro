@@ -1,10 +1,3 @@
-//
-//  LibraryGamePreviewState.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 10/05/2026.
-//
-
 import Foundation
 
 /// The derived board state a Library preview renders: the position reached by

@@ -1,10 +1,3 @@
-//
-//  CastlingRights.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 30/03/2026.
-//
-
 internal enum CastlingSide: Sendable {
     case kingSide
     case queenSide

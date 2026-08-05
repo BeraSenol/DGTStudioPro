@@ -1,10 +1,3 @@
-//
-//  DGTProtocol.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 13/04/2026.
-//
-
 internal enum DGTCommand: UInt8, Sendable {
     case sendReset              = 0x40
     case sendBoard              = 0x42

@@ -1,10 +1,3 @@
-//
-//  PlayersDestination.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 12/04/2026.
-//
-
 // `AppKit` for `selectAll(_:)` alone — see the twin import in
 // `LibraryDestination` for why an AppKit *protocol* member needs the module
 // named under `MemberImportVisibility`.

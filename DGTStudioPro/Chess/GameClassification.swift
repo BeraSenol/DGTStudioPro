@@ -1,10 +1,3 @@
-//
-//  GameClassification.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 30/07/2026.
-//
-
 /// The derived-truth pair a game learns about itself: which named opening it
 /// played, and which checkmate type it ended on (D19′, trigger revised by
 /// D34′).

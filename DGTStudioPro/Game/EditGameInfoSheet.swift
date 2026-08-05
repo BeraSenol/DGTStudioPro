@@ -1,10 +1,3 @@
-//
-//  EditGameInfoSheet.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 06/07/2026.
-//
-
 import SwiftUI
 
 /// The archive-confirmation sheet (M5): presented automatically when a

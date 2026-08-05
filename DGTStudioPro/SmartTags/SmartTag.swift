@@ -1,10 +1,3 @@
-//
-//  SmartTag.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 04/05/2026.
-//
-
 import os
 import SwiftData
 import SwiftUI

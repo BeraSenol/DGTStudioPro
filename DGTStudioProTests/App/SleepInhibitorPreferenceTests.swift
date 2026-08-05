@@ -1,11 +1,3 @@
-//
-//  SleepInhibitorPreferenceTests.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 25/07/2026.
-//
-
-
 import Foundation
 import Testing
 

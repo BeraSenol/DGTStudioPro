@@ -1,10 +1,3 @@
-//
-//  DGTSerialDevice.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 25/05/2026.
-//
-
 // No `isLikelyBoard` / `boardNameHints` (deleted 3 Aug 2026). The heuristic
 // scored a device on name fragments — "usbserial", "usbmodem", "ftdi", "dgt"
 // — and existed to order the connect dialog's device list with the plausible

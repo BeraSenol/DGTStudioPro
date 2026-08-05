@@ -1,10 +1,3 @@
-//
-//  PGN+GameRecord.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 20/07/2026.
-//
-
 import Foundation
 
 /// The projection seam (D10′): the only place the M-prs cores' input

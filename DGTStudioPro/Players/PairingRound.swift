@@ -1,10 +1,3 @@
-//
-//  PairingRound.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 21/07/2026.
-//
-
 import Foundation
 
 /// M-lib.1 (D16′): the New Game dialog's round prefill — "the latest round

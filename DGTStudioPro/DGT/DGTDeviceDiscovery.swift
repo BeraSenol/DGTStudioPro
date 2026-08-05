@@ -1,10 +1,3 @@
-//
-//  DGTDeviceDiscovery.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 25/05/2026.
-//
-
 import Foundation
 import IOKit
 import IOKit.serial

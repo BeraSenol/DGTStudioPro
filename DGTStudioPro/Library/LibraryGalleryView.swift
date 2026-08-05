@@ -1,10 +1,3 @@
-//
-//  LibraryGalleryView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 29/04/2026.
-//
-
 import SwiftData
 import SwiftUI
 

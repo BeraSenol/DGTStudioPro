@@ -1,10 +1,3 @@
-//
-//  LiveGameInspectorView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 12/06/2026.
-//
-
 import SwiftUI
 
 /// The Board inspector's live-game variant (M3.3), shown when a live game

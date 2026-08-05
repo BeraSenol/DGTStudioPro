@@ -1,10 +1,3 @@
-//
-//  Position.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 30/03/2026.
-//
-
 internal struct Position: Codable, Equatable, Sendable {
     
     // MARK: Static Constants

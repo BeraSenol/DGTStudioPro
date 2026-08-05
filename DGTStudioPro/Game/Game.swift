@@ -1,10 +1,3 @@
-//
-//  Game.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 20/05/2026.
-//
-
 import Foundation
 import os
 

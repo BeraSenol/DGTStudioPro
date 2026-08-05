@@ -1,10 +1,3 @@
-//
-//  LiveGameDraftStoreTests.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 05/07/2026.
-//
-
 import Foundation
 import Testing
 @testable import DGTStudioPro

@@ -1,10 +1,3 @@
-//
-//  SmartTagCommands.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 29/07/2026.
-//
-
 import SwiftUI
 
 // MARK: Focused Value

@@ -1,10 +1,3 @@
-//
-//  PieceIdentity.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 02/08/2026.
-//
-
 /// One piece the board's piece layer renders: what it is, where it sits, and
 /// the identity it animates under.
 ///

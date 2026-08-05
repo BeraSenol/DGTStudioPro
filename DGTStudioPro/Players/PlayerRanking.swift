@@ -1,10 +1,3 @@
-//
-//  PlayerRanking.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 05/08/2026.
-//
-
 import Foundation
 
 /// How the ladder is ordered — which is to say, what rank **1** means (D62′).

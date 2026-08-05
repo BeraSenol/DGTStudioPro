@@ -1,10 +1,3 @@
-//
-//  PositionTests.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 27/04/2026.
-//
-
 import Testing
 @testable import DGTStudioPro
 

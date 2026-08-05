@@ -1,10 +1,3 @@
-//
-//  PlayersListView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 20/07/2026.
-//
-
 import Foundation
 import SwiftUI
 

@@ -1,10 +1,3 @@
-//
-//  ImportStatusView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 22/05/2026.
-//
-
 import SwiftUI
 
 // MARK: Result Model

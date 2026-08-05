@@ -1,10 +1,3 @@
-//
-//  LibraryInspectorView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 12/04/2026.
-//
-
 import AppKit
 import SwiftData
 import SwiftUI

@@ -1,10 +1,3 @@
-//
-//  Piece.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 27/03/2026.
-//
-
 internal enum PieceColor: UInt8, CaseIterable, Codable, Sendable {
     case white = 0
     case black = 1

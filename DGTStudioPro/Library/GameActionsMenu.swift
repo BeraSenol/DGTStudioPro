@@ -1,10 +1,3 @@
-//
-//  GameActionsMenu.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 04/08/2026.
-//
-
 import SwiftData
 import SwiftUI
 

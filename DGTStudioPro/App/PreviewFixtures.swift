@@ -1,10 +1,3 @@
-//
-//  PreviewFixtures.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 23/07/2026.
-//
-
 #if DEBUG
 import Foundation
 

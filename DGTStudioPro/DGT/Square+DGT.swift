@@ -1,10 +1,3 @@
-//
-//  Square+DGT.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 25/05/2026.
-//
-
 // The DGT board numbers its fields a8 = 0 … h1 = 63 — "row by row, in normal
 // reading sequence, counting from the top-left square when the connector is on
 // the left hand" (DGT Chessboard Communication Protocol). The app's `Square`

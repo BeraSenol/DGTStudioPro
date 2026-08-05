@@ -1,10 +1,3 @@
-//
-//  IconGridSelection.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 02/08/2026.
-//
-
 import SwiftUI
 
 /// The icons grids' selection grammar — arrow stepping and rubber-band

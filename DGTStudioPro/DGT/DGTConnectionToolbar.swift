@@ -1,10 +1,3 @@
-//
-//  DGTConnectionToolbar.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 25/05/2026.
-//
-
 import SwiftUI
 
 /// The DGT-board connection control, as `ToolbarContent` a host composes into

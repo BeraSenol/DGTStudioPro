@@ -1,10 +1,3 @@
-//
-//  EngineConfiguration.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 20/07/2026.
-//
-
 import Foundation
 
 /// The single source of truth for the Stockfish options the app controls —

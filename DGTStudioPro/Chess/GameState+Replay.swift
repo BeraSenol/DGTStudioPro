@@ -1,10 +1,3 @@
-//
-//  GameState+Replay.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 10/05/2026.
-//
-
 extension GameState {
     
     // MARK: Replay (7g)

@@ -1,10 +1,3 @@
-//
-//  PlayerName.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 24/07/2026.
-//
-
 import Foundation
 
 /// The one rendering of a player name (D23′): PGN carries "Last, First",

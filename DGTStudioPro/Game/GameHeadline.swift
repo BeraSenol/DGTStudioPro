@@ -1,10 +1,3 @@
-//
-//  GameHeadline.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 23/07/2026.
-//
-
 /// The Board inspector's section headline: "Reviewing 1. Magnus Carlsen vs
 /// Ian Nepomniachtchi" over an archived game, "Recording 101. …" over a live
 /// one (M-ux.3, D20′).

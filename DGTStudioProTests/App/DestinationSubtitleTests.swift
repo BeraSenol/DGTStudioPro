@@ -1,10 +1,3 @@
-//
-//  DestinationSubtitleTests.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 03/08/2026.
-//
-
 import Testing
 @testable import DGTStudioPro
 

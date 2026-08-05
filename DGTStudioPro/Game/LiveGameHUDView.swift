@@ -1,10 +1,3 @@
-//
-//  LiveGameHUDView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 12/06/2026.
-//
-
 import SwiftUI
 
 /// The live-play status card (M3.1; re-homed into the sidebar's

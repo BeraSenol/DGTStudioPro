@@ -1,10 +1,3 @@
-//
-//  NewLiveGameSheet.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 02/07/2026.
-//
-
 import SwiftUI
 import SwiftData
 

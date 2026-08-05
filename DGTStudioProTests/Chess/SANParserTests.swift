@@ -1,10 +1,3 @@
-//
-//  SANParserTests.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 09/05/2026.
-//
-
 import Testing
 @testable import DGTStudioPro
 

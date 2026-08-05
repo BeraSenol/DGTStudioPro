@@ -1,10 +1,3 @@
-//
-//  SpecialCheckmateTests.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 22/07/2026.
-//
-
 import Testing
 @testable import DGTStudioPro
 

@@ -1,10 +1,3 @@
-//
-//  RecoveryGuidance.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 06/07/2026.
-//
-
 /// The per-square instructions for restoring a desynced physical board to
 /// the game's last legal position (M6.2; Decision #1 locks FIDE semantics —
 /// the only resolution is restoring that position, so there is nothing to

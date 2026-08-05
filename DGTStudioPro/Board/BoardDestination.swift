@@ -1,10 +1,3 @@
-//
-//  BoardDestination.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 09/04/2026.
-//
-
 import os
 import SwiftData
 import SwiftUI

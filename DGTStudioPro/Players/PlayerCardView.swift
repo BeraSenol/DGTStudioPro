@@ -1,10 +1,3 @@
-//
-//  PlayerCardView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 20/07/2026.
-//
-
 import SwiftUI
 
 /// The monogram avatar, shared by the card, the gallery's large preview,

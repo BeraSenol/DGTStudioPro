@@ -1,10 +1,3 @@
-//
-//  TestHost.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 05/08/2026.
-//
-
 import Foundation
 
 /// Whether this process is the XCTest host — asked once, spelled once.

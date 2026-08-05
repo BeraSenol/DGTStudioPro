@@ -1,10 +1,3 @@
-//
-//  OpeningSection.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 30/07/2026.
-//
-
 import SwiftUI
 
 /// A game's classified opening as one sidebar section (D34′, D35′) — shared

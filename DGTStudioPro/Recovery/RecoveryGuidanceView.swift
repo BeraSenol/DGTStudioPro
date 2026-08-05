@@ -1,10 +1,3 @@
-//
-//  RecoveryGuidanceView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 06/07/2026.
-//
-
 import SwiftUI
 
 /// The square-by-square restore checklist shown under the status card in

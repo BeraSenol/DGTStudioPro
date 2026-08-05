@@ -1,10 +1,3 @@
-//
-//  LibraryColumnsView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 03/05/2026.
-//
-
 import Foundation
 import SwiftData
 import SwiftUI

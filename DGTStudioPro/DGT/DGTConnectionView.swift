@@ -1,10 +1,3 @@
-//
-//  DGTConnectionView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 25/05/2026.
-//
-
 import SwiftUI
 
 /// The board connection window — a confirmation/error surface since

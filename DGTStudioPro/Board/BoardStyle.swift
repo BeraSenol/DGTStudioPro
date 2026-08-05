@@ -1,10 +1,3 @@
-//
-//  BoardStyle.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 01/04/2026.
-//
-
 import SwiftUI
 
 internal enum BoardStyle: String, CaseIterable, Codable, Sendable {

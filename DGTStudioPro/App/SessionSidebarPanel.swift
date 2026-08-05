@@ -1,10 +1,3 @@
-//
-//  SessionSidebarPanel.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 21/07/2026.
-//
-
 import SwiftUI
 
 /// M-ux.3 (D15′): the sidebar's session surface — the single home for

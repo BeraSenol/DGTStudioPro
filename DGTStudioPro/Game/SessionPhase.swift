@@ -1,10 +1,3 @@
-//
-//  SessionPhase.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 03/08/2026.
-//
-
 // MARK: Session Phase
 
 extension LiveGameHUDView.Phase {

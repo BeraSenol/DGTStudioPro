@@ -1,10 +1,3 @@
-//
-//  SevenTagRosterSection.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 23/07/2026.
-//
-
 import SwiftUI
 
 /// The Seven Tag Roster as one sidebar section (D22′): a headline carrying

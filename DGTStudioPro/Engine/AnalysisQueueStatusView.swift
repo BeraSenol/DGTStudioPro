@@ -1,10 +1,3 @@
-//
-//  AnalysisQueueStatusView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 19/07/2026.
-//
-
 import SwiftData
 import SwiftUI
 

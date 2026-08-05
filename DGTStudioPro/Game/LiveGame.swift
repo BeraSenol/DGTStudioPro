@@ -1,10 +1,3 @@
-//
-//  LiveGame.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 13/06/2026.
-//
-
 import Foundation
 import os
 

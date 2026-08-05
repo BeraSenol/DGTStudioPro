@@ -1,10 +1,3 @@
-//
-//  PlayerActionsMenu.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 04/08/2026.
-//
-
 import SwiftUI
 
 /// The Players destination's context menu, once — `GameActionsMenu`'s twin,

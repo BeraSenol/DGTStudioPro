@@ -1,10 +1,3 @@
-//
-//  SleepInhibitor.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 21/07/2026.
-//
-
 import Foundation
 import Observation
 import os

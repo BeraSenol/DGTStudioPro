@@ -1,10 +1,3 @@
-//
-//  Position+Attack.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 06/05/2026.
-//
-
 extension Position {
     
     /// Whether any of `offsets`, stepped once from `square` and guarded

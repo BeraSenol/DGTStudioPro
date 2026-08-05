@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 24/03/2026.
-//
-
 import os
 import SwiftData
 import SwiftUI

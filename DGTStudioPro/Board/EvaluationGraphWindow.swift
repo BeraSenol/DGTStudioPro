@@ -1,27 +1,18 @@
-//
-//  EvaluationGraphWindow.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 01/08/2026.
-//
-
 import SwiftData
 import SwiftUI
 
 /// What the magnifier asks for: one game's evaluation curve, enlarged.
 ///
-/// **A wrapper around a `PersistentIdentifier` rather than the identifier
-/// itself, and that is the whole reason this type exists.** `openWindow(value:)`
-/// routes by the value's *type*, and the app's main `WindowGroup` is already
-/// declared `for: PersistentIdentifier.self` with three call sites relying on
-/// it. A second group over the same type would make every one of those calls
-/// ambiguous — at best unspecified, and unspecified in a way that shows up as
-/// "opening a game from the Library now opens a graph".
+/// **The wrapper is the whole reason this type exists.** `openWindow(value:)`
+/// routes by the value's *type*, and the main `WindowGroup` already claims
+/// `PersistentIdentifier` — a second group over it would leave every existing
+/// call unspecified, which shows up as "opening a game from the Library opens
+/// a graph". The wrapper makes the routing a fact about the type system rather
+/// than about scene declaration order. The rejected alternative was passing
+/// `id:` at every call site and trusting the untagged calls elsewhere.
 ///
-/// So the routing is a fact about the type system rather than about scene
-/// declaration order. The cost is one struct; the alternative was passing
-/// `id:` at every call site and trusting that the untagged calls elsewhere
-/// still resolve the way they used to.
+/// D46′. `GetInfoRequest` is the second instance (D53′), which is what makes
+/// this a pattern rather than a quirk.
 internal struct EvaluationGraphRequest: Codable, Hashable, Sendable {
 
     internal let gameID: PersistentIdentifier

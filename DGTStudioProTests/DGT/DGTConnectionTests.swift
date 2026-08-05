@@ -1,10 +1,3 @@
-//
-//  DGTConnectionTests.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 16/07/2026.
-//
-
 import Testing
 import Foundation
 @testable import DGTStudioPro

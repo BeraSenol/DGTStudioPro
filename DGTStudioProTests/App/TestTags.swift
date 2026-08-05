@@ -1,10 +1,3 @@
-//
-//  TestTags.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 27/07/2026.
-//
-
 import Testing
 
 /// Suite tags used for plan-level inclusion and exclusion.

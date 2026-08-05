@@ -1,10 +1,3 @@
-//
-//  PGNExporter.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 24/07/2026.
-//
-
 import AppKit
 import UniformTypeIdentifiers
 import os

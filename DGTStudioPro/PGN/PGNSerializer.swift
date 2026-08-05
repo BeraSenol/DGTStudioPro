@@ -1,10 +1,3 @@
-//
-//  PGNSerializer.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 24/07/2026.
-//
-
 import Foundation
 
 /// Writes a game back out in the DGT reference shape (D17′/D24′), byte for

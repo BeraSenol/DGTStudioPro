@@ -1,10 +1,3 @@
-//
-//  DiagnosticsCommands.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 07/07/2026.
-//
-
 import SwiftUI
 
 /// The Diagnostics menu (M8.3, flag C) — wiring the last unsurfaced

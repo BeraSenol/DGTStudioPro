@@ -1,10 +1,3 @@
-//
-//  CollectionSearch.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 02/08/2026.
-//
-
 import Foundation
 
 /// Live-search matching for the collection destinations' toolbar search

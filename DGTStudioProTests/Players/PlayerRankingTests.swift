@@ -1,10 +1,3 @@
-//
-//  PlayerRankingTests.swift
-//  DGTStudioProTests
-//
-//  Created by Supreme Leader on 05/08/2026.
-//
-
 import Foundation
 import Testing
 @testable import DGTStudioPro

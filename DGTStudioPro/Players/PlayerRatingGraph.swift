@@ -1,10 +1,3 @@
-//
-//  PlayerRatingGraph.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 04/08/2026.
-//
-
 import Charts
 import SwiftUI
 

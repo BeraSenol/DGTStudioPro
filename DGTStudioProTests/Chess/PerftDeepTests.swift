@@ -1,10 +1,3 @@
-//
-//  PerftDeepTests.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 16/05/2026.
-//
-
 import Testing
 @testable import DGTStudioPro
 

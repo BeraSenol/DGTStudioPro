@@ -1,10 +1,3 @@
-//
-//  LiveGameDraft.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 13/06/2026.
-//
-
 import Foundation
 
 /// The crash-safety snapshot of an in-progress live game (M4, Decision #2) —

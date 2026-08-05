@@ -1,10 +1,3 @@
-//
-//  DGTLiveSessionArchiveTests.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 06/07/2026.
-//
-
 import Testing
 import Foundation
 import SwiftData

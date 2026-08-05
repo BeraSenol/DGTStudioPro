@@ -1,10 +1,3 @@
-//
-//  PGNParserLineEndingTests.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 26/05/2026.
-//
-
 import Foundation
 import Testing
 @testable import DGTStudioPro

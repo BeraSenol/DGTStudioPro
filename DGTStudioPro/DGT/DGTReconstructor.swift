@@ -1,10 +1,3 @@
-//
-//  DGTReconstructor.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 26/05/2026.
-//
-
 /// The outcome of trying to explain a settled physical board against the last
 /// known-legal game state.
 internal enum DGTReconstruction: Equatable {

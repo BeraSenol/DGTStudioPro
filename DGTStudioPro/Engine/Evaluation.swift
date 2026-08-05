@@ -1,10 +1,3 @@
-//
-//  Evaluation.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 14/05/2026.
-//
-
 import Foundation
 
 /// A single engine evaluation of a chess position.

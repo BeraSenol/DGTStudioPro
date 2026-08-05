@@ -1,10 +1,3 @@
-//
-//  SquareHighlight.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 01/04/2026.
-//
-
 internal struct SquareHighlight: OptionSet, Sendable {
     
     // MARK: Static Constants

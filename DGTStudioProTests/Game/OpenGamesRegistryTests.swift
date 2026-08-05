@@ -1,10 +1,3 @@
-//
-//  OpenGamesRegistryTests.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 09/06/2026.
-//
-
 import Testing
 import SwiftData
 @testable import DGTStudioPro

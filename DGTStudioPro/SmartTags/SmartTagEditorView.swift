@@ -1,10 +1,3 @@
-//
-//  SmartTagEditorView.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 20/07/2026.
-//
-
 import SwiftUI
 
 /// The editor's working copy: a pure value snapshot of a tag (or a fresh

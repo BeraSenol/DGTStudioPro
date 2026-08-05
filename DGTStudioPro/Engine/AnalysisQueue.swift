@@ -1,10 +1,3 @@
-//
-//  AnalysisQueue.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 19/07/2026.
-//
-
 /// Pure decisions behind batch engine analysis — ordering, dedupe,
 /// advancement, and outcome bookkeeping — extracted from
 /// `AnalysisQueueController` for the same reason `DGTAutoConnectPolicy`

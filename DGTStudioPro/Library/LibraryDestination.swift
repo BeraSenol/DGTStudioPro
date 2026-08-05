@@ -1,10 +1,3 @@
-//
-//  LibraryDestination.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 12/04/2026.
-//
-
 // `AppKit` explicitly, though `NSOpenPanel` below has compiled without it:
 // `selectAll(_:)` is a member of an AppKit *protocol*, and
 // `MemberImportVisibility` is precisely the upcoming feature that stops
@@ -1314,48 +1307,25 @@ internal struct LibraryDestination: View {
 
 extension Binding where Value == Bool {
     /// A presentation flag over optional state: `true` while a value is
-    /// present, and a dismissal clears the source. **Seven** `@State`
-    /// optionals open-code the same getter/setter pair otherwise — four
-    /// here, one in `ContentView` that couldn't see this while it was
-    /// `fileprivate`, and two in `PlayersDestination` (M5's refusal alert
-    /// and D40′'s orphan sweep).
-    ///
-    /// That count has now been wrong twice, in opposite directions: this
-    /// comment said "five" until M5 and D40′ added a site each without
-    /// touching it, and the instructions' forward note said "six" because
-    /// it caught the first of those two and not the second. A caller count
-    /// written into a doc comment is a claim about seven other files that
-    /// nothing recompiles — which is the enumerated-caller-list anti-pattern
-    /// the working agreements already name, kept here only because the
-    /// forward note below needs to know how much disappears.
+    /// present, and a dismissal clears the source.
     ///
     /// `BoardDestination`'s offer bindings look identical and are deliberately
     /// **not** folded in: they ignore dismissal (`set: { _ in }` — D#3 is a
-    /// fork, not a suggestion), and routing them through here would erase
-    /// that. Same shape, different contract.
+    /// fork, not a suggestion). Same shape, different contract.
     ///
-    /// **Waived, with a sunset condition.** These two captures are the app
-    /// target's only strict-concurrency residue: `Binding` is not `Sendable`
-    /// while `Binding.init(get:set:)` demands `@Sendable` closures, so the
-    /// helper cannot hold the source without tripping it. Constraining
-    /// `T: Sendable` would fix it and lock out the `@Model` call sites,
-    /// which are most of them; the alternatives are the unsafe-`nonisolated`
-    /// and unchecked-`Sendable` opt-outs this codebase has none of. (Both
-    /// spelled around on purpose — writing either token verbatim would put a
-    /// permanent false positive into the sweep's own prohibition grep.)
-    /// Telling detail: the diagnostic stays a *warning* under language mode
-    /// 6 rather than becoming an error, so the compiler is treating it as
-    /// framework-side friction rather than a defect here. The 2027 SDK's
-    /// item-based `alert` and `confirmationDialog` overloads retire all seven
-    /// call sites and this helper with them — at which point the waiver is
-    /// not lifted, it is deleted.
+    /// **Waived, sunset by deletion (D43′).** These two captures are the app
+    /// target's only strict-concurrency residue — `Binding` is not `Sendable`
+    /// while `init(get:set:)` demands `@Sendable` closures. `T: Sendable`
+    /// would fix it and lock out the `@Model` callers, which are most of
+    /// them; the opt-outs this codebase has none of are spelled around on
+    /// purpose, so the sweep's own prohibition grep stays clean. It stays a
+    /// *warning* under mode 6, which reads as framework friction rather than
+    /// a defect here. The 2027 SDK's item-based `alert` /
+    /// `confirmationDialog` retire every call site and this helper with them.
     ///
-    /// Those two are spelled around as well, for the reason the paragraph
-    /// above already gives about the concurrency tokens. The rule got applied
-    /// to the prohibition grep the author was thinking about and not to the
-    /// beta-surface grep in the next section of the same sweep, which is the
-    /// whole failure mode: writing a token verbatim to explain why you must
-    /// not is one keystroke away in every direction.
+    /// No caller count here on purpose — it has been wrong three times (five,
+    /// six, seven; it is currently eight). The count lives in the command,
+    /// D42′'s rule: `grep -rn 'Binding(present:' DGTStudioPro/`.
     internal init<T>(present source: Binding<T?>) {
         self.init(
             get: { source.wrappedValue != nil },

@@ -1,10 +1,3 @@
-//
-//  AccessibilityID.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 16/07/2026.
-//
-
 //  TARGET MEMBERSHIP: DGTStudioPro only, since 3 Aug 2026. This file used to
 //  compile into DGTStudioProUITests as well — the dual membership was the
 //  entire point (F8): identifiers were a tested contract, and the contract

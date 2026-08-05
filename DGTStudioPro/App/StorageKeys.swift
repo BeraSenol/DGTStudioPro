@@ -1,10 +1,3 @@
-//
-//  StorageKeys.swift
-//  DGTStudioPro
-//
-//  Created by Supreme Leader on 28/04/2026.
-//
-
 internal enum StorageKeys {
     internal static let boardStyle = "boardStyle"
 
