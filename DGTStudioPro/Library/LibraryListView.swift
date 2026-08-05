@@ -17,8 +17,24 @@ internal struct LibraryListView: View {
     let onExportIDs: (Set<PGN.ID>) -> Void
     let onDeleteIDs: (Set<PGN.ID>) -> Void
 
-    /// Which columns are shown, in what order, at what width — the state
-    /// behind the header's right-click menu.
+    /// Which columns are shown and in what order — the state behind the
+    /// header's right-click menu.
+    ///
+    /// **This said "and at what width" until 5 Aug 2026, and that was wrong.**
+    /// `TableColumnCustomization` carries visibility and order;
+    /// Apple's own forum answer on column widths is that there is "no way to
+    /// listen for changes in the column widths when the user resizes and no way
+    /// to set the size from code", and that width state restoration is not
+    /// supported. So a resized column has never survived a relaunch here, and
+    /// this comment claimed it did — a plausible sentence about a framework,
+    /// written once and never checked, which is the species this project keeps
+    /// cataloguing. Checkable in twenty seconds: resize a column, quit,
+    /// relaunch.
+    ///
+    /// Left as a standing note rather than removed with the auto-fit feature it
+    /// was found by: the fact is about SwiftUI, not about that feature, and it
+    /// is the reason any future attempt at remembering a column width has to
+    /// start somewhere other than this property.
     ///
     /// `@AppStorage` rather than D45′'s owning-type shape, and the difference
     /// is worth stating because D45′ argued the other way. That decision moved
@@ -37,8 +53,37 @@ internal struct LibraryListView: View {
     @AppStorage(StorageKeys.libraryColumns)
     private var columnCustomization = TableColumnCustomization<PGN>()
 
+    /// Click a header once to sort ascending, twice to reverse — `Table`'s own
+    /// behaviour, bound rather than built (5 Aug 2026).
+    ///
+    /// **A binding and not `@State`, which is the load-bearing half of this
+    /// change.** Sorting here would reorder the rows on screen and nothing
+    /// else, and three things downstream read *display order* rather than the
+    /// screen: D24′ numbers exported filenames from it, the analysis queue
+    /// crunches top-to-bottom as shown, and D56′ makes it tab order. Those all
+    /// resolve through `LibraryDestination.gamesInDisplayOrder`, so the sort
+    /// has to live where `filteredGames` can apply it — otherwise export
+    /// silently numbers by one order while the reader is looking at another,
+    /// which is a disagreement no test would catch and no screen would show.
+    ///
+    /// Deliberately **not** persisted, unlike `columnCustomization` one
+    /// property up. A hidden column is a statement about what this reader
+    /// cares about; a sort is a statement about the question being asked right
+    /// now, and a Library that reopens sorted by Round because of something
+    /// done last Tuesday is answering a question nobody is asking.
+    ///
+    /// Not persisting is what makes the default *load-bearing* rather than
+    /// merely initial: every launch opens on `#` descending (5 Aug 2026), so
+    /// that ordering is a property of the Library rather than of whatever was
+    /// last clicked. The default and its consequences are argued at
+    /// `LibraryDestination.sortOrder`, which owns the value.
+    @Binding var sortOrder: [KeyPathComparator<PGN>]
+
     var body: some View {
-        Table(games, selection: $selectedPGNs, columnCustomization: $columnCustomization) {
+        Table(games,
+              selection: $selectedPGNs,
+              sortOrder: $sortOrder,
+              columnCustomization: $columnCustomization) {
             // D58′ — the ordinal the game's file carries on disk, leading the
             // table because that is where a filing number reads.
             //
@@ -53,7 +98,13 @@ internal struct LibraryListView: View {
             // game did not come from a numbered file", which is a fact about
             // the *column's* premise — and a blank there reads as a rendering
             // failure in a column of otherwise unbroken numbers.
-            TableColumn("#") { game in
+            // `sortUsing:` rather than `value:` here and at every other
+            // optional-valued column below: `value:` requires the sort value to
+            // be `Comparable`, and `Optional` is not — `KeyPathComparator` has
+            // the initializer that takes an optional key path instead. Both
+            // forms produce a `KeyPathComparator<PGN>`, which is what lets them
+            // mix in one table.
+            TableColumn("#", sortUsing: KeyPathComparator(\PGN.libraryIndex)) { game in
                 Text(game.libraryIndex.map(String.init) ?? RosterSummary.displayUnknown)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
@@ -87,14 +138,24 @@ internal struct LibraryListView: View {
             // hideable now, so no cell can be a guaranteed address. Moving the
             // identifier to `#` would trade one hideable host for another, and
             // that one renders an em dash for every game imported before D58′.
-            TableColumn("White") { game in
+            // Sorted on the **display** form, not the stored tag: the column
+            // shows "Magnus Carlsen" and sorting it by `[White "Carlsen,
+            // Magnus"]` would order by a surname the cell does not print. That
+            // is the right call for a table and the wrong one for a filing
+            // system, which is worth naming — if a by-surname order is ever
+            // wanted it is a *second* column, not a quiet swap of this key.
+            TableColumn("White", value: \.whiteDisplayName) { game in
                 Text(game.whiteDisplayName)
                     .accessibilityIdentifier(AccessibilityID.gameRow(game.name))
             }
             .customizationID("white")
-            TableColumn("Black") { Text($0.blackDisplayName) }
+            TableColumn("Black", value: \.blackDisplayName) { Text($0.blackDisplayName) }
                 .customizationID("black")
-            TableColumn("Result") { game in
+            // The raw value, so the order is the PGN vocabulary's own — 0-1,
+            // 1-0, 1/2-1/2, * — rather than `GameResult`'s declaration order.
+            // Neither is meaningful as a ranking; this one at least matches
+            // what the cell prints, which is the only thing a reader can check.
+            TableColumn("Result", value: \.result.rawValue) { game in
                 Text(game.result.rawValue).foregroundStyle(.secondary)
             }
             .width(60)
@@ -113,19 +174,59 @@ internal struct LibraryListView: View {
             // here would make this the one surface that prints a code the
             // rest of the app calls unclassified — which is the failure the
             // invariant was written to surface, defeated by the reader.
-            TableColumn("ECO") { game in
+            // Sorted through `opening?.code`, **not** `ecoCode`, for the reason
+            // the display comment above gives: `opening` is where the
+            // both-or-neither invariant is checked, and a row carrying a code
+            // without a family prints nothing here. Keying the sort off the
+            // stored column would order that row by a code the cell does not
+            // show — the same "one surface reaching past the invariant" defect
+            // the reader was warned about, arriving through the comparator
+            // instead of the cell.
+            //
+            // The cost, named rather than discovered: `opening` rehydrates an
+            // `ECOOpening` per access, so this sorts with O(n log n) rehydrates
+            // instead of reading a stored string.
+            //
+            // **This comment first said the cost was "bounded by the sort being
+            // a user gesture rather than a per-render fold", and that was
+            // wrong** — corrected 5 Aug 2026, hours after being written. The
+            // sort is applied inside `filteredGames`, which *is* the per-render
+            // fold, so a reader sitting on this column pays the rehydrates on
+            // every render rather than once per click. The sentence was written
+            // from where the comparator is *declared* (a header, clicked
+            // rarely) instead of from where it is *applied*, which is the same
+            // mistake in the same pass as the Players toolbar comment that
+            // claimed three view modes ignored the sort. Both were claims about
+            // data flow made without following the data.
+            //
+            // Still not a reason to reach past the accessor: at personal-library
+            // scale it is invisible, it joins the known-costs census, and the
+            // alternative trades a real invariant for a hypothetical
+            // measurement.
+            TableColumn("ECO", sortUsing: KeyPathComparator(\PGN.opening?.code)) { game in
                 Text(game.opening?.code ?? "").foregroundStyle(.secondary)
             }
             .width(min: 44, ideal: 52)
             .customizationID("eco")
-            TableColumn("Event") { Text($0.event).lineLimit(1) }
+            TableColumn("Event", value: \.event) { Text($0.event).lineLimit(1) }
                 .customizationID("event")
-            TableColumn("Date") { game in
+            // `effectiveDate` (date ?? importedAt), which is the app's one
+            // ordering rule for a game with no date (D10′) and the same key
+            // `chronologicalOrder` folds by — so this column agrees with every
+            // pure fold rather than inventing a second answer.
+            //
+            // Display and sort deliberately diverge for an undated game: the
+            // cell prints an em dash while the row sorts by its import time.
+            // The alternative is sorting on `date` and letting every undated
+            // game clump at one end, which looks like a bug and is a worse lie
+            // than the dash — the game *does* have a position in time, and it
+            // is the one the rest of the app already uses.
+            TableColumn("Date", value: \.effectiveDate) { game in
                 Text(game.displayDate).foregroundStyle(.secondary)
             }
             .width(100)
             .customizationID("date")
-            TableColumn("Round") { game in
+            TableColumn("Round", sortUsing: KeyPathComparator(\PGN.round)) { game in
                 Text(game.displayRound).foregroundStyle(.secondary)
             }
             .width(60)
@@ -196,6 +297,7 @@ private func listPreviewGames() -> [PGN] {
 
 #Preview("With Games") {
     @Previewable @State var selection: Set<PGN.ID> = []
+    @Previewable @State var sort = LibraryDestination.defaultSortOrder
 
     LibraryListView(
         games: listPreviewGames(),
@@ -203,7 +305,8 @@ private func listPreviewGames() -> [PGN] {
         onOpen: { _ in },
         onAnalyzeIDs: { _ in },
         onExportIDs: { _ in },
-        onDeleteIDs: { _ in }
+        onDeleteIDs: { _ in },
+        sortOrder: $sort
     )
     .frame(width: 720, height: 360)
     .modelContainer(for: PGN.self, inMemory: true)
@@ -213,8 +316,33 @@ private func listPreviewGames() -> [PGN] {
     .defaultAppStorage(UserDefaults(suiteName: "preview")!)
 }
 
+// Sorted rather than empty, and it is the branch the other two previews cannot
+// reach: `sortOrder` non-empty is what draws the header's direction chevron, so
+// this is the only canvas that shows a sorted table looking sorted. Round is
+// the column chosen on purpose — it is optional-valued, so this also renders
+// the `sortUsing:` arm rather than the `value:` one.
+#Preview("Sorted by Round") {
+    @Previewable @State var selection: Set<PGN.ID> = []
+    @Previewable @State var sort: [KeyPathComparator<PGN>] =
+        [KeyPathComparator(\PGN.round)]
+
+    LibraryListView(
+        games: listPreviewGames().sorted(using: sort),
+        selectedPGNs: $selection,
+        onOpen: { _ in },
+        onAnalyzeIDs: { _ in },
+        onExportIDs: { _ in },
+        onDeleteIDs: { _ in },
+        sortOrder: $sort
+    )
+    .frame(width: 720, height: 360)
+    .modelContainer(for: PGN.self, inMemory: true)
+    .defaultAppStorage(UserDefaults(suiteName: "preview")!)
+}
+
 #Preview("Empty") {
     @Previewable @State var selection: Set<PGN.ID> = []
+    @Previewable @State var sort = LibraryDestination.defaultSortOrder
 
     LibraryListView(
         games: [],
@@ -222,7 +350,8 @@ private func listPreviewGames() -> [PGN] {
         onOpen: { _ in },
         onAnalyzeIDs: { _ in },
         onExportIDs: { _ in },
-        onDeleteIDs: { _ in }
+        onDeleteIDs: { _ in },
+        sortOrder: $sort
     )
     .frame(width: 720, height: 360)
     .modelContainer(for: PGN.self, inMemory: true)

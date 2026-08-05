@@ -21,11 +21,33 @@ internal struct PlayersListView: View {
     /// `@AppStorage` where D45′'s collapse state is an owning type, and why
     /// the customization IDs below are a persistence contract rather than
     /// incidental strings.
+    ///
+    /// Including the correction recorded there on 5 Aug 2026: this stores
+    /// visibility and order, **not width**. Column widths are not restorable in
+    /// SwiftUI at all — no way to observe a resize, no way to set one from
+    /// code — so a resized column has never survived a relaunch.
     @AppStorage(StorageKeys.playersColumns)
     private var columnCustomization = TableColumnCustomization<RankedPlayer>()
 
+    /// Click once to sort ascending, twice to reverse — the Library's twin, and
+    /// see its doc for why this is a binding rather than local state.
+    ///
+    /// **This is what replaced the D48′ sort picker**, and the substitution is
+    /// exact rather than approximate: the picker's two positions were "by rank"
+    /// and "by name", which are now the Rank and Player columns. What it gains
+    /// is the other seven columns, which the picker could never have offered
+    /// without becoming a menu of nine. What it costs is persistence — the
+    /// picker's choice survived a relaunch and this does not — and the default
+    /// is therefore stated in code (`.rank`, ascending) instead of in
+    /// `UserDefaults`, which is strictly better: there is now exactly one place
+    /// that says what order Players opens in.
+    @Binding var sortOrder: [KeyPathComparator<RankedPlayer>]
+
     var body: some View {
-        Table(players, selection: $selectedKeys, columnCustomization: $columnCustomization) {
+        Table(players,
+              selection: $selectedKeys,
+              sortOrder: $sortOrder,
+              columnCustomization: $columnCustomization) {
             // Rank and Player were both pinned visible until 5 Aug 2026, each
             // carrying an identifier no other cell can serve — `rankingRow`
             // pins the computed ladder order, `playerRow` addresses rows for
@@ -52,7 +74,14 @@ internal struct PlayersListView: View {
             // another cell, and the actual answer was that no cell is a
             // guaranteed address once any column can be hidden — so the pin
             // goes and the identifier stays where it is.
-            TableColumn("Rank") { player in
+            // Ascending rank IS the D11′ ladder, and that equivalence is what
+            // let the picker go: `rank` was assigned by folding
+            // `PlayerStats.rankingOrder` before this view ever saw the row, so
+            // sorting by the badge number reproduces wins-then-win-rate-then-key
+            // exactly, without this table needing to know that comparator
+            // exists. Pinned by `defaultSortReproducesTheLadder`, because the
+            // equivalence is the contract and it is not visible from here.
+            TableColumn("Rank", value: \.rank) { player in
                 // The rank cell carries the order-pinning identifier
                 // (`rankingRow.1.Liren Ding`) — minted so the ladder UITest
                 // could assert the computed order without geometry queries,
@@ -72,12 +101,17 @@ internal struct PlayersListView: View {
             }
             .width(52)
             .customizationID("rank")
-            TableColumn("Player") { player in
+            // `stats.name` is the display form (D23′), which is what the cell
+            // prints — the Library's White column makes the same call for the
+            // same reason. Note this is NOT `stats.key`: the key is the folded,
+            // lowercased identity and sorting by it would put "de Firmian"
+            // somewhere a reader scanning capitals would not look.
+            TableColumn("Player", value: \.stats.name) { player in
                 Text(player.stats.name)
                     .accessibilityIdentifier(AccessibilityID.playerRow(player.stats.name))
             }
             .customizationID("player")
-            TableColumn("Games") { player in
+            TableColumn("Games", value: \.stats.games) { player in
                 Text("\(player.stats.games)").foregroundStyle(.secondary)
             }
             .width(60)
@@ -93,28 +127,49 @@ internal struct PlayersListView: View {
             // 60 pt, matching Games: these four are one family of integer
             // counts and equal widths read as a group. 40 was sized for a
             // single character and truncates "Losses".
-            TableColumn("Wins") { Text("\($0.stats.wins)") }
+            // These four ascend on the first click like every other column, so
+            // one click on Wins shows the *fewest* wins first. That reads
+            // backwards for a scoreboard and is kept anyway: uniformity is the
+            // feature — a table where some headers start descending because
+            // someone judged them "achievement-like" is a table you have to
+            // learn. Finder and Mail both do it this way, and the second click
+            // is right there.
+            TableColumn("Wins", value: \.stats.wins) { Text("\($0.stats.wins)") }
                 .width(60)
                 .customizationID("wins")
-            TableColumn("Draws") { Text("\($0.stats.draws)").foregroundStyle(.secondary) }
-                .width(60)
-                .customizationID("draws")
-            TableColumn("Losses") { Text("\($0.stats.losses)").foregroundStyle(.secondary) }
-                .width(60)
-                .customizationID("losses")
-            TableColumn("Win %") { player in
+            TableColumn("Draws", value: \.stats.draws) {
+                Text("\($0.stats.draws)").foregroundStyle(.secondary)
+            }
+            .width(60)
+            .customizationID("draws")
+            TableColumn("Losses", value: \.stats.losses) {
+                Text("\($0.stats.losses)").foregroundStyle(.secondary)
+            }
+            .width(60)
+            .customizationID("losses")
+            // The underlying `Double`, not the rendered percent string: the cell
+            // rounds to whole percent, so three players at 66.4%, 66.5% and
+            // 66.6% all print "66%" and sorting the text would order them
+            // arbitrarily while looking like a tie. Sorting the value keeps the
+            // order true and lets the display stay rounded.
+            TableColumn("Win %", value: \.stats.winRate) { player in
                 Text(player.stats.winRate.formatted(.percent.precision(.fractionLength(0))))
                     .foregroundStyle(.secondary)
             }
             .width(60)
             .customizationID("winRate")
-            TableColumn("Rating") { player in
+            // `rating?.mean`, so unrated players sort together at one end rather
+            // than by the em dash's position in a string sort. The provisional
+            // marker is display only and deliberately not part of the key: a
+            // provisional 1700 is still a 1700, and D11′ already treats the
+            // deviation as a separate fact rather than a discount on the mean.
+            TableColumn("Rating", sortUsing: KeyPathComparator(\RankedPlayer.rating?.mean)) { player in
                 Text(player.rating?.displaySummary ?? RosterSummary.displayUnknown)
                     .foregroundStyle(.secondary)
             }
             .width(120)
             .customizationID("rating")
-            TableColumn("Last Played") { player in
+            TableColumn("Last Played", value: \.stats.lastPlayed) { player in
                 Text(RosterSummary.displayDate(player.stats.lastPlayed))
                     .foregroundStyle(.secondary)
             }
@@ -138,11 +193,13 @@ internal struct PlayersListView: View {
 
 #Preview("With Players") {
     @Previewable @State var selection: Set<PlayerStats.ID> = []
+    @Previewable @State var sort = PlayersDestination.defaultSortOrder
 
     PlayersListView(
         players: PreviewFixtures.rankedPlayers(),
         selectedKeys: $selection,
-        onShowInLibrary: { _ in }
+        onShowInLibrary: { _ in },
+        sortOrder: $sort
     )
     .frame(width: 720, height: 320)
     // Never `.standard` — see `LibraryListView`'s previews.
@@ -151,11 +208,13 @@ internal struct PlayersListView: View {
 
 #Preview("Selected Row") {
     @Previewable @State var selection: Set<PlayerStats.ID> = [PreviewFixtures.topStats().id]
+    @Previewable @State var sort = PlayersDestination.defaultSortOrder
 
     PlayersListView(
         players: PreviewFixtures.rankedPlayers(),
         selectedKeys: $selection,
-        onShowInLibrary: { _ in }
+        onShowInLibrary: { _ in },
+        sortOrder: $sort
     )
     .frame(width: 720, height: 320)
     // Never `.standard` — see `LibraryListView`'s previews.
@@ -164,8 +223,14 @@ internal struct PlayersListView: View {
 
 #Preview("Empty") {
     @Previewable @State var selection: Set<PlayerStats.ID> = []
+    @Previewable @State var sort = PlayersDestination.defaultSortOrder
 
-    PlayersListView(players: [], selectedKeys: $selection, onShowInLibrary: { _ in })
+    PlayersListView(
+        players: [],
+        selectedKeys: $selection,
+        onShowInLibrary: { _ in },
+        sortOrder: $sort
+    )
         .frame(width: 720, height: 320)
         // Never `.standard` — see `LibraryListView`'s previews.
         .defaultAppStorage(UserDefaults(suiteName: "preview")!)

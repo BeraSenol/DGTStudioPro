@@ -16,9 +16,11 @@ import SwiftData
 /// "Ruy Lopez", and "ruy  lopez" are one player), `"?"`/empty tags resolve
 /// to no player, both store doors link on insert, the backfill heals
 /// pre-schema rows idempotently, and `applyEdit` re-resolves — the
-/// relationship sibling of the one-hash rule. Also pins two deliberate
-/// non-behaviors: first-seen casing wins, and orphaned players are not
-/// garbage-collected.
+/// relationship sibling of the one-hash rule — and, since D60′, collects the
+/// row that re-resolution strands. One deliberate non-behavior survives:
+/// first-seen casing wins. The other, "orphaned players are not
+/// garbage-collected", was this suite's for months and is gone — see
+/// `applyEditRelinksAndCollectsTheDisplacedPlayer` for the reversal.
 ///
 /// `@MainActor`: fronts `PGNStore` and realized `@Model`s, same as the
 /// other store suites.
@@ -167,8 +169,15 @@ struct PGNStorePlayerTests {
         #expect(try store.backfillPlayerTagNames() == 0)
     }
 
-    /// A linkless row (a future deletion's orphan) stays nil and never
-    /// re-reports as work — readers fall back to `name`.
+    /// A linkless row stays nil and never re-reports as work — readers fall
+    /// back to `name`.
+    ///
+    /// **Unaffected by D60′ deliberately, and worth saying so.** This calls
+    /// `backfillPlayerTagNames`, which touches no links and therefore strands
+    /// nothing; collection lives in `backfillPlayerLinks`, which every call
+    /// site runs immediately before this one (D29′). Adding a collector here
+    /// too would delete the row this test exists to observe, for no gain — the
+    /// strand has already been swept one call earlier.
     @Test func backfillSkipsLinklessPlayers() throws {
         let context = try Self.makeContext()
         let orphan = Player(name: "Nobody Linked")
@@ -263,10 +272,23 @@ struct PGNStorePlayerTests {
     
     // MARK: Edit Re-Resolution
     
-    /// The relationship sibling of the one-hash rule: editing a tag through
-    /// the funnel relinks. The displaced player deliberately survives
-    /// unreferenced — no GC in the POC.
-    @Test func applyEditRelinksAndKeepsOrphanedPlayer() throws {
+    /// The relationship sibling of the one-hash rule: editing a tag through the
+    /// funnel relinks — **and collects the player it displaced** (D60′).
+    ///
+    /// **This test asserted the opposite until 5 Aug 2026**, under the title
+    /// `applyEditRelinksAndKeepsOrphanedPlayer`, with the message "Magnus
+    /// Carlsen should linger unreferenced". It was pinning D9′'s no-GC rule and
+    /// it was right to, for as long as that rule held. Reversed rather than
+    /// deleted, because the interesting claim has not changed — "what happens
+    /// to the registry when a seat is re-spelled" — only its answer has.
+    ///
+    /// Worth keeping the old wording visible for one more reason: **this is the
+    /// exact path that generated the orphans D60′ was minted for.** Every
+    /// distinct spelling committed to a seat mints a row, and before the
+    /// collector each correction left the previous one behind forever. This
+    /// test described that as deliberate, which it was — the reversal is a
+    /// change of mind, not a bug fix.
+    @Test func applyEditRelinksAndCollectsTheDisplacedPlayer() throws {
         let context = try Self.makeContext()
         let store = PGNStore(modelContext: context)
         let imported = try store.importPGN(text: Self.samplePGN())
@@ -275,7 +297,10 @@ struct PGNStorePlayerTests {
         
         #expect(imported.whitePlayer?.name == "Alireza Firouzja")
         #expect(imported.blackPlayer?.name == "Nepo")
-        #expect(try Self.playerCount(in: context) == 3, "Magnus Carlsen should linger unreferenced")
+        #expect(
+            try Self.playerCount(in: context) == 2,
+            "Magnus Carlsen is stranded by the edit and collected with it"
+        )
     }
     
     // MARK: Relationship Semantics
@@ -288,9 +313,12 @@ struct PGNStorePlayerTests {
     /// for game deletion specifically (`PGNStore.delete(_ pgns:)`), so the pin
     /// reverses with it rather than being deleted: the interesting claim is
     /// still "what happens to the registry when a game goes", and it now has a
-    /// different answer. The rest of D9′ is untouched — nothing collects the
-    /// registry unasked, and the D40′ sweep is still the only door for rows
-    /// stranded some other way.
+    /// different answer. That sentence has now been overtaken twice: it went on
+    /// to say "the rest of D9′ is untouched — nothing collects the registry
+    /// unasked, and the D40′ sweep is still the only door for rows stranded some
+    /// other way". D60′ repealed both halves. Every door collects now, and the
+    /// sweep is gone. Kept as a record of how a correctly-scoped claim decays:
+    /// it was true when written, and what changed was the surrounding rule.
     ///
     /// Note what is *not* asserted: the surviving player's inverse array. That
     /// would be a read of a relationship whose update timing is SwiftData's

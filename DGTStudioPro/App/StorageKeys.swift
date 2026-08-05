@@ -44,10 +44,17 @@ internal enum StorageKeys {
     // Absent reads as `.list`; the two `@AppStorage` read sites (Library's
     // and Players') must agree on that default — the documented twin.
     internal static let collectionViewMode = "collectionViewMode"
-    /// D48′ — the merged Players destination's ordering. Stored as
-    /// `PlayersSortOrder.rawValue`; absent reads as `.rank` at the one
-    /// `@AppStorage` site, which is the destination's default read.
-    internal static let playersSortOrder = "playersSortOrder"
+    // `playersSortOrder` was here until 5 Aug 2026 — D48′'s rank/name toggle,
+    // stored as a `PlayersSortOrder` raw value. Removed with the picker it
+    // backed: the Players list sorts by column header now, and that sort is
+    // deliberately session-only, so there is nothing left to persist.
+    //
+    // The stored value lingers in `UserDefaults` unread, on `collectionViewMode`'s
+    // precedent four lines up: a leftover key costs nothing and a migration is
+    // machinery the leftover does not earn. Worth one line rather than none,
+    // because this namespace now carries **two** dead keys and a third would be
+    // the point at which "unread leftover" stops being a footnote and starts
+    // being a pattern that needs a sweep.
 
     // The two list-mode tables' column layouts — which columns are shown,
     // in what order, at what width. **Two keys, not one**, deliberately and

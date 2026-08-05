@@ -98,6 +98,19 @@ internal struct BoardDestination: View {
     /// back would give the menu a value it has no way to use.
     @State private var getInfoRequested = false
 
+    /// The registry, for the archive sheet's seat pickers (5 Aug 2026).
+    ///
+    /// Queried *here* rather than in `EditGameInfoSheet` because that sheet is
+    /// deliberately container-free — its previews build it with none, so a
+    /// `@Query` inside it would trap the canvas. The destination has a context
+    /// already; the sheet takes strings.
+    ///
+    /// Sorted by `name` (display form) to match `NewLiveGameSheet`'s query, so
+    /// the two seat menus list players in the same order. The *inserted* value
+    /// is still `tagName ?? name` — sorting by what a reader scans, inserting
+    /// what the archive stores, which is D29′'s split.
+    @Query(sort: \Player.name) private var knownPlayers: [Player]
+
     // `BoardEditor` and `activeEditor` are gone with D57′, and the enum's own
     // doc is why this is worth a comment rather than a silent deletion. It
     // argued for staying an enum at one case, on the grounds that "a second
@@ -430,7 +443,12 @@ internal struct BoardDestination: View {
                         onSave: { roster in
                             applyEditedInfo(roster, to: pgn)
                             session.updateRoster(roster)
-                        }
+                        },
+                        // D29′: tag form into the field, `name` as the fallback
+                        // for a pre-backfill row — `NewLiveGameSheet`'s exact
+                        // expression, because a second spelling of "what a seat
+                        // menu offers" is the twin-read-site pattern.
+                        knownPlayers: knownPlayers.map { $0.tagName ?? $0.name }
                     )
                 }
             }

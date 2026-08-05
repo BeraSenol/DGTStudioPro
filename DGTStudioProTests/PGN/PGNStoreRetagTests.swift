@@ -77,9 +77,13 @@ struct PGNStoreRetagTests {
         try context.fetch(FetchDescriptor<Player>()).filter(PGNStore.isOrphaned)
     }
 
-    /// Mints a linkless registry row — an orphan of the only kind that still
-    /// occurs, now that `delete(_ pgns:)` collects the ones a game deletion
-    /// would strand.
+    /// Mints a linkless registry row.
+    ///
+    /// **Since D60′ this fixture is the only way to produce one**, which is the
+    /// point rather than a quirk: every door collects now, so an orphan exists
+    /// only in the instant between `resolvePlayer` creating a row and something
+    /// linking it. That instant is unreachable from the app and reachable from
+    /// here, which is what lets the collection tests have a subject at all.
     ///
     /// Through `resolvePlayer`, not `context.insert(Player(...))`: D9′'s single
     /// creation door is the whole reason a row exists at all, and a fixture
@@ -336,53 +340,94 @@ struct PGNStoreRetagTests {
     // and the applyEdit re-resolve contract is pinned by the rename
     // round-trips above.
 
-    // MARK: Delete — the orphan sweep (D38′'s guard, D40′'s surface)
+    // MARK: Orphan collection (D60′ — automatic, unasked)
 
-    /// The guard's reason, now expressed as absence rather than refusal: a
-    /// linked player is never *offered*, because `.nullify` leaves the games'
-    /// tags intact and the Library's next `backfillPlayerLinks()` resolves
-    /// those same tags and creates the row again. A delete the app undoes
-    /// within one navigation is worse than no delete.
-    @Test("A linked player is never listed as an orphan")
-    func linkedPlayerIsNeverListed() throws {
+    /// The rule, stated as the thing it replaced: a linked player is never
+    /// collected. `.nullify` leaves the games' tags intact and the Library's
+    /// next `backfillPlayerLinks()` resolves them again, so collecting a linked
+    /// row would be undone within one navigation — which is why D38′ made the
+    /// old manual delete orphan-only and why the automatic one keeps that floor.
+    @Test("A linked player is never collected")
+    func linkedPlayerIsNeverCollected() throws {
         let (store, context) = try Self.storeAndContext()
         _ = try store.importPGN(text: Self.pgnText())
 
         #expect(try Self.orphans(in: context).isEmpty)
+        #expect(store.collectOrphanedPlayers() == 0)
         #expect(try store.player(withNormalizedKey: Self.key(forTag: "Senol, Bera")) != nil)
     }
 
-    /// And the case the sweep still exists for. It used to be spelled by
-    /// deleting a player's last game; the cascade collects those at the source
-    /// now, so the remaining orphan is a registry row that never had a link —
-    /// the pre-cascade backlog, and anything a future path strands.
-    @Test("An unlinked registry row is listed, and the sweep removes it")
-    func orphanedPlayerIsListedAndSwept() throws {
+    /// A linkless row goes, without anyone asking. The whole of D60′.
+    @Test("An unlinked registry row is collected unasked")
+    func unlinkedRowIsCollected() throws {
         let (store, context) = try Self.storeAndContext()
         _ = try Self.orphanedRow(store, in: context, named: "Ghost, Casper")
+        #expect(!(try Self.orphans(in: context).isEmpty))
 
-        let orphans = try Self.orphans(in: context)
-        #expect(orphans.contains { $0.normalizedName == Self.key(forTag: "Ghost, Casper") })
-        #expect(try store.deleteOrphanedPlayers(orphans) == orphans.count)
+        #expect(store.collectOrphanedPlayers() == 1)
+        try context.save()
         #expect(try store.player(withNormalizedKey: Self.key(forTag: "Ghost, Casper")) == nil)
     }
 
-    /// The snapshot guard. The sweep acts on a list built for a confirmation
-    /// dialog, so between listing and deleting a row can pick up a link — here
-    /// by importing a game under the same tag, which resolves onto the existing
-    /// orphan rather than minting a row. Deleting it then would nullify live
-    /// links, so the re-check must skip it.
-    @Test("A row that gained a link since it was listed is skipped")
-    func sweepSkipsARowRelinkedSinceListing() throws {
+    /// **The generator this decision was minted for**, and the one a reader
+    /// would not guess from the rule's wording: re-spelling a seat.
+    ///
+    /// Every distinct spelling committed to a seat mints a row, because
+    /// `applyEdit` re-resolves both seats unconditionally (D18′) and
+    /// `resolvePlayer` is a creation door (D9′). Correcting a name therefore
+    /// used to leave the misspelling behind forever — which is exactly what the
+    /// seat pickers were found offering. Here the correction collects it.
+    ///
+    /// The two spellings have genuinely different identity keys, which is what
+    /// makes this a second row rather than a rename: "Bera" folds to `bera`,
+    /// while "Senol, Bera" displays as "Bera Senol" and folds to `bera senol`.
+    @Test("Correcting a seat collects the row the old spelling minted")
+    func reSpellingASeatCollectsTheStrandedRow() throws {
         let (store, context) = try Self.storeAndContext()
-        _ = try Self.orphanedRow(store, in: context, named: "Senol, Bera")
-        let stale = try Self.orphans(in: context)
-        #expect(!stale.isEmpty)
+        let game = try store.importPGN(text: Self.pgnText(white: "Bera"))
+        #expect(try store.player(withNormalizedKey: Self.key(forTag: "Bera")) != nil)
 
-        _ = try store.importPGN(text: Self.pgnText())
+        try store.applyEdit(to: game) { $0.white = "Senol, Bera" }
+        try context.save()
 
-        #expect(try store.deleteOrphanedPlayers(stale) == 0)
+        #expect(try store.player(withNormalizedKey: Self.key(forTag: "Bera")) == nil)
         #expect(try store.player(withNormalizedKey: Self.key(forTag: "Senol, Bera")) != nil)
+        #expect(try Self.orphans(in: context).isEmpty)
+    }
+
+    /// A rename collects the row it renamed *from*, in the same transaction —
+    /// which is what makes `retag` the merge replacement D52′ said it was:
+    /// retag onto an existing name and the loser does not linger as a duplicate
+    /// spelling in every seat picker.
+    @Test("A rename collects the row it renamed from")
+    func renameCollectsTheOldRow() throws {
+        let (store, context) = try Self.storeAndContext()
+        _ = try store.importPGN(text: Self.pgnText(white: "Bera"))
+        let old = try #require(try store.player(withNormalizedKey: Self.key(forTag: "Bera")))
+
+        _ = try store.retag(old, to: "Senol, Bera")
+        try context.save()
+
+        #expect(try store.player(withNormalizedKey: Self.key(forTag: "Bera")) == nil)
+        #expect(try store.player(withNormalizedKey: Self.key(forTag: "Senol, Bera")) != nil)
+    }
+
+    /// The backlog arm: rows orphaned before this rule existed are touched by
+    /// no door, so nothing would ever collect them. `backfillPlayerLinks` does,
+    /// because it is the one pass that already walks every game and every
+    /// player — and it collects **after** relinking, never before, or it would
+    /// delete the rows that pass is about to attach games to.
+    @Test("The backfill collects the pre-existing backlog, after relinking")
+    func backfillCollectsTheBacklogAfterRelinking() throws {
+        let (store, context) = try Self.storeAndContext()
+        _ = try store.importPGN(text: Self.pgnText())
+        _ = try Self.orphanedRow(store, in: context, named: "Ghost, Casper")
+
+        _ = try store.backfillPlayerLinks()
+
+        #expect(try store.player(withNormalizedKey: Self.key(forTag: "Ghost, Casper")) == nil)
+        #expect(try store.player(withNormalizedKey: Self.key(forTag: "Senol, Bera")) != nil)
+        #expect(try Self.orphans(in: context).isEmpty)
     }
 
     // MARK: Delete — the game-deletion cascade

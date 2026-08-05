@@ -32,31 +32,27 @@ internal struct LibraryInspectorView: View {
     /// the controller reachable directly, they simply enqueue.
     internal let queue: AnalysisQueueController
 
-    /// The movetext-edit request. Presentation and the write belong to
-    /// `LibraryDestination` (D15′ — modals are destination furniture); this
-    /// view only asks, which is what keeps it renderable in a canvas.
-    ///
-    /// Optional and defaulted, on `BoardInspectorView.onEditInfo`'s precedent
-    /// — which D57′ has since removed, leaving this the pattern's one instance
-    /// rather than its second; the shape is unchanged and the citation is kept
-    /// as provenance — so
-    /// the previews render without a destination and the pencil simply doesn't
-    /// draw. That is also the honest shape for a *host* capability: an
-    /// affordance that cannot act does not exist rather than sitting greyed
-    /// out — D40′'s rule, applied when minting rather than at the next sweep.
-    internal let onEditMoves: (() -> Void)?
+    // `onEditMoves` was here until 5 Aug 2026 — an optional closure the
+    // destination filled to draw the PGN header's Edit Moves pencil. It is
+    // gone with the pencil: the movetext door is Get Info's Move Text tab, and
+    // a closure nothing calls is the thing D54′ was itself written to stop.
+    //
+    // It outlived `BoardInspectorView.onEditInfo`, the precedent it cited, by
+    // one day. Both were the same shape — a *host capability* expressed as an
+    // optional closure, so an affordance that cannot act does not draw rather
+    // than sitting greyed out (D40′ applied at minting) — and both ended the
+    // same way, by the verb moving into Get Info. The pattern was sound; what
+    // it turned out to be describing was a surface in transit.
 
     // MARK: Initializers
     internal init(
         pgn: PGN? = nil,
         selectionCount: Int = 0,
-        queue: AnalysisQueueController,
-        onEditMoves: (() -> Void)? = nil
+        queue: AnalysisQueueController
     ) {
         self.pgn = pgn
         self.selectionCount = selectionCount
         self.queue = queue
-        self.onEditMoves = onEditMoves
     }
     
     // MARK: Body
@@ -71,7 +67,7 @@ internal struct LibraryInspectorView: View {
                 // state (the name-edit draft). It no longer tears down an
                 // analysis — the queue lives on the tab and keeps
                 // crunching while the user browses (decision 1).
-                LoadedSection(pgn: pgn, queue: queue, onEditMoves: onEditMoves)
+                LoadedSection(pgn: pgn, queue: queue)
                     .id(pgn.id)
             }
             .listStyle(.sidebar)
@@ -110,7 +106,6 @@ private struct LoadedSection: View {
     // MARK: Stored Properties
     @Bindable var pgn: PGN
     let queue: AnalysisQueueController
-    let onEditMoves: (() -> Void)?
     
     // MARK: Private Properties
     @Environment(\.modelContext) private var modelContext
@@ -321,30 +316,24 @@ private struct LoadedSection: View {
         CollapsibleSection(.pgn, title: "PGN") {
             rawPGNText
         } actions: {
-            // **The app's one movetext door, and this is where it landed.**
-            // M10 made movetext read-only on the Board in both branches; the
-            // Library is where a game's bytes are managed, and this is the
-            // section that renders them, so the pencil sits adjacent to its
-            // subject exactly as `InspectorEditButtonView`'s own argument
-            // requires. A pencil on the roster header would have been the
-            // wrong neighbour — that section is identity and tags.
+            // **The Edit Moves pencil stood here for one day** (D54′, 4 Aug)
+            // and is gone (5 Aug): the movetext door is Get Info's Move Text
+            // tab now. This section is read-only and renders the bytes, which
+            // is what it was doing before D54′ put a pencil on it.
             //
-            // Labelled "Edit Moves" rather than "Edit PGN": the editor is
-            // D18′'s movetext validator and touches no tag. The label is the
-            // only thing separating the two readings of a pencil in a header
-            // called PGN, which is why it names the narrower one.
+            // Recorded rather than quietly reverted, because the argument that
+            // put it here was good and is *still* good — a pencil belongs
+            // adjacent to its subject, and this section renders the movetext.
+            // What outranked it is that the pencil opened a modal over a
+            // sidebar, while Get Info is a window that already edits this
+            // game's other nine fields. Editing a game's Event in one place
+            // and its moves in another was the split; one window that edits
+            // everything about a game is the resolution, and the price is that
+            // the editor is no longer adjacent to a rendering of its subject.
             //
-            // Chevron first, then this, then Copy — `InspectorSectionHeader`
-            // owns that ordering and the trailing inset, so a two-control
-            // slot here needs no geometry of its own (D45′, and the
-            // three-control Players header is the precedent).
-            if let onEditMoves {
-                InspectorEditButtonView(
-                    label: "Edit Moves",
-                    identifier: AccessibilityID.libraryEditMovesButton,
-                    action: onEditMoves
-                )
-            }
+            // The header is back to chevron + Copy, its pre-D54′ arity — which
+            // is why `InspectorSectionHeader`'s *Actions — Every Arity*
+            // preview still covers this slot without change.
             copyPGNButton
         }
     }

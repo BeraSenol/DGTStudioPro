@@ -76,21 +76,18 @@ internal struct LibraryDestination: View {
     @State private var selectedPGNs: Set<PGN.ID> = []
     @State private var importProgress: ImportProgress?
 
-    /// Which game the movetext editor is up for, nil when it is closed.
-    ///
-    /// An item-sheet over the model rather than a `Bool` beside the selection:
-    /// the sheet must edit the game it was opened on, and a selection can
-    /// change underneath a modal. `BoardDestination.activeEditor` made the same
-    /// call for the same reason until D57′ removed it — that destination
-    /// presents no editor at all now, so this is the last item-sheet-over-a-
-    /// model in the app rather than one of two.
-    ///
-    /// **This is M10's other half.** The editor was the Board's until movetext
-    /// went read-only there — live and review both — and the Library became
-    /// the one place a game's bytes are managed. The store door, D18′'s replay
-    /// validator and the five `movetext.editor.*` identifiers are unchanged;
-    /// only the door moved.
-    @State private var editingMovetext: PGN?
+    // `editingMovetext` was here until 5 Aug 2026 — the `.sheet(item:)` subject
+    // that drove D18′'s editor, held as an item-sheet over the model rather
+    // than a `Bool` because a selection can change underneath a modal.
+    // Removed with the sheet: the editor is a *tab* in Get Info now, so there
+    // is no presentation state for this destination to hold.
+    //
+    // Its doc called this "M10's other half" and noted it was the app's last
+    // item-sheet-over-a-model, `BoardDestination.activeEditor` having gone with
+    // D57′ the day before. That count is now zero, which is worth keeping: the
+    // pattern is not deprecated, there is simply nothing left presenting a
+    // modal over a model, and a future one has both precedents in the history
+    // rather than a live example to copy.
     @State private var isQueuePopoverPresented = false
     
     // MARK: Search & Filters (2 Aug 2026 — native `.searchable`, restored
@@ -111,6 +108,74 @@ internal struct LibraryDestination: View {
     /// surface while the field is focused, so the menu remains the discoverable
     /// entry point, and its filled/unfilled glyph now tracks `!tokens.isEmpty`.
     @State private var searchTokens: [LibrarySearchToken] = []
+
+    /// The list mode's column sort (5 Aug 2026).
+    ///
+    /// **Defaults to `#` descending — highest ordinal first** (by request,
+    /// 5 Aug 2026). The Library opens on the most recently filed games, which
+    /// is what `importedAt` descending was reaching for and never quite said:
+    /// import time is when *this app* first saw a file, while the ordinal is
+    /// the number the folder on disk has been keeping since before the app
+    /// existed (D58′). Re-importing an old game moves it to the top under the
+    /// old default and leaves it in place under this one, which is the
+    /// difference that matters.
+    ///
+    /// **One comparator, not two, and that is deliberate.** A hidden
+    /// tiebreaker would make the launch order a state no click can return to —
+    /// as it stands, `#` twice reproduces the default exactly, so the opening
+    /// view is a position on the ladder of orderings rather than a private
+    /// one. The cost is that ties are unordered by contract: `libraryIndex` is
+    /// documented **not unique** at its declaration (two folders, two
+    /// numbering runs), and `sorted(using:)` is not guaranteed stable. In
+    /// practice it is deterministic — same array, same comparator, same result
+    /// — and the array arrives in the `@Query`'s `importedAt` order, so ties
+    /// fall out newest-first. Relied on for *display*, never for anything that
+    /// must be reproducible; D10′'s total-tiebreak rule governs the pure
+    /// folds, and this is not one.
+    ///
+    /// Un-indexed games (anything imported before D58′) sort to the **bottom**,
+    /// which is `Optional`'s ordering under a reversed comparator and is also
+    /// the right answer: a column of numbers should not open on the rows that
+    /// have none.
+    ///
+    /// **Owned here rather than in `LibraryListView`, which is the whole point
+    /// of the change.** `filteredGames` applies it as the last narrowing
+    /// stage, so every downstream consumer — the subtitle census, the
+    /// inspector's resolution, and above all `gamesInDisplayOrder` — sees the
+    /// order the reader is looking at. Left inside the table, a sort would
+    /// reorder pixels while D24′ numbered exported files, the analysis queue
+    /// picked its running order, and D56′ opened tabs, all three from the
+    /// *unsorted* array. Nothing would fail; the filenames would simply stop
+    /// matching the screen, which is the kind of disagreement this project has
+    /// twice recorded as invisible until someone opens two things at once.
+    ///
+    /// `@State` and not `TabState`: a sort is not a fact about the window it
+    /// was made in, and it deliberately does not survive a relaunch either —
+    /// see the binding's doc in `LibraryListView` for that argument. Since the
+    /// default is now a real ordering rather than "unsorted", not persisting
+    /// means every launch opens on `#` descending, which is the point.
+    @State private var sortOrder: [KeyPathComparator<PGN>] = Self.defaultSortOrder
+
+    /// The launch order, stated **once**.
+    ///
+    /// Extracted the moment it was written, because the first spelling put it
+    /// in the `@State` initializer above and the seven previews across this
+    /// file's two mode views each repeated it — eight statements of one
+    /// default, which is exactly the twin-read-site shape D25′ names and the
+    /// eval bar's 20-vs-16 already cost this project a month of quiet
+    /// disagreement. A preview drifting from the shipped default is the
+    /// harmless-looking version of that: the canvas stops showing what the app
+    /// opens on, and nothing fails.
+    ///
+    /// **Computed rather than stored**, the `SevenTagRosterSection.noGamePlaceholder`
+    /// spelling — and `nonisolated` because `View` conformance would otherwise
+    /// infer `@MainActor` onto it (the lesson `BoardPieceLayer` records at its
+    /// own statics), which would stop previews and any future nonisolated
+    /// caller from reaching it for no reason. `KeyPathComparator` is `Sendable`
+    /// by `SortComparator`'s own refinement, so nothing here needs an opt-out.
+    internal nonisolated static var defaultSortOrder: [KeyPathComparator<PGN>] {
+        [KeyPathComparator(\PGN.libraryIndex, order: .reverse)]
+    }
     
     // MARK: Initializers
     internal init(
@@ -171,7 +236,29 @@ internal struct LibraryDestination: View {
                 )
             }
         }
-        return result
+        // Sorting is the LAST stage, after every narrowing, and it is the stage
+        // that makes "display order" mean what the reader sees. Note the
+        // asymmetry with the stages above, which is deliberate: those *remove*
+        // rows and compose in any order; this one only permutes. It has to come
+        // last regardless, because sorting a set you are about to filter is
+        // work thrown away.
+        //
+        // **Unconditional since the default became a real ordering** (5 Aug
+        // 2026). This read `sortOrder.isEmpty ? result : …` while empty meant
+        // "unsorted" and was the common case. `#` descending is the default
+        // now, nothing in `Table`'s header behaviour ever empties the array,
+        // and a branch whose condition cannot be produced is the `.disabled(…)`
+        // shape D40′ names — so it goes rather than sitting here reading as a
+        // considered fast path. `PlayersDestination` made the same call one
+        // file over, for the same reason, an hour earlier.
+        //
+        // The honest cost of removing it: this fold runs once per render, so
+        // the Library now sorts every render instead of only when sorted. For
+        // `#` that is an `Int?` compare and invisible. For **ECO** it is not —
+        // that comparator goes through `opening`, which rehydrates — so a
+        // reader sitting on the ECO column pays a rehydrate per comparison per
+        // render. On the known-costs census, not optimized ahead of M7.
+        return result.sorted(using: sortOrder)
     }
     
     /// The model side of the `LibraryFilter` split: the pure matcher takes
@@ -260,37 +347,14 @@ internal struct LibraryDestination: View {
         selectedPGNs = Set(games.map(\.id))
     }
 
-    /// Commits an edited movetext through `PGNStore.applyMovetextEdit` —
-    /// validation, canonical store, hash refresh, evaluation invalidation and
-    /// re-classification, one transaction. D18′ owns all of it; this is
-    /// transport plus one failure sink.
-    ///
-    /// A rejection at commit would mean the sheet enabled Save on an invalid
-    /// game, which it cannot: both sides run the same pure validation. So only
-    /// a persistence failure is user-invisible-but-logged, and a rejection is
-    /// logged as the contradiction it would be.
-    ///
-    /// **What this does not do, which its Board ancestor did:** rebuild a
-    /// cached on-board `Game`. There is none here. The recorded cost is that a
-    /// Board window already reviewing this game holds its own `TabState` and
-    /// keeps rendering the pre-edit moves until it reloads — accepted rather
-    /// than engineered around, at one Mac and one reader, and named here so it
-    /// is a decision rather than a surprise.
-    private func applyEditedMovetext(_ proposed: [String], to pgn: PGN) {
-        do {
-            let outcome = try PGNStore(modelContext: modelContext)
-                .applyMovetextEdit(to: pgn, proposed: proposed)
-            if case .success = outcome {
-                Self.logger.info("Movetext edit applied to “\(pgn.name, privacy: .public)”")
-            } else {
-                Self.logger.error("movetext edit unexpectedly rejected at commit")
-            }
-        } catch {
-            Self.logger.error(
-                "movetext edit failed to persist: \(error.localizedDescription, privacy: .public)"
-            )
-        }
-    }
+    // `applyEditedMovetext` lived here for one day (D54′, 4 Aug) and moved to
+    // `GetInfoWindow.applyMovetext` on 5 Aug with the editor it served. It had
+    // moved here from `BoardDestination` the day before that, which makes this
+    // the *second* relocation of one door in two days — worth a line, because
+    // the door never changed and its three homes each looked right at the time:
+    // the Board had the cached `Game`, the Library had the bytes, Get Info has
+    // the window that edits everything else about a game. Only the last one is
+    // an argument about where a *reader* would look for it.
 
 
     // MARK: Body
@@ -471,17 +535,17 @@ internal struct LibraryDestination: View {
             return true
         }
         .inspector(isPresented: $tabState.libraryInspectorPresented) {
+            // `onEditMoves:` was a fourth argument here until 5 Aug 2026,
+            // passed only when a single game was selected so the pencil would
+            // not render over an empty or multi selection. Both the argument
+            // and the pencil went with the movetext door, which is Get Info's
+            // Move Text tab now. (Written above the call rather than inside the
+            // argument list, where it read as a commented-out parameter and
+            // matched every grep for the symbol it was announcing the death of.)
             LibraryInspectorView(
                 pgn: selectedPGN(in: games),
                 selectionCount: selectedPGNs.count,
-                queue: tabState.analysisQueue,
-                // Passed only when there is a game to edit, so the pencil
-                // doesn't render over an empty or multi selection. The
-                // inspector's own `if let` is what makes that a non-rendering
-                // control rather than a disabled one.
-                onEditMoves: selectedPGN(in: games).map { pgn in
-                    { editingMovetext = pgn }
-                }
+                queue: tabState.analysisQueue
             )
             .inspectorColumnWidth(min: 310, ideal: 310, max: 400)
         }
@@ -500,14 +564,13 @@ internal struct LibraryDestination: View {
         ) { token in
             tokenLabel(token)
         }
-        // D18′'s editor, on the destination rather than in the inspector:
-        // modals are destination furniture (D15′) and the write needs
-        // `modelContext` and the store door. The inspector only requests.
-        .sheet(item: $editingMovetext) { pgn in
-            MovetextEditorSheet(pgn: pgn) { proposed in
-                applyEditedMovetext(proposed, to: pgn)
-            }
-        }
+        // D18′'s editor was presented here — the destination owning the modal
+        // (D15′) while the inspector only requested it. Gone 5 Aug 2026 with
+        // the pencil: the editor is a *tab* in Get Info now, so there is no
+        // modal for a destination to own and no request for an inspector to
+        // make. The store write went with it, to the window that hosts the
+        // editor, which keeps "the surface that edits owns the door" true
+        // through the move.
         .sheet(isPresented: Binding(present: $importProgress)) {
             if let importProgress {
                 ImportStatusView(progress: importProgress) {
@@ -577,7 +640,8 @@ internal struct LibraryDestination: View {
                 onOpen:       openGames,
                 onAnalyzeIDs: { requestAnalysis(ids: $0) },
                 onExportIDs:  { requestExport(ids: $0) },
-                onDeleteIDs:  { requestDelete(ids: $0) }
+                onDeleteIDs:  { requestDelete(ids: $0) },
+                sortOrder:    $sortOrder
             )
             .accessibilityIdentifier(AccessibilityID.libraryModeList)
         case .columns:
@@ -588,7 +652,8 @@ internal struct LibraryDestination: View {
                 onOpen:    openGames,
                 onAnalyze: requestAnalysis,
                 onExport:  requestExport,
-                onDelete:  { pendingDeletion = $0 }
+                onDelete:  { pendingDeletion = $0 },
+                sortOrder: $sortOrder
             )
             .accessibilityIdentifier(AccessibilityID.libraryModeColumns)
         case .gallery:

@@ -42,6 +42,12 @@ internal struct LibraryColumnsView: View {
     internal let onExport: (PGN) -> Void
     internal let onDelete: (PGN) -> Void
 
+    /// Shared with list mode through `LibraryDestination` (5 Aug 2026), which
+    /// is what makes a sort made in one mode survive the switch to the other.
+    /// Same binding, same comparator array — deliberately not a second piece of
+    /// state that would have to be kept in step.
+    @Binding var sortOrder: [KeyPathComparator<PGN>]
+
     /// "No value to show" for the derived rows — the meaning
     /// `OpeningSection`'s em-dash carries, deliberately restated per surface
     /// (its own comment makes the same call beside `SevenTagRosterSection`'s).
@@ -131,8 +137,21 @@ internal struct LibraryColumnsView: View {
             // empty this view entirely. One column has nothing to customize,
             // so the omission costs nothing and closes the hazard by
             // construction.
-            Table(games, selection: $selectedPGNs) {
-                TableColumn("Name") { game in
+            // Sortable since 5 Aug 2026, sharing the destination's comparator
+            // with list mode. The header above was documented one screen up as
+            // an *accepted cost* — shipping SwiftUI on macOS cannot suppress
+            // it — so this is that cost turning into the feature: a header that
+            // had to be there anyway now does something.
+            //
+            // One consequence worth naming: sorting here writes the same state
+            // list mode reads, so a sort made in either mode survives the
+            // switch to the other. What it cannot do is *show* a sort it did
+            // not set — order by Rating in list mode, come back here, and this
+            // header carries no direction chevron while the rows are in rating
+            // order. Honest rather than ideal: a one-column table has nowhere
+            // to display an ordering it does not own.
+            Table(games, selection: $selectedPGNs, sortOrder: $sortOrder) {
+                TableColumn("Name", value: \.name) { game in
                     row(for: game)
                 }
                 // The 160 is the same number the enclosing frame carries, and
@@ -357,6 +376,7 @@ private func columnsPreviewGames() -> [PGN] {
 
 #Preview("Detail") {
     @Previewable @State var selection: Set<PGN.ID> = []
+    @Previewable @State var sort = LibraryDestination.defaultSortOrder
 
     let games = columnsPreviewGames()
 
@@ -367,7 +387,8 @@ private func columnsPreviewGames() -> [PGN] {
         onOpen: { _ in },
         onAnalyze: { _ in },
         onExport: { _ in },
-        onDelete: { _ in }
+        onDelete: { _ in },
+        sortOrder: $sort
     )
     .frame(width: 900, height: 620)
     .onAppear {
@@ -378,6 +399,7 @@ private func columnsPreviewGames() -> [PGN] {
 
 #Preview("Multi-Selection") {
     @Previewable @State var selection: Set<PGN.ID> = []
+    @Previewable @State var sort = LibraryDestination.defaultSortOrder
 
     let games = columnsPreviewGames()
 
@@ -388,7 +410,8 @@ private func columnsPreviewGames() -> [PGN] {
         onOpen: { _ in },
         onAnalyze: { _ in },
         onExport: { _ in },
-        onDelete: { _ in }
+        onDelete: { _ in },
+        sortOrder: $sort
     )
     .frame(width: 900, height: 620)
     .onAppear {
@@ -399,6 +422,7 @@ private func columnsPreviewGames() -> [PGN] {
 
 #Preview("No Selection") {
     @Previewable @State var selection: Set<PGN.ID> = []
+    @Previewable @State var sort = LibraryDestination.defaultSortOrder
 
     LibraryColumnsView(
         games: columnsPreviewGames(),
@@ -407,7 +431,8 @@ private func columnsPreviewGames() -> [PGN] {
         onOpen: { _ in },
         onAnalyze: { _ in },
         onExport: { _ in },
-        onDelete: { _ in }
+        onDelete: { _ in },
+        sortOrder: $sort
     )
     .frame(width: 900, height: 620)
     .modelContainer(for: PGN.self, inMemory: true)
@@ -415,6 +440,7 @@ private func columnsPreviewGames() -> [PGN] {
 
 #Preview("Empty") {
     @Previewable @State var selection: Set<PGN.ID> = []
+    @Previewable @State var sort = LibraryDestination.defaultSortOrder
 
     LibraryColumnsView(
         games: [],
@@ -423,7 +449,8 @@ private func columnsPreviewGames() -> [PGN] {
         onOpen: { _ in },
         onAnalyze: { _ in },
         onExport: { _ in },
-        onDelete: { _ in }
+        onDelete: { _ in },
+        sortOrder: $sort
     )
     .frame(width: 900, height: 620)
     .modelContainer(for: PGN.self, inMemory: true)

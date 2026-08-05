@@ -28,10 +28,25 @@
 //     are still applied throughout the view layer, and nothing reads them:
 //     `accessibilityIdentifier` is not surfaced to VoiceOver (that is
 //     `accessibilityLabel`, which the app sets separately and which is still
-//     live). They were kept rather than swept because removing 143 constants
-//     across 34 files is a large mechanical diff for no functional gain, and
+//     live). They were kept rather than swept because removing the whole
+//     registry and its call sites across the view layer is a large mechanical
+//     diff for no functional gain, and
 //     because they are what a future UI suite — or an accessibility audit
 //     tool — would need on day one. That is a stated bet, not an oversight.
+//
+//     The two counts this paragraph used to carry — a constant count and a
+//     file count — are gone deliberately, and the deletion is the point
+//     rather than tidying: D42′ moved the registry's size into a grep
+//     precisely so it could not go stale in prose, and it had gone stale in
+//     three places at once, each disagreeing with the other two and with the
+//     file. The size is not what this argument needs; "large" is.
+//
+//     The grep itself deliberately does NOT appear here, and that omission
+//     is load-bearing rather than lazy. It counts declaration keywords in
+//     this file, so writing it in this file adds a match to its own result —
+//     which is what happened when this note was first drafted: the count
+//     went up by one the moment the command explaining the count was pasted
+//     beside it. D42′ owns the command; read it there.
 //
 //  The rot the registry originally fixed was real, and is worth keeping as
 //  the reason the naming discipline exists: the UI suite once asserted the
@@ -167,7 +182,27 @@ internal enum AccessibilityID {
     // successor `getinfo.player.tag`), and now this. All three are a pencil on
     // a panel giving way to a door on the thing itself, which is what makes
     // them one decision arriving in instalments rather than three cleanups.
-    internal static let libraryEditMovesButton = "library.editMoves"
+    // `libraryEditMovesButton` ("library.editMoves") was **removed** 5 Aug
+    // 2026 — the fourth in the rhyme above, one day after it was minted as the
+    // successor to `board.editMoves`. The Library's PGN-header pencil is gone
+    // and the movetext door is Get Info's Move Text tab, whose host identifier
+    // is `getinfo.game.movetext`.
+    //
+    // **A successor at the tab, not at the button, and the difference is the
+    // finding.** The three removals above each swapped one control's
+    // identifier for another control's. This one has no replacement control:
+    // the editor is now reached by selecting a tab, and the five
+    // `movetext.editor.*` identifiers below — which never moved — are how you
+    // address what it opens. So the group shrank by one without losing
+    // coverage, because the *contents* were always the addressable part and
+    // the pencil was only the way in.
+    //
+    // Consequence worth stating: `InspectorEditButtonView` is down to **one**
+    // production consumer, the live inspector's Edit Details. The type is not
+    // dead and should not be swept — but it is now a shared component with a
+    // single caller, which is the state where "shared" starts describing
+    // history rather than structure. Named here so the next sweep reads it as
+    // measured rather than as something nobody noticed.
     internal static let movetextEditorSheet    = "movetext.editor"
     internal static let movetextEditorField    = "movetext.editor.field"
     internal static let movetextEditorStatus   = "movetext.editor.status"
@@ -212,7 +247,19 @@ internal enum AccessibilityID {
     /// form-level identifier, which is all there is to address on it.
     internal static let getInfoGame          = "getinfo.game"
     internal static let getInfoGameDetails   = "getinfo.game.details"
+    /// The third tab (5 Aug 2026), holding D18′'s movetext editor. Its
+    /// *contents* keep the five `movetext.editor.*` identifiers below — the
+    /// editor moved container and kept its addresses, which is what makes this
+    /// a new host rather than a new surface.
+    internal static let getInfoGameMoveText  = "getinfo.game.movetext"
     internal static let getInfoGameFile      = "getinfo.game.file"
+
+    /// The seat menus on the Details tab (5 Aug 2026). A function over the
+    /// seat's raw string, not over `SevenTagRoster` — the file's String-only
+    /// signature rule, whose reason is recorded in this file's header.
+    internal static func getInfoSeatPicker(_ seat: String) -> String {
+        "getinfo.game.seatPicker.\(seat)"
+    }
     internal static let getInfoLive          = "getinfo.live"
     internal static let getInfoPlayer        = "getinfo.player"
     internal static let getInfoPlayerTagField = "getinfo.player.tag"
@@ -532,8 +579,17 @@ internal enum AccessibilityID {
     /// `GameRecord`, so they appear in no view mode and can never be selected —
     /// which is the finding the decision came from. A toolbar affordance is the
     /// only kind that can reach them.
-    internal static let playersMaintenanceMenu  = "players.maintenanceMenu"
-    internal static let playersSweepOrphansItem = "players.maintenanceMenu.deleteUnused"
+    // `playersMaintenanceMenu` and `playersSweepOrphansItem` were **removed**
+    // 5 Aug 2026 with D40′'s manual sweep (D60′). No successors: orphan
+    // collection has no surface at all now — it happens inside the store doors
+    // — and an automatic rule is the one kind of behaviour this registry
+    // cannot name, because there is nothing for a person to point at.
+    //
+    // That makes two removals in two days with no successor control, after
+    // `library.editMoves`. Both are the same shape: an affordance replaced by
+    // something that is not an affordance. Worth watching rather than acting
+    // on — if it keeps happening, the registry is tracking a shrinking share of
+    // what the app does, and the header's bet is what would need re-reading.
 
     // The `player.renameSheet` family (sheet, tag field, save) was **removed**
     // with `RenamePlayerSheet` itself (M10 / D53′, 4 Aug 2026) — recorded, not
@@ -561,8 +617,20 @@ internal enum AccessibilityID {
         "playerCard.\(name)"
     }
     
-    /// D48′ — the merged destination's rank/name ordering picker.
-    internal static let playersSortPicker = "players.sortPicker"
+    // `playersSortPicker` ("players.sortPicker") was **removed** 5 Aug 2026
+    // with the D48′ ordering picker it named — the same class of change as the
+    // `rankings.*` group below, and recorded at its old anchor for the same
+    // reason: a removal is as breaking as a rename.
+    //
+    // **No successor, and that is the finding rather than an omission.** The
+    // replacement is a `Table` sort, and a table's sort affordance is its
+    // column *headers*, which SwiftUI owns and which take no identifier from
+    // us. So this is the first affordance in the registry to be replaced by
+    // something the registry structurally cannot name — the bet in this file's
+    // header ("what a future suite would need on day one") does not cover it,
+    // and a future suite would reach these headers by title or by AX role, not
+    // by identifier. Worth stating here because the alternative reading of a
+    // missing constant is that someone forgot.
 
     // The `rankings.*` group — seven constants — was **removed** with its
     // destination (D48′): removals are as breaking as renames, recorded here

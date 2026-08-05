@@ -10,10 +10,19 @@ import SwiftUI
 
 /// The Finder-column shape (2 Aug 2026 redesign, with `LibraryColumnsView`):
 /// a flat list of players in the first column, the selected player's detail
-/// filling the rest. The list follows `players`' own display order, so the
-/// toolbar's Sort picker is what it obeys — rank order and name order both
-/// arrive already sequenced, and the rank badge stays honest either way
-/// because rank is computed under D11′ regardless of display order.
+/// filling the rest. The list follows `players`' own display order, which
+/// since 5 Aug 2026 is set by the **list mode's column sort** (it replaced the
+/// toolbar Sort picker this comment used to name). Rows arrive already
+/// sequenced whatever that order is, and the rank badge stays honest in all of
+/// them because rank is computed under D11′ regardless of display order.
+///
+/// The one header this mode has sorts by name, sharing the destination's
+/// comparator with list mode — so a sort made in either survives the switch to
+/// the other. What it cannot do is *display* an ordering it did not set: sort
+/// by Rating over in list mode, come back, and this header shows no direction
+/// while the rows are in rating order. A one-column table has nowhere to put
+/// eight other columns' state, and inventing somewhere would be a second
+/// spelling of a sort this destination already has one of.
 ///
 /// Replaces the grouped browser (letter / win-band buckets): the groups were
 /// a navigation aid for a card grid, and the grid is gone. The win-band
@@ -37,6 +46,10 @@ internal struct PlayersColumnsView: View {
     /// `selectedGames`, threaded exactly as `PlayersInspectorView` gets it.
     let recentGames: [PGN]
     let onShowInLibrary: (PlayerStats.ID) -> Void
+
+    /// Shared with list mode through `PlayersDestination` — the Library twin's
+    /// arrangement and its reason (5 Aug 2026).
+    @Binding var sortOrder: [KeyPathComparator<RankedPlayer>]
 
     @Environment(\.openWindow) private var openWindow
 
@@ -92,8 +105,12 @@ internal struct PlayersColumnsView: View {
             // here (`PlayersListView` persists its layout under
             // `StorageKeys.playersColumns`; sharing that key would let hiding
             // a column there empty this view).
-            Table(players, selection: $selectedKeys) {
-                TableColumn("Player") { player in
+            // Sortable since 5 Aug 2026, on `LibraryColumnsView`'s reasoning
+            // and sharing the destination's comparator with list mode — see
+            // the Library twin for the accepted-cost-becomes-feature argument
+            // and for why this header cannot display an ordering it did not set.
+            Table(players, selection: $selectedKeys, sortOrder: $sortOrder) {
+                TableColumn("Player", value: \.stats.name) { player in
                     row(for: player)
                 }
                 // 160 floor, all three — the Library twin's reasoning applies
@@ -266,6 +283,7 @@ internal struct PlayersColumnsView: View {
 
 #Preview("Selected") {
     @Previewable @State var selection: Set<PlayerStats.ID> = [PreviewFixtures.topStats().id]
+    @Previewable @State var sort = PlayersDestination.defaultSortOrder
 
     PlayersColumnsView(
         players: PreviewFixtures.rankedPlayers(),
@@ -276,7 +294,8 @@ internal struct PlayersColumnsView: View {
             PGN(event: "Test Open", site: "Memory", round: 2,
                 white: "Nepomniachtchi, Ian", black: "Carlsen, Magnus", result: .draw)
         ],
-        onShowInLibrary: { _ in }
+        onShowInLibrary: { _ in },
+        sortOrder: $sort
     )
     .frame(width: 860, height: 520)
     .modelContainer(for: PGN.self, inMemory: true)
@@ -286,12 +305,14 @@ internal struct PlayersColumnsView: View {
 /// is empty renders "No games", not a collapsed void.
 #Preview("Selected — No Games") {
     @Previewable @State var selection: Set<PlayerStats.ID> = [PreviewFixtures.topStats().id]
+    @Previewable @State var sort = PlayersDestination.defaultSortOrder
 
     PlayersColumnsView(
         players: PreviewFixtures.rankedPlayers(),
         selectedKeys: $selection,
         recentGames: [],
-        onShowInLibrary: { _ in }
+        onShowInLibrary: { _ in },
+        sortOrder: $sort
     )
     .frame(width: 860, height: 520)
     .modelContainer(for: PGN.self, inMemory: true)
@@ -303,12 +324,14 @@ internal struct PlayersColumnsView: View {
     @Previewable @State var selection: Set<PlayerStats.ID> = Set(
         PreviewFixtures.rankedPlayers().prefix(2).map(\.id)
     )
+    @Previewable @State var sort = PlayersDestination.defaultSortOrder
 
     PlayersColumnsView(
         players: PreviewFixtures.rankedPlayers(),
         selectedKeys: $selection,
         recentGames: [],
-        onShowInLibrary: { _ in }
+        onShowInLibrary: { _ in },
+        sortOrder: $sort
     )
     .frame(width: 860, height: 520)
     .modelContainer(for: PGN.self, inMemory: true)
@@ -316,12 +339,14 @@ internal struct PlayersColumnsView: View {
 
 #Preview("No Selection") {
     @Previewable @State var selection: Set<PlayerStats.ID> = []
+    @Previewable @State var sort = PlayersDestination.defaultSortOrder
 
     PlayersColumnsView(
         players: PreviewFixtures.rankedPlayers(),
         selectedKeys: $selection,
         recentGames: [],
-        onShowInLibrary: { _ in }
+        onShowInLibrary: { _ in },
+        sortOrder: $sort
     )
     .frame(width: 860, height: 520)
     .modelContainer(for: PGN.self, inMemory: true)
@@ -329,12 +354,14 @@ internal struct PlayersColumnsView: View {
 
 #Preview("Empty") {
     @Previewable @State var selection: Set<PlayerStats.ID> = []
+    @Previewable @State var sort = PlayersDestination.defaultSortOrder
 
     PlayersColumnsView(
         players: [],
         selectedKeys: $selection,
         recentGames: [],
-        onShowInLibrary: { _ in }
+        onShowInLibrary: { _ in },
+        sortOrder: $sort
     )
     .frame(width: 860, height: 520)
 }

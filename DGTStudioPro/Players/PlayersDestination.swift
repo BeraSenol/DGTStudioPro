@@ -28,23 +28,25 @@ internal struct RankedPlayer: Identifiable, Hashable {
     internal var id: PlayerStats.ID { stats.id }
 }
 
-/// The merged destination's two orderings (D48′). Raw values are the stored
-/// form (an `@AppStorage` key), so they are spelled out — the
-/// `InspectorSection` rule: a rename that reads as a refactor must not
-/// silently reset the user's choice.
-internal enum PlayersSortOrder: String, CaseIterable, Identifiable, Sendable {
-    case rank = "rank"
-    case name = "name"
-
-    internal var id: String { rawValue }
-
-    internal var displayName: String {
-        switch self {
-        case .rank: "By Rank"
-        case .name: "By Name"
-        }
-    }
-}
+// `PlayersSortOrder` lived here until 5 Aug 2026 — D48′'s two orderings as a
+// persisted enum behind a toolbar menu picker. It is gone, along with its
+// `StorageKeys.playersSortOrder` key and the `playersSortPicker` identifier,
+// because the list's column headers now sort and its two positions were the
+// Rank and Player columns spelled a second way.
+//
+// Recorded rather than deleted quietly, because it reverses part of a numbered
+// decision and because the *reason* is not "columns are nicer": it is that two
+// controls answering one question is the twin-read-site shape this project
+// keeps re-recording, and the enum could not grow to nine orderings without
+// becoming a menu nobody would read. What D48′ decided that still stands is
+// the part that mattered — rank is the default read, and rank renders in every
+// ordering because it is a fact about the player rather than a position in the
+// current sort.
+//
+// The one thing genuinely lost: the picker's choice survived a relaunch and
+// the column sort does not. Accepted deliberately (5 Aug 2026) — a sort is the
+// question being asked now, not a standing preference, and the default is
+// stated in code below instead of in `UserDefaults`.
 
 /// The Players destination (M-prs.3; absorbed Rankings in D48′): the four
 /// `CollectionViewMode`s over the ranked ladder, in rank order by default
@@ -59,7 +61,7 @@ internal enum PlayersSortOrder: String, CaseIterable, Identifiable, Sendable {
 /// Selection is a `PlayerStats.ID` (the resolved key), `@State` like the
 /// Library's — deliberately not on `TabState`: neither destination
 /// promises selection survival across sidebar switches. It *does* survive
-/// a sort toggle, because both orderings speak the same keys.
+/// a re-sort, because every ordering speaks the same keys.
 internal struct PlayersDestination: View {
 
     // MARK: Static Constants
@@ -81,16 +83,40 @@ internal struct PlayersDestination: View {
     // last view mode used in either collection destination is what both
     // show. The `.list` default is the documented twin of the Library's.
     @AppStorage(StorageKeys.collectionViewMode) private var viewMode: CollectionViewMode = .list
-    @AppStorage(StorageKeys.playersSortOrder) private var sortOrder: PlayersSortOrder = .rank
+    /// The list mode's column sort (5 Aug 2026), successor to D48′'s persisted
+    /// picker. Ascending rank is the shipped default and **is** the D11′
+    /// ladder — `rank` was folded through `PlayerStats.rankingOrder` before any
+    /// view saw it, so ordering by the badge number reproduces the comparator
+    /// without restating it.
+    ///
+    /// Owned here rather than in `PlayersListView` for `LibraryDestination`'s
+    /// reason: `displayed` applies it, so the search below and everything
+    /// downstream see one order. Less load-bearing than the Library's — Players
+    /// has no export numbering and no tab order — but the two destinations
+    /// stay parallel under the collection-destination parity invariant, and a
+    /// reader who learns one has learned the other.
+    @State private var sortOrder: [KeyPathComparator<RankedPlayer>] = Self.defaultSortOrder
+
+    /// The ladder, stated **once** — `LibraryDestination.defaultSortOrder`'s
+    /// twin under the collection-destination parity invariant, extracted for
+    /// its reason (eight previews across two mode views were each repeating
+    /// it) and computed-and-`nonisolated` for its reason.
+    ///
+    /// Ascending, and that direction is not a style choice: rank 1 is the top
+    /// of the ladder, so ascending rank *is* D11′. Reversing this default would
+    /// silently open Players on its worst player.
+    internal nonisolated static var defaultSortOrder: [KeyPathComparator<RankedPlayer>] {
+        [KeyPathComparator(\RankedPlayer.rank)]
+    }
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \PGN.importedAt, order: .reverse) private var games: [PGN]
 
-    /// The player registry, for the orphan sweep only (D40′) — the rows the
-    /// index cannot show. A second `@Query` rather than a fetch inside `body`
-    /// because the sweep deletes `Player` rows and nothing else: driven off
-    /// `games` alone, the toolbar's count would still name the rows it had just
-    /// removed. `MergePlayerSheet` queries the same way for the same reason.
-    @Query(sort: \Player.name) private var registry: [Player]
+    // The `registry` @Query lived here for D40′'s sweep — a second query over
+    // `Player` so the toolbar's orphan count stayed reactive while the sweep
+    // deleted the rows. Gone with the sweep (D60′): orphans are collected
+    // inside the store doors now, so this destination has no reason to know
+    // the registry exists. Its rows come from the `games` fold, as they always
+    // did.
 
     /// A set since 2 Aug 2026, adopting the Library's selection model so
     /// the icons grid can rubber-band and the table can ⌘-click. Every
@@ -124,11 +150,8 @@ internal struct PlayersDestination: View {
     // surface is the D40′ lie one layer down, and the deadline is met by the
     // door existing rather than by the seam being tidied.
 
-    /// D40′'s sweep, held between offer and confirmation — the same optional-
-    /// array shape as the Library's `pendingBatchDeletion`. It is a *snapshot*
-    /// of rows, which is why the store door re-checks each one before deleting:
-    /// a player listed here can pick up a link before the alert is answered.
-    @State private var sweep: [Player]?
+    // `sweep` held D40′'s offer between the menu and its confirmation.
+    // Removed with both (D60′).
 
     // MARK: Initializers
 
@@ -196,10 +219,17 @@ internal struct PlayersDestination: View {
         let histories = Glicko1.histories(from: records)
         let ranked = Self.ranked(from: records, histories: histories)
         // Rank is computed under D11′ regardless of display order — the sort
-        // only decides sequence, never the number on the badge.
-        let displayed = sortOrder == .rank
-        ? ranked
-        : ranked.sorted { $0.stats.name < $1.stats.name }
+        // only decides sequence, never the number on the badge. That sentence
+        // predates the column sort and survives it unchanged, which is the
+        // clearest sign the two were separable all along.
+        //
+        // `ranked` already arrives in ladder order, so the common case sorts an
+        // array that is already sorted. Left as an unconditional call rather
+        // than special-cased: the Library guards its equivalent because *empty*
+        // there means "no sort at all", while here there is always exactly one
+        // comparator and the guard would be checking for a state that cannot
+        // occur.
+        let displayed = ranked.sorted(using: sortOrder)
         // Search narrows the *list only*. `selected` / `history` below read
         // the full ladder, so a player filtered out of view keeps their
         // inspector profile — searching is about finding, not deselecting.
@@ -232,7 +262,6 @@ internal struct PlayersDestination: View {
         let history = soleKey.flatMap { histories[$0] } ?? []
 
         // The store owns the rule, the query owns the rows (D40′).
-        let orphans = registry.filter(PGNStore.isOrphaned)
 
         // Exactly two selected is the head-to-head question, and the one
         // gesture in this destination that had no payoff — the inspector
@@ -273,17 +302,7 @@ internal struct PlayersDestination: View {
                 )
                 .inspectorColumnWidth(min: 310, ideal: 310, max: 400)
             }
-            .alert(
-                sweepTitle,
-                isPresented: Binding(present: $sweep),
-                presenting: sweep,
-                actions: { players in
-                    Button("Delete", role: .destructive) { performSweep(players) }
-                    Button("Cancel", role: .cancel) {}
-                },
-                message: { players in Text(Self.sweepMessage(players)) }
-            )
-            .toolbar { toolbarContent(orphans: orphans) }
+            .toolbar { toolbarContent }
             // `.searchScopes` is gone with the scope bar — the same three
             // choices are chips now. `suggestedTokens` drops what is already
             // applied, so the list never offers a chip you are wearing.
@@ -372,68 +391,6 @@ internal struct PlayersDestination: View {
     // `resolvedPlayer(for:)` went with them: `showInLibrary` above carries its
     // own inline lookup and was never a caller.
 
-    // `merge(key:into:)` and `beginMerge` lived here from M5 until D52′
-    // (4 Aug 2026). The id→model tombstone lesson their picker carried is
-    // not lost — the standing invariant records it, and the sweep below is
-    // its remaining exemplar in this file.
-
-    /// Deletes the confirmed snapshot. The door skips any row that gained a
-    /// link since the alert was raised, so this reports what actually went
-    /// rather than what was offered.
-    private func performSweep(_ players: [Player]) {
-        do {
-            let deleted = try PGNStore(modelContext: modelContext)
-                .deleteOrphanedPlayers(players)
-            Self.logger.info("Swept \(deleted) unused player row(s)")
-        } catch {
-            Self.logger.error("Sweep failed: \(error.localizedDescription, privacy: .public)")
-        }
-    }
-
-    // `present(_:)` and `refusalMessage(_:)` moved to `GetInfoWindow` with the
-    // rename they served (M10). Both are unchanged there, including the
-    // exhaustive switch whose point is that a future third `RetagRejection`
-    // case arrives as a compile error rather than a swallowed refusal.
-
-    /// Singular and plural spelled out rather than an interpolated "s": the
-    /// count reaching 1 is the common case here, not the edge one.
-    private var sweepTitle: String {
-        let count = sweep?.count ?? 0
-        return count == 1 ? "Delete 1 Unused Player?" : "Delete \(count) Unused Players?"
-    }
-
-    /// Names them, because an orphan appears in no *view mode* — the three
-    /// collection destinations fold `GameRecord`s, whose sides are resolved
-    /// links — so a bare count would ask the user to approve deleting rows the
-    /// list they are standing in cannot show. Capped like the refusal's list,
-    /// for the same reason.
-    ///
-    /// **Correction.** This comment used to claim the alert was the *only*
-    /// place an orphaned player is ever rendered, and D40′ says so too. It is
-    /// false. Counted rather than asserted — and recounted when D52′ removed
-    /// `MergePlayerSheet`'s query: **three** `@Query`s stand over the registry
-    /// — this destination's, `NewLiveGameSheet`'s, and `ContentView`'s. One
-    /// *renders* an unfiltered list, so an orphan has always been offered in
-    /// the New Game seat menu. `ContentView`'s is an id → model hop that shows
-    /// nothing, and this destination's is filtered to orphans by definition.
-    ///
-    /// The claim that survives is the narrower one the invariants list already
-    /// makes — orphans are unreachable through *selection*. Worth keeping the
-    /// correction visible rather than silently rewriting the sentence: "the
-    /// only place X happens" is a claim about a set, and this one was never
-    /// counted.
-    ///
-    /// The seat-menu pollution is also most of the practical argument for the
-    /// deletion cascade in `PGNStore.delete(_ pgns:)`, which is what stops new
-    /// orphans reaching either picker.
-    private static func sweepMessage(_ players: [Player]) -> String {
-        let shown = players.prefix(5).map(\.name)
-        let more = players.count > shown.count ? " And \(players.count - shown.count) more." : ""
-        return "These players are in no games: " + shown.joined(separator: ", ") + "."
-        + more
-        + " Removing them changes no game and no export; they return by name if a game of theirs is ever imported again."
-    }
-
     /// ⌘A over all four view modes. `LibraryDestination.selectAll(_:)` carries
     /// the full argument — the responder chain, `Table` answering first in list
     /// and columns, nil-on-empty leaving Edit ▸ Select All disabled — and it is
@@ -484,18 +441,22 @@ internal struct PlayersDestination: View {
                                      onShowInLibrary: showInLibrary)
                 case .list:
                     PlayersListView(players: players, selectedKeys: $selectedKeys,
-                                    onShowInLibrary: showInLibrary)
+                                    onShowInLibrary: showInLibrary,
+                                    sortOrder: $sortOrder)
                 case .columns:
                     // Flat list + detail since the Finder-column redesign
                     // (2 Aug 2026): the list follows `players`' display
-                    // order, so the Sort picker drives it directly and the
-                    // grouping vocabulary D48′ chose here went with the
-                    // grid it navigated. The detail feeds on the same
-                    // `selectedGames` the inspector receives.
+                    // order, which the list mode's column sort now sets
+                    // (5 Aug 2026, replacing the Sort picker this comment
+                    // used to name) — so this mode reads the order without
+                    // being able to change it. The grouping vocabulary D48′
+                    // chose here went with the grid it navigated. The detail
+                    // feeds on the same `selectedGames` the inspector receives.
                     PlayersColumnsView(players: players,
                                        selectedKeys: $selectedKeys,
                                        recentGames: selectedGames,
-                                       onShowInLibrary: showInLibrary)
+                                       onShowInLibrary: showInLibrary,
+                                       sortOrder: $sortOrder)
                 case .gallery:
                     PlayersGalleryView(players: players, selectedKeys: $selectedKeys,
                                        onShowInLibrary: showInLibrary)
@@ -533,47 +494,40 @@ internal struct PlayersDestination: View {
     /// its own group rather than sharing a pill with content controls (the
     /// `InspectorToggleContent` contract).
     @ToolbarContentBuilder
-    private func toolbarContent(orphans: [Player]) -> some ToolbarContent {
+    private var toolbarContent: some ToolbarContent {
         ToolbarSpacer(.fixed)
-        ToolbarItem {
-            // D48′'s one new control: rank order is the default read, name
-            // order is for finding someone. A menu picker rather than a
-            // second segmented pair — two segmented controls side by side
-            // read as one broken one.
-            Picker("Sort", selection: $sortOrder) {
-                ForEach(PlayersSortOrder.allCases) { order in
-                    Text(order.displayName)
-                        .tag(order)
-                }
-            }
-            .padding(.horizontal, 6)
-            .pickerStyle(.menu)
-            .help("Order players by rank or by name")
-            .accessibilityIdentifier(AccessibilityID.playersSortPicker)
-        }
-//        ToolbarSpacer(.fixed)
-        ToolbarItem {
-            // D40′'s surface, and the only affordance in the app that can reach
-            // an orphaned player. Before the spacer: it acts on content, so it
-            // belongs on the content side of the break.
-            //
-            // A menu rather than a bare button because the item opens a
-            // confirmation rather than acting, and because registry maintenance
-            // is a family with room to grow. Disabled rather than hidden, so
-            // "are there any?" is answerable without the control appearing and
-            // vanishing under the pointer.
-            Menu {
-                Button("Delete Unused Players…") { sweep = orphans }
-                    .disabled(orphans.isEmpty)
-                    .accessibilityIdentifier(AccessibilityID.playersSweepOrphansItem)
-            } label: {
-                Label("Maintenance", systemImage: "ellipsis.circle")
-            }
-            .help(orphans.isEmpty
-                  ? "No unused players"
-                  : "\(orphans.count) unused player row(s) can be removed")
-            .accessibilityIdentifier(AccessibilityID.playersMaintenanceMenu)
-        }
+        // D48′'s sort picker stood here until 5 Aug 2026. It is gone rather
+        // than disabled: the list's column headers sort now, and its two
+        // positions were the Rank and Player columns under another name. The
+        // toolbar keeps only what the columns cannot reach.
+        //
+        // One consequence, named because it is the honest cost: the other three
+        // view modes have no headers, so they can no longer *change* the order.
+        // They still **obey** it — `displayed` sorts before `coreContent` fans
+        // out, so a sort made in list mode survives a switch to gallery for the
+        // rest of the session. Read/write split rather than a loss of function,
+        // and accepted at one reader: those three are browsing surfaces where
+        // rank order is the point. If changing it from them ever bites, the
+        // answer is a control those modes own, not this one restored.
+        //
+        // (The first draft of this comment claimed those modes "always render
+        // the ladder", which is what it looked like from the toolbar and is
+        // wrong — the sort is applied one function up from where the modes
+        // branch. Left visible: it is a claim about data flow written without
+        // following the data, which is this project's most-recorded species,
+        // and it was caught by grepping for the picker rather than by care.)
+        // D40′'s Maintenance menu stood here until 5 Aug 2026, holding one
+        // item — Delete Unused Players… — disabled when there were none.
+        //
+        // Removed with the manual sweep (D60′), and the reason is D40′'s own:
+        // orphans are collected inside the store doors now, so the enabling
+        // condition can never be produced and the item would sit permanently
+        // greyed. "A disabled affordance whose guard can never be true is a lie
+        // with a green build" is that decision's sentence, and it is what
+        // retired its own surface.
+        //
+        // This is also why `toolbarContent` stopped taking an argument: the
+        // orphan list was the only thing ever passed in.
         ToolbarSpacer(.fixed)
         ToolbarItem {
             // Same macOS segmented-picker caveat as the Library's: the

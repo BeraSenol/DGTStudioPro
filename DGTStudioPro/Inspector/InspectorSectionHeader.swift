@@ -224,14 +224,14 @@ extension InspectorSectionHeader where Actions == EmptyView {
             ) {
                 InspectorEditButtonView(
                     // Was "Edit Info" / `board.editInfo` until D57′ removed
-                    // that affordance. Repointed at the Library's Edit Moves
+                    // that affordance. Repointed at the live inspector's Edit Details
                     // pencil rather than left citing a deleted identifier —
                     // and the app's *one* surviving `InspectorEditButtonView`
                     // is the honest thing for this canvas to show, since a
                     // preview witnessing an arrangement the app has retired
                     // reads as evidence the arrangement is still checked.
-                    label: "Edit Moves",
-                    identifier: AccessibilityID.libraryEditMovesButton,
+                    label: "Edit Details",
+                    identifier: AccessibilityID.liveInspectorEditDetails,
                     action: {}
                 )
             }
@@ -285,14 +285,14 @@ extension InspectorSectionHeader where Actions == EmptyView {
             InspectorSectionHeader("Lone Pencil") {
                 InspectorEditButtonView(
                     // Was "Edit Info" / `board.editInfo` until D57′ removed
-                    // that affordance. Repointed at the Library's Edit Moves
+                    // that affordance. Repointed at the live inspector's Edit Details
                     // pencil rather than left citing a deleted identifier —
                     // and the app's *one* surviving `InspectorEditButtonView`
                     // is the honest thing for this canvas to show, since a
                     // preview witnessing an arrangement the app has retired
                     // reads as evidence the arrangement is still checked.
-                    label: "Edit Moves",
-                    identifier: AccessibilityID.libraryEditMovesButton,
+                    label: "Edit Details",
+                    identifier: AccessibilityID.liveInspectorEditDetails,
                     action: {}
                 )
             }
@@ -303,12 +303,12 @@ extension InspectorSectionHeader where Actions == EmptyView {
         } header: {
             // The app's one multi-control header, and the only place two verbs
             // share a slot since D52′ took the Players menu and M10 took its
-            // pencil. The pencil leads the glyph because Edit Moves is the
+            // pencil. The pencil leads the glyph because the edit verb is the
             // section's verb and Copy is a convenience on what it shows.
             InspectorSectionHeader("Pencil and Glyph", section: .pgn) {
                 InspectorEditButtonView(
-                    label: "Edit Moves",
-                    identifier: AccessibilityID.libraryEditMovesButton,
+                    label: "Edit Details",
+                    identifier: AccessibilityID.liveInspectorEditDetails,
                     action: {}
                 )
                 Button { } label: { Image(systemName: "doc.on.doc") }

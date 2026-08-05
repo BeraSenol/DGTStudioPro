@@ -36,6 +36,25 @@ internal struct EditGameInfoSheet: View {
     /// The caller applies it to the PGN, refreshes the content hash, and
     /// keeps the on-screen live roster in sync.
     internal let onSave: (LiveGame.Roster) -> Void
+
+    /// Known-player **tag forms** for the seat pickers (5 Aug 2026), forwarded
+    /// verbatim to `LiveGameRosterForm` — same name, same default, same
+    /// meaning, so this is a pass-through rather than a second concept.
+    ///
+    /// **A parameter and not a `@Query`, and the previews are what settle it.**
+    /// The obvious move was to query `Player` here the way `NewLiveGameSheet`
+    /// does one file over. This sheet's own doc says it "never touches
+    /// SwiftData", which reads like discipline and is actually a *capability*:
+    /// both previews below construct it with no `modelContainer`, so a `@Query`
+    /// would trap the canvas the moment it was added. The presenter has a
+    /// context and this does not; passing the strings keeps that true.
+    ///
+    /// Empty renders plain text fields, so any caller that has no registry to
+    /// offer — and the previews — behave exactly as before. The default lives
+    /// on the **initializer's** parameter rather than here, because this type
+    /// writes its own `init` and therefore has no memberwise one for a property
+    /// default to reach.
+    internal let knownPlayers: [String]
     
     // MARK: Environment
     
@@ -47,14 +66,23 @@ internal struct EditGameInfoSheet: View {
     
     // MARK: Initializer
     
+    /// Hand-written because `_roster` has to be seeded from `pgn` — which is
+    /// also why `knownPlayers` needs a parameter here rather than riding a
+    /// memberwise init the way `LiveGameRosterForm`'s twin does. A type with an
+    /// explicit initializer gets **no** synthesized memberwise one, so a
+    /// defaulted stored property is invisible to callers until it is threaded
+    /// through by hand; adding the property alone compiled the declaration and
+    /// failed every call site.
     internal init(
         pgn: PGN,
         deduplicated: Bool,
-        onSave: @escaping (LiveGame.Roster) -> Void
+        onSave: @escaping (LiveGame.Roster) -> Void,
+        knownPlayers: [String] = []
     ) {
         self.pgn = pgn
         self.deduplicated = deduplicated
         self.onSave = onSave
+        self.knownPlayers = knownPlayers
         // Seed with form-friendly values ("?" placeholders → empty fields),
         // the same boundary conversion the live sheets use.
         _roster = State(initialValue: LiveGame.Roster(
@@ -83,7 +111,8 @@ internal struct EditGameInfoSheet: View {
             
             LiveGameRosterForm(
                 roster: $roster,
-                identifierPrefix: AccessibilityID.archiveFormPrefix
+                identifierPrefix: AccessibilityID.archiveFormPrefix,
+                knownPlayers: knownPlayers
             )
             
             Divider()

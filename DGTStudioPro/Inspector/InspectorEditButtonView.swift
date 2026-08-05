@@ -101,10 +101,15 @@ internal struct InspectorEditButtonView: View {
         ) {
             InspectorEditButtonView(
                 // See the twin note in `InspectorSectionHeader`'s previews:
-                // `board.editInfo` went with D57′, and the Library's Edit Moves
-                // is the app's one remaining pencil.
-                label: "Edit Moves",
-                identifier: AccessibilityID.libraryEditMovesButton,
+                // Repointed twice in two days as the pencils went:
+                // `board.editInfo` with D57′, then the Library's Edit Moves
+                // on 5 Aug. **Edit Details is now the app's only pencil**, so
+                // this canvas has nowhere left to drift to — which also means
+                // a fifth removal would leave this preview witnessing nothing,
+                // and the honest move then is to delete it rather than invent
+                // a caller.
+                label: "Edit Details",
+                identifier: AccessibilityID.liveInspectorEditDetails,
                 action: {}
             )
         }

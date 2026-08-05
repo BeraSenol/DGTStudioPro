@@ -1,5 +1,5 @@
 //
-//  MovetextEditorSheet.swift
+//  MovetextEditorView.swift
 //  DGTStudioPro
 //
 //  Created by Supreme Leader on 21/07/2026.
@@ -12,42 +12,62 @@ import SwiftUI
 /// (`MovetextEdit.validate`), so the status line shows the first illegal ply
 /// (or a green "N moves") and **Save** is gated on a legal, result-consistent
 /// game. Save hands the tokenized SAN to the caller, which owns the
-/// `PGNStore.applyMovetextEdit` write and the rebuild of the on-board `Game` —
-/// the sheet never touches SwiftData, the `EditGameInfoSheet` discipline.
+/// `PGNStore.applyMovetextEdit` write — this view never touches SwiftData, the
+/// `EditGameInfoSheet` discipline.
 ///
 /// The result is *shown* (from the game) and validated against, never edited
 /// here: a result change is a metadata edit (`applyEdit`), a separate door, so
 /// this door validates against the result exactly as the store does.
-internal struct MovetextEditorSheet: View {
-    
+///
+/// **Was `MovetextEditorSheet` until 5 Aug 2026.** It lost its sheet chrome —
+/// the title block, the frame, the `Cancel` button and the `dismiss`
+/// environment — when its one presenter went away: the Library inspector's
+/// pencil was the only thing that ever opened it, and with the door moved to
+/// Get Info's Move Text tab a sheet had nothing left to be presented *from*.
+/// Renamed rather than kept as a sheet wrapping a tab's content, because a
+/// type whose name says "sheet" and whose only host is a tab is the kind of
+/// stale label this project has repeatedly found reading as evidence that
+/// something was still true.
+///
+/// What deliberately did **not** change: the validator, the accept-whole rule,
+/// the splice refusal, the per-ply error copy, and all five
+/// `movetext.editor.*` identifiers. Only the container moved.
+internal struct MovetextEditorView: View {
+
     // MARK: Stored Properties
-    
-    /// The archived game — read for its name, its result (the claim the
-    /// movetext is validated against), and to seed the field.
+
+    /// The archived game — read for its result (the claim the movetext is
+    /// validated against) and to seed the field.
     internal let pgn: PGN
-    
-    /// Called with the tokenized SAN on Save; the caller runs the store write
-    /// and rebuilds the loaded `Game`.
+
+    /// Called with the tokenized SAN on Save; the caller runs the store write.
     internal let onCommit: ([String]) -> Void
-    
-    // MARK: Environment
-    
-    @Environment(\.dismiss) private var dismiss
-    
+
     // MARK: View State
-    
+
     @State private var text: String
-    
+
+    /// The seed, kept so **Revert** can restore it without re-reading `pgn`.
+    ///
+    /// Re-reading would look equivalent and is not: `pgn` is a live `@Model`,
+    /// so after a successful commit it holds the *new* moves, and a Revert
+    /// pressed afterwards would restore the edit rather than undo it. Storing
+    /// the seed makes Revert mean "back to what this editor opened with",
+    /// which is the only definition a reader can predict.
+    @State private var seed: String
+
     // MARK: Initializer
-    
+
     internal init(pgn: PGN, onCommit: @escaping ([String]) -> Void) {
         self.pgn = pgn
         self.onCommit = onCommit
         // One move per line reads better for scanning and fixing a typo than a
         // single wrapped paragraph; the tokenizer is whitespace-agnostic.
-        _text = State(initialValue: pgn.moves.joined(separator: "\n"))
+        let seeded = pgn.moves.joined(separator: "\n")
+        _text = State(initialValue: seeded)
+        _seed = State(initialValue: seeded)
     }
-    
+
     // MARK: Derived
 
     private typealias Validation = Result<MovetextEdit.Accepted, MovetextEdit.Rejection>
@@ -70,64 +90,74 @@ internal struct MovetextEditorSheet: View {
         if case .success = validation { return true }
         return false
     }
-    
+
     // MARK: Body
-    
+
     internal var body: some View {
         // Validate once per render. As a computed property this was pulled by
         // both Save's gate and the status line, and each pull re-tokenized
         // too — every keystroke replayed the whole game twice over.
         let check = checked()
-        
+
         VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Edit Moves")
-                    .font(.title2.bold())
-                Text("\(pgn.whiteDisplayName) vs \(pgn.blackDisplayName) — \(pgn.result.rawValue)")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+            // The result the movetext is validated *against*, stated at the top
+            // because it is the one input to this editor that cannot be changed
+            // from it. Without it, "the result must be 1-0" in the status line
+            // below is an instruction with no visible subject.
+            LabeledContent("Validated against") {
+                Text(pgn.result.rawValue).monospacedDigit()
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
             .padding([.horizontal, .top])
-            
+            .padding(.bottom, 8)
+
             TextEditor(text: $text)
                 .font(.body.monospaced())
                 .frame(minHeight: 200)
                 .padding(.horizontal)
-                .padding(.top, 8)
                 .accessibilityIdentifier(AccessibilityID.movetextEditorField)
-            
+
             statusLine(check.validation)
                 .padding(.horizontal)
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            
+
             Divider()
-            
+
             HStack {
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
+                // **Revert, not Cancel.** A sheet's Cancel meant "close without
+                // saving" and the closing did the work; a tab cannot close, so
+                // the same button would have to mean "put the text back" — a
+                // different verb wearing the old label. Disabled when there is
+                // nothing to revert, and that disabled state is producible
+                // (open the tab, touch nothing), which is the D40′ check.
+                Button("Revert") { text = seed }
+                    .disabled(text == seed)
                     .accessibilityIdentifier(AccessibilityID.movetextEditorCancel)
-                
+
                 Spacer()
-                
+
+                // No `.keyboardShortcut(.defaultAction)` any more, and its
+                // absence is deliberate rather than an oversight: Return inside
+                // a `TextEditor` is a newline — which is how you add a move —
+                // and a default-action Save would have made the most ordinary
+                // keystroke in this field commit the game instead. The sheet
+                // got away with it because Return there was unambiguous; in a
+                // tab beside a multi-line editor it is not.
                 Button("Save") {
                     onCommit(check.tokens)
-                    dismiss()
+                    seed = text
                 }
                 .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.defaultAction)
-                .disabled(!isValid(check.validation))
+                .disabled(!isValid(check.validation) || text == seed)
                 .accessibilityIdentifier(AccessibilityID.movetextEditorSave)
             }
             .padding()
         }
-        .frame(minWidth: 420, idealWidth: 460, minHeight: 420)
         .accessibilityIdentifier(AccessibilityID.movetextEditorSheet)
     }
-    
+
     // MARK: Status
-    
+
     @ViewBuilder
     private func statusLine(_ validation: Validation) -> some View {
         switch validation {
@@ -144,7 +174,7 @@ internal struct MovetextEditorSheet: View {
                 .accessibilityIdentifier(AccessibilityID.movetextEditorStatus)
         }
     }
-    
+
     /// Turns a validator rejection into editor copy — `MovetextEdit.Rejection`
     /// stays a pure value; the wording is view-layer.
     private func message(for rejection: MovetextEdit.Rejection) -> String {
@@ -163,7 +193,7 @@ internal struct MovetextEditorSheet: View {
             return "\(token) appears before the end — this looks like more than one game. Edit one game's moves only."
         }
     }
-    
+
     private func reasonText(_ reason: SANParseError) -> String {
         switch reason {
         case .empty:                   return "no move given"
@@ -177,15 +207,30 @@ internal struct MovetextEditorSheet: View {
 // MARK: Previews
 
 #Preview("Legal") {
-    MovetextEditorSheet(
+    MovetextEditorView(
         pgn: PGN(white: "Alice", black: "Bob", moves: ["e4", "e5", "Nf3", "Nc6"], result: .whiteWins),
         onCommit: { _ in }
     )
+    .frame(width: 460, height: 420)
 }
 
 #Preview("Mate") {
-    MovetextEditorSheet(
+    MovetextEditorView(
         pgn: PGN(white: "Alice", black: "Bob", moves: ["f3", "e5", "g4", "Qh4#"], result: .blackWins),
         onCommit: { _ in }
     )
+    .frame(width: 460, height: 420)
+}
+
+/// The rejection arm a reader hits by accident, and the one the status line
+/// exists for. Seeded legal — the canvas shows the green state, and typing a
+/// nonsense ply is how you reach the red one. Kept as a preview rather than a
+/// fixture with pre-broken text because the *transition* is the behaviour:
+/// Save disables the moment the line stops being legal.
+#Preview("Result Mismatch") {
+    MovetextEditorView(
+        pgn: PGN(white: "Alice", black: "Bob", moves: ["f3", "e5", "g4", "Qh4#"], result: .whiteWins),
+        onCommit: { _ in }
+    )
+    .frame(width: 460, height: 420)
 }

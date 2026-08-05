@@ -218,6 +218,20 @@ internal struct GetInfoWindow: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(DGTLiveSession.self) private var session
 
+    /// The registry, for the Details tab's seat menus (5 Aug 2026).
+    ///
+    /// A `@Query` here where `EditGameInfoSheet` takes strings, and the
+    /// difference is not inconsistency: that type is deliberately
+    /// container-free so its previews can build it, while this window already
+    /// has a `modelContainer` on its scene and already resolves a `Player`
+    /// through `modelContext` for the `.player` subject. Querying gets
+    /// reactivity for free — rename a player in one info window and the other's
+    /// seat menu updates — which a snapshot passed at construction would not.
+    ///
+    /// Sorted by `name`, matching both other seat menus, so all three list
+    /// players in the same order.
+    @Query(sort: \Player.name) private var knownPlayers: [Player]
+
     @State private var subject: Subject?
 
     /// The tag being edited, seeded by `resolve()` and committed on Return.
@@ -518,16 +532,67 @@ extension GetInfoWindow {
     ///
     /// `TabView` with `.tabItem`, not the 2027 `Tab(role:)` spelling, which is
     /// beta (D27′).
+    /// **Three tabs since 5 Aug 2026**, and the third is where D18′'s movetext
+    /// editor now lives — moved off the Library inspector's PGN header, which
+    /// had held it for exactly one day (D54′).
+    ///
+    /// The order is authorship again, extended one step: **Details** is what
+    /// the reader wrote and can rewrite (the nine exported tags), **Move Text**
+    /// is what the reader *played* and can rewrite under a validator, **File**
+    /// is what the app derived and nobody rewrites. Move Text sits in the
+    /// middle rather than last because it is content, and File is the only tab
+    /// that is about the row rather than the game.
+    ///
+    /// **Named "Move Text" and deliberately not "PGN".** The Library section it
+    /// came from is called PGN and shows exactly this, so the shorter name was
+    /// available — and it is the one that would go stale, because a tab labelled
+    /// PGN beside a Details tab holding the nine tags claims to be the whole
+    /// file while showing half of it. `MovetextEdit` is what this door is, and
+    /// the label now says so.
+    ///
+    /// This tab is on the **game** form only. A live game has no stored
+    /// movetext to edit and Decision #1 forbids the concept — the physical
+    /// board is truth and the game is append-only — so the absence is the
+    /// locked decision expressed as a missing tab rather than a disabled one. A
+    /// player has no movetext at all.
     private func gameForm(_ pgn: PGN) -> some View {
         TabView {
             detailsTab(pgn)
                 .tabItem { Label("Details", systemImage: "list.bullet.rectangle") }
+
+            moveTextTab(pgn)
+                .tabItem { Label("Move Text", systemImage: "text.line.first.and.arrowtriangle.forward") }
 
             fileTab(pgn)
                 .tabItem { Label("File", systemImage: "doc.text.magnifyingglass") }
         }
         .padding(.top, 8)
         .accessibilityIdentifier(AccessibilityID.getInfoGame)
+    }
+
+    /// D18′'s editor, hosted rather than reimplemented.
+    ///
+    /// **The commit model differs from Details' and that is not an
+    /// inconsistency to iron out.** Details commits per field on Return or
+    /// focus loss, because each of the nine tags is independently valid. A
+    /// movetext edit is accept-whole-or-reject-whole by D18′ — the whole line
+    /// replays or none of it does — so it takes an explicit Save that is gated
+    /// on the validator. Two commit models in one window, each matching what
+    /// its subject can promise; making them agree would mean either committing
+    /// half-typed movetext or making the reader press Save to change an Event.
+    ///
+    /// The `.id(pgn.persistentModelID)` is load-bearing rather than tidy: the
+    /// editor seeds its text in `init`, so without it, opening Get Info on a
+    /// second game while this window is alive would keep the first game's moves
+    /// in the field under the second game's title. That is the same staleness
+    /// D53′ found in the `.live` arm, arriving through view identity instead of
+    /// through a request that never changes.
+    private func moveTextTab(_ pgn: PGN) -> some View {
+        MovetextEditorView(pgn: pgn) { proposed in
+            applyMovetext(proposed, to: pgn)
+        }
+        .id(pgn.persistentModelID)
+        .accessibilityIdentifier(AccessibilityID.getInfoGameMoveText)
     }
 
     /// The seven tags, editable (D57′).
@@ -670,9 +735,13 @@ extension GetInfoWindow {
         on pgn: PGN
     ) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            TextField(label, text: text)
-                .focused($focusedField, equals: field)
-                .onSubmit { commitField(field, on: pgn) }
+            HStack(spacing: 4) {
+                TextField(label, text: text)
+                    .focused($focusedField, equals: field)
+                    .onSubmit { commitField(field, on: pgn) }
+
+                seatMenu(for: text, field: field, on: pgn)
+            }
 
             // Only while it says something different from the field, so the
             // ordinary "Bera" case does not carry a line repeating itself.
@@ -683,6 +752,63 @@ extension GetInfoWindow {
             }
         }
         .accessibilityIdentifier(AccessibilityID.getInfoGameField(label.lowercased()))
+    }
+
+    /// The known-player menu trailing a seat field (5 Aug 2026, by request) —
+    /// `LiveGameRosterForm.playerMenu`'s shape, deliberately reproduced rather
+    /// than shared.
+    ///
+    /// **Why not extract the two into one type.** The other menu fills a
+    /// `Roster` draft that is committed wholesale when a sheet's Save is
+    /// pressed; this one fills a field that commits *itself*, immediately,
+    /// through `PGNStore.applyEdit`. Same six lines of SwiftUI, two different
+    /// contracts about when the value lands — and a shared type would have to
+    /// take a commit closure to paper over that, which is more machinery than
+    /// six lines of `Menu` are worth. This is the `OpeningSection` em-dash
+    /// call: two surfaces that agree today, each owning its own reason.
+    ///
+    /// **Picking commits, and that is the whole reason this is not just a
+    /// field-filler here.** On the sheet, choosing a name and then closing
+    /// without saving changes nothing. On this form there is no Save, so a
+    /// choice that only filled the field would sit uncommitted until the row
+    /// happened to lose focus — the same value looking committed and not being
+    /// it. So the menu writes the draft *and* calls `commitField`, which is
+    /// also what makes it agree with `onSubmit` one line up.
+    ///
+    /// Hidden when the registry is empty, so a fresh install shows a plain
+    /// field rather than a menu of nothing. Free text always works: the menu
+    /// only fills, and picking creates no `Player` — `resolvePlayer` stays the
+    /// single creation door and fires inside `applyEdit`'s re-resolve.
+    @ViewBuilder
+    private func seatMenu(
+        for text: Binding<String>,
+        field: GameField,
+        on pgn: PGN
+    ) -> some View {
+        if !knownPlayers.isEmpty {
+            Menu {
+                ForEach(knownPlayers, id: \.persistentModelID) { player in
+                    // D29′ — insert the remembered *tag* form, never the
+                    // derived display form. The label shows the string it
+                    // inserts, because a menu showing "Bera Senol" while
+                    // writing "Senol, Bera" would be lying about its own effect.
+                    let tag = player.tagName ?? player.name
+                    Button(tag) {
+                        text.wrappedValue = tag
+                        commitField(field, on: pgn)
+                    }
+                }
+            } label: {
+                Image(systemName: "chevron.up.chevron.down")
+            }
+            .menuStyle(.button)
+            .buttonStyle(.borderless)
+            .fixedSize()
+            .help("Choose a known player")
+            .accessibilityIdentifier(
+                AccessibilityID.getInfoSeatPicker(field == .white ? "white" : "black")
+            )
+        }
     }
 
     /// Result, as a picker over the enum, checked against the final position on
@@ -955,6 +1081,39 @@ extension GetInfoWindow {
     /// one transaction (D18′). Re-resolving on an Event edit is a documented
     /// no-op rather than waste — it is what makes this door unable to rot the
     /// links, which is the invariant `PGN.whitePlayer` names.
+    /// The movetext write door, moved here from `LibraryDestination` with the
+    /// affordance (5 Aug 2026).
+    ///
+    /// `applyMovetextEdit` re-validates internally, so the `.rejected` arm is
+    /// reachable only if this window's Save gate and the store's validator
+    /// disagree — which they cannot, since both call `MovetextEdit.validate`
+    /// with the same result. Logged rather than surfaced for exactly that
+    /// reason: it is an internal-divergence breadcrumb, not a user-facing
+    /// state, and the settle machine's F5 guard is the precedent for treating
+    /// "the two halves of one rule disagreed" as something to shout about in
+    /// the log rather than explain in a dialog.
+    ///
+    /// **What this does not do, which its Board ancestor did:** rebuild a
+    /// cached on-board `Game`. Neither this window nor the Library holds one.
+    /// The recorded cost carried over unchanged from D54′: a Board window
+    /// already reviewing this game keeps rendering the pre-edit moves until it
+    /// reloads. Accepted at one Mac and one reader.
+    fileprivate func applyMovetext(_ proposed: [String], to pgn: PGN) {
+        do {
+            let outcome = try PGNStore(modelContext: modelContext)
+                .applyMovetextEdit(to: pgn, proposed: proposed)
+            if case .success = outcome {
+                Self.logger.info("Movetext edit applied to “\(pgn.name, privacy: .public)”")
+            } else {
+                Self.logger.error("movetext edit unexpectedly rejected at commit")
+            }
+        } catch {
+            Self.logger.error(
+                "movetext edit failed to persist: \(error.localizedDescription, privacy: .public)"
+            )
+        }
+    }
+
     fileprivate func commitField(_ field: GameField, on pgn: PGN) {
         let store = PGNStore(modelContext: modelContext)
         do {

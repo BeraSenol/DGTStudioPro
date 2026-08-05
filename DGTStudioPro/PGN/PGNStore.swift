@@ -241,7 +241,13 @@ internal struct PGNStore {
     internal func applyEdit(to pgn: PGN, _ edit: (PGN) -> Void) throws {
         edit(pgn)
         try resolvePlayers(for: pgn)
-        try refreshHash(of: pgn)   // saves — one transaction covers both
+        // D60′ — a seat edit can strand the player it just replaced, and this
+        // is where most orphans came from: every distinct *spelling* ever
+        // committed to a seat mints a row, and re-spelling one left the old
+        // behind. Collected here, before the save below, so the whole edit is
+        // one transaction.
+        collectOrphanedPlayers()
+        try refreshHash(of: pgn)   // saves — one transaction covers all three
     }
     
     // MARK: Movetext Edit (M-lib.3, D18′)
@@ -409,9 +415,25 @@ internal struct PGNStore {
             }
             if changed { relinked += 1 }
         }
-        if relinked > 0 {
+        // D60′ — and this is the arm that heals what is already there. The
+        // other collection sites fire when a door strands a row; nothing
+        // strands the orphans that predate the rule, so nothing would ever
+        // touch them. This runs on the Library's appearance, which is the one
+        // pass that already walks every game and every player, so the registry
+        // is clean by the first time anyone looks at it.
+        //
+        // Deliberately **after** the relink loop, never before: the loop
+        // *creates* players for previously unlinked seats, and collecting first
+        // would delete rows this pass is about to attach games to.
+        let collected = collectOrphanedPlayers()
+        if relinked > 0 || collected > 0 {
             try modelContext.save()
-            Self.logger.info("Backfilled player links on \(relinked) game(s)")
+            if relinked > 0 {
+                Self.logger.info("Backfilled player links on \(relinked) game(s)")
+            }
+            if collected > 0 {
+                Self.logger.info("Collected \(collected) orphaned player(s)")
+            }
         }
         return relinked
     }
@@ -633,6 +655,14 @@ internal struct PGNStore {
             try resolvePlayers(for: rewrite.game)
             rewrite.game.contentHash = Self.contentHash(for: rewrite.game)
         }
+        // D60′ — a rename relinks every game to the *new* identity, which
+        // leaves the row that was renamed *from* pointing at nothing. That row
+        // is the rename's whole residue and it goes with it, inside the same
+        // transaction, so a rename can never be the thing that grows the
+        // registry. This is also what makes rename the merge replacement D52′
+        // promised it was: retag onto an existing name, and the loser is
+        // collected rather than lingering as a duplicate spelling.
+        collectOrphanedPlayers()
         try modelContext.save()
         Self.logger.info(
             "Retagged player to '\(newTag, privacy: .public)' across \(rewrites.count) game(s)"
@@ -669,6 +699,52 @@ internal struct PGNStore {
     // surgery without tag rewriting is undone by `applyEdit`'s unconditional
     // re-resolve stands recorded at the decision, because it constrains any
     // future door that moves players between rows.
+
+    /// Deletes every registry row nothing points at (D60′).
+    ///
+    /// **The rule is that the PGN files are the source of truth.** A `Player`
+    /// exists to give a seat tag an identity; a row no game references is
+    /// describing nobody, and the archive it was derived from has already
+    /// forgotten it. So it goes, always, without being asked — which repeals
+    /// the "no collector" half of D9′ rather than narrowing it the way D50′
+    /// did for one cause.
+    ///
+    /// **Safe because `resolvePlayer` has exactly two callers and both link
+    /// immediately** — `resolvePlayers(for:)` and `backfillPlayerLinks()`.
+    /// There is no path that creates a row and links it later, so a linkless
+    /// row is always a leftover and never a row in transit. That was checked
+    /// rather than assumed, and it is the whole argument: if a future door ever
+    /// wants to mint a player *before* attaching it, this method is what breaks,
+    /// and it will break loudly by deleting the row mid-flight.
+    ///
+    /// **Save-free by contract**, the `resolvePlayers` discipline: every caller
+    /// already ends in a save, and one here would double each door's
+    /// transaction count. Callers that do *not* save (a read path) must not
+    /// call this.
+    ///
+    /// Fetch-all-and-scan, necessarily: `isOrphaned` reads relationships, which
+    /// SwiftData cannot express in a `#Predicate` — the same reason
+    /// `backfillPlayerLinks` fetches everything. It joins the known-costs
+    /// census, bounded by running only on doors a person invoked.
+    @discardableResult
+    internal func collectOrphanedPlayers() -> Int {
+        guard let players = try? modelContext.fetch(FetchDescriptor<Player>()) else {
+            // A failed fetch means no collection this pass, never a partial
+            // one. The next door through does it again; nothing accumulates
+            // that a later edit will not sweep.
+            Self.logger.error("Orphan collection skipped — player fetch failed")
+            return 0
+        }
+        var collected = 0
+        for player in players where !player.isDeleted && Self.isOrphaned(player) {
+            Self.logger.info(
+                "Collecting orphaned player '\(player.name, privacy: .public)' — no game references it"
+            )
+            modelContext.delete(player)
+            collected += 1
+        }
+        return collected
+    }
 
     /// The one spelling of "nothing points at this row" (D40′).
     ///
@@ -745,37 +821,20 @@ internal struct PGNStore {
             .sorted { $0.name < $1.name }
     }
 
-    /// Deletes the given rows, skipping any that gained a link since they were
-    /// listed. Returns how many actually went.
-    ///
-    /// **It takes the rows rather than re-querying**, so the sweep deletes
-    /// exactly what the dialog named — but re-checks each one, the merge
-    /// survivor's `isDeleted` lesson: a list built to be confirmed is a
-    /// snapshot, and acting on a stale one here would nullify live links. A
-    /// skip is logged rather than silent, because it means the snapshot and the
-    /// store disagreed, and that is worth seeing once.
-    ///
-    /// One transaction for the whole sweep: N saves for N rows would leave a
-    /// half-swept registry behind any mid-loop failure.
-    @discardableResult
-    internal func deleteOrphanedPlayers(_ players: [Player]) throws -> Int {
-        var deleted = 0
-        for player in players where !player.isDeleted {
-            guard Self.isOrphaned(player) else {
-                Self.logger.info(
-                    "Skipped '\(player.name, privacy: .public)' — it gained a link since the sweep was offered"
-                )
-                continue
-            }
-            Self.logger.info("Deleting orphaned player '\(player.name, privacy: .public)'")
-            modelContext.delete(player)
-            deleted += 1
-        }
-        guard deleted > 0 else { return 0 }
-        try modelContext.save()
-        return deleted
-    }
+// `deleteOrphanedPlayers(_:)` was D40′'s write door — it took the rows the
+    // confirmation dialog had named, re-checked each against `isOrphaned`, and
+    // deleted them in one transaction. Removed 5 Aug 2026 with the sweep it
+    // served (D60′): collection is automatic and unasked now, so there is no
+    // snapshot held across a confirmation and nothing for a user-invoked door
+    // to do.
+    //
+    // Its one transferable lesson is kept at `collectOrphanedPlayers` above, in
+    // inverted form: that door re-checked because a list held across a dialog
+    // is stale by construction, and the new one needs no such guard precisely
+    // because it never holds a list — it fetches, filters and deletes inside a
+    // single synchronous pass with no user in the middle.
 
+    
     /// D39′'s pre-flight. Throws `.wouldCollide` naming every game whose
     /// rewritten hash would land on a row that isn't itself.
     ///
