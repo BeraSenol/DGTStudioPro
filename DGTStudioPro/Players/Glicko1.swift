@@ -52,13 +52,30 @@ internal enum Glicko1 {
         
         internal var isProvisional: Bool { deviation > provisionalDeviationThreshold }
         
-        /// The one display rule for a rating — "1662" or "1662
-        /// (provisional)" — centralized because it was about to exist in
-        /// four views. "Unrated" (the nil case) stays at call sites: only
-        /// they know whether nil means no player or no rated games.
+        /// The one display rule for a rating — "1662" or "1662*" —
+        /// centralized because it was about to exist in four views.
+        /// "Unrated" (the nil case) stays at call sites: only they know
+        /// whether nil means no player or no rated games.
+        ///
+        /// **The marker was the word "(provisional)" until 5 Aug 2026**, when
+        /// the Players table gained a Rating column: thirteen characters of
+        /// parenthetical in a 120 pt cell truncate, and a rating that reads
+        /// "1662 (provisi…" is worse than no marker at all. The asterisk is
+        /// also the convention a chess reader already knows, so it needs no
+        /// legend — which the word did not, but the word was only ever
+        /// affordable in the two roomy surfaces that existed before the
+        /// column.
+        ///
+        /// **`*` means something else in this app, and that is worth naming
+        /// rather than discovering.** It is PGN's ongoing-result token, which
+        /// Decision #3 refuses at the archive door and D55′ folds to an em
+        /// dash on display. The two never meet: this one always trails digits
+        /// inside a Rating cell, that one stands alone in a Result cell. A
+        /// genuine collision would be a *result* surface reaching for this
+        /// glyph, and the separation is the reason to state it here.
         internal var displaySummary: String {
             let rounded = Int(mean.rounded())
-            return isProvisional ? "\(rounded) (provisional)" : "\(rounded)"
+            return isProvisional ? "\(rounded)*" : "\(rounded)"
         }
     }
     

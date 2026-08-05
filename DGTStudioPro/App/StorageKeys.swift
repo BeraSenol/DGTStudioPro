@@ -56,6 +56,21 @@ internal enum StorageKeys {
     // the point at which "unread leftover" stops being a footnote and starts
     // being a pattern that needs a sweep.
 
+    /// D62′ — how the ladder is ordered, which is to say what rank 1 means.
+    /// Stored as `PlayerRanking.rawValue`; absent reads as `.wins`, which is
+    /// D11′'s order and the one the app shipped with for months.
+    ///
+    /// **A new key rather than the retired `playersSortOrder`**, deliberately:
+    /// that one held a *sort* (`rank` / `name`) and its stored values are still
+    /// sitting in defaults unread. Reusing the name would read a stale `"name"`
+    /// as an unknown ranking method on the first launch after this ships, and
+    /// silently fall back — a migration disguised as a coincidence.
+    ///
+    /// Persisted where the column sort deliberately is not, and the difference
+    /// is the point: a sort is the question being asked right now, while a
+    /// ranking method is a standing statement about what the ladder measures.
+    internal static let playersRanking = "playersRanking"
+
     // The two list-mode tables' column layouts — which columns are shown,
     // in what order, at what width. **Two keys, not one**, deliberately and
     // for the opposite reason `collectionViewMode` is one: a view mode is a

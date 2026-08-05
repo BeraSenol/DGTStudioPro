@@ -10,7 +10,7 @@ import SwiftUI
 internal struct SquareView: View {
     
     // MARK: Stored Properties
-
+    
     /// The square's physical occupant — retained for *gating*, not drawing,
     /// since M6: the piece itself renders in `BoardPieceLayer` above this
     /// grid, and the square's one remaining occupancy question is whether
@@ -77,18 +77,18 @@ internal struct SquareView: View {
             if highlight.contains(.attention) {
                 // Solid red border: "fix this square" (remove / swap).
                 Rectangle().strokeBorder(
-                    .red.opacity(0.9),
-                    lineWidth: max(2, squareSize * 0.055)
+                    .red,
+                    lineWidth: max(2, squareSize * 0.05)
                 )
             }
             if highlight.contains(.target) {
                 // Dashed green border: "a piece belongs here" — reads as a
                 // drop target without claiming anything is wrong.
                 Rectangle().strokeBorder(
-                    .green.opacity(0.9),
+                    Color.accentColor,
                     style: StrokeStyle(
                         lineWidth: max(2, squareSize * 0.05),
-                        dash: [squareSize * 0.14]
+                        dash: [squareSize * 0.1]
                     )
                 )
             }

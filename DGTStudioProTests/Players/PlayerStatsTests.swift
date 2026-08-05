@@ -26,13 +26,15 @@ struct PlayerStatsTests {
         black: GameRecord.Side?,
         result: GameResult,
         endedInMate: Bool = false,
+        specialCheckmate: SpecialCheckmate? = nil,
         date: Date? = nil,
         importedAt: Date = Date(timeIntervalSince1970: 1_000),
         contentHash: String = "hash"
     ) -> GameRecord {
         GameRecord(
             white: white, black: black, result: result, endedInMate: endedInMate,
-            date: date, importedAt: importedAt, contentHash: contentHash
+            date: date, importedAt: importedAt, contentHash: contentHash,
+            specialCheckmate: specialCheckmate
         )
     }
     
@@ -221,7 +223,7 @@ struct PlayerStatsTests {
                 key: key, name: key, games: wins + losses,
                 whiteWins: wins, whiteDraws: 0, whiteLosses: losses,
                 blackWins: 0, blackDraws: 0, blackLosses: 0,
-                matesDelivered: 0,
+                matesDelivered: 0, specialMatesDelivered: 0,
                 firstPlayed: Date(timeIntervalSince1970: 0),
                 lastPlayed: Date(timeIntervalSince1970: 0)
             )
@@ -236,5 +238,82 @@ struct PlayerStatsTests {
             .sorted(by: PlayerStats.rankingOrder)
         
         #expect(ranked.map(\.key) == ["zoe", "amy", "ann", "ben"])
+    }
+
+    // MARK: Special mates (5 Aug 2026)
+
+    /// A motif mate credits the **winner**, exactly as `matesDelivered` does —
+    /// the loser of a smothered mate did not deliver one.
+    @Test func specialMateCreditsTheWinnerOnly() throws {
+        let records = [
+            record(white: alice, black: bob, result: .whiteWins,
+                   endedInMate: true, specialCheckmate: .smothered)
+        ]
+
+        let index = PlayerStats.index(of: records)
+
+        #expect(try stats(for: "alice", in: index).specialMatesDelivered == 1)
+        #expect(try stats(for: "bob", in: index).specialMatesDelivered == 0)
+    }
+
+    /// An ordinary mate is a mate and not a special one — the column would be
+    /// meaningless if every `#` counted.
+    @Test func anOrdinaryMateIsNotSpecial() throws {
+        let records = [record(white: alice, black: bob, result: .whiteWins, endedInMate: true)]
+
+        // `aliceStats`, not `alice` — that name is the `GameRecord.Side`
+        // fixture used two lines up, and a local of the same name in the same
+        // scope is a use-before-declaration error rather than a shadow.
+        let aliceStats = try stats(for: "alice", in: PlayerStats.index(of: records))
+
+        #expect(aliceStats.matesDelivered == 1)
+        #expect(aliceStats.specialMatesDelivered == 0)
+    }
+
+    /// Both motifs count, and they count together — the column is "how many
+    /// motif mates", not one per motif.
+    @Test func bothMotifsCountTowardTheSameTotal() throws {
+        let records = [
+            record(white: alice, black: bob, result: .whiteWins,
+                   endedInMate: true, specialCheckmate: .smothered, contentHash: "a"),
+            record(white: alice, black: bob, result: .whiteWins,
+                   endedInMate: true, specialCheckmate: .backRank, contentHash: "b")
+        ]
+
+        #expect(try stats(for: "alice", in: PlayerStats.index(of: records)).specialMatesDelivered == 2)
+    }
+
+    /// **`specialMatesDelivered <= matesDelivered` is not guaranteed**, and this
+    /// pins the reason rather than the tidy arithmetic a reader would assume.
+    ///
+    /// `matesDelivered` asks `GameRecord.endedInMate`, which spells "ended in
+    /// mate" as `hasSuffix("#")`; the motif classifier spells it
+    /// `contains("#")`. So a game ending `Qd2#!` is a special mate that is not
+    /// a mate — a standing open item, reproduced here as the record those two
+    /// spellings would produce.
+    ///
+    /// Pinned deliberately rather than worked around: nesting the special count
+    /// inside `endedInMate` would make this test impossible to write and would
+    /// hide the divergence instead of surfacing it. If the open item is ever
+    /// closed, **this test is the one that should fail** and tell you so.
+    @Test func aSpecialMateCanOutnumberMatesWhileTheSpellingsDisagree() throws {
+        let records = [
+            record(white: alice, black: bob, result: .whiteWins,
+                   endedInMate: false, specialCheckmate: .smothered)
+        ]
+
+        let aliceStats = try stats(for: "alice", in: PlayerStats.index(of: records))
+
+        #expect(aliceStats.matesDelivered == 0)
+        #expect(aliceStats.specialMatesDelivered == 1)
+    }
+
+    /// A drawn or ongoing game credits nobody, whatever the motif field says —
+    /// the switch only reaches the counter on a decided result.
+    @Test func onlyADecidedGameCreditsASpecialMate() throws {
+        let records = [
+            record(white: alice, black: bob, result: .draw, specialCheckmate: .smothered)
+        ]
+        #expect(try stats(for: "alice", in: PlayerStats.index(of: records)).specialMatesDelivered == 0)
     }
 }

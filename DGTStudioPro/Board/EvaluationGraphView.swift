@@ -108,7 +108,7 @@ internal struct EvaluationGraphView: View {
             LinearGradient(
                 colors: [
                     .gray.opacity(0.1),
-                    .black.opacity(0.1),
+                    .gray.opacity(0.01),
                     .gray.opacity(0.1)
                 ],
                 startPoint: .top,

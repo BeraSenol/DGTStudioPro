@@ -54,10 +54,7 @@ internal final class DGTConnection {
     
     // MARK: Logging
     
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "dgt"
-    )
+    private static let logger = AppLog.logger(.dgt)
     
     // MARK: Status
     
@@ -161,15 +158,15 @@ internal final class DGTConnection {
     /// so a dead port cannot strand the one-shot gate.
     internal func requestBoardResync() {
         guard isConnected else {
-            Self.logger.info("Board resync requested while disconnected — ignored")
+            Self.logger?.info("Board resync requested while disconnected — ignored")
             return
         }
-        Self.logger.info("Requesting full board dump to reconcile before recovery")
+        Self.logger?.info("Requesting full board dump to reconcile before recovery")
         Task {
             do {
                 try await port.send(.sendBoard)
             } catch {
-                Self.logger.error(
+                Self.logger?.error(
                     "Board resync send failed: \(error.localizedDescription, privacy: .public)"
                 )
             }
@@ -311,10 +308,10 @@ internal final class DGTConnection {
         // question ("what can I choose from?"); this one's is the only question
         // left, and it is the one worth reading in Console at launch.
         if let attachedBoard {
-            Self.logger.info("search(): the board is attached at \(attachedBoard.path, privacy: .public)")
+            Self.logger?.info("Board found at \(attachedBoard.path, privacy: .public)")
             sessionLog?.capture(.debug, "search: board attached [\(attachedBoard.name)]")
         } else {
-            Self.logger.info("search(): the board is not attached")
+            Self.logger?.info("No board attached")
             sessionLog?.capture(.debug, "search: board not attached")
         }
     }
@@ -356,13 +353,13 @@ internal final class DGTConnection {
             boardPath: Self.onlyBoardPath,
             among: enumerateDevices()
         ) else {
-            Self.logger.info("Auto-connect at launch: the board is not attached")
+            Self.logger?.info("Auto-connect at launch: the board is not attached")
             return
         }
         // Paranoia more than necessity — nothing else connects this early.
         guard case .disconnected = status else { return }
 
-        Self.logger.info("Auto-connecting to the board at \(target.path, privacy: .public)")
+        Self.logger?.info("Auto-connecting to the board at \(target.path, privacy: .public)")
         sessionLog?.capture(.info, "Auto-connecting to \(target.name) [\(target.path)]")
         await connect(to: target, failureStyle: .quiet)
     }
@@ -382,7 +379,7 @@ internal final class DGTConnection {
         // the mirror must not fire a spurious settle into the session. M7.3
         // reconnection leans on this same property.
         physicalBoard = .empty
-        Self.logger.info("Connecting to \(device.path, privacy: .public)")
+        Self.logger?.info("Connecting to \(device.path, privacy: .public)")
         sessionLog?.capture(.info, "Connecting to \(device.name) [\(device.path)]")
         
         if let failure = await openPortAndRunInit(to: device) {
@@ -392,7 +389,7 @@ internal final class DGTConnection {
     
     /// Disconnects and resets to `.disconnected`.
     internal func disconnect() async {
-        Self.logger.info("Disconnecting")
+        Self.logger?.info("Disconnecting")
         sessionLog?.capture(.info, "Disconnecting")
         cancelReconnect()
         await teardownPort()
@@ -480,7 +477,7 @@ internal final class DGTConnection {
                 return nil  // cancelled mid-stagger — stand down quietly
             }
         }
-        Self.logger.info("Init sequence sent")
+        Self.logger?.info("Init sequence sent")
         sessionLog?.capture(.debug, "Init sequence sent")
         return nil
     }
@@ -499,7 +496,7 @@ internal final class DGTConnection {
             switch status {
             case .connecting(let device), .reconnecting(let device):
                 status = .connected(device)
-                Self.logger.info("Connected: first board dump received")
+                Self.logger?.info("Connected: first board dump received")
                 sessionLog?.capture(.info, "Connected: first board dump received from \(device.name)")
             default:
                 break
@@ -547,7 +544,7 @@ internal final class DGTConnection {
     /// `String` interpolation is redacted by default — the previous per-case
     /// lines relied on that annotation being remembered six times.
     private func noteBoardInfo(_ label: String, _ value: String) {
-        Self.logger.info("\(label): \(value, privacy: .public)")
+        Self.logger?.info("\(label): \(value, privacy: .public)")
         sessionLog?.capture(.debug, "\(label): \(value)")
     }
     
@@ -565,7 +562,7 @@ internal final class DGTConnection {
             return
         }
         
-        Self.logger.error("Serial stream ended unexpectedly")
+        Self.logger?.error("Serial stream ended unexpectedly")
         
         // M7.3 — while a game is on the board, a vanished device begins the
         // auto-reconnect loop instead of the failure banner. Convergence
@@ -591,7 +588,7 @@ internal final class DGTConnection {
     /// the device we were just connected to, read from `status` — which is
     /// `onlyBoardPath` by construction, since nothing else can ever connect.
     private func beginReconnect(to device: DGTSerialDevice) {
-        Self.logger.error("Board vanished mid-game — auto-reconnecting to \(device.path, privacy: .public)")
+        Self.logger?.error("Board vanished mid-game — auto-reconnecting to \(device.path, privacy: .public)")
         sessionLog?.capture(.error, "Board vanished mid-game — auto-reconnecting to \(device.name)")
         
         // Truthful mirror: nothing is detected while unplugged. Direct
@@ -624,7 +621,7 @@ internal final class DGTConnection {
                 // Success, discard, or idle are the loop's only exits (plus
                 // cancellation) — this is the discard/idle one: quiet, no
                 // banner, nothing left to reconnect for.
-                Self.logger.info("Auto-reconnect stopped: no active game")
+                Self.logger?.info("Auto-reconnect stopped: no active game")
                 sessionLog?.capture(.info, "Auto-reconnect stopped — no active game")
                 await teardownPort()
                 if !Task.isCancelled { status = .disconnected }
@@ -634,7 +631,7 @@ internal final class DGTConnection {
                 break  // device not back yet — just sleep below
                 
             case .attempt:
-                Self.logger.info("Auto-reconnect: device reappeared, attempting")
+                Self.logger?.info("Auto-reconnect: device reappeared, attempting")
                 await teardownPort()  // close any half-open port from a prior lap
                 guard !Task.isCancelled else { return }
                 boardInfo = BoardInfo()
@@ -644,7 +641,7 @@ internal final class DGTConnection {
                     // one line per 3 s lap. The next attempt's `teardownPort`
                     // still cleans up whatever this lap left behind.
                     if failure != lastReconnectFailureLogged {
-                        Self.logger.error("Reconnect attempt failed: \(failure, privacy: .public)")
+                        Self.logger?.error("Reconnect attempt failed: \(failure, privacy: .public)")
                         sessionLog?.capture(.error, "Reconnect attempt failed: \(failure)")
                         lastReconnectFailureLogged = failure
                     }
@@ -666,7 +663,7 @@ internal final class DGTConnection {
     /// stop is not an error.
     internal func stopReconnecting() async {
         guard case .reconnecting = status else { return }
-        Self.logger.info("Auto-reconnect cancelled by user")
+        Self.logger?.info("Auto-reconnect cancelled by user")
         sessionLog?.capture(.info, "Auto-reconnect cancelled by user")
         cancelReconnect()
         await teardownPort()
@@ -693,7 +690,7 @@ internal final class DGTConnection {
         let recorder = DGTSessionRecorder()
         recorder.record(physicalBoard)
         self.recorder = recorder
-        Self.logger.info("Board session recording started")
+        Self.logger?.info("Board session recording started")
         sessionLog?.capture(.info, "Board session recording started")
     }
     
@@ -709,7 +706,7 @@ internal final class DGTConnection {
         )
         let recording = recorder.finish()
         self.recorder = nil
-        Self.logger.info("Board session recording stopped (\(recording.entries.count) snapshots)")
+        Self.logger?.info("Board session recording stopped: snapshots=\(recording.entries.count)")
         sessionLog?.capture(.info, "Board session recording stopped — \(recording.entries.count) snapshots")
         return recording
     }
@@ -727,7 +724,7 @@ internal final class DGTConnection {
     }
     
     private func fail(_ message: String, style: FailureStyle = .announced) {
-        Self.logger.error("\(message, privacy: .public)")
+        Self.logger?.error("\(message, privacy: .public)")
         sessionLog?.capture(.error, "Connection failure: \(message)")
         physicalBoard = .empty
         switch style {

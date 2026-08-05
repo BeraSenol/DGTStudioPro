@@ -74,10 +74,7 @@ internal actor DGTSerialPort: DGTPortProviding {
     
     // MARK: Logging
     
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "dgt"
-    )
+    private static let logger = AppLog.logger(.dgt)
     
     // MARK: Errors
     
@@ -118,14 +115,14 @@ internal actor DGTSerialPort: DGTPortProviding {
     /// went away (F1).
     internal func open(path: String) throws -> AsyncStream<DGTEvent> {
         guard fileDescriptor < 0 else {
-            Self.logger.error("open() called while already open")
+            Self.logger?.error("Serial open ignored — port already open")
             throw PortError.alreadyOpen
         }
         
         let fd = path.withCString { Darwin.open($0, O_RDWR | O_NOCTTY | O_NONBLOCK) }
         guard fd >= 0 else {
             let err = errno
-            Self.logger.error("open(\(path, privacy: .public)) failed: errno=\(err, privacy: .public)")
+            Self.logger?.error("Serial open failed: path='\(path, privacy: .public)' errno=\(err, privacy: .public)")
             throw PortError.openFailed(errno: err)
         }
         
@@ -182,7 +179,7 @@ internal actor DGTSerialPort: DGTPortProviding {
             readSourceEnded()
         }
         
-        Self.logger.info("Opened serial port \(path, privacy: .public) (fd=\(fd))")
+        Self.logger?.info("Opened serial port '\(path, privacy: .public)' fd=\(fd)")
         
         return AsyncStream { continuation in
             self.eventContinuation = continuation
@@ -193,7 +190,7 @@ internal actor DGTSerialPort: DGTPortProviding {
     /// to call when not open (no-op).
     internal func close() {
         guard fileDescriptor >= 0 else { return }
-        Self.logger.info("Closing serial port (fd=\(self.fileDescriptor))")
+        Self.logger?.info("Closing serial port fd=\(self.fileDescriptor)")
         
         fileHandle?.readabilityHandler = nil
         fileHandle = nil
@@ -218,7 +215,7 @@ internal actor DGTSerialPort: DGTPortProviding {
     /// which finishes the *event* stream — the signal `DGTConnection` keys on.
     private func readSourceEnded() {
         guard fileDescriptor >= 0 else { return }
-        Self.logger.error("Serial read source ended (device vanished or read failed) — closing port")
+        Self.logger?.error("Serial read source ended (device vanished or read failed) — closing port")
         close()
     }
     
@@ -227,7 +224,7 @@ internal actor DGTSerialPort: DGTPortProviding {
     /// Sends a single-byte command to the board.
     internal func send(_ command: DGTCommand) throws {
         guard fileDescriptor >= 0 else {
-            Self.logger.error("send(\(command.rawValue, privacy: .public)) while not open")
+            Self.logger?.error("Serial send refused — port not open: command=\(command.rawValue, privacy: .public)")
             throw PortError.notOpen
         }
         var byte = command.rawValue
@@ -236,10 +233,10 @@ internal actor DGTSerialPort: DGTPortProviding {
         }
         guard written == 1 else {
             let err = errno
-            Self.logger.error("write of command \(command.rawValue, privacy: .public) failed: errno=\(err, privacy: .public)")
+            Self.logger?.error("Serial write failed: command=\(command.rawValue, privacy: .public) errno=\(err, privacy: .public)")
             throw PortError.writeFailed(errno: err)
         }
-        Self.logger.debug("send command 0x\(String(command.rawValue, radix: 16), privacy: .public)")
+        Self.logger?.debug("Sent command 0x\(String(command.rawValue, radix: 16), privacy: .public)")
     }
     
     // MARK: Inbound
@@ -248,11 +245,11 @@ internal actor DGTSerialPort: DGTPortProviding {
     /// resulting events. Runs only on `readLoopTask`, in chunk-arrival
     /// order (F2).
     private func ingest(_ data: Data) {
-        Self.logger.debug("Received \(data.count) \(data.count == 1 ? "byte" : "bytes"): \(data)")
+        Self.logger?.debug("Received \(data.count) \(data.count == 1 ? "byte" : "bytes"): \(data)")
         for frame in framer.ingest(data) {
             guard let event = DGTDecoder.decode(frame) else {
-                Self.logger.debug(
-                    "undecoded frame: msg=0x\(String(frame.message, radix: 16), privacy: .public) len=\(frame.data.count)"
+                Self.logger?.debug(
+                    "Undecoded frame: msg=0x\(String(frame.message, radix: 16), privacy: .public) len=\(frame.data.count)"
                 )
                 continue
             }

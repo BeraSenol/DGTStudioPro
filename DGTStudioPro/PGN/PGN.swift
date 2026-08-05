@@ -92,7 +92,7 @@ internal final class PGN: Identifiable {
     /// and `ECOOpening` cannot drift about which half of the name is which.
     internal var ecoVariation: String?
 
-    /// The recognised checkmate pattern the game ended on, or nil for an
+    /// The recognised checkmate type the game ended on, or nil for an
     /// ordinary mate, an unfinished game, or a movetext the replayer can't
     /// walk. Surfaced only through smart-tag filtering by decision — the
     /// seeded "Smothered mates" tag is its shop window.

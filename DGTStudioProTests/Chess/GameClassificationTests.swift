@@ -56,7 +56,7 @@ struct GameClassificationTests {
     }
 
     @Test("A game that never claims mate is never replayed")
-    func unfinishedGameHasNoMatePattern() {
+    func unfinishedGameHasNoCheckmateType() {
         #expect(Self.classify(["e4", "e5", "Nf3"]).specialCheckmate == nil)
         #expect(Self.classify([]).specialCheckmate == nil)
     }

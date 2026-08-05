@@ -65,10 +65,7 @@ internal struct RankedPlayer: Identifiable, Hashable {
 internal struct PlayersDestination: View {
 
     // MARK: Static Constants
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "players"
-    )
+    private static let logger = AppLog.logger(.players)
 
     // MARK: Tab State (lives on enclosing `ContentView`)
     @Bindable internal var tabState: TabState
@@ -96,6 +93,11 @@ internal struct PlayersDestination: View {
     /// stay parallel under the collection-destination parity invariant, and a
     /// reader who learns one has learned the other.
     @State private var sortOrder: [KeyPathComparator<RankedPlayer>] = Self.defaultSortOrder
+
+    /// How the ladder is ordered (D62′) — what rank 1 means, not what order the
+    /// rows appear in. Persisted, unlike the column sort one property up; see
+    /// `StorageKeys.playersRanking` for why those two differ.
+    @AppStorage(StorageKeys.playersRanking) private var ranking: PlayerRanking = .wins
 
     /// The ladder, stated **once** — `LibraryDestination.defaultSortOrder`'s
     /// twin under the collection-destination parity invariant, extracted for
@@ -198,18 +200,19 @@ internal struct PlayersDestination: View {
     /// instance state and silently re-derive: `body` folds once and threads.
     private static func ranked(
         from records: [GameRecord],
-        histories: [String: [Glicko1.Sample]]
+        histories: [String: [Glicko1.Sample]],
+        by method: PlayerRanking
     ) -> [RankedPlayer] {
-        PlayerStats.index(of: records)
-            .sorted(by: PlayerStats.rankingOrder)
-            .enumerated()
-            .map { offset, stats in
-                RankedPlayer(
-                    rank: offset + 1,
-                    stats: stats,
-                    rating: histories[stats.key]?.last?.rating
-                )
+        // The ladder itself moved to `PlayerRanking.ranked(_:)` with D62′ —
+        // this pairs each player with the rating the *other* fold produced and
+        // hands both over. Pairing here rather than inside the method is what
+        // keeps `PlayerRanking` free of any knowledge that histories are keyed
+        // by `stats.key`, which is this destination's business.
+        method.ranked(
+            PlayerStats.index(of: records).map {
+                (stats: $0, rating: histories[$0.key]?.last?.rating)
             }
+        )
     }
 
     // MARK: Body
@@ -217,7 +220,7 @@ internal struct PlayersDestination: View {
         // Fold once per render, then thread down (see the Derived Data note).
         let records = games.map(\.gameRecord)
         let histories = Glicko1.histories(from: records)
-        let ranked = Self.ranked(from: records, histories: histories)
+        let ranked = Self.ranked(from: records, histories: histories, by: ranking)
         // Rank is computed under D11′ regardless of display order — the sort
         // only decides sequence, never the number on the badge. That sentence
         // predates the column sort and survives it unchanged, which is the
@@ -365,12 +368,12 @@ internal struct PlayersDestination: View {
         do {
             guard let player = try PGNStore(modelContext: modelContext)
                 .player(withNormalizedKey: key) else {
-                Self.logger.error("Show in Library: no Player row for key '\(key, privacy: .public)'")
+                Self.logger?.error("Show in Library: no Player row for key '\(key, privacy: .public)'")
                 return
             }
             onShowInLibrary(player.persistentModelID)
         } catch {
-            Self.logger.error("Show in Library lookup failed: \(error.localizedDescription, privacy: .public)")
+            Self.logger?.error("Show in Library lookup failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -496,6 +499,32 @@ internal struct PlayersDestination: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarSpacer(.fixed)
+        ToolbarItem {
+            // D62′ — what rank 1 means. **Not a sort control**, which is the
+            // one thing a reader could mistake it for: this changes the number
+            // on the badge, and the column sort changes the sequence rows
+            // appear in. Both can be active and they answer different
+            // questions.
+            //
+            // A menu picker rather than a segmented control, on D48′'s own
+            // reasoning for the picker that used to stand here: two segmented
+            // controls side by side read as one broken one, and the view-mode
+            // picker two items along is already segmented.
+            //
+            // The label carries the *current* method rather than a static word,
+            // because a menu titled "Ranking" tells you a menu exists and this
+            // tells you what the ladder is currently measuring — which is the
+            // thing you would otherwise have to open it to find out.
+            Picker("Ranking", selection: $ranking) {
+                ForEach(PlayerRanking.allCases) { method in
+                    Text(method.displayName).tag(method)
+                }
+            }
+            .pickerStyle(.menu)
+            .padding(.horizontal, 6)
+            .help("Ranked by \(ranking.shortName) — changes what rank 1 means, not the row order")
+            .accessibilityIdentifier(AccessibilityID.playersRankingPicker)
+        }
         // D48′'s sort picker stood here until 5 Aug 2026. It is gone rather
         // than disabled: the list's column headers sort now, and its two
         // positions were the Rank and Player columns under another name. The
@@ -558,7 +587,7 @@ internal struct PlayersDestination: View {
             // D29′ — after links, which it reads (see the store doc).
             try store.backfillPlayerTagNames()
         } catch {
-            Self.logger.error("Player-link backfill failed: \(error.localizedDescription, privacy: .public)")
+            Self.logger?.error("Player-link backfill failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 }

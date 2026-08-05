@@ -194,10 +194,11 @@ internal struct DGTStudioProApp: App {
         // under the same harness in Xcode). The guard's UI-test half
         // retired with the suite (3 Aug 2026, D51′); this env-var check
         // was always the unit half.
-        let environment = ProcessInfo.processInfo.environment
-        let isUnitTestHost = environment["XCTestConfigurationFilePath"] != nil
-        || environment["XCTestSessionIdentifier"] != nil
-        if !isUnitTestHost {
+        // `TestHost` since 5 Aug 2026 — this probe was spelled here and
+        // nowhere else until `AppLog` needed the same answer, at which point
+        // two copies of an environment check would have been D25′'s twin read
+        // site with a hermetic test suite riding on it.
+        if !TestHost.isActive {
             Task { await connection.autoConnectAtLaunch() }
         }
         

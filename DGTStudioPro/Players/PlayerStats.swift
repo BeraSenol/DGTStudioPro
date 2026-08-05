@@ -20,6 +20,15 @@ import Foundation
 ///   a percentage.
 /// - `matesDelivered` credits the *winner* of a game whose last move
 ///   carries `#` — result and mate flag together identify the deliverer.
+/// - `specialMatesDelivered` credits the same winner when the game carries a
+///   **motif** (D19′). Counted from `specialCheckmate` directly rather than
+///   nested inside `endedInMate`, and that is deliberate: those two spell
+///   "did this end in mate" differently — `hasSuffix("#")` here against
+///   `contains("#")` in the classifier — so a game ending `Qd2#!` is a
+///   special mate that is not a mate. **`specialMatesDelivered <= matesDelivered`
+///   is therefore not guaranteed**, which looks like a bug and is a standing
+///   open item this column now makes visible rather than hides. Nesting it
+///   would have kept the arithmetic tidy by inheriting the narrower rule.
 /// - `firstPlayed`/`lastPlayed` use `effectiveDate`, the same fallback
 ///   rule the rating fold orders by. Non-optional: a player only exists
 ///   through at least one record.
@@ -37,6 +46,9 @@ internal struct PlayerStats: Sendable, Hashable, Identifiable {
     internal let blackDraws: Int
     internal let blackLosses: Int
     internal let matesDelivered: Int
+    /// Mates this player delivered that carry a motif (D19′ — smothered or
+    /// back-rank). 5 Aug 2026.
+    internal let specialMatesDelivered: Int
     internal let firstPlayed: Date
     internal let lastPlayed: Date
     
@@ -148,6 +160,7 @@ internal struct PlayerStats: Sendable, Hashable, Identifiable {
         var whiteWins = 0, whiteDraws = 0, whiteLosses = 0
         var blackWins = 0, blackDraws = 0, blackLosses = 0
         var matesDelivered = 0
+        var specialMatesDelivered = 0
         var firstPlayed: Date
         var lastPlayed: Date
         
@@ -167,10 +180,12 @@ internal struct PlayerStats: Sendable, Hashable, Identifiable {
             case (.whiteWins, .white):
                 whiteWins += 1
                 if record.endedInMate { matesDelivered += 1 }
+                if record.specialCheckmate != nil { specialMatesDelivered += 1 }
             case (.whiteWins, .black): blackLosses += 1
             case (.blackWins, .black):
                 blackWins += 1
                 if record.endedInMate { matesDelivered += 1 }
+                if record.specialCheckmate != nil { specialMatesDelivered += 1 }
             case (.blackWins, .white): whiteLosses += 1
             case (.draw, .white): whiteDraws += 1
             case (.draw, .black): blackDraws += 1
@@ -184,6 +199,7 @@ internal struct PlayerStats: Sendable, Hashable, Identifiable {
                 whiteWins: whiteWins, whiteDraws: whiteDraws, whiteLosses: whiteLosses,
                 blackWins: blackWins, blackDraws: blackDraws, blackLosses: blackLosses,
                 matesDelivered: matesDelivered,
+                specialMatesDelivered: specialMatesDelivered,
                 firstPlayed: firstPlayed, lastPlayed: lastPlayed
             )
         }

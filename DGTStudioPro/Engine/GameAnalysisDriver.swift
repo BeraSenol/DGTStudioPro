@@ -33,10 +33,7 @@ import SwiftData
 internal final class GameAnalysisDriver {
     
     // MARK: Static Constants
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "analysis"
-    )
+    private static let logger = AppLog.logger(.analysis)
     
     // MARK: Status
     /// Coarse-grained pass state, read only by `AnalysisQueueController`:
@@ -76,14 +73,14 @@ internal final class GameAnalysisDriver {
         modelContext: ModelContext
     ) async -> Status {
         guard task == nil else {
-            Self.logger.info(
-                "analyze() called but a prior analysis is already in flight; ignoring"
+            Self.logger?.info(
+                "Analysis request ignored — a prior analysis is already in flight"
             )
             return status
         }
         
         guard let binaryURL = StockfishEngine.defaultBinaryURL else {
-            Self.logger.error("Stockfish binary not bundled in app Resources")
+            Self.logger?.error("Stockfish binary not bundled in app Resources")
             status = .failed(
                 message: "Stockfish binary not bundled in app Resources. " +
                 "See Engine_README.md for setup."
@@ -94,8 +91,8 @@ internal final class GameAnalysisDriver {
         let engine = self.engine ?? StockfishEngine(binaryURL: binaryURL)
         self.engine = engine
         
-        Self.logger.info(
-            "analyze begin: pgn='\(pgn.name, privacy: .public)' plies=\(pgn.moves.count) depth=\(depth)"
+        Self.logger?.info(
+            "Analysis started: pgn='\(pgn.name, privacy: .public)' plies=\(pgn.moves.count) depth=\(depth)"
         )
         
         // The evaluations reset lives in `runAnalysis`, *after* a
@@ -134,7 +131,7 @@ internal final class GameAnalysisDriver {
     /// driver returns to `.idle`; any evaluations already populated stay
     /// in the PGN.
     internal func stop() {
-        Self.logger.info("analyze stop requested")
+        Self.logger?.info("Analysis stop requested")
         task?.cancel()
     }
     
@@ -143,7 +140,7 @@ internal final class GameAnalysisDriver {
     /// the queue drains (decision 4) and at tab teardown. Safe to call
     /// multiple times — re-entry after shutdown returns immediately.
     internal func shutdown() async {
-        Self.logger.info("Analysis driver shutdown")
+        Self.logger?.info("Analysis driver shutdown")
         task?.cancel()
         await engine?.shutdown()
         engine = nil
@@ -165,9 +162,9 @@ internal final class GameAnalysisDriver {
             try await engine.start()
         } catch StockfishEngine.EngineError.alreadyStarted {
             // Reused engine — already warm, proceed.
-            Self.logger.info("Reusing warm engine")
+            Self.logger?.info("Reusing warm engine")
         } catch {
-            Self.logger.error(
+            Self.logger?.error(
                 "Engine start failed: \(String(describing: error), privacy: .public)"
             )
             status = .failed(message: "Engine failed to start: \(error).")
@@ -220,7 +217,7 @@ internal final class GameAnalysisDriver {
             // preferable to crashing on corrupt PGN. The graph just keeps
             // its nil tail.
             guard let move = try? state.parseSAN(san) else {
-                Self.logger.error(
+                Self.logger?.error(
                     """
                     SAN walk broke at index \(index) san='\(san, privacy: .public)' \
                     pgn='\(pgn.name, privacy: .public)' — partial analysis stops here, \
@@ -260,7 +257,7 @@ internal final class GameAnalysisDriver {
             // with nothing evaluated (M1 item 9b). One actor hop per ply
             // is nothing next to the search that just ran.
             guard await engine.isRunning else {
-                Self.logger.error(
+                Self.logger?.error(
                     "Engine died mid-pass at ply \(index + 1)/\(total) for pgn='\(pgn.name, privacy: .public)'"
                 )
                 status = .failed(
@@ -278,8 +275,8 @@ internal final class GameAnalysisDriver {
                 consecutiveSaveFailures = 0
             } catch {
                 consecutiveSaveFailures += 1
-                Self.logger.error(
-                    "modelContext.save() failed at ply \(index + 1) (\(consecutiveSaveFailures) in a row): \(error.localizedDescription, privacy: .public)"
+                Self.logger?.error(
+                    "Evaluation save failed at ply \(index + 1) (\(consecutiveSaveFailures) in a row): \(error.localizedDescription, privacy: .public)"
                 )
                 if consecutiveSaveFailures >= saveFailureTolerance {
                     // The message follows the walk's other exits: name where
@@ -299,9 +296,9 @@ internal final class GameAnalysisDriver {
         }
         
         if Task.isCancelled {
-            Self.logger.info("analyze cancelled for pgn='\(pgn.name, privacy: .public)'")
+            Self.logger?.info("Analysis cancelled: pgn='\(pgn.name, privacy: .public)'")
         } else {
-            Self.logger.info("analyze done for pgn='\(pgn.name, privacy: .public)' [\(total) plies]")
+            Self.logger?.info("Analysis complete: pgn='\(pgn.name, privacy: .public)' plies=\(total)")
         }
         
         status = Task.isCancelled ? .idle : .done

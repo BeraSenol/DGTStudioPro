@@ -44,7 +44,7 @@ import Foundation
 /// - The M4 pair (D34′) inherits both rules rather than inventing any:
 ///   `opening` is an ordinary string field over the full opening name, so an
 ///   unclassified game presents `""` and fails negation like any other
-///   unknown; `matePattern` is the first field whose subject is an optional
+///   unknown; `checkmateType` is the first field whose subject is an optional
 ///   *enum*, and it guards nil the same way — see the switch arm for why
 ///   that is less obvious than it sounds.
 internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
@@ -67,11 +67,21 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
         case round, moves
         case date
         case checkmate, analyzed, timed
-        /// Which recognised mate motif the game ended on — distinct from
+        /// Which recognised checkmate type the game ended on — distinct from
         /// `checkmate`, which only asks *whether* it ended in mate.
-        case matePattern
+        ///
+        /// **The raw value stays `"matePattern"` and must.** This case was
+        /// spelled `matePattern` until 5 Aug 2026, when the user-facing name
+        /// became "Checkmate Type"; `Field` is `String, Codable` and its raw
+        /// values are encoded into every saved `SmartTag`'s rule blob, so
+        /// letting the implicit raw value follow the Swift name would have
+        /// silently dropped the rule from every tag that used it — including
+        /// the seeded "Smothered Mates" default. Hand-written for exactly the
+        /// reason `InspectorSection`'s raw values are: a rename that reads as a
+        /// refactor must not reset stored state.
+        case checkmateType = "matePattern"
 
-        internal enum Kind { case string, result, number, date, boolean, checkmatePattern }
+        internal enum Kind { case string, result, number, date, boolean, checkmateType }
 
         internal var id: String { rawValue }
 
@@ -82,7 +92,7 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
             case .round, .moves: return .number
             case .date: return .date
             case .checkmate, .analyzed, .timed: return .boolean
-            case .matePattern: return .checkmatePattern
+            case .checkmateType: return .checkmateType
             }
         }
 
@@ -90,7 +100,7 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
             switch self {
             case .player:      return "Player (either)"
             case .moves:       return "Moves (plies)"
-            case .matePattern: return "Mate pattern"
+            case .checkmateType: return "Checkmate Type"
             default:           return rawValue.capitalized
             }
         }
@@ -104,7 +114,7 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
             case .number:           return [.equals, .lessThan, .greaterThan]
             case .date:             return [.before, .after]
             case .boolean:          return [.isTrue, .isFalse]
-            case .checkmatePattern: return [.equals, .notEquals]
+            case .checkmateType: return [.equals, .notEquals]
             }
         }
     }
@@ -259,13 +269,13 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
             let subject = booleanSubject(of: record)
             return comparison == .isFalse ? !subject : subject
 
-        case .checkmatePattern:
+        case .checkmateType:
             // Unknowns never match, negation included — the D30′ rule, and
             // the tension is worth naming rather than glossing: a nil motif
             // means either "classified, and it's an ordinary mate" or "not
             // classified yet", and the rule cannot tell them apart (the same
             // conflation `backfillClassifications` makes with `ecoCode`).
-            // Reading nil as "not smothered" would make "mate pattern is not
+            // Reading nil as "not smothered" would make "checkmate type is not
             // smothered" quietly true for every unclassified game in the
             // Library — precisely the failure D30′ closed for "White is
             // not X".

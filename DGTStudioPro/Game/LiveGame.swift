@@ -41,10 +41,7 @@ internal final class LiveGame {
     
     // MARK: Static Constants
     
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "dgt"
-    )
+    private static let logger = AppLog.logger(.dgt)
     
     // MARK: Roster
     
@@ -164,7 +161,7 @@ internal final class LiveGame {
         self.sanMoves = []
         self.result = .ongoing
         
-        Self.logger.info(
+        Self.logger?.info(
             "Started live game: \(roster.white, privacy: .public) vs \(roster.black, privacy: .public)"
         )
     }
@@ -178,14 +175,14 @@ internal final class LiveGame {
     @discardableResult
     internal func commit(_ move: Move) -> Bool {
         guard !isFinished else {
-            Self.logger.debug("commit ignored: game already finished")
+            Self.logger?.debug("Commit ignored — game already finished")
             return false
         }
         
         let state = currentState
         guard state.legalMoves().contains(move) else {
-            Self.logger.error(
-                "commit rejected: \(move.from)→\(move.to) not legal in current state"
+            Self.logger?.error(
+                "Commit rejected — \(move.from)→\(move.to) not legal in current state"
             )
             return false
         }
@@ -202,7 +199,7 @@ internal final class LiveGame {
         // The move line precedes result detection so the log reads in event
         // order (Recorded Qd2# → Checkmate — 0-1); updateResult()'s own line
         // would otherwise print before the move that caused it.
-        Self.logger.info("Recorded \(san, privacy: .public) [ply \(self.moves.count)]")
+        Self.logger?.info("Recorded \(san, privacy: .public) [ply \(self.moves.count)]")
         updateResult()
         return true
     }
@@ -214,14 +211,14 @@ internal final class LiveGame {
     internal func resign(_ color: PieceColor) {
         guard !isFinished else { return }
         result = (color == .white) ? .blackWins : .whiteWins
-        Self.logger.info("\(color == .white ? "White" : "Black", privacy: .public) resigned")
+        Self.logger?.info("\(color == .white ? "White" : "Black", privacy: .public) resigned")
     }
     
     /// Records an agreed draw. No-op if the game is already decided.
     internal func agreeDraw() {
         guard !isFinished else { return }
         result = .draw
-        Self.logger.info("Draw agreed")
+        Self.logger?.info("Draw agreed")
     }
     
     // MARK: Result Detection
@@ -237,10 +234,10 @@ internal final class LiveGame {
         if state.isInCheck {
             // The side to move is checkmated, so the other side won.
             result = (state.activeColor == .white) ? .blackWins : .whiteWins
-            Self.logger.info("Checkmate — \(self.result.rawValue, privacy: .public)")
+            Self.logger?.info("Checkmate — \(self.result.rawValue, privacy: .public)")
         } else {
             result = .draw
-            Self.logger.info("Stalemate — draw")
+            Self.logger?.info("Stalemate — draw")
         }
     }
 }

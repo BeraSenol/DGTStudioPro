@@ -208,6 +208,35 @@ internal struct LibraryListView: View {
             }
             .width(min: 44, ideal: 52)
             .customizationID("eco")
+            // D19′/D34′'s other half. The table has shown the *opening* side of
+            // classification since M4 and not the mate side, which was an
+            // asymmetry rather than a decision — the two are classified
+            // together, stamped together and cleared together.
+            //
+            // **Em dash for "no motif", where ECO one column up shows nothing**,
+            // and the divergence is the right way round: D55′ made the em dash
+            // the house glyph for every absent display value, so this is the
+            // rule and ECO is the documented exception (it argues a column of
+            // dashes is noise where a blank states the fact fine). Worth naming
+            // because two adjacent classification columns disagreeing looks
+            // careless until you read both.
+            //
+            // Sorted on the stored `rawValue`, not `displayName`: the two are
+            // 1:1 so no divergence is possible, and the stored side needs no
+            // rehydrate. Ascending puts un-mated games first; a second click
+            // groups the motifs at the top, which is the reading anyone
+            // clicking this column wants.
+            TableColumn("Checkmate Type", sortUsing: KeyPathComparator(\PGN.specialCheckmate?.rawValue)) { game in
+                Text(game.specialCheckmate?.displayName ?? RosterSummary.displayUnknown)
+                    .foregroundStyle(.secondary)
+            }
+            // Wide enough for the header, which is now longer than anything
+            // it labels — "Checkmate Type" against "Back Rank". The
+            // customization ID stays `"mate"`: it is stored state and
+            // deliberately not derived from the title, so the rename cannot
+            // reset a reader's column layout.
+            .width(min: 96, ideal: 110)
+            .customizationID("mate")
             TableColumn("Event", value: \.event) { Text($0.event).lineLimit(1) }
                 .customizationID("event")
             // `effectiveDate` (date ?? importedAt), which is the app's one

@@ -24,10 +24,7 @@ import SwiftData
 internal struct PGNStore {
     
     // MARK: Static Constants
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "pgnstore"
-    )
+    private static let logger = AppLog.logger(.pgnstore)
     
     /// UTC Gregorian calendar backing the hash's date rendering.
     private static let hashCalendar: Calendar = {
@@ -102,7 +99,7 @@ internal struct PGNStore {
         let hash = Self.contentHash(for: pgn)
         
         if let existing = try existingPGN(withHash: hash) {
-            Self.logger.info(
+            Self.logger?.info(
                 "Rejected duplicate: '\(pgn.name, privacy: .public)' matches existing '\(existing.name, privacy: .public)' hash=\(hash, privacy: .public)"
             )
             throw Error.duplicate(existingID: existing.persistentModelID, existingName: existing.name)
@@ -110,7 +107,7 @@ internal struct PGNStore {
         
         try insertNewGame(pgn, hash: hash)
         
-        Self.logger.info(
+        Self.logger?.info(
             "Imported: '\(pgn.name, privacy: .public)' \(pgn.white, privacy: .public) vs \(pgn.black, privacy: .public) [\(pgn.result.rawValue, privacy: .public)] plies=\(pgn.moves.count)"
         )
         
@@ -124,7 +121,7 @@ internal struct PGNStore {
         do {
             text = try String(contentsOf: url, encoding: .utf8)
         } catch {
-            Self.logger.error("Failed to read PGN at \(url.path, privacy: .public)")
+            Self.logger?.error("Failed to read PGN at \(url.path, privacy: .public)")
             throw Error.fileReadFailed(url, underlying: error)
         }
         
@@ -197,7 +194,7 @@ internal struct PGNStore {
         let hash = Self.contentHash(for: pgn)
         
         if let existing = try existingPGN(withHash: hash) {
-            Self.logger.info(
+            Self.logger?.info(
                 "Archive deduplicated: matches existing '\(existing.name, privacy: .public)' hash=\(hash, privacy: .public)"
             )
             // Deliberately untouched: healing links on pre-existing rows is
@@ -207,7 +204,7 @@ internal struct PGNStore {
         
         try insertNewGame(pgn, hash: hash)
         
-        Self.logger.info(
+        Self.logger?.info(
             "Archived: '\(pgn.name, privacy: .public)' [\(pgn.result.rawValue, privacy: .public)] plies=\(pgn.moves.count)"
         )
         return ArchiveResult(pgn: pgn, deduplicated: false)
@@ -221,7 +218,7 @@ internal struct PGNStore {
     internal func refreshHash(of pgn: PGN) throws {
         pgn.contentHash = Self.contentHash(for: pgn)
         try modelContext.save()
-        Self.logger.info("Refreshed content hash for '\(pgn.name, privacy: .public)'")
+        Self.logger?.info("Refreshed content hash for '\(pgn.name, privacy: .public)'")
     }
     
     /// The one-hash/two-doors invariant, made structural: every in-place
@@ -296,7 +293,7 @@ internal struct PGNStore {
             pgn.evaluations = []
             classify(pgn)              // re-derived, not cleared — see the note above
             try refreshHash(of: pgn)   // recompute hash + save — one transaction
-            Self.logger.info(
+            Self.logger?.info(
                 "Applied movetext edit to '\(pgn.name, privacy: .public)' plies=\(accepted.moves.count)"
             )
             return .success(accepted.moves)
@@ -331,12 +328,12 @@ internal struct PGNStore {
         guard !pgns.isEmpty else { return }
         let stranded = Self.playersOrphaned(byDeleting: pgns)
         let subject = pgns.count == 1 ? "'\(pgns[0].name)'" : "\(pgns.count) games"
-        Self.logger.info("Deleting \(subject, privacy: .public)")
+        Self.logger?.info("Deleting \(subject, privacy: .public)")
         for pgn in pgns {
             modelContext.delete(pgn)
         }
         for player in stranded {
-            Self.logger.info(
+            Self.logger?.info(
                 "Collecting '\(player.name, privacy: .public)' — its last game went with this deletion"
             )
             modelContext.delete(player)
@@ -362,10 +359,13 @@ internal struct PGNStore {
     /// resolve to `nil` — a placeholder is the *absence* of a player,
     /// never a player named "?".
     internal func resolvePlayer(named rawTag: String) throws -> Player? {
+        // The placeholder rule and the identity fold both live on
+        // `Player.identity(forTag:)` since D61′ — extracted when the seat guard
+        // needed the same answer without creating a row. Three lines were
+        // inline here and this was the only place that knew them.
+        guard let key = Player.identity(forTag: rawTag) else { return nil }
         let display = PlayerName.displayForm(of: rawTag)
-        guard !display.isEmpty, display != "?" else { return nil }
-        
-        let key = Player.normalizedKey(for: display)
+
         if let existing: Player = try first(#Predicate { $0.normalizedName == key }) {
             return existing
         }
@@ -375,7 +375,7 @@ internal struct PGNStore {
         // stay verbatim, so the picker re-inserts what the tag actually was.
         let player = Player(name: display, tagName: PlayerName.folded(rawTag))
         modelContext.insert(player)
-        Self.logger.info("Created player '\(display, privacy: .public)'")
+        Self.logger?.info("Created player '\(display, privacy: .public)'")
         return player
     }
     
@@ -429,10 +429,10 @@ internal struct PGNStore {
         if relinked > 0 || collected > 0 {
             try modelContext.save()
             if relinked > 0 {
-                Self.logger.info("Backfilled player links on \(relinked) game(s)")
+                Self.logger?.info("Backfilled player links on \(relinked) game(s)")
             }
             if collected > 0 {
-                Self.logger.info("Collected \(collected) orphaned player(s)")
+                Self.logger?.info("Collected \(collected) orphaned player(s)")
             }
         }
         return relinked
@@ -471,7 +471,7 @@ internal struct PGNStore {
         }
         if stamped > 0 {
             try modelContext.save()
-            Self.logger.info("Backfilled tag names on \(stamped) player(s)")
+            Self.logger?.info("Backfilled tag names on \(stamped) player(s)")
         }
         return stamped
     }
@@ -555,7 +555,7 @@ internal struct PGNStore {
         }
         if classified > 0 {
             try modelContext.save()
-            Self.logger.info("Classified \(classified) game(s)")
+            Self.logger?.info("Classified \(classified) game(s)")
         }
         return classified
     }
@@ -664,7 +664,7 @@ internal struct PGNStore {
         // collected rather than lingering as a duplicate spelling.
         collectOrphanedPlayers()
         try modelContext.save()
-        Self.logger.info(
+        Self.logger?.info(
             "Retagged player to '\(newTag, privacy: .public)' across \(rewrites.count) game(s)"
         )
         return rewrites.count
@@ -732,12 +732,12 @@ internal struct PGNStore {
             // A failed fetch means no collection this pass, never a partial
             // one. The next door through does it again; nothing accumulates
             // that a later edit will not sweep.
-            Self.logger.error("Orphan collection skipped — player fetch failed")
+            Self.logger?.error("Orphan collection skipped — player fetch failed")
             return 0
         }
         var collected = 0
         for player in players where !player.isDeleted && Self.isOrphaned(player) {
-            Self.logger.info(
+            Self.logger?.info(
                 "Collecting orphaned player '\(player.name, privacy: .public)' — no game references it"
             )
             modelContext.delete(player)
@@ -861,7 +861,7 @@ internal struct PGNStore {
             }
         }
         guard collisions.isEmpty else {
-            Self.logger.error("Retag refused: \(collisions.count) hash collision(s)")
+            Self.logger?.error("Retag refused: \(collisions.count) hash collision(s)")
             throw RetagRejection.wouldCollide(collisions)
         }
     }

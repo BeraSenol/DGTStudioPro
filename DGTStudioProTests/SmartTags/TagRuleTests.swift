@@ -93,21 +93,39 @@ struct TagRuleTests {
         #expect(TagRule(field: .opening, comparison: .notEquals, text: "French").matches(game) == false)
     }
 
-    @Test("A mate-pattern rule matches its motif and rejects the other")
-    func matePatternMatches() {
+    /// **The stored raw value survived the 5 Aug 2026 rename**, which is the
+    /// only thing about it that could have broken anything.
+    ///
+    /// `Field` is `String, Codable` and its raw values are encoded into every
+    /// saved `SmartTag`'s rule blob. The case is spelled `checkmateType` now
+    /// and the raw value is still `"matePattern"`; letting the implicit value
+    /// follow the Swift name would have made every previously-saved rule
+    /// decode to nothing — silently, because D36′'s defaulting decoder is
+    /// designed to tolerate a missing key rather than fail loudly.
+    ///
+    /// Asserted on the literal deliberately. This is one of the few places a
+    /// hard-coded string is *correct*: the value is a persistence contract, so
+    /// the test's job is to fail if anyone "tidies" it into matching the case
+    /// name.
+    @Test func theCheckmateTypeFieldKeepsItsStoredRawValue() {
+        #expect(TagRule.Field.checkmateType.rawValue == "matePattern")
+    }
+
+    @Test("A checkmate-type rule matches its motif and rejects the other")
+    func checkmateTypeMatches() {
         let smothered = record(specialCheckmate: .smothered)
         let backRank = record(specialCheckmate: .backRank)
 
         #expect(
-            TagRule(field: .matePattern, comparison: .equals, specialCheckmate: .smothered)
+            TagRule(field: .checkmateType, comparison: .equals, specialCheckmate: .smothered)
                 .matches(smothered)
         )
         #expect(
-            TagRule(field: .matePattern, comparison: .equals, specialCheckmate: .smothered)
+            TagRule(field: .checkmateType, comparison: .equals, specialCheckmate: .smothered)
                 .matches(backRank) == false
         )
         #expect(
-            TagRule(field: .matePattern, comparison: .notEquals, specialCheckmate: .smothered)
+            TagRule(field: .checkmateType, comparison: .notEquals, specialCheckmate: .smothered)
                 .matches(backRank)
         )
     }
@@ -115,15 +133,15 @@ struct TagRuleTests {
     /// The arm's whole argument: an ordinary mate and an unclassified game
     /// are the same nil, so neither may satisfy a negated motif rule.
     @Test("A game with no motif never matches a mate-pattern rule, negation included")
-    func absentMatePatternNeverMatches() {
+    func absentCheckmateTypeNeverMatches() {
         let game = record(endedInMate: true, specialCheckmate: nil)
 
         #expect(
-            TagRule(field: .matePattern, comparison: .equals, specialCheckmate: .smothered)
+            TagRule(field: .checkmateType, comparison: .equals, specialCheckmate: .smothered)
                 .matches(game) == false
         )
         #expect(
-            TagRule(field: .matePattern, comparison: .notEquals, specialCheckmate: .smothered)
+            TagRule(field: .checkmateType, comparison: .notEquals, specialCheckmate: .smothered)
                 .matches(game) == false
         )
     }
@@ -157,7 +175,7 @@ struct TagRuleTests {
     @Test("A rule round-trips through the encoder it will actually be stored by")
     func ruleRoundTripsThroughCoding() throws {
         let original = TagRule(
-            field: .matePattern, comparison: .notEquals, specialCheckmate: .backRank
+            field: .checkmateType, comparison: .notEquals, specialCheckmate: .backRank
         )
         let decoded = try JSONDecoder().decode(
             TagRule.self, from: JSONEncoder().encode(original)

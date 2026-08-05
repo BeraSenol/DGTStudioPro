@@ -251,11 +251,11 @@ private struct TagRuleRow: View {
         case .boolean:
             // The comparison IS the value ("is true"/"is false").
             Spacer()
-        case .checkmatePattern:
+        case .checkmateType:
             // `allCases` here, unlike `.result` above: every motif the
             // classifier can produce is a motif a game can carry, so none of
             // them is a dead rule.
-            Picker("Mate Pattern", selection: $rule.specialCheckmate) {
+            Picker("Checkmate Type", selection: $rule.specialCheckmate) {
                 ForEach(SpecialCheckmate.allCases, id: \.self) { pattern in
                     Text(pattern.displayName).tag(pattern)
                 }
@@ -303,7 +303,7 @@ private struct TagRuleRow: View {
         TagRule(field: .moves, comparison: .greaterThan, number: 40),
         TagRule(field: .date, comparison: .after, date: .now),
         TagRule(field: .checkmate, comparison: .isTrue),
-        TagRule(field: .matePattern, comparison: .equals, specialCheckmate: .backRank)
+        TagRule(field: .checkmateType, comparison: .equals, specialCheckmate: .backRank)
     ]
     return SmartTagEditorView(draft: draft, onSave: { _ in })
         .frame(width: 520, height: 520)

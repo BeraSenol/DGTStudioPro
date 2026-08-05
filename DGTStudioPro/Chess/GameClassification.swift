@@ -6,7 +6,7 @@
 //
 
 /// The derived-truth pair a game learns about itself: which named opening it
-/// played, and which checkmate pattern it ended on (D19′, trigger revised by
+/// played, and which checkmate type it ended on (D19′, trigger revised by
 /// D34′).
 ///
 /// One entry point for both because they are stamped, cleared and backfilled
@@ -32,7 +32,7 @@ internal struct GameClassification: Sendable, Hashable {
     ///
     /// The two halves fail independently, on purpose. The opening is pure
     /// string matching, so it survives a game whose movetext the replayer
-    /// chokes on — a corrupt import still gets its name. The mate pattern
+    /// chokes on — a corrupt import still gets its name. The checkmate type
     /// needs the real final position, so an unreplayable game classifies
     /// `nil` there rather than guessing.
     internal static func classify(

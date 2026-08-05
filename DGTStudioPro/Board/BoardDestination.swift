@@ -46,10 +46,7 @@ internal struct BoardDestination: View {
     
     // MARK: Static Constants
     
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "boardload"
-    )
+    private static let logger = AppLog.logger(.boardload)
     
     // MARK: Bound State
     
@@ -532,8 +529,8 @@ internal struct BoardDestination: View {
                 if hadDefaultName { pgn.name = pgn.defaultDisplayName }
             }
         } catch {
-            Self.logger.error(
-                "archive edit failed to persist: \(error.localizedDescription, privacy: .public)"
+            Self.logger?.error(
+                "Archive edit failed to persist: \(error.localizedDescription, privacy: .public)"
             )
         }
     }
@@ -684,7 +681,7 @@ internal struct BoardDestination: View {
     /// when the ID hasn't actually changed.
     private func loadIfNeeded() {
         guard let id = loadedGameID else {
-            Self.logger.debug("loadIfNeeded: loadedGameID is nil — clearing")
+            Self.logger?.debug("Board load: no game selected — clearing")
             clearBoard(error: nil)
             return
         }
@@ -699,13 +696,13 @@ internal struct BoardDestination: View {
         if tabState.boardPGN?.persistentModelID == id,
            tabState.boardPGN?.isDeleted == false,
            tabState.boardGame != nil {
-            Self.logger.debug(
-                "loadIfNeeded: cache hit for '\(self.tabState.boardPGN?.name ?? "?", privacy: .public)' — no reload"
+            Self.logger?.debug(
+                "Board load: cache hit for '\(self.tabState.boardPGN?.name ?? "?", privacy: .public)' — no reload"
             )
             return
         }
 
-        Self.logger.debug("loadIfNeeded: resolving id \(String(describing: id), privacy: .public)")
+        Self.logger?.debug("Board load: resolving id \(String(describing: id), privacy: .public)")
 
         // The blessed id→model resolution plus the tombstone guard — the
         // `AnalysisQueueController.run()` pattern: `model(for:)` happily
@@ -713,7 +710,7 @@ internal struct BoardDestination: View {
         // wave the ghost through to `Game.init`.
         guard let loadedPGN = modelContext.model(for: id) as? PGN, !loadedPGN.isDeleted else {
             clearBoard(error: "The game could not be found in the library.")
-            Self.logger.error(
+            Self.logger?.error(
                 "PGN lookup failed for id \(String(describing: id), privacy: .public)"
             )
             return
@@ -728,8 +725,8 @@ internal struct BoardDestination: View {
             tabState.boardPGN = loadedPGN
             tabState.boardGame = newGame
             tabState.boardLoadError = nil
-            Self.logger.info(
-                "Opened game: \(loadedPGN.name, privacy: .public) [\(loadedPGN.moves.count) plies]"
+            Self.logger?.info(
+                "Opened game '\(loadedPGN.name, privacy: .public)' plies=\(loadedPGN.moves.count)"
             )
         } catch {
             // `Game.init` is `throws(BuildError)` and `BuildError` has exactly
@@ -740,7 +737,7 @@ internal struct BoardDestination: View {
             switch error {
             case .invalidMove(let index, let san, let underlying):
                 tabState.boardLoadError = "Move \(index + 1) couldn't be parsed."
-                Self.logger.error(
+                Self.logger?.error(
                             """
                             Game.init failed for \(loadedPGN.name, privacy: .public): \
                             move \(index + 1) (index \(index)) SAN '\(san, privacy: .public)' \

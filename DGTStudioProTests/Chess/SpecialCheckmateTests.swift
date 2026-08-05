@@ -23,9 +23,13 @@ struct SpecialCheckmateTests {
 
     /// The tripwire for "simplify this to `rawValue.capitalized`", which
     /// would quietly rename the motif to "Backrank" in the rule editor.
+    ///
+    /// Title case since 5 Aug 2026 — "Back Rank". The expected string moved and
+    /// **the reason did not**: `.capitalized` still yields "Backrank", so this
+    /// still fails the way it was written to.
     @Test func displayNamesAreWrittenOut() {
         #expect(SpecialCheckmate.smothered.displayName == "Smothered")
-        #expect(SpecialCheckmate.backRank.displayName == "Back rank")
+        #expect(SpecialCheckmate.backRank.displayName == "Back Rank")
     }
 
     // MARK: Smothered

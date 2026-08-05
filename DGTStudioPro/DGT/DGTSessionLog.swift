@@ -43,10 +43,7 @@ internal final class DGTSessionLog {
     
     // MARK: Logging
     
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "dgt"
-    )
+    private static let logger = AppLog.logger(.dgt)
     
     // MARK: Entry
     
@@ -82,9 +79,9 @@ internal final class DGTSessionLog {
     internal func record(_ level: Level, _ message: String) {
         append(level: level, message: message)
         switch level {
-        case .debug: Self.logger.debug("\(message, privacy: .public)")
-        case .info:  Self.logger.info("\(message, privacy: .public)")
-        case .error: Self.logger.error("\(message, privacy: .public)")
+        case .debug: Self.logger?.debug("\(message, privacy: .public)")
+        case .info:  Self.logger?.info("\(message, privacy: .public)")
+        case .error: Self.logger?.error("\(message, privacy: .public)")
         }
     }
     
@@ -167,9 +164,9 @@ internal final class DGTSessionLog {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             try write(to: url)
-            Self.logger.info("Exported live session log to \(url.lastPathComponent, privacy: .public)")
+            Self.logger?.info("Exported live session log to \(url.lastPathComponent, privacy: .public)")
         } catch {
-            Self.logger.error("Log export failed: \(error.localizedDescription, privacy: .public)")
+            Self.logger?.error("Log export failed: \(error.localizedDescription, privacy: .public)")
         }
     }
     

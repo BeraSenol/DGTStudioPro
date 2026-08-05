@@ -39,7 +39,7 @@ struct RankedPlayerSortTests {
             key: key, name: key, games: wins + losses,
             whiteWins: wins, whiteDraws: 0, whiteLosses: losses,
             blackWins: 0, blackDraws: 0, blackLosses: 0,
-            matesDelivered: 0,
+            matesDelivered: 0, specialMatesDelivered: 0,
             firstPlayed: Date(timeIntervalSince1970: 0),
             lastPlayed: Date(timeIntervalSince1970: 0)
         )
@@ -56,16 +56,24 @@ struct RankedPlayerSortTests {
             player("ben", wins: 4, losses: 4),   // 4 wins, 50%, loses the key tiebreak
             player("ann", wins: 4, losses: 4)    // 4 wins, 50%, wins it
         ]
-        return stats
-            .sorted(by: PlayerStats.rankingOrder)
-            .enumerated()
-            .map { RankedPlayer(rank: $0.offset + 1, stats: $0.element, rating: nil) }
+        // Through `PlayerRanking.wins` since D62′ rather than
+        // `PlayerStats.rankingOrder` directly. Same order — that case delegates
+        // to that comparator — but it is now the *default method* that has to
+        // agree with the default sort, and asserting against the comparator
+        // would keep passing if the default method changed.
+        return PlayerRanking.wins.ranked(stats.map { (stats: $0, rating: nil) })
     }
 
     // MARK: The equivalence the picker's deletion rests on
 
-    /// The **shipped** default reproduces D11′ exactly — wins, then win rate,
-    /// then key.
+    /// The **shipped** default sort reproduces the **shipped** default *ranking
+    /// method* exactly — `.wins`, which is D11′: wins, then win rate, then key.
+    ///
+    /// Two defaults, and since D62′ they are separate values that must agree:
+    /// `PlayersDestination.defaultSortOrder` (rank ascending) and
+    /// `PlayerRanking.wins` (what rank means). Change either alone and this
+    /// goes red, which is the point — a ladder whose default sort disagrees
+    /// with its default ranking would open on a list that looks shuffled.
     ///
     /// Two things make this able to fail, and both were deliberate:
     ///

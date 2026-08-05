@@ -66,15 +66,9 @@ internal actor StockfishEngine {
     
     // MARK: Static Constants
     
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "engine"
-    )
+    private static let logger = AppLog.logger(.engine)
     
-    private static let uciLogger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "uci"
-    )
+    private static let uciLogger = AppLog.logger(.uci)
     
     // MARK: Errors
     
@@ -184,11 +178,11 @@ internal actor StockfishEngine {
         readyTimeout: Duration = .seconds(30)
     ) async throws {
         guard process == nil else {
-            Self.logger.error("start() called but engine is already running")
+            Self.logger?.error("Engine start ignored — already running")
             throw EngineError.alreadyStarted
         }
         
-        Self.logger.info("Starting engine at \(self.binaryURL.path, privacy: .public)")
+        Self.logger?.info("Starting engine at \(self.binaryURL.path, privacy: .public)")
         
         let proc = Process()
         proc.executableURL = binaryURL
@@ -243,7 +237,7 @@ internal actor StockfishEngine {
         do {
             try proc.run()
         } catch {
-            Self.logger.error(
+            Self.logger?.error(
                 "Engine subprocess failed to launch: \(error.localizedDescription, privacy: .public)"
             )
             teardown()
@@ -287,7 +281,7 @@ internal actor StockfishEngine {
             // torn-down state. Foreign errors (e.g. an EPIPE from writing
             // `uci` into a pipe whose reader already died) are wrapped so
             // `start()`'s failure surface is uniformly `EngineError`.
-            Self.logger.error(
+            Self.logger?.error(
                 "Engine startup failed: \(String(describing: error), privacy: .public) — terminating subprocess"
             )
             if proc.isRunning { proc.terminate() }
@@ -296,7 +290,7 @@ internal actor StockfishEngine {
             ?? EngineError.startupFailed("UCI handshake failed: \(error.localizedDescription)")
         }
         
-        Self.logger.info(
+        Self.logger?.info(
             "Engine ready: name='\(self.engineName ?? "?", privacy: .public)' author='\(self.engineAuthor ?? "?", privacy: .public)'"
         )
     }
@@ -309,7 +303,7 @@ internal actor StockfishEngine {
     internal func shutdown() async {
         guard let proc = process else { return }
         
-        Self.logger.info("Shutting down engine")
+        Self.logger?.info("Shutting down engine")
         
         // Tear down any in-flight analysis.
         currentContinuation?.finish()
@@ -331,13 +325,13 @@ internal actor StockfishEngine {
         // the subprocess precisely when the tab is going away.
         try? await Task.sleep(for: .milliseconds(500))
         if proc.isRunning {
-            Self.logger.info("Engine did not exit within grace period; force-terminating")
+            Self.logger?.info("Engine did not exit within grace period; force-terminating")
             proc.terminate()
         }
         
         teardown()
         
-        Self.logger.info("Engine shutdown complete")
+        Self.logger?.info("Engine shutdown complete")
     }
     
     /// Fires for every process exit — the clean `quit` during `shutdown()`,
@@ -348,7 +342,7 @@ internal actor StockfishEngine {
     /// `process` nil, and this becomes a no-op.
     private func processDidTerminate(status: Int32) {
         guard process != nil else { return }
-        Self.logger.error("Engine terminated (status \(status, privacy: .public))")
+        Self.logger?.error("Engine terminated (status \(status, privacy: .public))")
         failHandshake(
             with: EngineError.startupFailed(
                 "The engine exited (status \(status)) before completing the UCI handshake."
@@ -368,7 +362,7 @@ internal actor StockfishEngine {
     /// termination handler, which follows immediately behind.
     private func engineOutputEnded() {
         guard process != nil else { return }
-        Self.logger.error("Engine stdout ended while the process was still tracked")
+        Self.logger?.error("Engine stdout ended while the process was still tracked")
         failHandshake(
             with: EngineError.startupFailed(
                 "The engine closed its output before completing the UCI handshake."
@@ -489,8 +483,8 @@ internal actor StockfishEngine {
         currentSideToMove = fen.activeColor
         currentAnalysisID = analysisID
         
-        Self.logger.debug(
-            "beginAnalysis id=\(analysisID, privacy: .public) depth=\(depth) fen='\(fen.string, privacy: .public)' replacing=\(hadPriorAnalysis)"
+        Self.logger?.debug(
+            "Analysis begun: id=\(analysisID, privacy: .public) depth=\(depth) fen='\(fen.string, privacy: .public)' replacing=\(hadPriorAnalysis)"
         )
         
         // Capture analysisID in the termination closure so it can be
@@ -518,8 +512,8 @@ internal actor StockfishEngine {
             try writeLine("position fen \(fen.string)")
             try writeLine("go depth \(depth)")
         } catch {
-            Self.logger.error(
-                "beginAnalysis write failed for id=\(analysisID, privacy: .public): \(error.localizedDescription, privacy: .public)"
+            Self.logger?.error(
+                "Analysis write failed for id=\(analysisID, privacy: .public): \(error.localizedDescription, privacy: .public)"
             )
             continuation.finish()
             currentContinuation = nil
@@ -567,13 +561,25 @@ internal actor StockfishEngine {
     /// Parses a single complete line from stdout and dispatches by
     /// response type.
     private func handleStdoutLine(_ line: String) {
-        Self.uciLogger.debug("recv: \(line, privacy: .public)")
+        Self.uciLogger?.debug("recv: \(line, privacy: .public)")
         
         guard let response = UCIProtocol.parse(line) else {
-            // Empty lines are normal between sections; only log non-empty
-            // unparseables so we can spot real engine drift.
-            if !line.trimmingCharacters(in: .whitespaces).isEmpty {
-                Self.uciLogger.error("unparseable: \(line, privacy: .public)")
+            // `parse` returns nil for three different reasons and only one of
+            // them is news. Empty lines are normal between sections. Option
+            // advertisements are the recorded invariant — deliberately
+            // ignored, and there are about twenty-five of them at every start,
+            // which is what used to make this an error channel nobody could
+            // read. What is left is genuine engine drift.
+            //
+            // One line per start still reaches the error arm in normal use:
+            // Stockfish's `Stockfish 18 by the …` banner, which is legal
+            // pre-handshake chatter and matches no keyword. Named here so a
+            // reader knows what the floor looks like — if this arm ever prints
+            // anything *else*, the engine has changed under us, which is the
+            // whole reason the arm exists.
+            if !UCIProtocol.isDeliberatelyIgnored(line),
+               !line.trimmingCharacters(in: .whitespaces).isEmpty {
+                Self.uciLogger?.error("Unrecognized engine line: '\(line, privacy: .public)'")
             }
             return
         }
@@ -625,12 +631,12 @@ internal actor StockfishEngine {
     /// `FileHandle.write(contentsOf:)` doesn't suspend.
     private func writeLine(_ command: String) throws {
         guard let stdin = stdinHandle else {
-            Self.logger.error(
-                "writeLine called but engine not started: command='\(command, privacy: .public)'"
+            Self.logger?.error(
+                "Write refused — engine not started: command='\(command, privacy: .public)'"
             )
             throw EngineError.notStarted
         }
-        Self.uciLogger.debug("send: \(command, privacy: .public)")
+        Self.uciLogger?.debug("send: \(command, privacy: .public)")
         try stdin.write(contentsOf: Data((command + "\n").utf8))
     }
 }

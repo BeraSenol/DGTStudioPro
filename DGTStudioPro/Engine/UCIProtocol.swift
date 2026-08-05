@@ -51,7 +51,44 @@ internal enum UCIProtocol {
         default:         return nil
         }
     }
-    
+
+    // MARK: Two Kinds of nil
+
+    /// Keywords this app understands and deliberately does not act on.
+    ///
+    /// `option` is the recorded invariant — the app *sends* its options from
+    /// `EngineConfiguration.uciOptionLines` rather than negotiating against
+    /// the engine's advertised catalogue. `copyprotection` and `registration`
+    /// are the spec's other two engine-to-GUI keywords with nothing for us to
+    /// do; naming them costs two strings and stops the first engine that
+    /// emits one from reading as a defect.
+    internal static let deliberatelyIgnoredKeywords: Set<String> = [
+        "option", "copyprotection", "registration"
+    ]
+
+    /// Whether `parse` returned nil because the line is *known and ignored*
+    /// rather than *unrecognized*.
+    ///
+    /// **This distinction existed only in prose until 5 Aug 2026, and the
+    /// code beneath the prose contradicted it.** `parse`'s doc above has
+    /// always said `option` lines are deliberately ignored; `StockfishEngine`
+    /// logged every nil at **error** level under a comment reading "only log
+    /// non-empty unparseables so we can spot real engine drift". Stockfish
+    /// advertises about twenty-five options at every start, so the channel
+    /// meant for spotting drift was roughly 96% expected traffic — and a
+    /// channel that always contains noise is one nobody reads, which is the
+    /// `.DS_Store` finding wearing a protocol hat. The comment did not fail;
+    /// it just never came true.
+    ///
+    /// Asked of a *line* rather than a keyword so the split lives here beside
+    /// `parse` — the caller has a line in hand, and a caller that had to
+    /// tokenize first would be a second tokenizer.
+    internal static func isDeliberatelyIgnored(_ line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let first = trimmed.split(separator: " ").first else { return false }
+        return deliberatelyIgnoredKeywords.contains(String(first))
+    }
+
     // MARK: info Line Parsing
     
     /// Parses an `info` line's fields. UCI info lines have variable-length

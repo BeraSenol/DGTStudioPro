@@ -58,10 +58,7 @@ internal final class DGTLiveSession {
     
     // MARK: Static Constants
     
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "dgt"
-    )
+    private static let logger = AppLog.logger(.dgt)
     
     // MARK: Mode
     
@@ -354,7 +351,7 @@ internal final class DGTLiveSession {
             // desync, not a move.
             if board == game.currentState.position {
                 mode = .playing(game)
-                Self.logger.info("Physical board reached new game's start — live play active")
+                Self.logger?.info("Physical board reached new game's start — live play active")
                 sessionLog?.capture(.info, "Physical setup complete — live play active")
             }
             
@@ -382,7 +379,7 @@ internal final class DGTLiveSession {
             if board == game.currentState.position {
                 mode = .playing(game)
                 clearGhost()
-                Self.logger.info("Board restored to last legal position — exiting recovery")
+                Self.logger?.info("Board restored to last legal position — exiting recovery")
                 sessionLog?.capture(.info, "Recovery resolved — board restored; resuming play")
             }
         }
@@ -451,7 +448,7 @@ internal final class DGTLiveSession {
                 "settle: committed \(game.sanMoves.last ?? "?") [ply \(game.plyCount)]"
             )
             if game.isFinished {
-                Self.logger.info("Live game finished: \(game.result.rawValue, privacy: .public)")
+                Self.logger?.info("Live game finished: \(game.result.rawValue, privacy: .public)")
                 sessionLog?.capture(.info, "Live game finished: \(game.result.rawValue)")
                 // Archive-first (M5): the Library save fires on the
                 // `isFinished` transition itself, before any UI reacts.
@@ -488,7 +485,7 @@ internal final class DGTLiveSession {
             return
         }
         resyncAttempted = true
-        Self.logger.info("Settled board unexplained — requesting a full dump before recovery")
+        Self.logger?.info("Settled board unexplained — requesting a full dump before recovery")
         sessionLog?.capture(
             .info,
             "settle: unreconciled — asking the board for a full dump before recovery (one shot)"
@@ -517,7 +514,7 @@ internal final class DGTLiveSession {
                 plyCount: game.plyCount
             )
         } else {
-            Self.logger.error("Board could not be reconciled — entering recovery")
+            Self.logger?.error("Board could not be reconciled — entering recovery")
         }
     }
     
@@ -535,7 +532,7 @@ internal final class DGTLiveSession {
             if !offeredNewGameForCurrentStart && pendingDraft == nil && !archiveFailed {
                 shouldOfferNewGame = true
                 offeredNewGameForCurrentStart = true
-                Self.logger.info("Start position detected — offering new game")
+                Self.logger?.info("Start position detected — offering new game")
                 sessionLog?.capture(.info, "Start position detected — offering new game")
             } else {
                 // The suppressed settle leaves a breadcrumb: it answers the
@@ -599,7 +596,7 @@ internal final class DGTLiveSession {
             + (alreadySetUp ? "" : " — awaiting physical setup")
         )
         if !alreadySetUp {
-            Self.logger.info("New game started — awaiting physical setup of starting position")
+            Self.logger?.info("New game started — awaiting physical setup of starting position")
         }
         
         // Starting fresh forfeits any resume offer (the destructive
@@ -953,7 +950,7 @@ internal final class DGTLiveSession {
         if let sessionLog {
             sessionLog.record(.error, message)
         } else {
-            Self.logger.error("\(message, privacy: .public)")
+            Self.logger?.error("\(message, privacy: .public)")
         }
     }
     

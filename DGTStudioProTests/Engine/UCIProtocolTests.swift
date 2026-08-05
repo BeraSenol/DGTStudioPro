@@ -246,4 +246,67 @@ struct UCIProtocolTests {
         let flipped = original.toEvaluation(sideToMove: .black)
         #expect(flipped.flipped == .centipawns(75))
     }
+
+    // MARK: Known-and-ignored vs unrecognized (D63′)
+
+    /// `parse` returning nil means two different things, and until 5 Aug 2026
+    /// the engine treated both as **errors** — so Stockfish's twenty-five
+    /// option advertisements arrived on the error channel at every start,
+    /// under a comment saying that channel existed to spot real engine drift.
+    ///
+    /// These pin the split rather than the logging, because the split is the
+    /// part that can be wrong: a caller can only classify correctly if this
+    /// answers correctly.
+    @Test(arguments: [
+        "option name Hash type spin default 16 min 1 max 33554432",
+        "option name Threads type spin default 1 min 1 max 1024",
+        "copyprotection checking",
+        "registration ok"
+    ])
+    func knownButUnusedKeywordsAreDeliberatelyIgnored(_ line: String) {
+        #expect(UCIProtocol.parse(line) == nil, "still unparsed — that has not changed")
+        #expect(UCIProtocol.isDeliberatelyIgnored(line), "but it is not news")
+    }
+
+    /// Genuine drift is **not** absorbed by the new arm, which is the failure
+    /// mode worth guarding: a classifier that returns true too easily would
+    /// silence the very thing the error channel was cleared out to reveal.
+    ///
+    /// The banner is the interesting case. It is emitted by every real
+    /// Stockfish before the handshake and it is deliberately *not* on the
+    /// ignore list — it matches no keyword, so it reaches the error arm once
+    /// per start, which is the documented floor at the call site. Absorbing it
+    /// would need a rule ("anything before uciok") broad enough to swallow a
+    /// real protocol change made in the same window.
+    @Test(arguments: [
+        "Stockfish 18 by the Stockfish developers (see AUTHORS file)",
+        "some future keyword we have never seen",
+        "optional"           // a known keyword's prefix is not that keyword
+    ])
+    func unrecognizedLinesAreNotAbsorbed(_ line: String) {
+        #expect(UCIProtocol.isDeliberatelyIgnored(line) == false)
+    }
+
+    /// Leading whitespace must not hide a known keyword, because the caller
+    /// asks this *before* it asks whether the line is blank — so a padded
+    /// `option` line that classified as unrecognized would land back on the
+    /// error channel this change exists to clear.
+    @Test func leadingWhitespaceStillFindsTheKeyword() {
+        #expect(UCIProtocol.isDeliberatelyIgnored("   option name Hash type spin default 16"))
+    }
+
+    /// An empty line is neither — it takes the caller's own empty exit, and
+    /// asking this of it must not trap.
+    @Test(arguments: ["", "   ", "\n"])
+    func blankLinesClassifyAsNothing(_ line: String) {
+        #expect(UCIProtocol.isDeliberatelyIgnored(line) == false)
+    }
+
+    /// The lines the app actually acts on are untouched by the new arm — the
+    /// check that this change subtracted nothing.
+    @Test(arguments: ["uciok", "readyok", "id name Stockfish 18", "bestmove e2e4"])
+    func handledResponsesAreNeverClassifiedAsIgnorable(_ line: String) {
+        #expect(UCIProtocol.parse(line) != nil)
+        #expect(UCIProtocol.isDeliberatelyIgnored(line) == false)
+    }
 }

@@ -102,4 +102,27 @@ internal final class Player: Identifiable {
     internal static func normalizedKey(for displayName: String) -> String {
         PlayerName.folded(displayName).lowercased()
     }
+
+    /// The identity a raw **seat tag** resolves to, or `nil` when the tag is
+    /// the *absence* of a player rather than a player (D61′).
+    ///
+    /// `normalizedKey(for:)` one function up answers "what is this display
+    /// name's identity" and will happily fold `"?"` into a key. This answers
+    /// the question a caller holding a PGN tag actually has: *is there a player
+    /// here at all, and if so which one* — which needs the display transform
+    /// (D23′, so `"Lopez, Ruy"` and `"Ruy Lopez"` are one identity) and the
+    /// placeholder rule (D9′, so `"?"` and empty are no player, never a player
+    /// named `"?"`).
+    ///
+    /// **Extracted because a second caller appeared, not on principle.**
+    /// `PGNStore.resolvePlayer(named:)` had these three lines inline and was
+    /// the only place that knew them; D61′'s seat guard needs the same answer
+    /// *without creating a row*, and restating the rule in a view is how two
+    /// spellings of "same player" start. The resolver now calls this, so there
+    /// is still exactly one.
+    internal static func identity(forTag rawTag: String) -> String? {
+        let display = PlayerName.displayForm(of: rawTag)
+        guard !display.isEmpty, display != RosterSummary.unknownTag else { return nil }
+        return normalizedKey(for: display)
+    }
 }

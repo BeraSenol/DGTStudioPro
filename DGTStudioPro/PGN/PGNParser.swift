@@ -12,10 +12,7 @@ import os
 internal enum PGNParser {
     
     // MARK: Static Constants
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "pgnparse"
-    )
+    private static let logger = AppLog.logger(.pgnparse)
     
     internal static let requiredTags: Set<String> = Set(
         SevenTagRoster.allCases.map(\.rawValue)
@@ -66,7 +63,7 @@ internal enum PGNParser {
         let tags = parseTags(from: tagSection)
         let missing = missingTags(in: tags)
         if !missing.isEmpty {
-            logger.error(
+            logger?.error(
                 """
                 Parse failed: missing required tags \
                 missing=\(missing.sorted().joined(separator: ","), privacy: .public) \
@@ -80,14 +77,14 @@ internal enum PGNParser {
         // A tag pair can only open a *new* game once the movetext has begun —
         // legal movetext never starts a line with `[Key "`. See `Error.multipleGames`.
         if containsTagPairLine(movetextSection) {
-            logger.error("Parse failed: file contains more than one game")
+            logger?.error("Parse failed: file contains more than one game")
             throw Error.multipleGames
         }
         
         let (moves, evaluations) = try parseMovesAndEvaluations(from: movetextSection)
         
         let hasEvals = evaluations.contains(where: { $0 != nil })
-        logger.info(
+        logger?.info(
             """
             Parsed PGN: \
             \(tags[.white] ?? "?", privacy: .public) vs \(tags[.black] ?? "?", privacy: .public) \
@@ -302,7 +299,7 @@ internal enum PGNParser {
         flushToken()
         
         if braceDepth != 0 {
-            Self.logger.error(
+            Self.logger?.error(
                 """
                 Movetext parse failed: unbalanced braces \
                 finalBraceDepth=\(braceDepth) \
@@ -314,7 +311,7 @@ internal enum PGNParser {
             throw Error.unbalancedBraces
         }
         if parenDepth != 0 {
-            Self.logger.error(
+            Self.logger?.error(
                 """
                 Movetext parse failed: unbalanced parentheses \
                 finalParenDepth=\(parenDepth) \

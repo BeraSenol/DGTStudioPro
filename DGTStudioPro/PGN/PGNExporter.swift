@@ -21,10 +21,7 @@ import os
 @MainActor
 internal enum PGNExporter {
     
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "pgnexport"
-    )
+    private static let logger = AppLog.logger(.pgnexport)
     
     /// Declared by the system via the `.pgn` extension; the fallback keeps
     /// the panel's filter usable rather than showing none if that ever fails.
@@ -82,11 +79,11 @@ internal enum PGNExporter {
     private static func write(_ pgn: PGN, to url: URL) {
         do {
             try Data(pgn.pgnText.utf8).write(to: url, options: .atomic)
-            logger.info(
+            logger?.info(
                 "Exported '\(pgn.name, privacy: .public)' to \(url.lastPathComponent, privacy: .public)"
             )
         } catch {
-            logger.error(
+            logger?.error(
                 """
                 PGN export failed for '\(pgn.name, privacy: .public)': \
                 \(error.localizedDescription, privacy: .public)

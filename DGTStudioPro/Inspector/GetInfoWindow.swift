@@ -202,10 +202,7 @@ internal struct GetInfoWindow: View {
     /// door emits are the same lines the sweep and the old sheet emitted, and
     /// splitting them would make `log stream --predicate 'category ==
     /// "players"'` — which the manual checks name — stop showing renames.
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "players"
-    )
+    private static let logger = AppLog.logger(.players)
 
     // MARK: Stored Properties
 
@@ -287,10 +284,11 @@ internal struct GetInfoWindow: View {
     /// for. Same window, two rules, stated at both sites.
     @FocusState private var focusedField: GameField?
 
-    /// A refused result change, held for its alert (D57′). Carries the
-    /// validator's own rejection so the message is D18′'s sentence rather than
-    /// a second opinion about the same position.
-    @State private var resultRefusal: ResultRefusal?
+    /// A refused field edit, held for its alert. Two causes reach it: a result
+    /// the final position disproves (D57′, carrying the validator's own
+    /// sentence rather than a second opinion about the same position) and a
+    /// seat that would put one player on both sides (D61′).
+    @State private var fieldRefusal: FieldRefusal?
 
     // MARK: Body
     internal var body: some View {
@@ -328,9 +326,9 @@ internal struct GetInfoWindow: View {
         // one alert serve two doors on 4 Aug and retired the same evening with
         // the second door (D52′) — the lesson stuck.
         .alert(
-            "Can’t Change Result",
-            isPresented: Binding(present: $resultRefusal),
-            presenting: resultRefusal,
+            fieldRefusal?.title ?? "",
+            isPresented: Binding(present: $fieldRefusal),
+            presenting: fieldRefusal,
             actions: { _ in Button("OK", role: .cancel) {} },
             message: { refusal in Text(refusal.message) }
         )
@@ -353,14 +351,22 @@ extension GetInfoWindow {
         case board, timeControl
     }
 
-    /// A result change the final position disproves (D57′).
+    /// A per-field edit this form refused, rendered as an alert.
     ///
-    /// Carries the rendered sentence rather than the `MovetextEdit.Rejection`
-    /// itself, because the alert needs one string and the mapping from
-    /// rejection to prose belongs beside the switch that is exhaustive over it.
-    fileprivate struct ResultRefusal: Identifiable {
+    /// Carries the rendered sentence rather than the underlying rejection,
+    /// because the alert needs one string and the mapping from cause to prose
+    /// belongs beside the switch that is exhaustive over it.
+    ///
+    /// **Gained a `title` in D61′**, when a second field started refusing. It
+    /// was `ResultRefusal` with a hard-coded "Can't Change Result" at the alert;
+    /// a seat refusal is the same shape with a different heading, and two
+    /// structs of one field plus two alerts on one view is more machinery than
+    /// one struct of two fields. Not a rename for tidiness — the second caller
+    /// is what made the title a value rather than a literal.
+    fileprivate struct FieldRefusal: Identifiable {
+        let title: String
         let message: String
-        var id: String { message }
+        var id: String { title + message }
     }
 }
 
@@ -799,9 +805,9 @@ extension GetInfoWindow {
                     }
                 }
             } label: {
-                Image(systemName: "chevron.up.chevron.down")
+//                Image(systemName: "chevron.up.chevron.down")
             }
-            .menuStyle(.button)
+            .menuStyle(.borderlessButton)
             .buttonStyle(.borderless)
             .fixedSize()
             .help("Choose a known player")
@@ -912,7 +918,7 @@ extension GetInfoWindow {
                 LabeledContent("Family", value: pgn.ecoFamily ?? RosterSummary.displayUnknown)
                 LabeledContent("Variation", value: pgn.ecoVariation ?? RosterSummary.displayUnknown)
                 LabeledContent(
-                    "Mate Pattern",
+                    "Checkmate Type",
                     value: pgn.specialCheckmate?.displayName ?? RosterSummary.displayUnknown
                 )
             }
@@ -1103,13 +1109,13 @@ extension GetInfoWindow {
             let outcome = try PGNStore(modelContext: modelContext)
                 .applyMovetextEdit(to: pgn, proposed: proposed)
             if case .success = outcome {
-                Self.logger.info("Movetext edit applied to “\(pgn.name, privacy: .public)”")
+                Self.logger?.info("Movetext edit applied to '\(pgn.name, privacy: .public)'")
             } else {
-                Self.logger.error("movetext edit unexpectedly rejected at commit")
+                Self.logger?.error("Movetext edit unexpectedly rejected at commit")
             }
         } catch {
-            Self.logger.error(
-                "movetext edit failed to persist: \(error.localizedDescription, privacy: .public)"
+            Self.logger?.error(
+                "Movetext edit failed to persist: \(error.localizedDescription, privacy: .public)"
             )
         }
     }
@@ -1147,12 +1153,22 @@ extension GetInfoWindow {
             case .white:
                 let proposed = seatValue(draftWhite)
                 guard proposed != pgn.white else { return }
+                guard !seatsCollide(proposed, opposite: pgn.black) else {
+                    draftWhite = pgn.white
+                    fieldRefusal = Self.sameSeatRefusal(proposed)
+                    return
+                }
                 try store.applyEdit(to: pgn) { $0.white = proposed }
                 draftWhite = proposed
 
             case .black:
                 let proposed = seatValue(draftBlack)
                 guard proposed != pgn.black else { return }
+                guard !seatsCollide(proposed, opposite: pgn.white) else {
+                    draftBlack = pgn.black
+                    fieldRefusal = Self.sameSeatRefusal(proposed)
+                    return
+                }
                 try store.applyEdit(to: pgn) { $0.black = proposed }
                 draftBlack = proposed
 
@@ -1179,7 +1195,7 @@ extension GetInfoWindow {
                 try store.applyEdit(to: pgn) { $0.timeControl = proposed }
             }
         } catch {
-            Self.logger.error(
+            Self.logger?.error(
                 "Info edit failed to persist: \(error.localizedDescription, privacy: .public)"
             )
             seedGameDrafts(from: pgn)
@@ -1202,6 +1218,38 @@ extension GetInfoWindow {
     private func seatValue(_ draft: String) -> String {
         let trimmed = draft.trimmingCharacters(in: .whitespaces)
         return trimmed.isEmpty ? RosterSummary.unknownTag : trimmed
+    }
+
+    /// Whether committing `proposed` into one seat would put a single player on
+    /// both sides of the game (D61′).
+    ///
+    /// **Compares identities, not strings**, which is the whole of it: `"Lopez,
+    /// Ruy"` and `"Ruy Lopez"` are one player under D23′'s one-way transform,
+    /// so a raw `!=` would let the two seats be spelled differently and still
+    /// name the same person. `Player.identity(forTag:)` is the resolver's own
+    /// answer, which is why it is asked here rather than restated.
+    ///
+    /// **Two unknown seats are not one player**, and that exemption is the
+    /// reason this returns `false` on a nil identity rather than treating nil
+    /// as a value. `?` is the *absence* of a player (D9′), and a game with both
+    /// seats unknown is two absences — the commonest shape in an imported
+    /// archive, and refusing it would make the window unable to edit anything
+    /// about such a game.
+    private func seatsCollide(_ proposed: String, opposite: String) -> Bool {
+        guard let proposedIdentity = Player.identity(forTag: proposed),
+              let oppositeIdentity = Player.identity(forTag: opposite) else { return false }
+        return proposedIdentity == oppositeIdentity
+    }
+
+    /// The refusal, in the reader's terms — naming the player rather than the
+    /// rule, because the reader can see the rule from the two fields.
+    private static func sameSeatRefusal(_ tag: String) -> FieldRefusal {
+        FieldRefusal(
+            title: "Can’t Set Both Seats to One Player",
+            message: "\(PlayerName.displayForm(of: tag)) is already the other seat. "
+            + "A game needs two players; give one seat a different name, or "
+            + "clear it to “\(RosterSummary.unknownTag)” if it isn’t known."
+        )
     }
 
     /// Commits a result change, refusing what the final position disproves
@@ -1229,12 +1277,15 @@ extension GetInfoWindow {
                 try PGNStore(modelContext: modelContext)
                     .applyEdit(to: pgn) { $0.result = proposed }
             } catch {
-                Self.logger.error(
+                Self.logger?.error(
                     "Result edit failed to persist: \(error.localizedDescription, privacy: .public)"
                 )
             }
         case .failure(let rejection):
-            resultRefusal = ResultRefusal(message: Self.resultMessage(rejection))
+            fieldRefusal = FieldRefusal(
+                title: "Can’t Change Result",
+                message: Self.resultMessage(rejection)
+            )
         }
     }
 
@@ -1318,7 +1369,7 @@ extension GetInfoWindow {
         } catch let rejection as PGNStore.RetagRejection {
             present(rejection, revertingTo: player)
         } catch {
-            Self.logger.error("Rename failed: \(error.localizedDescription, privacy: .public)")
+            Self.logger?.error("Rename failed: \(error.localizedDescription, privacy: .public)")
             draftTag = player.tagName ?? player.name
         }
     }
@@ -1337,7 +1388,7 @@ extension GetInfoWindow {
         case .wouldCollide(let collisions):
             refusal = Refusal(collisions: collisions)
         case .emptyTag:
-            Self.logger.error("Retag refused for an empty tag — the field's guard let one through")
+            Self.logger?.error("Retag refused for an empty tag — the field's guard let one through")
         }
         draftTag = player.tagName ?? player.name
     }
@@ -1346,7 +1397,7 @@ extension GetInfoWindow {
     /// unactionable otherwise. Caps the list: a rename over a double-imported
     /// set can collide many times, and an alert is not a report.
     fileprivate static func refusalMessage(_ collisions: [PGNStore.HashCollision]) -> String {
-        let shown = collisions.prefix(3).map { "“\($0.gameName)” and “\($0.existingName)”" }
+        let shown = collisions.prefix(3).map { "“\($0.gameName)” and “\($0.existingName)'" }
         let lead = "This would make these games identical: " + shown.joined(separator: "; ") + "."
         let more = collisions.count > shown.count
             ? " And \(collisions.count - shown.count) more."

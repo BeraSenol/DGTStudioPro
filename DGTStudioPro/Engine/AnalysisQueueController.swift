@@ -54,10 +54,7 @@ internal final class AnalysisQueueController {
     
     // MARK: Static Constants
     
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "analysis"
-    )
+    private static let logger = AppLog.logger(.analysis)
     
     // MARK: Queue State
     
@@ -101,7 +98,7 @@ internal final class AnalysisQueueController {
     internal func enqueue(_ pgns: [PGN], modelContext: ModelContext) {
         self.modelContext = modelContext
         let accepted = queue.enqueue(pgns.map(\.persistentModelID))
-        Self.logger.info(
+        Self.logger?.info(
             "Enqueued \(accepted)/\(pgns.count) game(s); \(self.queue.remainingCount) in the run"
         )
         startRunIfNeeded()
@@ -205,7 +202,7 @@ internal final class AnalysisQueueController {
             // Unreachable by construction — `enqueue` sets the context
             // before starting the run — but a drain beats a wedge if the
             // wiring ever drifts.
-            Self.logger.error("Run started without a model context; draining")
+            Self.logger?.error("Run started without a model context; draining")
             while queue.startNext() != nil {
                 queue.finishCurrent(.failed(message: "Internal error: no model context."))
             }
@@ -247,6 +244,6 @@ internal final class AnalysisQueueController {
         // Decision 4: release the subprocess at drain. The next batch
         // pays one fresh handshake; nothing idles in Activity Monitor.
         await driver.shutdown()
-        Self.logger.info("Queue drained: \(self.queue.completedCount) finished")
+        Self.logger?.info("Queue drained: \(self.queue.completedCount) finished")
     }
 }

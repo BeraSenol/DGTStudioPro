@@ -39,20 +39,27 @@ internal enum SpecialCheckmate: String, Codable, Sendable, CaseIterable {
     /// literal name, so this is not what keeps the two in step and shouldn't
     /// be documented as if it were.
     ///
-    /// Deliberately unlocalized, matching the PGN tag labels' recorded
-    /// stance, and deliberately *not* `rawValue.capitalized`, which renders
-    /// `backRank` as "Backrank". That substitution looks like a
-    /// simplification and is the reason this has a pin.
+    /// **Title case throughout** (5 Aug 2026, by request): "Back Rank", not
+    /// "Back rank". These read as the names of things — a reader scanning a
+    /// Checkmate Type column sees two proper nouns rather than a sentence
+    /// fragment — and it matches how every other classification label in the
+    /// app is written.
+    ///
+    /// Deliberately unlocalized, matching the PGN tag labels' recorded stance,
+    /// and deliberately *not* `rawValue.capitalized`, which renders `backRank`
+    /// as "Backrank". **The title-case change does not weaken that**: the
+    /// substitution is still wrong, still looks like a simplification, and the
+    /// pin still exists to catch it — only the expected string moved.
     internal var displayName: String {
         switch self {
         case .smothered: return "Smothered"
-        case .backRank:  return "Back rank"
+        case .backRank:  return "Back Rank"
         }
     }
 
     // MARK: Classification
     
-    /// Recognises the mate pattern in `state`, or `nil` when the position is
+    /// Recognises the checkmate type in `state`, or `nil` when the position is
     /// not checkmate or is an ordinary mate. Self-checking (`isCheckmate`
     /// guarded) so it is total and testable without the analysis driver.
     internal static func classify(_ state: GameState) -> SpecialCheckmate? {

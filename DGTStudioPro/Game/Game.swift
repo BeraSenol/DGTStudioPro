@@ -30,10 +30,7 @@ internal final class Game {
     
     // MARK: Static Constants
     
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "game"
-    )
+    private static let logger = AppLog.logger(.game)
     
     // MARK: Errors
     
@@ -146,7 +143,7 @@ internal final class Game {
             do {
                 move = try state.parseSAN(san)
             } catch {
-                Self.logger.error(
+                Self.logger?.error(
                     """
                     SAN parse failed for '\(pgn.name, privacy: .public)' \
                     at move \(index + 1) (index \(index)): \
@@ -175,8 +172,8 @@ internal final class Game {
         self.moves = moves
         self.currentPly = moves.count
         
-        Self.logger.info(
-            "Built Game '\(pgn.name, privacy: .public)' [\(moves.count) plies]"
+        Self.logger?.info(
+            "Built game '\(pgn.name, privacy: .public)' plies=\(moves.count)"
         )
     }
     

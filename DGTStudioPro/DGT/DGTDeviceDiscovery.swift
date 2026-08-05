@@ -29,10 +29,7 @@ import os
 /// entitlements note).
 internal enum DGTDeviceDiscovery {
     
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "dgt"
-    )
+    private static let logger = AppLog.logger(.dgt)
     
     /// Returns every serial callout device attached right now, unsorted.
     ///
@@ -44,7 +41,7 @@ internal enum DGTDeviceDiscovery {
     /// — nothing renders it, so nothing can depend on it.
     internal static func availableDevices() -> [DGTSerialDevice] {
         guard let matching = IOServiceMatching(kIOSerialBSDServiceValue) else {
-            logger.error("IOServiceMatching returned nil for serial services")
+            logger?.error("IOServiceMatching returned nil for serial services")
             return []
         }
         
@@ -61,13 +58,13 @@ internal enum DGTDeviceDiscovery {
             // A non-callout constant would be a programmer error at one
             // symbol; matching wide keeps the membership checks correct
             // while this line names the surprise.
-            logger.error("onlyBoardPath is not a /dev/cu. path; matching all serial devices")
+            logger?.error("Configured board path is not a /dev/cu. path; matching all serial devices")
         }
         
         var iterator: io_iterator_t = 0
         let result = IOServiceGetMatchingServices(kIOMainPortDefault, matching, &iterator)
         guard result == KERN_SUCCESS else {
-            logger.error("IOServiceGetMatchingServices failed: \(result, privacy: .public)")
+            logger?.error("IOServiceGetMatchingServices failed: \(result, privacy: .public)")
             return []
         }
         defer { IOObjectRelease(iterator) }
@@ -90,7 +87,7 @@ internal enum DGTDeviceDiscovery {
         // transport echo. (It read "Enumerated 4 serial device(s)" for two
         // days, which is what prompted the narrowing: a count of ignored
         // devices is a line you learn to read past.)
-        logger.debug("Board node \(devices.isEmpty ? "absent" : "present", privacy: .public)")
+        logger?.debug("Board node \(devices.isEmpty ? "absent" : "present", privacy: .public)")
         return devices
     }
     

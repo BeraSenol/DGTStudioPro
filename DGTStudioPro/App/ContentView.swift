@@ -38,10 +38,7 @@ internal struct ContentView: View {
 
     // MARK: Static Constants
 
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "smarttags"
-    )
+    private static let logger = AppLog.logger(.smarttags)
 
     // MARK: Window-Bound State
     
@@ -264,7 +261,7 @@ internal struct ContentView: View {
         do {
             try modelContext.save()
         } catch {
-            Self.logger.error(
+            Self.logger?.error(
                 "Tag \(operation, privacy: .public) failed to save: \(error.localizedDescription, privacy: .public)"
             )
         }

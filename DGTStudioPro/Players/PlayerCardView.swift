@@ -119,11 +119,17 @@ internal enum RankMedal: String, CaseIterable, Identifiable, Sendable {
         }
     }
     
-    /// The style for *any* rank — the medal on the podium, `.tint` below it.
+    /// The style for *any* rank on a **headline** surface — the medal on the
+    /// podium, `.tint` below it.
+    ///
     /// Erased rather than `Color?` with an `.accentColor` fallback, because
     /// the unmedalled badge has always been `.tint` and therefore follows a
     /// host's `.tint()`; collapsing it to `.accentColor` would be a silent
     /// behaviour change for every rank from fourth down.
+    ///
+    /// Used where a rank is *one large thing beside a name*: the card's badge,
+    /// the gallery's identity row, the columns detail's. See `tableStyle`
+    /// below for the dense case and why it differs.
     internal static func style(forRank rank: Int) -> AnyShapeStyle {
         if let medal = RankMedal(rank: rank) {
             AnyShapeStyle(medal.color)
@@ -131,11 +137,45 @@ internal enum RankMedal: String, CaseIterable, Identifiable, Sendable {
             AnyShapeStyle(.tint)
         }
     }
+
+    /// The style for a rank in a **column** — the same podium colours,
+    /// `.secondary` below them (5 Aug 2026).
+    ///
+    /// **The two fallbacks differ on purpose, and the podium does not.** Gold,
+    /// silver and bronze come from `medal.color` in both, so the podium can
+    /// never be one colour in the table and another on a card — which is the
+    /// guarantee this type was created for. What diverges is everything from
+    /// fourth down, and it diverges because the surfaces are not doing the same
+    /// job: a headline shows *one* rank next to a name and `.tint` reads as
+    /// emphasis, while the table shows a *column* of them and a run of accent
+    /// blue down the leading edge is noise competing with the names beside it.
+    ///
+    /// Recorded rather than left as two call sites making different choices,
+    /// because "the ranks are blue in one view and grey in another" is exactly
+    /// the kind of thing that reads as a bug until someone finds the reason.
+    internal static func tableStyle(forRank rank: Int) -> AnyShapeStyle {
+        if let medal = RankMedal(rank: rank) {
+            AnyShapeStyle(medal.color)
+        } else {
+            AnyShapeStyle(.secondary)
+        }
+    }
 }
 
-/// The ladder position as a chip — one rendering behind the icons badge and
-/// the table's Rank column, so the podium can't be gold in one and blue in
-/// the other.
+/// The ladder position as a chip.
+///
+/// **One caller since 5 Aug 2026** — the card, and through it the icons grid.
+/// This doc said "one rendering behind the icons badge and the table's Rank
+/// column" until the table's column became plain text: a capsule for ranks 1–3
+/// and a bare number below meant the column changed *shape* three rows in.
+/// The guarantee that sentence was protecting survives intact and moved down a
+/// level: the podium colours come from `RankMedal.color` in every surface, so
+/// gold is gold whether it is worn by a chip, a headline or a table cell.
+///
+/// Kept rather than inlined into the card. A chip is a real thing a card wants
+/// and a second host is plausible; what is *not* plausible is a second host
+/// that wants it at a different colour, which is the only failure this type
+/// exists to prevent.
 ///
 /// The outer inset deliberately stays with the caller: the card needs it to
 /// hold the chip off its corner, and a table cell must not inherit it.

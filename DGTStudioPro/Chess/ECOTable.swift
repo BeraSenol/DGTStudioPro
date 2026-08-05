@@ -27,10 +27,7 @@ import os
 /// `ECOClassifier`'s longest-prefix walk land on the right name.
 internal enum ECOTable {
 
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "eco"
-    )
+    private static let logger = AppLog.logger(.eco)
 
     /// Resource base names, one per ECO volume. Fetched as `a.tsv`…`e.tsv`
     /// and renamed on the way in: bundle resources land flat at the Resources
@@ -75,7 +72,7 @@ internal enum ECOTable {
         var entries: [(line: [String], opening: ECOOpening)] = []
         for name in resourceNames {
             guard let url = Bundle.main.url(forResource: name, withExtension: "tsv") else {
-                logger.error(
+                logger?.error(
                     """
                     ECO volume '\(name, privacy: .public).tsv' missing from the app bundle — \
                     games will classify as unclassified until it is restored
@@ -86,7 +83,7 @@ internal enum ECOTable {
             do {
                 entries.append(contentsOf: try parse(contentsOf: url))
             } catch {
-                logger.error(
+                logger?.error(
                     """
                     ECO volume '\(name, privacy: .public).tsv' unreadable: \
                     \(error.localizedDescription, privacy: .public)
@@ -94,7 +91,7 @@ internal enum ECOTable {
                 )
             }
         }
-        logger.info("ECO table loaded: \(entries.count) lines")
+        logger?.info("ECO table loaded: \(entries.count) lines")
         return ECOClassifier(entries)
     }
 
@@ -114,7 +111,7 @@ internal enum ECOTable {
             guard columns.count >= 3 else {
                 // `String(row)`, not `row`: os.Logger's interpolation has no
                 // `Substring` overload, and the split hands back Substrings.
-                logger.error(
+                logger?.error(
                     "ECO row has \(columns.count) columns, expected 3: \(String(row), privacy: .public)"
                 )
                 continue
@@ -131,7 +128,7 @@ internal enum ECOTable {
             // cannot fire on this data — table lines carry no result token —
             // so it degrades to a skipped row rather than a caught case.
             guard let line = try? MovetextEdit.tokenize(String(columns[2])), !line.isEmpty else {
-                logger.error("ECO row has unusable movetext: \(String(row), privacy: .public)")
+                logger?.error("ECO row has unusable movetext: \(String(row), privacy: .public)")
                 continue
             }
             entries.append((line, ECOOpening(code: code, name: String(columns[1]))))

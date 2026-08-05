@@ -120,7 +120,7 @@ internal final class SmartTag: Identifiable {
                 colorName: .purple,
                 rules: [
                     TagRule(
-                        field: .matePattern,
+                        field: .checkmateType,
                         comparison: .equals,
                         specialCheckmate: .smothered
                     )
@@ -150,7 +150,7 @@ internal final class SmartTag: Identifiable {
             // release build is silent — the flag stays unset (a retry
             // next launch, deliberately), but the sidebar just looks
             // inexplicably empty with nothing in Console to say why.
-            Logger(subsystem: "com.berasenol.dgtstudiopro", category: "smarttags")
+            AppLog.logger(.smarttags)?
                 .error("Default smart-tag seed failed: \(error.localizedDescription, privacy: .public)")
             assertionFailure("Default smart-tag seed failed: \(error)")
         }

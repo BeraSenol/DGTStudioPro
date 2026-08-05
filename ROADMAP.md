@@ -14,9 +14,19 @@ close the two surfaces it left wired to nothing: **D53′** (Get Info is one
 window over three subjects and the app's rename door) and **D54′** (movetext
 is read-only everywhere but the Library), and **D55′** (one display glyph for
 every unknown, minted after ⌘U came back red on four pins asserting the
-contract it replaced). Next free: **D56′**. The standing
+contract it replaced). The standing
 counter-grep that would have caught this — milestone numbers in the code
 against milestone numbers in these two documents — is now on the sweep list.*
+
+*Revised 5 August 2026: **the 5 August day entered as a Landed entry**, the
+2–4 August burst's precedent for work that ships outside milestone discipline.
+Eight decisions across the day — **D56′** through **D63′** — none of them a
+milestone, and the roadmap's schedulable half is unchanged: M7's two gated
+items remain (Instruments-with-board; the ~September GM re-read). Next free:
+**D64′**. That number was **D56′** in this file until now, eight behind the
+instructions, which is the same drift the instructions' own header produced on
+the same day and the reason both counts now point at one owner: the
+instructions' header is the source, this line repeats it.*
 
 *Revised 2 August 2026 (second): **M9 added by request and moved to Landed in
 the same pass** — Players and Rankings merged into one destination (D48′): the
@@ -395,6 +405,74 @@ without a roadmap entry. The recording pass wrote that list after the fact,
 against what the code does rather than what it was meant to do; it is in the
 instructions under *M10's own*, and its first item is the `openWindow` routing
 check, because five existing call sites depend on the answer.
+
+### The 4 August late sitting — ⌘A, shortcuts, and the file ordinal *(recorded 5 August 2026)*
+
+Entered late, and the reason is the one this roadmap has now recorded twice:
+**D58′ appeared nowhere in this file until the 5 August sweep looked for it**,
+and an unrecorded decision cannot go stale, contradict anything or fail a
+grep. The counter-grep on the sweep list catches milestone numbers; it does
+not catch D-numbers, and this is the case that says it should.
+
+Shipped: ⌘A selecting every visible row in all four view modes on both
+collection destinations, through the system's Edit ▸ Select All rather than a
+shortcut of our own — "visible" meaning after smart tags, query and chips,
+which is `filteredGames`' existing contract rather than a new one; a keyboard
+shortcut on every context-menu item across both destinations; **D56′** — Open
+takes the selected set rather than one game, which is what makes display order
+tab order; **D57′** — Get Info split into Details and File tabs, with Details
+becoming where an archived game's roster is edited; and **D58′** — a game
+carries the ordinal its file already had on disk, so the Library's `#` column
+reads the filing number rather than an invented one.
+
+**Gate evidence: ⌘U reported green by Bera**, discharging the M10 recording's
+owed run at the same time.
+
+### The 5 August day — tables, Get Info, orphans, the ladder, and the logs *(recorded 5 August 2026)*
+
+A day of requests rather than a milestone, recorded the same day, against
+`97d1243` "Keyboard Shortcuts" and `75a02d3` "Secondary Personal ID, Detailed
+Info Window" plus a working tree of 54 changed paths. Eight decisions, two
+deliberately numberless.
+
+Shipped, in the order asked for: **column-header sorting** on both collection
+destinations (once ascending, twice descending), which deleted D48′'s sort
+picker — the sort lives on the destination rather than the table, because
+`gamesInDisplayOrder` feeds D24′'s export filename numbering, the analysis
+queue's order and D56′'s tab order, and a table-local sort would have let
+export silently number by one order while the reader looked at another; the
+Library opening on `#` descending; **D57′**–**D59′** — Get Info grew to three
+tabs and became the only place a game is edited, taking the movetext editor
+off the Library inspector's pencil one day after D54′ put it there, the
+one-day reversal recorded rather than smoothed; the known-player seat menu
+everywhere a seat is edited; **D60′** — orphaned players are always collected,
+on the stated premise that the PGN files are the source of truth; the Move
+Text tab's numbered two-column **score sheet** (numberless, resting entirely
+on `MovetextEdit.tokenize` treating numbers and padding as decoration — tab
+separation was tried and reverted the same hour); **D61′** — one player cannot
+hold both seats; **D62′** — the ladder's ordering is a user choice (wins /
+win rate / rating) with D11′ demoted from the only answer to the default, and
+the rating graph gaining a hollow point at step 0 for the 1500 everyone starts
+from; a **Checkmate Type** column on the Library and a **Special Mates** count
+on Players; the *mate pattern* vocabulary renamed to **Checkmate Type** with
+the motif names title-cased; and **D63′** — logging given one owner, one
+policy and one grammar, silent under the test host and re-armed by `DGT_LOG=1`.
+
+**An auto-fit column feature was built and withdrawn the same day** — an
+`NSTableView` delegate proxy measuring the widest cell on a double-click in
+the header divider. SwiftUI has no native equivalent and
+`TableColumnCustomization` does not persist width at all, which is the finding
+that outlived the feature: both list views' docs had claimed it did, wrong
+since the day they were written and checkable in twenty seconds.
+
+**Gate evidence: ⌘U reported green by Bera twice during the day, then red
+once.** The red was `displaySummaryRoundsAndMarksProvisional` — `Glicko1`'s
+provisional marker had changed from "(provisional)" to `*` for the new Rating
+column's 120 pt cell, and neither the doc comment above it nor its pin moved
+with it. Fixed. **⌘U is owed on the full tree including D63′ and is not
+claimed here**, which is the formula this project records as a hypothesis
+rather than a result — the same day it came back red is the day to stop
+writing "expected green" as though it settled anything.
 
 ### The 2–4 August burst — search, selection, chrome, the cascade, and the suite's exit *(recorded 4 August 2026)*
 

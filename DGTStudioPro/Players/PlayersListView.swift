@@ -88,16 +88,30 @@ internal struct PlayersListView: View {
                 // kept per the registry's bet (D51′). The Player cell keeps
                 // `playerRow(name)` from the rename/merge flows. Two cells,
                 // two currencies — one element can't serve both.
-                Group {
-                    if RankMedal(rank: player.rank) != nil {
-                        RankBadge(rank: player.rank)
-                    } else {
-                        Text("\(player.rank)").monospacedDigit().foregroundStyle(.secondary)
-                    }
-                }
-                .accessibilityIdentifier(
-                    AccessibilityID.rankingRow(player.rank, player.stats.name)
-                )
+                // **Plain text, one shape for every row** (5 Aug 2026, by
+                // request). This was a `RankBadge` capsule for ranks 1–3 and
+                // bare secondary text below, which meant the column changed
+                // *shape* three rows in — a chip, a chip, a chip, then a
+                // number — and a table column that renders two different kinds
+                // of thing reads as two columns badly aligned.
+                //
+                // The medal colours survive the badge because they were never
+                // the problem: `#1` in gold says the same thing the capsule
+                // said, in a column of numbers that now all sit on one
+                // baseline. The `#` comes along because it is what the gallery
+                // and the columns detail already print, so this is the fourth
+                // surface joining one rendering rather than a new one.
+                //
+                // `tableStyle` and not `style`: same podium colours, and
+                // `.secondary` rather than `.tint` from fourth down — argued at
+                // that function, which is where both fallbacks are visible
+                // together.
+                Text("#\(player.rank)")
+                    .monospacedDigit()
+                    .foregroundStyle(RankMedal.tableStyle(forRank: player.rank))
+                    .accessibilityIdentifier(
+                        AccessibilityID.rankingRow(player.rank, player.stats.name)
+                    )
             }
             .width(52)
             .customizationID("rank")
@@ -163,6 +177,28 @@ internal struct PlayersListView: View {
             // marker is display only and deliberately not part of the key: a
             // provisional 1700 is still a 1700, and D11′ already treats the
             // deviation as a separate fact rather than a discount on the mean.
+            // Motif mates only (D19′ — smothered, back rank).
+            //
+            // Headed "Special Mates" and not "Special", which the first draft
+            // used on the reasoning that "the neighbour already says Mates".
+            // **There is no neighbour**: the total mate count lives in the
+            // profile grid, never in this table, so "Special" would have been a
+            // header qualifying a noun that appears nowhere on screen. Caught
+            // by reading the column list rather than by care — the same species
+            // this file's other comments keep recording.
+            //
+            // **`Special <= Mates` is not guaranteed**, which will look like a
+            // bug the first time it happens: `matesDelivered` asks
+            // `hasSuffix("#")` while the motif classifier asks `contains("#")`,
+            // so a game ending `Qd2#!` is a special mate that is not a mate.
+            // That divergence is a standing open item and this column is now
+            // the place it becomes visible — argued at `PlayerStats`, where the
+            // counting happens.
+            TableColumn("Special Mates", value: \.stats.specialMatesDelivered) { player in
+                Text("\(player.stats.specialMatesDelivered)").foregroundStyle(.secondary)
+            }
+            .width(min: 84, ideal: 96)
+            .customizationID("specialMates")
             TableColumn("Rating", sortUsing: KeyPathComparator(\RankedPlayer.rating?.mean)) { player in
                 Text(player.rating?.displaySummary ?? RosterSummary.displayUnknown)
                     .foregroundStyle(.secondary)

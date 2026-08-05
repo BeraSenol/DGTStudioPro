@@ -107,8 +107,17 @@ struct Glicko1Tests {
         #expect(!Glicko1.Rating(mean: 1500, deviation: 110).isProvisional, "boundary is established")
     }
     
+    /// The marker is `*` since 5 Aug 2026, not the word "(provisional)" — the
+    /// Rating column's 120 pt cell truncated the word. Argued at the
+    /// declaration; the expected string moved and the two claims did not:
+    /// provisional ratings are marked, settled ones are bare, and both round.
+    ///
+    /// This test is why the rename was caught at all. The change was made for
+    /// a table cell, the doc comment above `displaySummary` still said
+    /// "(provisional)" afterwards, and nothing else in the app would have
+    /// disagreed out loud — three view sites print whatever this returns.
     @Test func displaySummaryRoundsAndMarksProvisional() {
-        #expect(Glicko1.Rating(mean: 1662.212, deviation: 290.23).displaySummary == "1662 (provisional)")
+        #expect(Glicko1.Rating(mean: 1662.212, deviation: 290.23).displaySummary == "1662*")
         #expect(Glicko1.Rating(mean: 1499.6, deviation: 30).displaySummary == "1500")
     }
     

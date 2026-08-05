@@ -24,10 +24,7 @@ internal final class LiveGameDraftStore {
 
     // MARK: Static Constants
 
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "dgt"
-    )
+    private static let logger = AppLog.logger(.dgt)
 
     private static let fileName = "LiveGameDraft.json"
 
@@ -68,7 +65,7 @@ internal final class LiveGameDraftStore {
         )
         let data = try LiveGameDraft.encoder().encode(draft)
         try data.write(to: fileURL, options: [.atomic])
-        Self.logger.debug("Draft saved (\(draft.sanMoves.count) plies)")
+        Self.logger?.debug("Draft saved (\(draft.sanMoves.count) plies)")
     }
 
     /// Loads the draft, or `nil` when no file exists (the common launch).
@@ -92,11 +89,11 @@ internal final class LiveGameDraftStore {
     internal func delete() {
         do {
             try FileManager.default.removeItem(at: fileURL)
-            Self.logger.debug("Draft deleted")
+            Self.logger?.debug("Draft deleted")
         } catch CocoaError.fileNoSuchFile {
             // Already gone — exactly the desired end state.
         } catch {
-            Self.logger.error(
+            Self.logger?.error(
                 "Draft delete failed: \(error.localizedDescription, privacy: .public)"
             )
         }

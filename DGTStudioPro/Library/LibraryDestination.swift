@@ -18,10 +18,7 @@ import UniformTypeIdentifiers
 internal struct LibraryDestination: View {
     
     // MARK: Static Constants
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "library"
-    )
+    private static let logger = AppLog.logger(.library)
 
     /// Above this many, Open asks first (D56′).
     ///
@@ -530,7 +527,7 @@ internal struct LibraryDestination: View {
             ) ?? ""
         )
         .dropDestination(for: URL.self) { urls, _ in
-            Self.logger.info("Drop received: \(urls.count) URL(s)")
+            Self.logger?.info("Drop received: \(urls.count) URL(s)")
             importURLs(urls)
             return true
         }
@@ -693,7 +690,7 @@ internal struct LibraryDestination: View {
 
     /// The unguarded half, reached either directly or from the confirmation.
     private func performOpen(_ pgns: [PGN]) {
-        Self.logger.info("Open requested: \(pgns.count) game(s)")
+        Self.logger?.info("Open requested: \(pgns.count) game(s)")
         for pgn in pgns {
             openWindow(value: pgn.persistentModelID)
         }
@@ -707,7 +704,7 @@ internal struct LibraryDestination: View {
     /// and the graph filling in. The one-shot `pendingAnalysisID` relay
     /// this used to set is gone with the per-inspector driver it fed.
     private func requestAnalysis(_ pgn: PGN) {
-        Self.logger.info("Analyze requested: '\(pgn.name, privacy: .public)'")
+        Self.logger?.info("Analyze requested: '\(pgn.name, privacy: .public)'")
         selectedPGNs = [pgn.id]
         // Not in columns mode: its detail pane already shows the game being
         // analyzed, and forcing the inspector open here would reintroduce the
@@ -755,7 +752,7 @@ internal struct LibraryDestination: View {
             requestAnalysis(ordered[0])
             return
         }
-        Self.logger.info("Batch analyze requested: \(ordered.count) game(s)")
+        Self.logger?.info("Batch analyze requested: \(ordered.count) game(s)")
         tabState.analysisQueue.enqueue(ordered, modelContext: modelContext)
     }
     
@@ -1080,7 +1077,7 @@ internal struct LibraryDestination: View {
     /// status sheet animates as work proceeds.
     @MainActor
     private func runImport(_ urls: [URL]) async {
-        Self.logger.info("Import batch starting: \(urls.count) URL(s)")
+        Self.logger?.info("Import batch starting: \(urls.count) URL(s)")
         let store = PGNStore(modelContext: modelContext)
         importProgress = ImportProgress(total: urls.count)
         
@@ -1090,10 +1087,10 @@ internal struct LibraryDestination: View {
                 let pgn = try store.importPGN(from: url)
                 outcome = .imported(name: pgn.name)
             } catch let error as PGNStore.Error {
-                Self.logger.error("Import failed for \(url.lastPathComponent, privacy: .public)")
+                Self.logger?.error("Import failed for \(url.lastPathComponent, privacy: .public)")
                 outcome = .failed(error)
             } catch {
-                Self.logger.error("Import failed for \(url.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                Self.logger?.error("Import failed for \(url.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
                 outcome = .failed(.fileReadFailed(url, underlying: error))
             }
             
@@ -1106,7 +1103,7 @@ internal struct LibraryDestination: View {
         
         importProgress?.isFinished = true
         let imported = importProgress?.importedCount ?? 0
-        Self.logger.info("Import batch complete: \(imported)/\(urls.count) imported")
+        Self.logger?.info("Import batch complete: \(imported)/\(urls.count) imported")
     }
     
     /// The confirmation's body: the lead sentence, plus a clause naming any
@@ -1191,7 +1188,7 @@ internal struct LibraryDestination: View {
         do {
             try store.delete(pgns)
         } catch {
-            Self.logger.error(
+            Self.logger?.error(
                 "Failed to batch-delete \(pgns.count) PGNs: \(error.localizedDescription, privacy: .public)"
             )
         }
@@ -1230,7 +1227,7 @@ internal struct LibraryDestination: View {
         do {
             try store.delete(pgn)
         } catch {
-            Self.logger.error("Failed to delete PGN: \(error.localizedDescription, privacy: .public)")
+            Self.logger?.error("Failed to delete PGN: \(error.localizedDescription, privacy: .public)")
         }
     }
     
@@ -1243,11 +1240,11 @@ internal struct LibraryDestination: View {
         do {
             try modelContext.save()
             let healed = toFix.map(\.name).joined(separator: ", ")
-            Self.logger.info(
+            Self.logger?.info(
                 "Backfilled \(toFix.count) legacy game name(s): \(healed, privacy: .public)"
             )
         } catch {
-            Self.logger.error("Name backfill save failed: \(error.localizedDescription, privacy: .public)")
+            Self.logger?.error("Name backfill save failed: \(error.localizedDescription, privacy: .public)")
         }
     }
     
@@ -1262,7 +1259,7 @@ internal struct LibraryDestination: View {
             // D29′ — after links, which it reads (see the store doc).
             try store.backfillPlayerTagNames()
         } catch {
-            Self.logger.error("Player-link backfill failed: \(error.localizedDescription, privacy: .public)")
+            Self.logger?.error("Player-link backfill failed: \(error.localizedDescription, privacy: .public)")
         }
     }
     
@@ -1288,7 +1285,7 @@ internal struct LibraryDestination: View {
         do {
             try PGNStore(modelContext: modelContext).backfillClassifications(using: table)
         } catch {
-            Self.logger.error("Classification backfill failed: \(error.localizedDescription, privacy: .public)")
+            Self.logger?.error("Classification backfill failed: \(error.localizedDescription, privacy: .public)")
         }
     }
     
@@ -1297,7 +1294,7 @@ internal struct LibraryDestination: View {
     /// Single-game entry (a card's context menu). One game means a save
     /// panel: the user names the file.
     private func requestExport(_ pgn: PGN) {
-        Self.logger.info("Export requested: '\(pgn.name, privacy: .public)'")
+        Self.logger?.info("Export requested: '\(pgn.name, privacy: .public)'")
         PGNExporter.export([pgn])
     }
     
@@ -1308,7 +1305,7 @@ internal struct LibraryDestination: View {
     private func requestExport(ids: Set<PGN.ID>) {
         let ordered = gamesInDisplayOrder(ids)
         guard !ordered.isEmpty else { return }
-        Self.logger.info("Export requested: \(ordered.count) game(s)")
+        Self.logger?.info("Export requested: \(ordered.count) game(s)")
         PGNExporter.export(ordered)
     }
 }

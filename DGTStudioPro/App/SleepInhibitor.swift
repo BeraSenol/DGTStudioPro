@@ -78,10 +78,7 @@ internal final class SleepInhibitor {
 
     // MARK: Static Constants
     @ObservationIgnored
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "power"
-    )
+    private static let logger = AppLog.logger(.power)
 
     @ObservationIgnored
     private static let activityReason = "Live chess game or board recording in progress"
@@ -94,7 +91,7 @@ internal final class SleepInhibitor {
     internal var isEnabled: Bool {
         didSet {
             defaults.set(isEnabled, forKey: StorageKeys.preventSleepDuringPlay)
-            Self.logger.info(
+            Self.logger?.info(
                 "Sleep inhibition preference: \(self.isEnabled ? "on" : "off", privacy: .public)"
             )
         }
@@ -172,7 +169,7 @@ internal final class SleepInhibitor {
     private func setInhibited(_ inhibited: Bool) {
         guard inhibited != (token != nil) else { return }
         token = inhibited ? ActivityToken(reason: Self.activityReason) : nil
-        Self.logger.info(
+        Self.logger?.info(
             "Idle-sleep inhibition \(inhibited ? "began" : "ended", privacy: .public)"
         )
     }

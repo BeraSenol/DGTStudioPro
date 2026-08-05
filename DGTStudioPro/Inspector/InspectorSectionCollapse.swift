@@ -80,10 +80,7 @@ internal final class InspectorSectionCollapse {
 
     // MARK: Type Properties
     @ObservationIgnored
-    private static let logger = Logger(
-        subsystem: "com.berasenol.dgtstudiopro",
-        category: "inspector"
-    )
+    private static let logger = AppLog.logger(.inspector)
 
     // MARK: Stored Properties
 
@@ -143,7 +140,7 @@ internal final class InspectorSectionCollapse {
             // Not a defect — this is the retired-section path doing its job.
             // Logged because it is also what a *typo* in a raw value looks
             // like, and the two are indistinguishable from the store.
-            Self.logger.info(
+            Self.logger?.info(
                 "Ignored \(stored.count - sections.count, privacy: .public) unknown collapsed-section key(s)"
             )
         }
