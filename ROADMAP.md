@@ -28,6 +28,41 @@ instructions, which is the same drift the instructions' own header produced on
 the same day and the reason both counts now point at one owner: the
 instructions' header is the source, this line repeats it.*
 
+*Revised 6 August 2026: **three refinement milestones added — M12, M13, M14**
+— the first entries on this roadmap that schedule no feature. M7's Instruments
+item is absorbed into M12 rather than left standing beside it, because the run
+was always a gate on something and now it is a gate on something scheduled;
+M7's remaining bullet is the ~September GM re-read, which is the only thing on
+this roadmap that waits on a date. Base: `ef92d96` plus a working tree dirty
+with 36 modified sources — named rather than discovered, and **⌘U is owed on
+it before M12 starts**, since the last reported run predates the four
+doc-compression commits. The ordering is the argument and it is written into
+M12: stability, then structure, then reading. **No D-numbers are penciled** —
+three M12 bullets will each take one at recording time. Next free: **D64′**.
+
+**M11 is skipped, and the reason is a finding rather than a preference.**
+These three were drafted as M11–M13 and renumbered, because `M11` is already
+taken: it is the pre-roadmap **decoupling review**, live in ten source
+comments across `SettingsView`, `StorageKeys`, `BoardDestination`,
+`StockfishEngine`, `PGNStore` and `PGNStoreTests`, in the same provenance
+class as M7.2 and M-prs.1. Roadmap milestones stopped at M10, so the next
+free *roadmap* number and the next free *tag* number had quietly diverged by
+one — and nothing would have failed if the collision had shipped. The
+counter-grep would have come back clean, because it asks whether a tag in the
+sources appears in these documents and both meanings share a string. A reader
+grepping `M11` would have got two unrelated things and no way to tell them
+apart. **Caught by running the check rather than by trusting it**, which is
+the only method with a record here. The transferable rule: milestone numbers
+live in one namespace with the legacy tags, not two, so the next free number
+is `max` over the sources and both documents — never over the roadmap alone.*
+
+*Next free milestone number: **M15**.
+The three measurements this revision rests on, with their methods, so the next
+pass re-runs rather than inherits: 140 app sources and 91 test sources
+(`find … -name '*.swift'`); 30,332 app lines of which 11,587 are comments
+(`grep -rh '^\s*///'` and its `//` sibling); `PROJECT-INSTRUCTIONS.md` at
+335 KB (`wc -c`).*
+
 *Revised 2 August 2026 (second): **M9 added by request and moved to Landed in
 the same pass** — Players and Rankings merged into one destination (D48′): the
 ladder becomes Players' default sort with a persisted name toggle, rank and
@@ -313,6 +348,359 @@ known-costs list is honestly labelled as unmeasured rather than quietly
 wrong. That is why it survived three passes of demolition, and it is worth
 noticing that the one item nobody could dissolve is the one that was written
 down as an admission of ignorance rather than as an assertion.
+
+---
+
+## M12 — Close what is known
+
+**Goal: every item on the instructions' open-items list is closed, decided,
+or measured — while the code is still where every anchor says it is.**
+
+*Sequencing note, because this milestone's position is the argument rather
+than its contents. M12 runs before M13's file moves for one reason: a bug fix
+and a path rewrite are both cheap alone and expensive together. A fix landing
+into a tree mid-reorganization cannot be reviewed against the anchor that
+describes it, and the anchor cannot be corrected until the file stops moving.
+Stability first also means the reorganization lands on a tree with nothing
+outstanding, which is the only state in which "⌘U green plus a cold build" is
+a sufficient gate for a change that touches a hundred paths.*
+
+**No D-numbers are penciled here.** Three of the bullets below reverse or
+narrow a recorded contract and will each take a number at recording time, in
+the instructions, in sequence. Next free is **D64′**, which is a fact about
+today rather than an allocation.
+
+- **The `endedInMate` divergence, decided.** `PGN+GameRecord` builds the
+  record with `moves.last?.hasSuffix("#")`; `GameClassification` gates on
+  `moves.last?.contains("#")`. A game ending `Qd2#!` is therefore a special
+  mate that is not a mate, and since the Special Mates column landed on 5
+  August **the disagreement is on screen** — a player's Special Mates can
+  exceed their mates, pinned deliberately by
+  `aSpecialMateCanOutnumberMatesWhileTheSpellingsDisagree`.
+
+  The reason this is a decision and not a one-line fix is stated at the open
+  item: `contains` is the spelling D18′ argued for and the tokenizer's own
+  behaviour supports (`!`/`?` survive, so `hasSuffix` answers false for a
+  perfectly ordinary annotated mate), but moving `endedInMate` to `contains`
+  changes what every *saved* Checkmate smart tag matches, which is D30′'s
+  class of change. **Gate: the pin above is the test that must fail**, and it
+  says so in its own doc — a close that leaves it green closed nothing.
+
+- **D61′'s scope gap, closed at the shared form.** The one-player-two-seats
+  guard lives in `GetInfoWindow` alone. `NewLiveGameSheet` and
+  `EditGameInfoSheet` both edit seats through `LiveGameRosterForm` and refuse
+  nothing — so the three surfaces that were *deliberately unified* for the
+  seat menu one request earlier are deliberately different for the guard one
+  request later. D61′ names this as a real gap and names the remedy: the
+  check moves into the shared form, where the two seats are one `Roster` and
+  the comparison is cheaper than it is in Get Info's two independent drafts.
+
+  The import asymmetry is untouched and must stay so — a PGN on disk may
+  legitimately record one person on both sides, `selfPlayRewritesBothSeats`
+  pins that the store still handles one, and `headToHeadIgnoresSelfPlay` pins
+  that the folds do. **What is being closed is one door minting them, not the
+  concept.**
+
+- **The three unconsumed symbols, each decided rather than swept.**
+  `DGTSerialPort.isOpen` (the app target's one symbol with no consumer),
+  `OpenGamesRegistry.markDirty` (honest pre-wiring — its read side is live in
+  `LibraryDestination`'s delete path, and it goes live with no wiring the day
+  an editor defers its writes), and `BoardView.selectedSquare` (built
+  capability for a surface never decided).
+
+  These are not one item three times. `markDirty` and `selectedSquare` each
+  point at something already on the Horizon — a deferring editor, and a
+  click-to-move / position-setup surface — so the decision for each is *earn
+  a consumer, or join the test-only-by-decision list*, and D41′ is the
+  precedent for the third possibility. `isOpen` has no such sibling waiting,
+  which is exactly why it has outlived two sweeps.
+
+- **The launch-time `FocusedValue` warning, discriminated.**
+  `FocusedValue update tried to update multiple times per frame` fires at
+  every launch and is narrowed to two candidates: `\.boardGetInfoRequest`
+  carrying a `Binding<Bool>` that is a fresh non-`Equatable` instance on every
+  body pass (so SwiftUI cannot dedupe it) while `.onAppear` mutates
+  `tabState.boardGame` and forces a second pass inside the launch frame; or
+  two restored board windows both writing `\.activeGame` in one frame, which
+  D51′'s restoration saga makes more than hypothetical.
+
+  **One step separates them: quit with a single board window open, relaunch.**
+  That is the whole of this bullet's cost, and it is on the list because the
+  arrangement it implicates is D53′'s trigger-binding pattern in its third
+  use — so if the first candidate is the cause, the fix is a decision about a
+  pattern rather than a tidy-up of one call site.
+
+- **The library-index backfill, built.** D58′ shipped with a stated gap:
+  every game imported before it gets `nil`, the app never stored the URL it
+  imported through, and re-importing is refused as a duplicate — so the
+  existing archive **cannot be backfilled by any door that exists**. The `#`
+  column and the File tab read em dashes for the whole pre-D58′ library, which
+  is most of it.
+
+  The remedy is the one the anchor names: **a folder scan matching files to
+  rows by content hash**. Point at the PGN folder, hash each file through the
+  pipeline that already computes the import hash, match, stamp
+  `PGNSerializer.libraryIndex(fromFileName:)`'s answer onto the row. It reuses
+  the import machinery whole, needs no schema change, and is re-runnable as
+  the folder grows. Two properties to get right at the declaration: it must
+  stamp **only** where the row's index is currently nil (a scan that
+  overwrites is a scan that can renumber the archive from a stale folder), and
+  a file matching no row is a *finding worth logging*, not an error — it means
+  the folder holds a game the Library does not.
+
+  Rejected, and worth recording because the obvious one is wrong: **storing
+  the source URL at import** is the right permanent fix and does nothing about
+  the games already imported, which is the entire problem — it only pays off
+  bolted to the scan, and the scan alone is sufficient. **Hand-editing the
+  index on the File tab** was rejected on D57′'s own split: File is defined as
+  what the app derived or stamped, and putting an editable field there costs
+  the rule that makes the two tabs legible.
+
+- **Instruments, the run that gates the census.** M7's surviving item,
+  unchanged and now load-bearing for this roadmap rather than only for itself.
+  The four scenarios are already written down in the run sheet above; what M12
+  adds is the consequence: **every entry in the known-costs census gets a
+  number or gets struck**, and nothing on that list becomes eligible for
+  optimization until it has one.
+
+  The list has said that since it was written and has never been able to
+  enforce it, because there was no moment at which the enforcement was due.
+  This is that moment. Three entries are the ones to watch — `Glicko1.histories`
+  folding every player's full sample array per render on the merged Players
+  body, `LibraryFilter.matches` building a `GameRecord` per game per body pass
+  on the most invalidation-prone surface in the app, and the ECO comparator
+  rehydrating an `ECOOpening` per comparison per render since the column sort
+  landed — but the run is what decides whether any of them is real.
+
+**Gate.** ⌘U green, reported by Bera, on the whole of it — with the named
+expectation that `aSpecialMateCanOutnumberMatesWhileTheSpellingsDisagree`
+goes **red** and is rewritten in the same change, because a pin on a rule the
+milestone repeals is the one failure that means the work happened. Plus the
+manual checks each fix implies: the seat guard exercised from all three
+surfaces rather than from Get Info alone; the relaunch step for the
+`FocusedValue` question, with the answer written down whichever way it comes
+out; and the folder scan run against the real archive with the `#` column
+read afterwards, since a backfill that stamps nothing and a backfill that
+stamps everything look identical from the console.
+
+---
+
+## M13 — Feature-first, and the filesystem says so
+
+**Goal: a file's folder states what it is for. Surfaces are grouped by the
+thing they serve; the substrate is grouped by what it knows.**
+
+*What this milestone is not: a purity axis. `Core/`, `Model/`, `Feature/`
+was the alternative and it was declined — it would make D10′ visible in the
+filesystem, and it would also scatter every feature across three folders so
+that working on Players means three directories open. Feature-first is the
+choice that optimizes for the person doing the work rather than for the
+diagram. The purity invariant survives where it always lived: it names
+**types**, not folders, which D34′ already had to say out loud when
+`ECOClassifier` and `ECOTable` were filed together.*
+
+**The layout, measured at writing (140 app sources, 91 test sources).**
+
+```
+DGTStudioPro/
+  App/            the shell alone — DGTStudioProApp, ContentView, SettingsView,
+                  SessionSidebarPanel, StorageKeys, AppLog, TestHost,
+                  AccessibilityID, PreviewFixtures, SleepInhibitor, TabState
+  Features/
+    Board/        the board and everything played or reviewed on it: destination,
+                  BoardView, SquareView, piece layer, PieceIdentity, the two
+                  evaluation surfaces and their readings, MoveHistoryView, the
+                  board and live inspectors, the live sheets, HUD, recovery,
+                  GameNavigationCommands
+    Library/      unchanged — destination, four modes, inspector, filter, import,
+                  actions menu, preview
+    Players/      unchanged — destination, four modes, inspector, stats, Glicko,
+                  ranking, rating graph, name, pairing
+    SmartTags/    unchanged
+    GetInfo/      the split window (below) plus MovetextEditorView, which D59′
+                  made a tab rather than a sheet
+  Shared/
+    Inspector/    the chrome six areas consume: section header, collapse store,
+                  CollapsibleSection, edit button, empty state, +Toolbar — and
+                  SevenTagRosterSection + OpeningSection, which are views that
+                  have been misfiled in PGN/ since they were written
+    Collection/   CollectionViewMode, CollectionSearch, IconGridSelection,
+                  DestinationSubtitle — reusable machinery currently in App/,
+                  serving Library and Players
+  Chess/          the pure rules core
+  DGT/            transport, protocol, framer, decoder, reconstructor, session
+  Engine/         Stockfish, UCI, the queue and its controller — gains
+                  StockfishEngine.swift, whose filing in PGN/ is a recorded quirk
+  Game/           model only — LiveGame, its draft sidecar and store, Game,
+                  GameHeadline, SessionPhase, OpenGamesRegistry
+  PGN/            model and format only — PGN and its two extensions, PGNStore,
+                  GameRecord, Parser, Serializer, Exporter, RosterSummary
+```
+
+**Where feature-first strains, named rather than smoothed.** `Recovery/`'s
+two files go to `Features/Board/`, and `SessionSidebarPanel` — which stays in
+`App/`, because D15′ makes the sidebar the master of session info — reads
+`RecoveryGuidance` across that boundary. That is a real cross-feature
+reference and there is no filing that removes it: the guidance is computed in
+two places by decision (the board for its overlays, the panel for its
+checklist), so whichever folder it sits in, one consumer is elsewhere. It is
+recorded here so the next reader knows it was seen rather than missed.
+
+- **`GetInfoWindow` splits by tab.** 1,362 lines holding one enum, two views
+  and four extensions becomes eight files, and the seams are the decisions:
+  `GetInfoRequest` (the routing type, carrying the `openWindow`-by-type trap
+  D46′ minted and D53′ made a pattern), `GetInfoMenuItem`, `GetInfoWindow`
+  (shell, `Subject`, `resolve`, title, content dispatch, unavailable),
+  `GetInfoDetailsTab` (D57′ and D61′ — the nine tags, per-field commit, the
+  seat rows, the result check, `FieldRefusal`), `GetInfoMoveTextTab` (D59′),
+  `GetInfoFileTab` (D57′ and D58′, with its formatters), `GetInfoLiveForm`,
+  and `GetInfoPlayerForm` with the rename extension (D53′).
+
+  By tab rather than by subject because the game form is most of the file and
+  its three tabs are three different stories with three different commit
+  models — per-field on Return or focus loss for Details, accept-whole for
+  Move Text, read-only for File. A by-subject split would leave one file still
+  carrying nearly a thousand lines.
+
+  **The one thing to check while splitting:** `private` members become
+  invisible across files. Everything the tabs share — the drafts, `commitField`,
+  `seatValue`, `optionalValue`, `seatsCollide` — has to move to a level all
+  the extensions can see, and the honest spelling is `internal` on the type
+  rather than `fileprivate` scattered. That is a visibility widening and it
+  should be argued once at the type, not eight times.
+
+- **Three merges, and only three.** `LastMove.swift` is four lines and folds
+  into `Move.swift` — it is a `Move` plus context and there is no reading
+  under which it earns a file. `FEN+Parsing` folds into `FEN.swift`, which
+  puts the boundary-hardening rules beside the type they harden. And
+  `GameState.swift` (51 lines) takes `GameState+Replay` (51), leaving
+  `+MoveGeneration` (354) and `+SAN` (324) standing alone — which is the split
+  that was always earning its keep, now visible as such rather than as one of
+  four siblings.
+
+  **Deliberately not merged:** the two evaluation readings. It was the
+  tempting fourth — both pure, both small, and D46′ pins the graph's label to
+  the bar's verbatim — and it is declined because that pin is a test asserting
+  one type against the other, and a test asserting a type against itself
+  across a file boundary it no longer has is a weaker test. The separation is
+  what makes the agreement checkable.
+
+- **One extraction, found while checking M12's seat-guard bullet.**
+  `LiveGameRosterForm` is declared at line 38 of `NewLiveGameSheet.swift` and
+  used by *both* that sheet and `EditGameInfoSheet` — a shared component living
+  inside one of its two consumers, which is the arrangement that makes the
+  second consumer invisible to anyone reading the first. It gets its own file.
+
+  This matters beyond tidiness because it is where M12's D61′ fix lands: the
+  self-play guard moves into this form, so the file it lives in is about to
+  become the single home of a rule covering two surfaces. A shared type inside
+  a sibling's file is survivable while it only draws controls; it is not once
+  it owns a refusal. Note also that `GetInfoWindow` reproduces this form's
+  `playerMenu` shape **deliberately rather than sharing it** — D59′ argues that
+  one at the site, on two different commit contracts — so the extraction covers
+  two consumers, not three, and the third stays separate on purpose.
+
+- **The test target mirrors, and three recorded misfilings go.**
+  `PairingRoundTests` out of `Chess/`, `MovetextEditTests` out of `Players/`,
+  `PieceTrackerTests` out of `DGT/`. Suites track their subjects, so a suite
+  is findable from the thing it pins.
+
+**How it lands: two commits, one sitting.** The first moves files and changes
+no code — mechanical changes travel alone, and this is the largest mechanical
+change in the project's life. The second re-points every path citation in
+both documents, driven by a grep for the old folder names rather than by
+reading, because "any sentence in these documents that contains a path is a
+checkable claim about the filesystem" is this project's own rule and a
+hundred-file move is the event that falsifies the most of them at once.
+
+**Gate.** ⌘U green — and a **cold build against a scratch derived-data path**,
+which is the gate ⌘U alone cannot be, because under synchronized folder
+groups *target membership is folder contents*. A file moved out of a target's
+folder leaves that target silently. The specific thing to verify by hand is
+the bundled resources: the five ECO TSVs and the three reference PGNs land
+flat at the Resources root whatever source folder they came from, so they
+*should* be unaffected — and "should" is what the 30 July resource death was
+made of. Confirm `ECOTable` reports its row count once at load and
+`PGNSerializerTests` finds its bundle, rather than assuming the flat-root rule
+held. Then: `grep -rn` for each retired folder name across both documents,
+expecting empty.
+
+---
+
+## M14 — Reading cost
+
+**Goal: the project's memory stops charging full price on every read.**
+
+`PROJECT-INSTRUCTIONS.md` is 335 KB — roughly 84,000 tokens, re-read at the
+start of every sitting. The app target is 30,332 lines of which **11,587 are
+comments** (7,964 doc, 3,623 ordinary): 38%. Neither number is a defect on its
+own. Together they mean the same reasoning is being paid for twice, in two
+places, at every read — which is the actual finding, and it is what makes this
+milestone a consolidation rather than a deletion.
+
+- **`DECISIONS.md` takes the anchors, verbatim and append-only.** D9′ through
+  D63′ move unchanged. `PROJECT-INSTRUCTIONS.md` keeps what the app is, where
+  things stand, the architecture invariants, the working agreements, the
+  waiver register, the toolchain notes, the open items, and the manual checks
+  — and cites D-numbers without restating their arguments.
+
+  **Verbatim, and by the whole set rather than by judgement, for one reason
+  each.** Verbatim because a decision rewritten in the act of being moved is a
+  decision silently re-decided, and this document has caught itself doing
+  smaller versions of that repeatedly. The whole set rather than only the
+  superseded ones because "which anchors are still cited daily" is a judgement
+  that needs re-making every sitting, and a rule that needs re-judging is the
+  thing this project replaces with mechanism wherever it can.
+
+  **The property to preserve, stated because it is what could go wrong:** the
+  fifth species of unchecked claim is *absence* — a milestone that was never
+  written down cannot be caught by any check that reads what was written. A
+  split creates a second place work can fail to be recorded in. So the
+  counter-grep gains a second target: milestone numbers in the sources against
+  **both** documents, and the next-free-D-number line keeps exactly one owner,
+  which after this split is `DECISIONS.md`'s tail rather than the
+  instructions' header.
+
+- **Doc comments defer to the anchor.** The rule the last four commits have
+  been applying, stated so it governs the next reader too: a site comment
+  carries the *local* why — the decision made here, the alternative rejected
+  here, the trap avoided here — and cites the D-number rather than restating
+  its argument. The reasoning lives once, in the archive, where it is
+  maintained.
+
+  This is the second half of the split's payoff and the reason M14 is one
+  milestone rather than two: moving the anchors out of the instructions and
+  leaving the code restating them would relocate the duplication rather than
+  remove it.
+
+  **Two exemptions, argued rather than assumed.** A comment that states a rule
+  about *the language* stays where it is and stays complete — D43′ and D44′
+  both cost this project a month of green builds because a language claim read
+  as expertise, and a citation is not a claim a compiler can check. And a
+  comment recording a **rejected** local implementation stays: the anchor
+  records why the decision went the way it did, not why this function does not
+  use `hasSuffix` here.
+
+- **The five review and audit documents get a disposition.**
+  `AUDIT-2026-08-01.md`, `CODE-REVIEW-2026-08-01.md` and
+  `CODE-REVIEW-2026-08-04.md` are 76 KB of findings that have all been applied
+  and are all recorded in the instructions. They are history, not memory. The
+  decision is whether they are archived, folded into `DECISIONS.md`'s
+  provenance notes, or kept — and it is a decision rather than a sweep,
+  because their value is that they show the *process* that found things, which
+  is the one thing the instructions' summaries cannot preserve.
+
+**Gate.** ⌘U green (nothing here touches behaviour, which is exactly why the
+run matters — a doc-comment pass that changes code is a doc-comment pass that
+went wrong). The counter-grep clean against both documents:
+`comm -23` of `grep -rhoE "\bM[0-9]+" --include='*.swift'` over the sources
+against the same grep over `PROJECT-INSTRUCTIONS.md`, `ROADMAP.md` and
+`DECISIONS.md`. Every D-number cited in a source resolving to an anchor that
+exists — which is a new grep and is the split's own falsifiable check, since
+a citation into a document that lost the entry is precisely the failure this
+milestone could introduce. And the ratio re-measured rather than assumed:
+`grep -rh '^\s*///'` and its sibling, against the same denominator, so the
+next revision inherits a number with a method attached rather than a number.
 
 ---
 
