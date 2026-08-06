@@ -296,7 +296,7 @@ internal struct PlayersColumnsView: View {
 
 /// The no-games branch of the detail — a selected player whose recent list
 /// is empty renders "No games", not a collapsed void.
-#Preview("Selected — No Games") {
+#Preview("Selected, No Games") {
     @Previewable @State var selection: Set<PlayerStats.ID> = [PreviewFixtures.topStats().id]
     @Previewable @State var sort = PlayersDestination.defaultSortOrder
 

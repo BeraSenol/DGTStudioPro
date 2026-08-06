@@ -168,14 +168,14 @@ internal final class LiveGame {
     @discardableResult
     internal func commit(_ move: Move) -> Bool {
         guard !isFinished else {
-            Self.logger?.debug("Commit ignored — game already finished")
+            Self.logger?.debug("Commit ignored, game already finished")
             return false
         }
         
         let state = currentState
         guard state.legalMoves().contains(move) else {
             Self.logger?.error(
-                "Commit rejected — \(move.from)→\(move.to) not legal in current state"
+                "Commit rejected, \(move.from)→\(move.to) not legal in current state"
             )
             return false
         }
@@ -227,10 +227,10 @@ internal final class LiveGame {
         if state.isInCheck {
             // The side to move is checkmated, so the other side won.
             result = (state.activeColor == .white) ? .blackWins : .whiteWins
-            Self.logger?.info("Checkmate — \(self.result.rawValue, privacy: .public)")
+            Self.logger?.info("Checkmate, \(self.result.rawValue, privacy: .public)")
         } else {
             result = .draw
-            Self.logger?.info("Stalemate — draw")
+            Self.logger?.info("Stalemate, draw")
         }
     }
 }

@@ -329,8 +329,8 @@ internal final class DGTLiveSession {
             // desync, not a move.
             if board == game.currentState.position {
                 mode = .playing(game)
-                Self.logger?.info("Physical board reached new game's start — live play active")
-                sessionLog?.capture(.info, "Physical setup complete — live play active")
+                Self.logger?.info("Physical board reached new game's start, live play active")
+                sessionLog?.capture(.info, "Physical setup complete, live play active")
             }
             
         case .playing(let game):
@@ -357,8 +357,8 @@ internal final class DGTLiveSession {
             if board == game.currentState.position {
                 mode = .playing(game)
                 clearGhost()
-                Self.logger?.info("Board restored to last legal position — exiting recovery")
-                sessionLog?.capture(.info, "Recovery resolved — board restored; resuming play")
+                Self.logger?.info("Board restored to last legal position, exiting recovery")
+                sessionLog?.capture(.info, "Recovery resolved, board restored; resuming play")
             }
         }
     }
@@ -391,7 +391,7 @@ internal final class DGTLiveSession {
             setGhost(for: castling, physical: board)
             sessionLog?.capture(
                 .info,
-                "settle: castling in progress — ghost \(castlingGhostPiece?.type == .king ? "king" : "rook") awaited at \(castlingGhostSquare?.algebraicNotation ?? "?")"
+                "settle: castling in progress, ghost \(castlingGhostPiece?.type == .king ? "king" : "rook") awaited at \(castlingGhostSquare?.algebraicNotation ?? "?")"
             )
             
         case .correctable(let move, let clear, _):
@@ -402,7 +402,7 @@ internal final class DGTLiveSession {
             setCorrection(move: move, clear: clear, in: game.currentState)
             sessionLog?.capture(
                 .info,
-                "settle: correctable — clear \(clear.map(\.algebraicNotation).joined(separator: ",")) to complete \(game.currentState.san(for: move))"
+                "settle: correctable, clear \(clear.map(\.algebraicNotation).joined(separator: ",")) to complete \(game.currentState.san(for: move))"
             )
             
         case .move(let move):
@@ -416,7 +416,7 @@ internal final class DGTLiveSession {
             guard game.commit(move) else {
                 recordError(
                     "settle: commit refused reconstructed move "
-                    + "\(move.from.algebraicNotation)→\(move.to.algebraicNotation) — entering recovery"
+                    + "\(move.from.algebraicNotation)→\(move.to.algebraicNotation), entering recovery"
                 )
                 enterRecovery(game, board: board)
                 return
@@ -463,10 +463,10 @@ internal final class DGTLiveSession {
             return
         }
         resyncAttempted = true
-        Self.logger?.info("Settled board unexplained — requesting a full dump before recovery")
+        Self.logger?.info("Settled board unexplained, requesting a full dump before recovery")
         sessionLog?.capture(
             .info,
-            "settle: unreconciled — asking the board for a full dump before recovery (one shot)"
+            "settle: unreconciled, asking the board for a full dump before recovery (one shot)"
         )
         requestBoardResync()
     }
@@ -492,7 +492,7 @@ internal final class DGTLiveSession {
                 plyCount: game.plyCount
             )
         } else {
-            Self.logger?.error("Board could not be reconciled — entering recovery")
+            Self.logger?.error("Board could not be reconciled, entering recovery")
         }
     }
     
@@ -510,8 +510,8 @@ internal final class DGTLiveSession {
             if !offeredNewGameForCurrentStart && pendingDraft == nil && !archiveFailed {
                 shouldOfferNewGame = true
                 offeredNewGameForCurrentStart = true
-                Self.logger?.info("Start position detected — offering new game")
-                sessionLog?.capture(.info, "Start position detected — offering new game")
+                Self.logger?.info("Start position detected, offering new game")
+                sessionLog?.capture(.info, "Start position detected, offering new game")
             } else {
                 // The suppressed settle leaves a breadcrumb: it answers the
                 // real user question ("why isn't the dialog appearing?") and
@@ -522,7 +522,7 @@ internal final class DGTLiveSession {
                 let reason = pendingDraft != nil ? "resume offer pending"
                 : archiveFailed ? "unarchived finished game"
                 : "already offered for this visit to the start"
-                sessionLog?.capture(.debug, "Start position settled — new-game offer suppressed (\(reason))")
+                sessionLog?.capture(.debug, "Start position settled, new-game offer suppressed (\(reason))")
             }
         } else {
             offeredNewGameForCurrentStart = false
@@ -547,7 +547,7 @@ internal final class DGTLiveSession {
         // finished game's only safety net (requirements 6/8 — never lost).
         guard !archiveFailed else {
             recordError(
-                "New game refused: the finished game hasn't been saved yet — retry or discard first"
+                "New game refused: the finished game hasn't been saved yet, retry or discard first"
             )
             return
         }
@@ -571,10 +571,10 @@ internal final class DGTLiveSession {
         sessionLog?.record(
             .info,
             "New live game: \(roster.white) vs \(roster.black)"
-            + (alreadySetUp ? "" : " — awaiting physical setup")
+            + (alreadySetUp ? "" : ", awaiting physical setup")
         )
         if !alreadySetUp {
-            Self.logger?.info("New game started — awaiting physical setup of starting position")
+            Self.logger?.info("New game started, awaiting physical setup of starting position")
         }
         
         // Starting fresh forfeits any resume offer (the destructive
@@ -660,10 +660,10 @@ internal final class DGTLiveSession {
             return
         case .recovering(let game):
             mode = .playing(game)
-            sessionLog?.capture(.info, "Recovery ended by manual result — guidance discarded")
+            sessionLog?.capture(.info, "Recovery ended by manual result, guidance discarded")
         case .awaitingSetup(let game):
             mode = .playing(game)
-            sessionLog?.capture(.info, "Setup wait ended by manual result — nothing left to set up")
+            sessionLog?.capture(.info, "Setup wait ended by manual result, nothing left to set up")
         }
         // Defensive: neither mode can have set these, but keep the exit
         // symmetrical and future-proof.
@@ -744,7 +744,7 @@ internal final class DGTLiveSession {
             archivedPGN = nil
             saveDraft()
             recordError(
-                "Archive failed: \(error) — draft kept, new-game entry suppressed until Retry or Discard"
+                "Archive failed: \(error). Draft kept, new-game entry suppressed until Retry or Discard"
             )
         }
     }
@@ -788,11 +788,11 @@ internal final class DGTLiveSession {
             sessionLog?.record(
                 .info,
                 "Draft found: \(draft.white) vs \(draft.black) "
-                + "(\(draft.sanMoves.count) plies) — offering resume"
+                + "(\(draft.sanMoves.count) plies), offering resume"
             )
         } catch {
             pendingDraft = .corrupt
-            recordError("Draft file can't be read: \(error) — offering delete")
+            recordError("Draft file can't be read: \(error), offering delete")
         }
     }
     
@@ -823,7 +823,7 @@ internal final class DGTLiveSession {
                 mode = .playing(game)
                 sessionLog?.record(
                     .info,
-                    "Resumed a finished game (\(draft.result.rawValue)) — archiving now"
+                    "Resumed a finished game (\(draft.result.rawValue)), archiving now"
                 )
                 archiveFinishedGame(game)
             } else {
@@ -832,12 +832,12 @@ internal final class DGTLiveSession {
                 sessionLog?.record(
                     .info,
                     "Resumed live game: \(draft.white) vs \(draft.black) (\(game.plyCount) plies)"
-                    + (alreadySetUp ? "" : " — awaiting physical setup")
+                    + (alreadySetUp ? "" : ", awaiting physical setup")
                 )
             }
         } catch {
             pendingDraft = .corrupt
-            recordError("Draft failed to resume: \(error) — offering delete")
+            recordError("Draft failed to resume: \(error), offering delete")
         }
     }
     

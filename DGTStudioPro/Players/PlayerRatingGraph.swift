@@ -78,7 +78,7 @@ internal struct PlayerRatingGraph: View {
                 // Names the number rather than only its absence: "the rating
                 // starts" invites "at what?", and the graph beside it cannot
                 // answer while there is nothing to draw.
-                Text("No rated games yet — everyone starts at \(Int(Glicko1.initialMean)), and the rating moves once this player finishes a game against another named player.")
+                Text("No rated games yet. Everyone starts at \(Int(Glicko1.initialMean)), and the rating moves once this player finishes a game against another named player.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(3)
@@ -86,7 +86,7 @@ internal struct PlayerRatingGraph: View {
                 chart
 
                 if history.last?.rating.isProvisional == true {
-                    Text("Provisional — the rating settles as more games are played.")
+                    Text("Provisional. The rating settles as more games are played.")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .lineLimit(3)
@@ -206,7 +206,7 @@ private func veteranHistory() -> [Glicko1.Sample] {
     .environment(InspectorSectionCollapse.preview)
 }
 
-#Preview("Veteran — Long Break, No Gap") {
+#Preview("Veteran, Long Break, No Gap") {
     List {
         PlayerRatingGraph(history: veteranHistory())
     }
@@ -215,7 +215,7 @@ private func veteranHistory() -> [Glicko1.Sample] {
     .environment(InspectorSectionCollapse.preview)
 }
 
-#Preview("Provisional — Three Games") {
+#Preview("Provisional, Three Games") {
     List {
         PlayerRatingGraph(history: Array(settlingHistory().prefix(3)))
     }

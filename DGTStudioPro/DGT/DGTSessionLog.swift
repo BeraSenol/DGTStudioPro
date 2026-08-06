@@ -117,7 +117,7 @@ internal final class DGTSessionLog {
     internal func exportText() -> String {
         let stamp = Self.timestampFormatter
         var lines: [String] = [
-            "DGT Studio Pro — Live Session Log",
+            "DGT Studio Pro Live Session Log",
             "Exported \(stamp.string(from: .now))",
             "\(entries.count) entr\(entries.count == 1 ? "y" : "ies")",
             String(repeating: "─", count: 48),

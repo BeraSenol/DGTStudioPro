@@ -125,7 +125,7 @@ internal struct SmartTagEditorView: View {
                 }
                 if draft.rules.isEmpty {
                     HStack {
-                        Text("No rules — this tag matches nothing.")
+                        Text("No rules, this tag matches nothing.")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                         Spacer()
@@ -266,7 +266,7 @@ private struct TagRuleRow: View {
         .frame(width: 520, height: 420)
 }
 
-#Preview("Populated — Match All") {
+#Preview("Populated, Match All") {
     var draft = TagDraft()
     draft.name = "Bera's Wins"
     draft.colorName = .green

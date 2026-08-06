@@ -279,7 +279,7 @@ internal struct EvaluationMagnifierButton: View {
         .modelContainer(for: PGN.self, inMemory: true)
 }
 
-#Preview("Content — Curve") {
+#Preview("Content, Curve") {
     EvaluationGraphContent(
         moves: ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6"],
         evaluations: [Evaluation?](repeating: nil, count: 6),

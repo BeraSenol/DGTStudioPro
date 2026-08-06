@@ -1151,7 +1151,7 @@ extension GetInfoWindow {
         case .claimsCheckmateButPositionIsNot(let san):
             "The last move (\(san)) is written as checkmate but the position is not."
         case .illegalMove(let index, let san, _):
-            "The stored moves don’t replay — ply \(index + 1) (\(san)) is illegal."
+            "The stored moves don’t replay, ply \(index + 1) (\(san)) is illegal."
         case .splicedGames(let token):
             "The stored movetext contains more than one game (at “\(token)”)."
         }
@@ -1240,7 +1240,7 @@ extension GetInfoWindow {
         case .wouldCollide(let collisions):
             refusal = Refusal(collisions: collisions)
         case .emptyTag:
-            Self.logger?.error("Retag refused for an empty tag — the field's guard let one through")
+            Self.logger?.error("Retag refused for an empty tag, the field's guard let one through")
         }
         draftTag = player.tagName ?? player.name
     }
@@ -1254,7 +1254,7 @@ extension GetInfoWindow {
         let more = collisions.count > shown.count
             ? " And \(collisions.count - shown.count) more."
             : ""
-        return lead + more + " Delete or edit one of each pair first — nothing has been changed."
+        return lead + more + " Delete or edit one of each pair first, nothing has been changed."
     }
 }
 
@@ -1298,7 +1298,7 @@ extension GetInfoWindow {
 /// door — it never runs in the app — but it is worth naming, because the
 /// reason those fields are absent from `PGN.init` is exactly to make this
 /// assignment visible when it happens.
-#Preview("Game — Details & File") {
+#Preview("Game, Details & File") {
     let container = try! ModelContainer(
         for: PGN.self,
         configurations: ModelConfiguration(isStoredInMemoryOnly: true)

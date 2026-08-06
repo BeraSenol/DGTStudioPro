@@ -167,7 +167,7 @@ internal struct DGTConnectionView: View {
             Text("Reconnecting to \(device.name)…")
                 .font(.callout)
             Text(
-                "The board disconnected during a game. Plug it back in — "
+                "The board disconnected during a game. Plug it back in, "
                 + "the game resumes where it left off."
             )
             .font(.caption)

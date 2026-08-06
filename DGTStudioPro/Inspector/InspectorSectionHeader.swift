@@ -256,10 +256,10 @@ extension InspectorSectionHeader where Actions == EmptyView {
 /// which is the app's only remaining two-verb slot. A preview that shows an
 /// arrangement the app has retired is worse than no preview: it reads as
 /// evidence that the arrangement is still checked.
-#Preview("Actions — Every Arity") {
+#Preview("Actions, Every Arity") {
     List {
         Section {
-            Text("One control — four inspectors' pencils.")
+            Text("One control, four inspectors' pencils.")
                 .foregroundStyle(.secondary)
         } header: {
             InspectorSectionHeader("Lone Pencil") {
@@ -278,7 +278,7 @@ extension InspectorSectionHeader where Actions == EmptyView {
             }
         }
         Section {
-            Text("Chevron, pencil, glyph — the Library's PGN header (D54′).")
+            Text("Chevron, pencil, glyph, the Library's PGN header (D54′).")
                 .foregroundStyle(.secondary)
         } header: {
             // The app's one multi-control header, and the only place two verbs
@@ -297,7 +297,7 @@ extension InspectorSectionHeader where Actions == EmptyView {
             }
         }
         Section {
-            Text("No actions — Opening, Evaluation, Moves, Recent Games…")
+            Text("No actions, Opening, Evaluation, Moves, Recent Games…")
                 .foregroundStyle(.secondary)
         } header: {
             InspectorSectionHeader("Nothing To Act On")

@@ -186,7 +186,7 @@ internal struct BoardPieceLayer: View {
 /// gxh8=Q glides out of g7 and lands already a queen (one identity, the
 /// pawn's — `PieceTracker.applyMove`'s reuse rule made visible); O-O glides
 /// king and rook simultaneously, crossing.
-#Preview("Four Shapes — Interactive") {
+#Preview("Four Shapes, Interactive") {
     @Previewable @State var plyCount = 0
     let script = [
         "e4", "d5", "e5", "f5", "exf6", "Nh6", "fxg7", "Nc6",

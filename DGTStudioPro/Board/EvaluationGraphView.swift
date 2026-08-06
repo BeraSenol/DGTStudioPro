@@ -186,7 +186,7 @@ internal struct EvaluationGraphView: View {
 }
 
 // MARK: Previews
-#Preview("Walnut — Dramatic Endgame") {
+#Preview("Walnut, Dramatic Endgame") {
     EvaluationGraphView(
         evaluations: [
             0.50, 0.52, 0.51, 0.49, 0.50, 0.52, 0.50, 0.48,
@@ -203,7 +203,7 @@ internal struct EvaluationGraphView: View {
     .background(.black)
 }
 
-#Preview("Rosewood — Back-and-Forth") {
+#Preview("Rosewood, Back-and-Forth") {
     EvaluationGraphView(
         evaluations: [
             0.50, 0.55, 0.48, 0.58, 0.45, 0.52, 0.40, 0.55,
@@ -218,7 +218,7 @@ internal struct EvaluationGraphView: View {
     .background(.black)
 }
 
-#Preview("Wenge — Black Dominates") {
+#Preview("Wenge, Black Dominates") {
     EvaluationGraphView(
         evaluations: [
             0.50, 0.48, 0.42, 0.38, 0.35, 0.30, 0.25, 0.22,

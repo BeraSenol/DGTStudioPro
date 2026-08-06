@@ -25,7 +25,7 @@ struct RecoveryGuidanceTests {
         let guidance = RecoveryGuidance(physical: physical, target: .starting)
         
         #expect(guidance.items.count == 1)
-        #expect(guidance.items.first?.message == "c3 — remove the White Knight")
+        #expect(guidance.items.first?.message == "c3, remove the White Knight")
         #expect(guidance.attentionSquares == [Squares.c3])
         #expect(guidance.targetSquares.isEmpty)
     }
@@ -37,7 +37,7 @@ struct RecoveryGuidanceTests {
         let guidance = RecoveryGuidance(physical: physical, target: .starting)
         
         #expect(guidance.items.count == 1)
-        #expect(guidance.items.first?.message == "g1 — place the White Knight")
+        #expect(guidance.items.first?.message == "g1, place the White Knight")
         #expect(guidance.targetSquares == [Squares.g1])
         #expect(guidance.attentionSquares.isEmpty)
     }
@@ -53,7 +53,7 @@ struct RecoveryGuidanceTests {
         #expect(guidance.items.count == 1)
         #expect(
             guidance.items.first?.message
-            == "e4 — replace the Black Pawn with the White Knight"
+            == "e4, replace the Black Pawn with the White Knight"
         )
         // Wrong-piece squares are attention-only: the instruction text
         // carries what belongs there; stacking both styles reads as noise.
@@ -75,8 +75,8 @@ struct RecoveryGuidanceTests {
         let guidance = RecoveryGuidance(physical: physical, target: target)
         
         #expect(guidance.items.map(\.message) == [
-            "f3 — place the White Knight",
-            "h3 — remove the White Knight",
+            "f3, place the White Knight",
+            "h3, remove the White Knight",
         ])
         #expect(guidance.attentionSquares == [Squares.h3])
         #expect(guidance.targetSquares == [Squares.f3])

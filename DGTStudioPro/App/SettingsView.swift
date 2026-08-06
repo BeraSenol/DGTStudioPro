@@ -185,7 +185,7 @@ internal struct SettingsView: View {
                 Text("Board Style")
             } footer: {
                 Text(
-                    "Applies everywhere a board is drawn — the live mirror "
+                    "Applies everywhere a board is drawn, the live mirror "
                     + "and game replays."
                 )
             }
@@ -224,7 +224,7 @@ internal struct SettingsView: View {
             } footer: {
                 Text(
                     "Draws file letters and rank numbers on the board's "
-                    + "frame. Off keeps the frame — only the labels go."
+                    + "frame. Off keeps the frame, only the labels go."
                 )
             }
         }

@@ -8,9 +8,11 @@ import SwiftUI
 /// `PGNStore.applyMovetextEdit` write — this view never touches SwiftData, the
 /// `EditGameInfoSheet` discipline.
 ///
-/// The result is *shown* (from the game) and validated against, never edited
-/// here: a result change is a metadata edit (`applyEdit`), a separate door, so
-/// this door validates against the result exactly as the store does.
+/// The stored result is validated against but neither shown nor edited here: a
+/// result change is a metadata edit (`applyEdit`), a separate door, so this one
+/// validates against the result exactly as the store does. When the status line
+/// says "the result must be 1-0" it is naming a value the reader changes on Get
+/// Info's Details tab.
 ///
 /// **Was `MovetextEditorSheet` until D59′**, and lost its sheet chrome — title
 /// block, frame, `Cancel`, `dismiss` — when its one presenter went away. With
@@ -23,20 +25,20 @@ import SwiftUI
 /// moved. `Cancel` became **Revert** — a sheet's Cancel meant "close without
 /// saving" and the closing did the work; a tab cannot close.
 internal struct MovetextEditorView: View {
-
+    
     // MARK: Stored Properties
-
+    
     /// The archived game — read for its result (the claim the movetext is
     /// validated against) and to seed the field.
     internal let pgn: PGN
-
+    
     /// Called with the tokenized SAN on Save; the caller runs the store write.
     internal let onCommit: ([String]) -> Void
-
+    
     // MARK: View State
-
+    
     @State private var text: String
-
+    
     /// The seed, kept so **Revert** can restore it without re-reading `pgn`.
     ///
     /// Re-reading would look equivalent and is not: `pgn` is a live `@Model`,
@@ -45,9 +47,9 @@ internal struct MovetextEditorView: View {
     /// the seed makes Revert mean "back to what this editor opened with",
     /// which is the only definition a reader can predict.
     @State private var seed: String
-
+    
     // MARK: Initializer
-
+    
     internal init(pgn: PGN, onCommit: @escaping ([String]) -> Void) {
         self.pgn = pgn
         self.onCommit = onCommit
@@ -55,9 +57,9 @@ internal struct MovetextEditorView: View {
         _text = State(initialValue: seeded)
         _seed = State(initialValue: seeded)
     }
-
+    
     // MARK: Score sheet
-
+    
     /// Renders plies as a numbered two-column score sheet — the shape a player
     /// reads (5 Aug 2026, by request).
     ///
@@ -99,19 +101,19 @@ internal struct MovetextEditorView: View {
     /// size. Recorded because the next reader will think of tabs too.
     internal nonisolated static func scoreSheet(_ moves: [String]) -> String {
         guard !moves.isEmpty else { return "" }
-
+        
         let lastNumber = (moves.count + 1) / 2
         let numberWidth = String(lastNumber).count
         // The widest ply governs the column, so "Qa1xd4#" does not push its
         // own row's black move out of line with every other row's.
         let sanWidth = moves.reduce(2) { max($0, $1.count) }
-
+        
         return stride(from: 0, to: moves.count, by: 2).map { index -> String in
             let number = index / 2 + 1
             let label = String(number) + "."
             let gutter = String(repeating: " ", count: numberWidth - String(number).count)
             let white = moves[index]
-
+            
             guard index + 1 < moves.count else {
                 // A game ending on White's move gets a white-only final line —
                 // the same shape D24′ writes to disk, arrived at independently
@@ -129,11 +131,11 @@ internal struct MovetextEditorView: View {
         }
         .joined(separator: "\n")
     }
-
+    
     // MARK: Derived
-
+    
     private typealias Validation = Result<MovetextEdit.Accepted, MovetextEdit.Rejection>
-
+    
     /// Tokenization and validation as one step: `tokenize` refuses spliced
     /// input (M2 item 3), so tokens and verdict now travel together — a
     /// separate `tokens` property would re-tokenize *and* need its own story
@@ -147,44 +149,33 @@ internal struct MovetextEditorView: View {
             return ([], .failure(error))
         }
     }
-
+    
     private func isValid(_ validation: Validation) -> Bool {
         if case .success = validation { return true }
         return false
     }
-
+    
     // MARK: Body
-
+    
     internal var body: some View {
         // Validate once per render. As a computed property this was pulled by
         // both Save's gate and the status line, and each pull re-tokenized
         // too — every keystroke replayed the whole game twice over.
         let check = checked()
-
+        
         VStack(spacing: 0) {
-            // The result the movetext is validated *against*, stated at the top
-            // because it is the one input to this editor that cannot be changed
-            // from it. Without it, "the result must be 1-0" in the status line
-            // below is an instruction with no visible subject.
-            LabeledContent("Validated against") {
-                Text(pgn.result.rawValue).monospacedDigit()
-            }
-            .padding([.horizontal, .top])
-            .padding(.bottom, 8)
-
+            statusLine(check.validation)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding([.horizontal, .top])
+            
             TextEditor(text: $text)
                 .font(.body.monospaced())
                 .frame(minHeight: 200)
-                .padding(.horizontal)
+                .padding()
                 .accessibilityIdentifier(AccessibilityID.movetextEditorField)
-
-            statusLine(check.validation)
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
+            
             Divider()
-
+            
             HStack {
                 // **Revert, not Cancel.** A sheet's Cancel meant "close without
                 // saving" and the closing did the work; a tab cannot close, so
@@ -195,9 +186,9 @@ internal struct MovetextEditorView: View {
                 Button("Revert") { text = seed }
                     .disabled(text == seed)
                     .accessibilityIdentifier(AccessibilityID.movetextEditorCancel)
-
+                
                 Spacer()
-
+                
                 // No `.keyboardShortcut(.defaultAction)` any more, and its
                 // absence is deliberate rather than an oversight: Return inside
                 // a `TextEditor` is a newline — which is how you add a move —
@@ -227,15 +218,15 @@ internal struct MovetextEditorView: View {
         }
         .accessibilityIdentifier(AccessibilityID.movetextEditorSheet)
     }
-
+    
     // MARK: Status
-
+    
     @ViewBuilder
     private func statusLine(_ validation: Validation) -> some View {
         switch validation {
         case .success(let accepted):
             Label(
-                "Legal — \(accepted.moves.count) \(accepted.moves.count == 1 ? "move" : "moves").",
+                "Legal, \(accepted.moves.count) \(accepted.moves.count == 1 ? "move" : "moves").",
                 systemImage: "checkmark.circle"
             )
             .foregroundStyle(.green)
@@ -246,7 +237,7 @@ internal struct MovetextEditorView: View {
                 .accessibilityIdentifier(AccessibilityID.movetextEditorStatus)
         }
     }
-
+    
     /// Turns a validator rejection into editor copy — `MovetextEdit.Rejection`
     /// stays a pure value; the wording is view-layer.
     private func message(for rejection: MovetextEdit.Rejection) -> String {
@@ -256,22 +247,22 @@ internal struct MovetextEditorView: View {
         case .claimsCheckmateButPositionIsNot(let san):
             return "\(san) is marked mate (#), but that position isn't checkmate."
         case .checkmateResultMismatch(let expected, _):
-            return "This line ends in checkmate — the result must be \(expected.rawValue)."
+            return "This line ends in checkmate, the result must be \(expected.rawValue)."
         case .stalemateRequiresDraw:
-            return "This line ends in stalemate — the result must be a draw (1/2-1/2)."
+            return "This line ends in stalemate, the result must be a draw (1/2-1/2)."
         case .resultRequiresDecision:
             return "An archived game needs a decided result (not *)."
         case .splicedGames(let token):
-            return "\(token) appears before the end — this looks like more than one game. Edit one game's moves only."
+            return "\(token) appears before the end, this looks like more than one game. Edit one game's moves only."
         }
     }
-
+    
     private func reasonText(_ reason: SANParseError) -> String {
         switch reason {
         case .empty:                   return "no move given"
         case .malformed(let san):      return "\(san) isn't a valid move"
         case .noMatchingMove:          return "no legal move matches"
-        case .ambiguous(_, let count): return "ambiguous — \(count) moves match; add a disambiguator"
+        case .ambiguous(_, let count): return "ambiguous, \(count) moves match; add a disambiguator"
         }
     }
 }

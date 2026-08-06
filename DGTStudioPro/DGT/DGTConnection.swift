@@ -144,7 +144,7 @@ internal final class DGTConnection {
     /// so a dead port cannot strand the one-shot gate.
     internal func requestBoardResync() {
         guard isConnected else {
-            Self.logger?.info("Board resync requested while disconnected — ignored")
+            Self.logger?.info("Board resync requested while disconnected, ignored")
             return
         }
         Self.logger?.info("Requesting full board dump to reconcile before recovery")
@@ -574,8 +574,8 @@ internal final class DGTConnection {
     /// the device we were just connected to, read from `status` — which is
     /// `onlyBoardPath` by construction, since nothing else can ever connect.
     private func beginReconnect(to device: DGTSerialDevice) {
-        Self.logger?.error("Board vanished mid-game — auto-reconnecting to \(device.path, privacy: .public)")
-        sessionLog?.capture(.error, "Board vanished mid-game — auto-reconnecting to \(device.name)")
+        Self.logger?.error("Board vanished mid-game, auto-reconnecting to \(device.path, privacy: .public)")
+        sessionLog?.capture(.error, "Board vanished mid-game, auto-reconnecting to \(device.name)")
         
         // Truthful mirror: nothing is detected while unplugged. Direct
         // assignment bypasses `onBoardChanged`, so no spurious settle fires.
@@ -608,7 +608,7 @@ internal final class DGTConnection {
                 // cancellation) — this is the discard/idle one: quiet, no
                 // banner, nothing left to reconnect for.
                 Self.logger?.info("Auto-reconnect stopped: no active game")
-                sessionLog?.capture(.info, "Auto-reconnect stopped — no active game")
+                sessionLog?.capture(.info, "Auto-reconnect stopped, no active game")
                 await teardownPort()
                 if !Task.isCancelled { status = .disconnected }
                 return
@@ -693,7 +693,7 @@ internal final class DGTConnection {
         let recording = recorder.finish()
         self.recorder = nil
         Self.logger?.info("Board session recording stopped: snapshots=\(recording.entries.count)")
-        sessionLog?.capture(.info, "Board session recording stopped — \(recording.entries.count) snapshots")
+        sessionLog?.capture(.info, "Board session recording stopped, \(recording.entries.count) snapshots")
         return recording
     }
     

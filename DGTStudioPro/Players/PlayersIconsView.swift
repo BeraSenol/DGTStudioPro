@@ -184,7 +184,7 @@ internal struct PlayersIconsView: View {
 /// than one row holds; the column count lives in `CollectionGridMetrics`.
 /// Preselected with *two* cards, the state the single-select grid could
 /// never render.
-#Preview("Wraps To Two Rows — Multi") {
+#Preview("Wraps To Two Rows, Multi") {
     @Previewable @State var selection: Set<PlayerStats.ID> = Set(
         PreviewFixtures.deepRankedPlayers().prefix(2).map(\.id)
     )

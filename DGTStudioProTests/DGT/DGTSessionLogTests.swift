@@ -121,7 +121,7 @@ struct DGTSessionLogTests {
         let log = DGTSessionLog()
         let text = log.exportText()
 
-        #expect(text.contains("DGT Studio Pro — Live Session Log"))
+        #expect(text.contains("DGT Studio Pro Live Session Log"))
         #expect(text.contains("0 entries"))
     }
 

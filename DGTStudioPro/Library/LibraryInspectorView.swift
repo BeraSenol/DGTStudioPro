@@ -215,7 +215,7 @@ private struct LoadedSection: View {
             
         case .waiting(let position):
             HStack(spacing: 8) {
-                Label("Queued — #\(position) in line", systemImage: "hourglass")
+                Label("Queued, #\(position) in line", systemImage: "hourglass")
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button {

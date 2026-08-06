@@ -325,7 +325,7 @@ internal struct PGNStore {
         }
         for player in stranded {
             Self.logger?.info(
-                "Collecting '\(player.name, privacy: .public)' — its last game went with this deletion"
+                "Collecting '\(player.name, privacy: .public)', its last game went with this deletion"
             )
             modelContext.delete(player)
         }
@@ -705,13 +705,13 @@ internal struct PGNStore {
             // A failed fetch means no collection this pass, never a partial
             // one. The next door through does it again; nothing accumulates
             // that a later edit will not sweep.
-            Self.logger?.error("Orphan collection skipped — player fetch failed")
+            Self.logger?.error("Orphan collection skipped, player fetch failed")
             return 0
         }
         var collected = 0
         for player in players where !player.isDeleted && Self.isOrphaned(player) {
             Self.logger?.info(
-                "Collecting orphaned player '\(player.name, privacy: .public)' — no game references it"
+                "Collecting orphaned player '\(player.name, privacy: .public)', no game references it"
             )
             modelContext.delete(player)
             collected += 1

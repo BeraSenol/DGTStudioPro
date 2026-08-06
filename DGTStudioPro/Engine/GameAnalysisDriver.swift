@@ -57,7 +57,7 @@ internal final class GameAnalysisDriver {
     ) async -> Status {
         guard task == nil else {
             Self.logger?.info(
-                "Analysis request ignored — a prior analysis is already in flight"
+                "Analysis request ignored, a prior analysis is already in flight"
             )
             return status
         }
@@ -213,7 +213,7 @@ internal final class GameAnalysisDriver {
                 // mapping always claimed failures are recorded — now the
                 // driver actually hands it one.
                 status = .failed(
-                    message: "\(Self.moveLabel(plyIndex: index, san: san)) won't parse — "
+                    message: "\(Self.moveLabel(plyIndex: index, san: san)) won't parse, "
                     + "analysis stopped there; earlier evaluations were kept."
                 )
                 return

@@ -90,7 +90,7 @@ internal struct InspectorEmptyState: View {
 
 /// One at the narrowest the column can be dragged to — where the description
 /// wraps and the symbol/title spacing is actually under load.
-#Preview("Single — Minimum Width") {
+#Preview("Single, Minimum Width") {
     InspectorEmptyState(
         title: "No Game Selected",
         systemImage: "document.fill",

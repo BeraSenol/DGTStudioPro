@@ -120,7 +120,7 @@ internal struct LiveGameHUDView: View {
     private var title: String {
         switch phase {
         case .reconnecting:
-            "Board disconnected — reconnecting…"
+            "Board disconnected, reconnecting…"
         case .idle:
             "Board connected"
         case .awaitingSetup:
@@ -137,14 +137,14 @@ internal struct LiveGameHUDView: View {
         case .finished(let result):
             Self.headline(for: result)
         case .archiveFailed(let result, _):
-            Self.headline(for: result) + " — not saved yet"
+            Self.headline(for: result) + ". Not saved yet"
         }
     }
 
     private var subtitle: String? {
         switch phase {
         case .reconnecting:
-            "Plug the board back in — the game picks up where it left off."
+            "Plug the board back in, the game picks up where it left off."
         case .idle:
             "Set up the pieces to be offered a game, or start one now."
         case .awaitingSetup:
@@ -155,8 +155,8 @@ internal struct LiveGameHUDView: View {
         case .correction(let message):
             message
         case .recovering(let lastSAN):
-            lastSAN.map { "Restore the position after \($0) — square-by-square guidance is below." }
-            ?? "Restore the starting position — square-by-square guidance is below."
+            lastSAN.map { "Restore the position after \($0). Square-by-square guidance is below." }
+            ?? "Restore the starting position. Square-by-square guidance is below."
         case .finished:
             "Saved to your Library. Start a new game whenever you're ready."
         case .archiveFailed(_, let message):
@@ -207,9 +207,9 @@ internal struct LiveGameHUDView: View {
     /// from the `finished` phase but kept total for safety.
     private static func headline(for result: GameResult) -> String {
         switch result {
-        case .whiteWins: "1–0 — White wins"
-        case .blackWins: "0–1 — Black wins"
-        case .draw:      "1/2-1/2 — Draw"
+        case .whiteWins: "White wins"
+        case .blackWins: "Black wins"
+        case .draw:      "Draw"
         case .ongoing:   "Game over"
         }
     }

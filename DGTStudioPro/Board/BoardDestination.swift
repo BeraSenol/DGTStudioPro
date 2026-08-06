@@ -464,7 +464,7 @@ internal struct BoardDestination: View {
         // stores tag form, so it renders through the transform.
         let pairing = "\(PlayerName.displayForm(of: draft.white)) vs \(PlayerName.displayForm(of: draft.black))"
         var lines = [
-            "\(pairing) — \(plies) \(plies == 1 ? "move" : "moves").",
+            "\(pairing), \(plies) \(plies == 1 ? "move" : "moves").",
             "Last saved \(draft.updatedAt.formatted(date: .abbreviated, time: .shortened))."
         ]
         if draft.result != .ongoing {
@@ -664,7 +664,7 @@ internal struct BoardDestination: View {
     /// when the ID hasn't actually changed.
     private func loadIfNeeded() {
         guard let id = loadedGameID else {
-            Self.logger?.debug("Board load: no game selected — clearing")
+            Self.logger?.debug("Board load: no game selected, clearing")
             clearBoard(error: nil)
             return
         }
@@ -680,7 +680,7 @@ internal struct BoardDestination: View {
            tabState.boardPGN?.isDeleted == false,
            tabState.boardGame != nil {
             Self.logger?.debug(
-                "Board load: cache hit for '\(self.tabState.boardPGN?.name ?? "?", privacy: .public)' — no reload"
+                "Board load: cache hit for '\(self.tabState.boardPGN?.name ?? "?", privacy: .public)', no reload"
             )
             return
         }

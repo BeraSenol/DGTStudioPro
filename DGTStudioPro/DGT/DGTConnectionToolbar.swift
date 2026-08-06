@@ -77,9 +77,9 @@ internal struct DGTConnectionToolbarContent: ToolbarContent {
         switch status {
         case .disconnected, .searching: "Connect a DGT e-Board"
         case .connecting:               "Connecting to board…"
-        case .reconnecting:             "Board disconnected — reconnecting…"
-        case .connected:                "Board connected — show details"
-        case .failed:                   "Connection failed — try again"
+        case .reconnecting:             "Board disconnected, reconnecting…"
+        case .connected:                "Board connected, show details"
+        case .failed:                   "Connection failed, try again"
         }
     }
 }

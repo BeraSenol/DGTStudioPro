@@ -152,7 +152,7 @@ internal actor StockfishEngine {
         readyTimeout: Duration = .seconds(30)
     ) async throws {
         guard process == nil else {
-            Self.logger?.error("Engine start ignored — already running")
+            Self.logger?.error("Engine start ignored, already running")
             throw EngineError.alreadyStarted
         }
         
@@ -256,7 +256,7 @@ internal actor StockfishEngine {
             // `uci` into a pipe whose reader already died) are wrapped so
             // `start()`'s failure surface is uniformly `EngineError`.
             Self.logger?.error(
-                "Engine startup failed: \(String(describing: error), privacy: .public) — terminating subprocess"
+                "Engine startup failed: \(String(describing: error), privacy: .public), terminating subprocess"
             )
             if proc.isRunning { proc.terminate() }
             teardown()
@@ -606,7 +606,7 @@ internal actor StockfishEngine {
     private func writeLine(_ command: String) throws {
         guard let stdin = stdinHandle else {
             Self.logger?.error(
-                "Write refused — engine not started: command='\(command, privacy: .public)'"
+                "Write refused, engine not started: command='\(command, privacy: .public)'"
             )
             throw EngineError.notStarted
         }

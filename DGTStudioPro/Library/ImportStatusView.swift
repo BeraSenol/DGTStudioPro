@@ -179,7 +179,7 @@ private struct ImportResultRow: View {
         case .imported:
             return result.fileName
         case .failed(.duplicate):
-            return "Already in your library — skipped."
+            return "Already in your library, skipped."
         case .failed(.missingRequiredTags(let tags)):
             return "Missing required tags: \(tags.sorted().joined(separator: ", "))."
         case .failed(.malformedPGN(let reason)):
@@ -212,7 +212,7 @@ private struct ImportResultRow: View {
     )
 }
 
-#Preview("Finished — All Imported") {
+#Preview("Finished, All Imported") {
     ImportStatusView(
         progress: ImportProgress(
             total: 3,
@@ -236,7 +236,7 @@ private struct ImportResultRow: View {
 /// previewing it would mean standing up a container for one row. It is
 /// covered instead by `PGNStoreTests`' dedupe pins and the import manual
 /// check.
-#Preview("Finished — Mixed Failures") {
+#Preview("Finished, Mixed Failures") {
     ImportStatusView(
         progress: ImportProgress(
             total: 5,

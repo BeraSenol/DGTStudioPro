@@ -510,7 +510,7 @@ internal struct PlayersDestination: View {
             }
             .pickerStyle(.menu)
             .padding(.horizontal, 6)
-            .help("Ranked by \(ranking.shortName) — changes what rank 1 means, not the row order")
+            .help("Ranked by \(ranking.shortName). Changes what rank 1 means, not the row order")
             .accessibilityIdentifier(AccessibilityID.playersRankingPicker)
         }
         // D48′'s sort picker stood here until 5 Aug 2026 — gone rather than

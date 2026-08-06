@@ -139,7 +139,7 @@ internal struct EditGameInfoSheet: View {
     
     private var subheadline: String {
         let line = "\(pgn.whiteDisplayName) vs \(pgn.blackDisplayName)"
-        + " — \(pgn.result.rawValue)."
+        + ", \(pgn.result.rawValue)."
         return deduplicated
         ? line + " An identical game was already saved, so no duplicate was created."
         : line + " Check the details below and adjust anything before moving on."

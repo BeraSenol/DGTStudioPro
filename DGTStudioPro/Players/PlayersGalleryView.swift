@@ -153,7 +153,7 @@ internal struct PlayersGalleryView: View {
         .frame(width: 720, height: 420)
 }
 
-#Preview("Gallery — Preselected") {
+#Preview("Gallery, Preselected") {
     @Previewable @State var selection: Set<PlayerStats.ID> = [PreviewFixtures.topStats().id]
 
     PlayersGalleryView(

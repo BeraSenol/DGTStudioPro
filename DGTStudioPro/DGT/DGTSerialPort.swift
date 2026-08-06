@@ -104,7 +104,7 @@ internal actor DGTSerialPort: DGTPortProviding {
     /// went away (F1).
     internal func open(path: String) throws -> AsyncStream<DGTEvent> {
         guard fileDescriptor < 0 else {
-            Self.logger?.error("Serial open ignored — port already open")
+            Self.logger?.error("Serial open ignored, port already open")
             throw PortError.alreadyOpen
         }
         
@@ -204,7 +204,7 @@ internal actor DGTSerialPort: DGTPortProviding {
     /// which finishes the *event* stream — the signal `DGTConnection` keys on.
     private func readSourceEnded() {
         guard fileDescriptor >= 0 else { return }
-        Self.logger?.error("Serial read source ended (device vanished or read failed) — closing port")
+        Self.logger?.error("Serial read source ended (device vanished or read failed), closing port")
         close()
     }
     
@@ -213,7 +213,7 @@ internal actor DGTSerialPort: DGTPortProviding {
     /// Sends a single-byte command to the board.
     internal func send(_ command: DGTCommand) throws {
         guard fileDescriptor >= 0 else {
-            Self.logger?.error("Serial send refused — port not open: command=\(command.rawValue, privacy: .public)")
+            Self.logger?.error("Serial send refused, port not open: command=\(command.rawValue, privacy: .public)")
             throw PortError.notOpen
         }
         var byte = command.rawValue

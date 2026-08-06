@@ -229,7 +229,7 @@ internal struct NewLiveGameSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("New Game")
                     .font(.title2.bold())
-                Text("Details land on the archived game — edit them any time.")
+                Text("Details land on the archived game, edit them any time.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }

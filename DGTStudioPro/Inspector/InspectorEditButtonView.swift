@@ -111,7 +111,7 @@ internal struct InspectorEditButtonView: View {
 /// The narrowest the column drags to, beside a header with no action at all —
 /// the two states of the same section, which is where a shift in header
 /// height or baseline shows up.
-#Preview("Narrow — With and Without") {
+#Preview("Narrow, With and Without") {
     List {
         SevenTagRosterSection(
             roster: RosterSummary(

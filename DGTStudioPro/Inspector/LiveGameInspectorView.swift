@@ -68,7 +68,7 @@ internal struct LiveGameInspectorView: View {
             Button("Agree Draw (1/2-1/2)", action: onAgreeDraw)
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Both players agree — the game ends 1/2-1/2.")
+            Text("Both players agree, the game ends 1/2-1/2.")
         }
         .confirmationDialog(
             "Discard this game?",
@@ -77,7 +77,7 @@ internal struct LiveGameInspectorView: View {
             Button("Discard Game", role: .destructive, action: onDiscard)
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("The game and its moves will be lost — it won't be saved to the Library.")
+            Text("The game and its moves will be lost. It won't be saved to the Library.")
         }
     }
     

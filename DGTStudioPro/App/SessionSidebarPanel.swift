@@ -81,7 +81,7 @@ internal struct SessionSidebarPanel: View {
                 
                 if showsRestoredFlash {
                     Label(
-                        "Position restored — play continues.",
+                        "Position restored, play continues.",
                         systemImage: "checkmark.circle.fill"
                     )
                     .font(.callout.weight(.medium))

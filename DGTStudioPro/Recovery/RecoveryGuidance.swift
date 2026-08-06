@@ -43,11 +43,11 @@ internal struct RecoveryGuidance: Equatable, Sendable {
         internal var message: String {
             switch action {
             case .remove(let piece):
-                "\(square.algebraicNotation) — remove the \(Self.name(of: piece))"
+                "\(square.algebraicNotation), remove the \(Self.name(of: piece))"
             case .place(let piece):
-                "\(square.algebraicNotation) — place the \(Self.name(of: piece))"
+                "\(square.algebraicNotation), place the \(Self.name(of: piece))"
             case .replace(let current, let expected):
-                "\(square.algebraicNotation) — replace the \(Self.name(of: current)) "
+                "\(square.algebraicNotation), replace the \(Self.name(of: current)) "
                 + "with the \(Self.name(of: expected))"
             }
         }
