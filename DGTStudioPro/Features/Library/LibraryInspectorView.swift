@@ -144,20 +144,12 @@ private struct LoadedSection: View {
     }
     
     
-    // MARK: Open Affordance
-    /// "Open" button in the Library inspector. Asks macOS to open a
-    /// window for this game's `persistentModelID`. macOS handles dedup —
-    /// re-clicking activates the existing window. With "Prefer Tabs:
-    /// Always," multiple opened games merge as native tabs of one window.
-    private var reviewButton: some View {
-        Button {
-            openWindow(value: pgn.persistentModelID)
-        } label: {
-            Label("Review", systemImage: "checkerboard.rectangle")
-        }
-        .help("Review this game in a new window")
-    }
-    
+    // `reviewButton` was here until 6 Aug 2026. M10 removed the Review and
+    // Analyze row that rendered it (see `evaluationSection`) and left the
+    // implementation behind; `reviewGlyphButton` in the roster header is the
+    // affordance that replaced it. Deleted by the between-milestone sweep,
+    // with `analysisControlRow` and `hasRecordedAnalysis` below.
+
     // MARK: Evaluation Section
     @ViewBuilder
     private var evaluationSection: some View {
@@ -189,73 +181,24 @@ private struct LoadedSection: View {
         }
     }
     
-    /// One row, four shapes, all driven by the queue's view of this game:
-    /// Analyze/Re-analyze enqueues (a single game is a batch of one); a
-    /// queued game shows its place in line with a way out; the running
-    /// game shows the per-ply progress and the skip control; a failure
-    /// shows its message with Retry. "Re-analyze" keys off recorded
-    /// evaluations rather than a driver's `.done` — the driver is gone
-    /// from this view, and the data reads correctly for games analyzed in
-    /// an earlier session or imported with `[%eval]` tags, which the old
-    /// status-based label never did.
-    @ViewBuilder
-    private var analysisControlRow: some View {
-        switch queue.status(of: pgn.id) {
-        case .running:
-            HStack(spacing: 8) {
-                ProgressView(value: queue.currentProgress)
-                Button {
-                    queue.skipCurrent()
-                } label: {
-                    Image(systemName: "stop.fill")
-                }
-                .buttonStyle(.borderless)
-                .help("Stop analyzing this game")
-            }
-            
-        case .waiting(let position):
-            HStack(spacing: 8) {
-                Label("Queued, #\(position) in line", systemImage: "hourglass")
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Button {
-                    queue.removeWaiting(pgn.id)
-                } label: {
-                    Image(systemName: "xmark.circle")
-                }
-                .buttonStyle(.borderless)
-                .help("Remove from the analysis queue")
-            }
-            
-        case .finished(.failed(let message)):
-            VStack(alignment: .leading, spacing: 6) {
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Button("Retry") {
-                    queue.enqueue([pgn], modelContext: modelContext)
-                }
-                .buttonStyle(.borderless)
-            }
-            
-        case .notQueued, .finished(.done), .finished(.cancelled):
-            Button {
-                queue.enqueue([pgn], modelContext: modelContext)
-            } label: {
-                // "Analyzed" rather than "Re-analyze" since 3 Aug 2026 —
-                // state over verb; the button still re-runs the pass.
-                AnalysisLabel(analyzed: hasRecordedAnalysis)
-            }
-        }
-    }
-    
-    /// Whether any ply of this game carries a recorded evaluation —
-    /// what "Re-analyze" and the gear glyph key off. Delegated to
-    /// `AnalysisGlyph` since the glyph unified this spelling with the
-    /// search filter's.
-    private var hasRecordedAnalysis: Bool {
-        AnalysisGlyph.isAnalyzed(pgn)
-    }
+    // `analysisControlRow` and `hasRecordedAnalysis` were here until 6 Aug
+    // 2026, deleted together by the between-milestone sweep.
+    //
+    // The row rendered four shapes off the queue — enqueue, queued-with-a-way-
+    // out, running-with-progress-and-skip, and failed-with-retry — and M10
+    // removed the affordance that showed it, by request. `evaluationSection`
+    // above has recorded that removal correctly since the day it happened; what
+    // nobody noticed is that the *implementation* stayed, fully written and
+    // rendered by nothing, for two months.
+    //
+    // `hasRecordedAnalysis` had exactly one caller, inside the row, so it went
+    // with it. `AnalysisLabel`, `skipCurrent` and `removeWaiting` all have live
+    // consumers elsewhere and stayed — checked rather than assumed.
+    //
+    // Why three sweeps missed it: the previous declaration scans counted a name
+    // mentioned in a *comment* as a reference, and both names were mentioned in
+    // the comment explaining their own removal. Stripping comments before
+    // building the frequency table is what surfaced them.
     
     // MARK: PGN Section
     

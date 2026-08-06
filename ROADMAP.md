@@ -1028,6 +1028,46 @@ next revision inherits a number with a method attached rather than a number.
 
 ---
 
+## Between-milestone sweep *(6 August 2026, after M12–M14)*
+
+**The agreement's own prediction held: the sweep's value was a finding nobody
+was looking for, and it came from correcting a check rather than running one.**
+
+`git status` clean, counter-grep clean across three documents, prohibited
+tokens clean, every cited D-number resolving to an anchor. The `.disabled(…)`
+census is **22 code sites** (25 matches, three of them doc comments) and every
+enabling value is producible both ways — D40′'s question, re-asked. The
+denominator moved from 18 because M12.2 added two and D60′ removed D40′'s own.
+
+**The finding: two dead view members in `LibraryInspectorView`, ~80 lines,
+orphaned by M10 and surviving three sweeps.** `reviewButton` and
+`analysisControlRow` — the latter a four-arm switch over the analysis queue
+with progress, skip, remove and retry — were left behind when M10 removed the
+Review-and-Analyze row *by request*. `hasRecordedAnalysis` had one caller,
+inside the row, and cascaded. `AnalysisLabel`, `skipCurrent` and
+`removeWaiting` all have live consumers elsewhere and stayed, checked rather
+than assumed.
+
+**Why three sweeps missed it, which is the durable part.** The declaration
+scans — 1,589 names, then 1,809, then 1,888 — counted a name mentioned in a
+**comment** as a reference. That is not a small imprecision: the comment most
+likely to mention a symbol is the one explaining why it was removed, and
+`evaluationSection`'s comment names both members while describing the removal
+of the row that rendered them. The code was dead and its own epitaph kept it
+looking alive. Stripping comments before building the frequency table is the
+whole fix; the corrected scan returns **two** orphans over 1,841 names, both
+explained. Method recorded with the command in the working agreements, because
+a check whose method lives in its author's head is not part of the check.
+
+*One process note. This is the third time in two days that a check produced a
+clean result for the wrong reason — after the counter-grep's missing
+`--include` and the `.disabled(…)` count with no recorded method. The pattern
+is not carelessness; it is that a passing check is never interrogated. The
+only thing that has caught any of them is running the check while asking what
+it would have to see to fail.*
+
+---
+
 ## Horizon — known, wanted, unscheduled
 
 File-menu Export via `.focusedSceneValue` (the pattern has three worked
