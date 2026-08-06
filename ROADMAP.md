@@ -765,12 +765,21 @@ recorded here so the next reader knows it was seen rather than missed.
   changed?' a diff, the shape D18′ rejected at `applyEdit`." That argument is
   about correctness, not tidiness, and it outranks file size.
 
-  So the three real options are: **widen the eighteen** and accept a window
+  So the three real options were: **widen the eighteen** and accept a window
   with no private state; **keep the file at 1,234** and treat the two free
   extractions as the whole of it; or **revisit D57′'s draft-struct rejection**,
   which is a decision about commit granularity wearing a refactor's clothes.
-  Not chosen here, because a file-size preference should not quietly overturn a
-  correctness argument.
+
+  **Decided 6 August 2026: stop at 1,234.** The file is large and coherent —
+  one window, one subject resolution, three forms, and every draft private to
+  the type that commits it. Neither of the other two buys anything the reader
+  can feel: widening eighteen `@State`s trades a real guarantee for a smaller
+  file, and reopening D57′ would let a formatting preference reach into a
+  correctness argument. **Recorded as a decision rather than left as an open
+  item**, because "this file is too big" is exactly the kind of unexamined
+  discomfort that sits on a list accruing imagined weight — M7's own lesson.
+  If it is ever reopened, the reason should be that someone got lost in it,
+  not that 1,234 is a large number.
 
   *Original specification follows, unchanged, for whichever option is taken.*
   1,362 lines holding one enum, two views
@@ -891,7 +900,26 @@ own. Together they mean the same reasoning is being paid for twice, in two
 places, at every read — which is the actual finding, and it is what makes this
 milestone a consolidation rather than a deletion.
 
-- **`DECISIONS.md` takes the anchors, verbatim and append-only.** D9′ through
+- ~~**`DECISIONS.md` takes the anchors, verbatim and append-only.**~~ —
+  **landed 6 August 2026.** 55 anchors, 913 lines, moved and then **diffed
+  against `HEAD` to prove they were moved rather than rewritten** — identical.
+  `PROJECT-INSTRUCTIONS.md` goes **335 KB → 173 KB**, a 48% cut with no
+  information lost, and keeps all twelve of its sections.
+
+  What stayed, because it is read constantly and this document has to stand
+  alone: locked decisions **#1** (the physical board is truth, the live game is
+  append-only) and **#3** (`*` never finishes and never archives), restated
+  rather than cited. What moved with the anchors: the **next-free-number**
+  line, so it has exactly one owner — the rule the other document's header had
+  to learn twice.
+
+  Both new checks were run and both are clean: every D-number cited in a source
+  resolves to an anchor that exists, and the milestone counter-grep now reads
+  three documents. The second matters more than it looks — a third file is a
+  third place work can fail to be recorded in, and absence is the one species
+  no check that reads what *was* written can catch.
+
+  Original specification: D9′ through
   D63′ move unchanged. `PROJECT-INSTRUCTIONS.md` keeps what the app is, where
   things stand, the architecture invariants, the working agreements, the
   waiver register, the toolchain notes, the open items, and the manual checks
