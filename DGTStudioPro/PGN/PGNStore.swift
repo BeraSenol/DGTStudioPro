@@ -191,40 +191,24 @@ internal struct PGNStore {
     /// Matches PGN files in `folder` to Library rows by content hash and
     /// stamps each match with the ordinal its **filename** carries (D58′).
     ///
-    /// **Why this door has to exist.** D58′ reads the ordinal at the import
-    /// door, from the URL — so every game imported before it has `nil`, the app
-    /// never stored the URL it came from, and re-importing is refused as a
-    /// duplicate. The pre-D58′ archive is therefore unreachable by every other
-    /// door in the app, which is a gap D58′ named and did not close.
+    /// Closes the gap D58′ named and did not: the pre-D58′ archive has no
+    /// ordinals and no door that can reach them.
     ///
-    /// **Matching is by content hash, not by filename**, which is the whole
-    /// design. The folder this was built for spells filenames with full display
-    /// names (`47. Bera Senol vs Christophe Heylen.pgn`) while
-    /// `PGNSerializer.fileName` writes given names only — D58′ records that
-    /// discrepancy — so a name-based match would miss exactly the files this
-    /// exists to read. The hash is what already decides "same game" everywhere
-    /// else, and reusing it means this door inherits every folding rule without
-    /// restating one.
+    /// **Matching is by content hash, not by filename**, and that is the choice
+    /// most likely to be "simplified" later. A name-based match would miss
+    /// exactly the files this exists to read — D58′ records that the working
+    /// folder spells full display names while `PGNSerializer.fileName` writes
+    /// given names only. Pinned by `matchingIgnoresTheNameInTheFilename`.
     ///
-    /// **Stamps only where the row has no ordinal.** A scan that overwrites is
-    /// a scan that can renumber the archive from a stale or partial folder, and
-    /// the failure would be silent and total. `alreadyNumbered` counts the
-    /// skips so a re-run reports "nothing to do" rather than looking like it
-    /// failed.
+    /// Three local rules, each guarding a silent failure. **An existing ordinal
+    /// is never overwritten**, or a stale folder renumbers the archive with
+    /// nothing to show for it. **The ordinal is read before the file is
+    /// parsed**, because parsing is the expensive half and an unnumbered
+    /// filename has nothing to give however well it parses. **Non-recursive**,
+    /// or a nested export directory renumbers from files nobody offered.
     ///
-    /// **The ordinal is read before the file is parsed**, which is an ordering
-    /// choice rather than an accident: parsing is the expensive half, and a
-    /// file whose name carries no `<digits>.` has nothing to give however well
-    /// it parses. On the folder this targets that is the difference between
-    /// reading every game and reading the numbered ones.
-    ///
-    /// Non-recursive by decision: "point at the PGN folder" is the gesture, and
-    /// descending would let a nested export directory renumber the archive from
-    /// files the reader did not mean to offer.
-    ///
-    /// One transaction. Failures inside the loop are collected rather than
-    /// thrown — a folder with one unreadable file should still stamp the other
-    /// forty, and the report names what it skipped.
+    /// One transaction; per-file failures are collected rather than thrown, so
+    /// one bad file does not cost the other forty.
     internal func backfillLibraryIndices(from folder: URL) throws -> LibraryIndexBackfill {
         var report = LibraryIndexBackfill()
 
