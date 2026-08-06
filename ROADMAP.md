@@ -274,8 +274,27 @@ deliberately instead of "while I'm here".**
 ### Instruments run sheet
 
 *Written 31 July with D44′, so the one remaining actionable item needs no
-planning on the day. Four scenarios, each naming the known-costs entries it
-is the only chance to see.*
+planning on the day. Each scenario names the known-costs entries it is the
+only chance to see.*
+
+***Re-read 6 August 2026 against the census, and it needed it.*** *Six days
+and four milestones had passed. Scenario 4 was called "a Players → **Rankings**
+browse" — a destination D48′ deleted on 2 August, so the sheet named a screen
+that does not exist. And the census had grown by seven entries the table never
+picked up: the whole search-and-filter path (`CollectionSearch`,
+`LibraryFilter.matches`, `AnalysisGlyph.isAnalyzed`, the ECO comparator), which
+is the most invalidation-prone surface in the app and had **no scenario at
+all**. It is now scenario 5, and it is the one most likely to produce a
+finding, because every cost on it runs per keystroke rather than per
+navigation. Two more entries were added to the census in the same pass, both
+of which had been declared members and never added.*
+
+***The transferable bit: a run sheet is a claim about what the run will
+cover.*** *This one would have produced clean numbers for four scenarios and
+said nothing about the path a reader touches most, and nothing about it would
+have failed — the profile would have looked fine because the work was
+elsewhere. Re-read the sheet against the census on the morning of the run, not
+before.*
 
 **Two rules for the whole pass, both learned the hard way here.**
 
@@ -296,10 +315,11 @@ worth having**, and it is invisible to any single run.
 
 | # | Scenario | Instruments | Known costs it exercises | Record |
 |---|---|---|---|---|
-| 1 | **A full live game**, real board, to a natural finish | Time Profiler + Allocations; Leaks at teardown | `parseSAN` generating all legal moves per ply; `Position`'s `[Piece]` heap-allocating per `applying`; the draft sidecar's atomic write per committed ply; the New Game sheet's `games.map(\.gameRecord)` fold per seat edit | Plies played; main-thread time per settle; allocations per ply; whether any settle crosses the hang threshold |
+| 1 | **A full live game**, real board, to a natural finish | Time Profiler + Allocations; Leaks at teardown | `parseSAN` generating all legal moves per ply; `Position`'s `[Piece]` heap-allocating per `applying`; **pawn movegen's two-element capture-offset array, built per pawn per call inside `legalMoves()`** — the one non-static offset table, and the only census entry gated on perft rather than on appetite; the draft sidecar's atomic write per committed ply; the New Game sheet's `games.map(\.gameRecord)` fold per seat edit | Plies played; main-thread time per settle; allocations per ply; whether any settle crosses the hang threshold |
 | 2 | **A depth-heavy analysis** on one long game | Allocations + Time Profiler; Leaks after Stop All | `UCIProtocol.parse`'s ~3 arrays per info line — by frequency the hottest allocation in the app; engine teardown (the strand-no-waiter contract) | Info lines parsed; allocation rate; Stockfish resident memory against configured Hash; zero leaked engine processes after Stop All |
-| 3 | **A large import**, then the first Library appearance | Time Profiler; SwiftUI (view body counts) | The ECO table's ~3,800-row parse, warmed off-actor but never measured; `ECOClassifier.opening(for:)`'s quadratic prefix re-join, bounded at 36 plies; `backfillPlayerLinks`'s fetch-all-and-scan; MD5 per game; `parseSAN` × plies × games | Games imported; wall-clock import; whether the ECO parse ever lands on the main actor; time to first Library paint; **then double the batch and re-run** |
-| 4 | **A Players → Rankings browse**, then a rename | Time Profiler; SwiftUI | `Glicko1.histories` building every player's full sample array per question; both destinations folding once per body; `backfillPlayerLinks` again at its three `onAppear`s; `retag`'s per-game re-resolve + MD5, O(linked games), **inside a modal save** | Players in the fold; body evaluations per navigation; rename wall-clock against the linked-game count — this is the one that blocks a sheet, so it is the one a user feels |
+| 3 | **A large import**, then the first Library appearance, then select a game and expand its PGN section | Time Profiler; SwiftUI (view body counts) | The ECO table's ~3,800-row parse, warmed off-actor but never measured; `ECOClassifier.opening(for:)`'s quadratic prefix re-join, bounded at 36 plies; `backfillPlayerLinks`'s fetch-all-and-scan; MD5 per game; `parseSAN` × plies × games; the Library inspector's PGN section **re-serializing the whole game per body pass while expanded** (and the columns detail doing it ungated); the backfill affordance's `games.contains { $0.libraryIndex == nil }` per body pass | Games imported; wall-clock import; whether the ECO parse ever lands on the main actor; time to first Library paint; body evaluations while the PGN section is open versus collapsed — D45′ gates it, so this is the one cost with a user-facing off switch; **then double the batch and re-run** |
+| 4 | **A Players browse**, then a rename | Time Profiler; SwiftUI | `Glicko1.histories` building every player's full sample array per question — now on the *merged* body, so it runs on the destination you actually use; the destination folding once per body; `backfillPlayerLinks` again at its `onAppear`s; `retag`'s per-game re-resolve + MD5, O(linked games), **inside a modal save**; `collectOrphanedPlayers`' fetch-all-and-scan riding the same transaction (D60′) | Players in the fold; body evaluations per navigation; rename wall-clock against the linked-game count — this is the one that blocks a sheet, so it is the one a user feels |
+| 5 | **Type in the Library search field**, with a tag filter active and a non-default column sort | Time Profiler; SwiftUI (view body counts) | `CollectionSearch` folding every row's fields per keystroke; `LibraryFilter.matches` building a `GameRecord` per game per body pass; `AnalysisGlyph.isAnalyzed` scanning a game's full `evaluations` per row per body pass; `filteredGames`' unconditional `sorted(using:)`, whose **ECO** comparator rehydrates an `ECOOpening` per comparison per render | Keystrokes; body evaluations per keystroke; time per keystroke at 1× and 2× Library. **Sort by ECO and by `#` and compare** — same rows, one comparator rehydrating and one comparing `Int?` |
 
 **What the pass is allowed to change: nothing.** It produces numbers, and the
 numbers go into the instructions' known-costs list — each entry either gets a
