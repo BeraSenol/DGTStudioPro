@@ -658,6 +658,29 @@ stamps everything look identical from the console.
 **Goal: a file's folder states what it is for. Surfaces are grouped by the
 thing they serve; the substrate is grouped by what it knows.**
 
+***The move landed 6 August 2026 (`ff1220c`) — 92 renames, 0 insertions, 0
+deletions, followed by the path sweep as its own commit. What remains of this
+milestone is code: the `GetInfoWindow` split and the three merges, both of
+which want a compiler and are deliberately not riding a mechanical commit.***
+
+***The path debt turned out to be almost nothing, and that is the finding.***
+*The sweep expected a hundred false claims and found **one** — D45′'s
+invariant saying the collapse store is read "in exactly two files, both in
+`Inspector/`". **Zero source comments cite a moved folder at all.** The
+codebase names types, not paths, so the reorganization could not invalidate
+it; the two documents cite paths in fourteen places and eleven of those are
+folders that did not move. M14's "stop citing paths in docs" option was
+written as a proposal and turns out to describe what the code already does —
+the remaining exposure is the documents, and it is small enough to fix by
+hand rather than by policy.*
+
+*One item closed as collateral: the filing-quirk entry naming
+`StockfishEngine` and three misfiled suites. It undercounted, because it was
+a list of things someone had noticed rather than the output of a check —
+`DGTBoardDiffTests` had sat two folders from its subject the whole time. The
+check that would have found all five: for each test file, does its subject
+live in the mirrored folder?*
+
 *What this milestone is not: a purity axis. `Core/`, `Model/`, `Feature/`
 was the alternative and it was declined — it would make D10′ visible in the
 filesystem, and it would also scatter every feature across three folders so
@@ -706,7 +729,7 @@ DGTStudioPro/
 ```
 
 **Where feature-first strains, named rather than smoothed.** `Recovery/`'s
-two files go to `Features/Board/`, and `SessionSidebarPanel` — which stays in
+two files went to `Features/Board/`, and `SessionSidebarPanel` — which stayed in
 `App/`, because D15′ makes the sidebar the master of session info — reads
 `RecoveryGuidance` across that boundary. That is a real cross-feature
 reference and there is no filing that removes it: the guidance is computed in
@@ -768,10 +791,15 @@ recorded here so the next reader knows it was seen rather than missed.
   one at the site, on two different commit contracts — so the extraction covers
   two consumers, not three, and the third stays separate on purpose.
 
-- **The test target mirrors, and three recorded misfilings go.**
-  `PairingRoundTests` out of `Chess/`, `MovetextEditTests` out of `Players/`,
-  `PieceTrackerTests` out of `DGT/`. Suites track their subjects, so a suite
-  is findable from the thing it pins.
+- ~~**The test target mirrors, and three recorded misfilings go.**~~ —
+  **landed with the move.** `PairingRoundTests` out of `Chess/`,
+  `MovetextEditTests` out of `Players/`, `PieceTrackerTests` out of `DGT/` —
+  and a **fourth** the recorded list had never noticed, `DGTBoardDiffTests`,
+  which had sat in `Board/` while `DGTBoardDiff` lives in `DGT/`.
+  `DGTBoardSimulator` followed it to the folder holding its one consumer, and
+  `MovetextScoreSheetTests` went to `Features/GetInfo/` with the view it
+  renders. Suites track their subjects, so a suite is findable from the thing
+  it pins.
 
 **How it lands: two commits, one sitting.** The first moves files and changes
 no code — mechanical changes travel alone, and this is the largest mechanical
