@@ -1070,17 +1070,42 @@ it would have to see to fail.*
 
 ## Horizon — known, wanted, unscheduled
 
-File-menu Export via `.focusedSceneValue` (the pattern has three worked
-examples now: `activeGame`, M1's `tagEditorDraft`, and `SmartTagCommands`) —
-unblocked on appetite since M2 made export truthful; **Library sectioning by
-opening**, which M4 promoted from speculation to a named candidate by giving
-every game an ECO identity (the 2027 SDK's native `sectionBy` makes it cheaper
-later, which is a reason to wait); Library sectioning by event / player /
-month; the galleries' empty-selection parity decision; a click-to-move /
-position-setup surface (would finally consume `BoardView.selectedSquare`); an
-opening-tree explorer over the Library (natural now that M4 landed); the
-custom Xcode agent skill encoding the working agreements (gated on Xcode 27
-GM).
+*Re-read 6 August 2026 against the tree, because a Horizon list is as
+checkable as anything else here and this one had gone stale in two places.*
+
+**File-menu Export** via `.focusedSceneValue` — three worked examples
+(`activeGame`, M1's `tagEditorDraft`, `SmartTagCommands`), unblocked on
+appetite since M2 made export truthful. **Now carries a caveat it did not have
+this morning:** M12 narrowed the launch-time `FocusedValue` warning to that
+exact pattern, and this would be its fourth use. Worth reading the log line
+first, or the fourth use lands on an arrangement under suspicion.
+
+**Library sectioning by opening** — M4 promoted it from speculation by giving
+every game an ECO identity; the 2027 SDK's native `sectionBy` makes it cheaper
+later, which is a reason to wait. Sectioning by event / player / month is the
+same machinery pointed elsewhere.
+
+**A click-to-move / position-setup surface** — would consume
+`BoardView.selectedSquare`, `SquareHighlight.selected` and `SquareView`'s tint
+arm, all three of which M12.3 decided to keep as pre-wiring precisely because
+this is named here. The one Horizon item with code already waiting for it.
+
+**A deferring editor** — inline annotations, or a live movetext buffer — would
+consume `OpenGamesRegistry.markDirty` and turn on `LibraryDestination.delete`'s
+discard-confirmation arm with no wiring. Added 6 Aug 2026: M12.3 kept that
+machinery on the strength of this, so it belongs on the list it was justified
+by rather than only in a doc comment.
+
+**An opening-tree explorer** over the Library — natural since M4.
+
+**The custom Xcode agent skill** encoding the working agreements — gated on
+Xcode 27 GM.
+
+~~The galleries' empty-selection parity decision~~ — **closed 4 August 2026**,
+struck here 6 August. The Library's rule won (no fallback; never preview what
+the user didn't pick) and `PlayersGalleryView` dropped its `players.first`
+arm. It had been sitting on this list as wanted work for two days after being
+decided.
 
 ---
 
