@@ -942,7 +942,35 @@ milestone a consolidation rather than a deletion.
   which after this split is `DECISIONS.md`'s tail rather than the
   instructions' header.
 
-- **Doc comments defer to the anchor.** The rule the last four commits have
+- **Doc comments defer to the anchor — adopted as standing guidance, not run
+  retroactively. Decided 6 August 2026.**
+
+  A two-file calibration tranche landed first, both blocks written the same day
+  by the pass proposing the rule: 31 lines to 11, and 37 to 18. Then the
+  arithmetic settled it. The ratio is **38%** (11,885 comment lines of 30,818),
+  and two files out of 137 do not move it; reaching ~30% means cutting roughly
+  **2,400 lines**, nearly all of it prose whose reasoning lives nowhere else.
+  `AccessibilityID.swift` is 62% comments and every line is load-bearing;
+  `MovetextEdit.swift` is 52% and that is D18′'s validator explaining its own
+  check order.
+
+  **So the duplication the split was built to remove had already been
+  removed.** `DECISIONS.md` stopped the two *documents* paying for the same
+  reasoning twice — that was the measurable win, and it was 162 KB. The code
+  restating an anchor is a smaller and much less certain cost, and cutting it
+  trades a definite loss of reasoning for an indefinite gain in brevity.
+
+  The rule stands for **new** comments, where it costs nothing and prevents the
+  duplication forming again. It is recorded in the working agreements rather
+  than scheduled as a pass, with both exemptions: a comment stating a rule
+  about *the language* stays complete (D43′ and D44′ each cost a month of green
+  builds), and a comment recording a **rejected local implementation** stays,
+  because the anchor explains the decision and not why this function avoids
+  `hasSuffix`. A third emerged from the tranche: a **disposition record** is
+  not a restatement — `DGTSerialPort.isOpen`'s paragraph is why the symbol is
+  kept, and there is no anchor holding it.
+
+  *Original specification follows.* The rule the last four commits have
   been applying, stated so it governs the next reader too: a site comment
   carries the *local* why — the decision made here, the alternative rejected
   here, the trap avoided here — and cites the D-number rather than restating
@@ -962,7 +990,22 @@ milestone a consolidation rather than a deletion.
   records why the decision went the way it did, not why this function does not
   use `hasSuffix` here.
 
-- **The five review and audit documents get a disposition.**
+- **The review and audit documents: kept, and labelled. Decided 6 August
+  2026.** `AUDIT-2026-08-01.md`, `CODE-REVIEW-2026-08-01.md` and
+  `CODE-REVIEW-2026-08-04.md` are 76 KB of findings, all applied and all
+  recorded in the instructions. They are **history, not memory** — and the
+  disposition follows from that rather than from their size: they are never
+  read on a working pass, so they cost nothing per sitting, and their filenames
+  already date them. Folding them into `DECISIONS.md` would put process notes
+  in a file that holds outcomes; deleting them would discard the one thing the
+  summaries cannot preserve, which is *how* the findings were reached.
+
+  What they earn instead is one line in the instructions saying what they are,
+  so a future reader does not mistake an applied finding for an open one. The
+  bar for a fourth: a review document is worth keeping when its method is
+  reusable, not when its findings are interesting.
+
+  *Original specification follows.*
   `AUDIT-2026-08-01.md`, `CODE-REVIEW-2026-08-01.md` and
   `CODE-REVIEW-2026-08-04.md` are 76 KB of findings that have all been applied
   and are all recorded in the instructions. They are history, not memory. The
