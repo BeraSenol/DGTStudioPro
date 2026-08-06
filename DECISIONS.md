@@ -28,7 +28,7 @@ Locked product decisions #1–#8 and their interpretation flags were recorded in
 
 Old milestone and finding tags (M7.2, M-prs.1, F1–F9…) survive in code comments and below as provenance only — they identify where a decision came from; they schedule nothing.
 
-D-numbers are sequential and never reused. Next free number: **D64′**. (This line said D47′ until the 3 Aug audit — it had not been advanced since the M6 revision while the header above was; the header is the owner and this line now just repeats it.)
+D-numbers are sequential and never reused. Next free number: **D65′**. (D64′ minted 6 Aug 2026 for M13's layout — the last entry in this file.) (This line said D47′ until the 3 Aug audit — it had not been advanced since the M6 revision while the header above was; the header is the owner and this line now just repeats it.)
 
 ### D9′ — Player is a machine-managed @Model
 
@@ -943,3 +943,21 @@ Registry: `players.rankingPicker`, the first identifier minted after two consecu
 
 Rejected: **a segmented control** (D48′'s reasoning for the picker that used to stand here: two segmented controls side by side read as one broken one, and the view-mode picker is already segmented); **ranking by rating with unrated players at 1500** (above); **making the method change the sort too** (it would collapse the distinction the badge depends on, and D48′'s "rank is a fact about the player" is the sentence that would have to go).
 
+
+### D64′ — the app is grouped by what a file serves, not by what it knows
+
+M13, 6 August 2026. `App/` is the shell; `Features/{Board,Library,Players,SmartTags,GetInfo}/` are the surfaces; `Shared/{Inspector,Collection}/` is what more than one feature consumes; and `Chess/ DGT/ Engine/ Game/ PGN/` stay top-level as the substrate. Thirteen folders where there were twelve, 92 files moved, no code changed.
+
+**Chosen over a purity axis, which was the obvious alternative and is the one worth arguing.** `Core/ Model/ Feature/` would have made D10′ visible in the filesystem — pure `Sendable` value types in one place, SwiftData in another, SwiftUI in a third. It was declined twice over. The purity invariant names **types, not folders**, which D34′ already had to say out loud when `ECOClassifier` and `ECOTable` were filed together and the rule survived it intact. And a layer axis scatters every feature across three directories, so working on Players means three open at once — it optimizes for the diagram rather than for the person doing the work.
+
+**Get Info is a feature, not chrome.** It has a window group, three subjects, and four decisions behind it (D53′, D57′, D59′, D61′); it is not a shared component. `MovetextEditorView` lives with it because D59′ made the editor a tab rather than a sheet.
+
+**The live-game split is the one placement with a rule behind it.** `LiveGame`, its draft sidecar and store, `Game`, `GameHeadline`, `SessionPhase` and `OpenGamesRegistry` are model read by four areas, so they stay a domain folder; the sheets, HUD and commands are surfaces and followed the Board. A type read by Board *and* DGT *and* PGN is not the Board's.
+
+**Where it strains, named rather than smoothed.** `Recovery/`'s two files went to `Features/Board/`, and `SessionSidebarPanel` — which stays in `App/`, because D15′ makes the sidebar the master of session info — reads `RecoveryGuidance` across that boundary. No filing removes that: the guidance is computed in two places by decision, so wherever it sits, one consumer is elsewhere. Accepted, not hidden.
+
+**Safe because of a project fact worth restating:** two `PBXFileSystemSynchronizedRootGroup`s with **no membership exceptions**, so target membership follows location and a move needs no project edit. The corollary is the risk — a file moved *out* of a target's root leaves that target silently, which is why a folder move is gated on a cold build rather than on ⌘U.
+
+**What the move cost in documentation was almost nothing, and that is a finding about the code.** The path sweep expected a hundred stale citations and found **one**. **Zero source comments cite a folder at all** — the codebase names types, so a reorganization cannot invalidate it. A proposal to "stop citing paths in docs" turned out to describe what the code already did.
+
+Rejected: **`Core/ Model/ Feature/`** (above); **nesting the substrate under `Domain/`** (most symmetric top level — three entries — and it rewrites every anchor that names a folder for no gain a reader feels); **no `Features/` level at all**, leaving the five surfaces beside the five substrate folders (smallest diff, and it leaves the distinction implicit, which is the thing this decision exists to make explicit); **feature-owned everything**, where Board keeps its own pure types (fewest cross-folder hops, and it puts `PieceIdentity` and the evaluation readings out of reach of the purity argument that governs them).

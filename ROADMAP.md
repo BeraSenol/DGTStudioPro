@@ -38,7 +38,9 @@ with 36 modified sources — named rather than discovered, and **⌘U is owed on
 it before M12 starts**, since the last reported run predates the four
 doc-compression commits. The ordering is the argument and it is written into
 M12: stability, then structure, then reading. **No D-numbers are penciled** —
-three M12 bullets will each take one at recording time. Next free: **D64′**.
+three M12 bullets will each take one at recording time. *(They took none —
+see M12's own preamble. The day minted **D64′** for M13's layout instead, and
+`DECISIONS.md` owns the next free number since M14.)*
 
 **M11 is skipped, and the reason is a finding rather than a preference.**
 These three were drafted as M11–M13 and renumbered, because `M11` is already
@@ -400,8 +402,13 @@ a sufficient gate for a change that touches a hundred paths.*
 
 **No D-numbers are penciled here.** Three of the bullets below reverse or
 narrow a recorded contract and will each take a number at recording time, in
-the instructions, in sequence. Next free is **D64′**, which is a fact about
-today rather than an allocation.
+sequence. *(Written expecting three. **None of them needed one** — M12.1
+reversed nothing because there was no divergence, M12.2 discharged a gap D61′
+had already argued, M12.3 kept what the documents already described. The one
+number the day did mint was M13's layout, D64′, which this bullet did not
+anticipate at all. A number marks a decision that binds future work, and
+predicting which work will bind is harder than it reads.)* The next free
+number lives in `DECISIONS.md`, which owns it since M14.
 
 - ~~**The `endedInMate` divergence, decided.**~~ — **closed 6 August 2026 as
   a correction, not a fix. There was no divergence.** This bullet was written
