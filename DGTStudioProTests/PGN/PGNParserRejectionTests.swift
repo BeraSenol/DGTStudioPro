@@ -126,7 +126,35 @@ struct PGNParserRejectionTests {
         let pgn = try PGNParser.parse(pgnText(movetext: "1. e4! f5?? 2. Qh5+ g6!? *"))
         #expect(pgn.moves == ["e4", "f5", "Qh5+", "g6"])
     }
-    
+
+    /// The `#` case of the sibling above, split out because a **false claim
+    /// rested on it for a week** and the sibling was green throughout.
+    ///
+    /// `GameClassification` documented its `contains("#")` gate as necessary
+    /// "because annotations survive import, so `Qd2#!` claims mate", the
+    /// instructions carried a matching open item, and `PlayerStatsTests`
+    /// reproduced the impossible record as if it were a bug — all while the
+    /// test one function up proved annotations are stripped. **The check and
+    /// the claim simply never met**, which is a species worth naming: not an
+    /// unchecked claim, but one already contradicted by a passing test nobody
+    /// had connected to it. The sibling used `+`, so nothing forced the
+    /// connection; this one uses `#` and says what follows from it.
+    ///
+    /// What follows: `GameRecord.endedInMate`'s `hasSuffix("#")` and the
+    /// classifier's `contains("#")` **cannot disagree on a stored game**,
+    /// because no writer can put `#` anywhere but last — this door strips
+    /// annotations, and the other two store canonical `san(for:)` output.
+    /// Delete `stripAnnotations`, or add a writer that skips it, and this goes
+    /// red rather than the divergence quietly becoming real.
+    @Test func annotationsDoNotSurviveImport() throws {
+        let pgn = try PGNParser.parse(pgnText(movetext: "1. f3 e5 2. g4 Qh4#! 0-1"))
+
+        #expect(pgn.moves == ["f3", "e5", "g4", "Qh4#"])
+
+        let last = try #require(pgn.moves.last)
+        #expect(last.hasSuffix("#") == last.contains("#"))
+    }
+
     @Test func nagTokensVanishBetweenMoves() throws {
         let pgn = try PGNParser.parse(pgnText(movetext: "1. e4 $1 e5 $14 *"))
         #expect(pgn.moves == ["e4", "e5"])

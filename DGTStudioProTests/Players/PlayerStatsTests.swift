@@ -276,20 +276,30 @@ struct PlayerStatsTests {
         #expect(try stats(for: "alice", in: PlayerStats.index(of: records)).specialMatesDelivered == 2)
     }
 
-    /// **`specialMatesDelivered <= matesDelivered` is not guaranteed**, and this
-    /// pins the reason rather than the tidy arithmetic a reader would assume.
+    /// The two counters read **different fields**, and this pins that rather
+    /// than the tidy arithmetic a reader would assume: hand this fold a record
+    /// with `endedInMate: false` and a motif, and it will report one special
+    /// mate and zero mates.
     ///
-    /// `matesDelivered` asks `GameRecord.endedInMate`, which spells "ended in
-    /// mate" as `hasSuffix("#")`; the motif classifier spells it
-    /// `contains("#")`. So a game ending `Qd2#!` is a special mate that is not
-    /// a mate — a standing open item, reproduced here as the record those two
-    /// spellings would produce.
+    /// **Rewritten 6 August 2026, and the correction is the point.** This test
+    /// used to be named `aSpecialMateCanOutnumberMatesWhileTheSpellingsDisagree`
+    /// and claimed to reproduce a standing open item: `matesDelivered` asks
+    /// `hasSuffix("#")` while the motif classifier asks `contains("#")`, so a
+    /// game ending `Qd2#!` was said to be a special mate that is not a mate.
+    /// **No such game can exist.** `PGNParser.flushToken` strips trailing
+    /// `!`/`?` from every token it emits, and the other two writers store
+    /// canonical `san(for:)` output — so `#` is always last and the two
+    /// spellings always agree. `annotationsDoNotSurviveImport` is the pin for
+    /// that, and it lives in the parser suite because that is where the claim
+    /// would break.
     ///
-    /// Pinned deliberately rather than worked around: nesting the special count
-    /// inside `endedInMate` would make this test impossible to write and would
-    /// hide the divergence instead of surfacing it. If the open item is ever
-    /// closed, **this test is the one that should fail** and tell you so.
-    @Test func aSpecialMateCanOutnumberMatesWhileTheSpellingsDisagree() throws {
+    /// So the record below is **synthetic**, and saying so is the whole value
+    /// of the rewrite: the old version was a test that could only pass, over a
+    /// state no door produces, wearing the name of a bug. What it legitimately
+    /// witnesses is that the fold does not nest one counter inside the other —
+    /// which is worth keeping, because nesting would bury the two spellings
+    /// behind an invariant that holds by luck rather than by enforcement.
+    @Test func matesAndSpecialMatesAreCountedFromDifferentFields() throws {
         let records = [
             record(white: alice, black: bob, result: .whiteWins,
                    endedInMate: false, specialCheckmate: .smothered)

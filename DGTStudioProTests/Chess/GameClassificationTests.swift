@@ -54,8 +54,21 @@ struct GameClassificationTests {
         #expect(Self.classify([]).specialCheckmate == nil)
     }
 
-    /// The gate is `contains("#")`, not `hasSuffix` — D18′'s recorded reason,
-    /// because annotations survive import.
+    /// The gate is `contains("#")`, not `hasSuffix`, so an annotated final ply
+    /// still reaches the replay.
+    ///
+    /// **The reason recorded here until 6 August 2026 was false** — it read
+    /// "because annotations survive import". They do not:
+    /// `PGNParser.stripAnnotations` removes trailing `!`/`?` from every token
+    /// the parser emits, so no stored game reaches this function with `Qh4#!`
+    /// in it (`annotationsDoNotSurviveImport` is the pin). The fixtures below
+    /// are hand-built and bypass that door.
+    ///
+    /// The test keeps its place on the narrower argument the gate now carries:
+    /// `classify` is a pure function over a `[String]` it does not own, and
+    /// this pins that it tolerates an annotated ply rather than silently
+    /// classifying `nil` for one. That is a real contract for a future caller
+    /// that has not canonicalized — it is just not the one about import.
     @Test("An annotated mating move still claims mate")
     func annotatedMateStillClaimsMate() {
         let result = Self.classify(["f3", "e5", "g4", "Qh4#!"])

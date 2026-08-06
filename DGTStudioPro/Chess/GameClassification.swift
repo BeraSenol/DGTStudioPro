@@ -49,12 +49,23 @@ internal struct GameClassification: Sendable, Hashable {
     /// a correctness one; a game that claims `#` and isn't mate still
     /// classifies `nil`.
     ///
-    /// Spelled `contains("#")`, not `hasSuffix` — D18′'s recorded reason:
-    /// annotations survive import, so `Qd2#!` claims mate. Worth knowing that
-    /// `GameRecord.endedInMate` spells the same question `hasSuffix` and so
-    /// answers `false` for that game; the divergence predates this file and
-    /// changing it would move every saved Checkmate tag's matching, which is
-    /// a decision of its own rather than a rider here.
+    /// Spelled `contains("#")`, not `hasSuffix` — and the reason recorded
+    /// here until 6 August 2026 was **false**. It read "annotations survive
+    /// import, so `Qd2#!` claims mate". They do not: `PGNParser.flushToken`
+    /// passes every token through `stripAnnotations`, which strips trailing
+    /// `!`/`?`, and that is the *only* `moves.append` in the parser. The other
+    /// two writers store `san(for:)` output, which appends `#` or `+` and
+    /// nothing else. **No door in this app can store a move with `#` anywhere
+    /// but last** — pinned by `annotationsDoNotSurviveImport`.
+    ///
+    /// The spelling survives its own justification, on a narrower argument:
+    /// this is a pure function over a `[String]` it does not own, so
+    /// tolerating an annotated final ply costs one character against a future
+    /// caller that hasn't canonicalized. `GameRecord.endedInMate` spells the
+    /// same question `hasSuffix` because it reads `PGN.moves`, which *is* the
+    /// canonical form. Both are right about their own input, and the
+    /// "divergence" the open-items list carried for a week has no value either
+    /// can disagree on.
     private static func specialCheckmate(endingIn moves: [String]) -> SpecialCheckmate? {
         guard moves.last?.contains("#") == true else { return nil }
         guard let final = try? GameState.starting.replay(moves) else { return nil }

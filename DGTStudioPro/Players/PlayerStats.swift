@@ -17,11 +17,12 @@ import Foundation
 ///   **motif** (D19′). Counted from `specialCheckmate` directly rather than
 ///   nested inside `endedInMate`, and that is deliberate: those two spell
 ///   "did this end in mate" differently — `hasSuffix("#")` here against
-///   `contains("#")` in the classifier — so a game ending `Qd2#!` is a
-///   special mate that is not a mate. **`specialMatesDelivered <= matesDelivered`
-///   is therefore not guaranteed**, which looks like a bug and is a standing
-///   open item this column now makes visible rather than hides. Nesting it
-///   would have kept the arithmetic tidy by inheriting the narrower rule.
+///   `contains("#")` in the classifier. **On a stored game they cannot
+///   disagree** (6 Aug 2026): no writer can put `#` anywhere but last, so
+///   `specialMatesDelivered <= matesDelivered` holds for every record this
+///   fold will ever see. It is not guaranteed by *construction*, which is why
+///   the counting stays separate — nesting would bury two spellings behind an
+///   invariant that happens to hold rather than one anything enforces.
 /// - `firstPlayed`/`lastPlayed` use `effectiveDate`, the same fallback
 ///   rule the rating fold orders by. Non-optional: a player only exists
 ///   through at least one record.

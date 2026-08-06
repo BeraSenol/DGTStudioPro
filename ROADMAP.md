@@ -370,21 +370,56 @@ narrow a recorded contract and will each take a number at recording time, in
 the instructions, in sequence. Next free is **D64′**, which is a fact about
 today rather than an allocation.
 
-- **The `endedInMate` divergence, decided.** `PGN+GameRecord` builds the
-  record with `moves.last?.hasSuffix("#")`; `GameClassification` gates on
-  `moves.last?.contains("#")`. A game ending `Qd2#!` is therefore a special
-  mate that is not a mate, and since the Special Mates column landed on 5
-  August **the disagreement is on screen** — a player's Special Mates can
-  exceed their mates, pinned deliberately by
-  `aSpecialMateCanOutnumberMatesWhileTheSpellingsDisagree`.
+- ~~**The `endedInMate` divergence, decided.**~~ — **closed 6 August 2026 as
+  a correction, not a fix. There was no divergence.** This bullet was written
+  as the milestone's headline item and was wrong within the hour, which is
+  worth leaving visible rather than deleting.
 
-  The reason this is a decision and not a one-line fix is stated at the open
-  item: `contains` is the spelling D18′ argued for and the tokenizer's own
-  behaviour supports (`!`/`?` survive, so `hasSuffix` answers false for a
-  perfectly ordinary annotated mate), but moving `endedInMate` to `contains`
-  changes what every *saved* Checkmate smart tag matches, which is D30′'s
-  class of change. **Gate: the pin above is the test that must fail**, and it
-  says so in its own doc — a close that leaves it green closed nothing.
+  It read: `PGN+GameRecord` builds the record with `hasSuffix("#")` while
+  `GameClassification` gates on `contains("#")`, so a game ending `Qd2#!` is a
+  special mate that is not a mate, on screen since the Special Mates column
+  landed. **No such game can be stored.** `PGNParser.flushToken` runs every
+  emitted token through `stripAnnotations`, which strips trailing `!`/`?` —
+  and it is the only `moves.append` in the parser. The other two writers store
+  canonical `san(for:)` output, which appends `#` or `+` and nothing else. So
+  `#` is always last, and the two spellings agree on every value either will
+  ever be handed.
+
+  **The finding is not the false comment. It is that the test disproving it
+  was already green.** `suffixAnnotationsStripButCheckAndMateSurvive` has been
+  parsing `1. e4! f5?? 2. Qh5+ g6!? *` to `["e4", "f5", "Qh5+", "g6"]` since it
+  was written. Simultaneously: `GameClassification`'s doc asserted annotations
+  survive import, the instructions carried an open item resting on that
+  assertion, `PlayerStats`' doc repeated it, and `PlayerStatsTests`
+  reproduced the impossible record under a name calling it a bug. Four
+  artefacts agreeing with each other and one passing test contradicting all
+  four. Nothing failed, because **the check and the claim never met** — the
+  sibling test used `+`, so no grep, no build and no run would ever put them
+  on the same screen.
+
+  That is a species this roadmap had not named. The working agreements cover
+  claims that are false, stale, invented, true-but-narrower, and absent; this
+  one is **already checked and already contradicted**, sitting a hundred lines
+  from its own refutation. The defence is not another grep. It is that a
+  comment asserting a fact about *another file's behaviour* should name the
+  test that holds it — a citation the reader can follow in one jump, which is
+  what the corrected comments now carry.
+
+  **Landed:** the false claim corrected at `GameClassification` and
+  `PlayerStats` (two homes, one pass); `annotationsDoNotSurviveImport` added
+  to the parser suite as the `#` case, citing the sibling and stating the
+  consequence; and the anomaly test rewritten as
+  `matesAndSpecialMatesAreCountedFromDifferentFields`, which is what it
+  actually witnesses — the old name described a bug that did not exist over a
+  record no door produces. **No behaviour changed and no D-number is owed**:
+  nothing was reversed, nothing minted, and `contains` keeps its spelling on a
+  narrower argument now written at the site (a pure function tolerating input
+  it does not own).
+
+  *Method note, because it is the transferable part: this was found by asking
+  what would have to be true for the bug to occur, and then checking whether
+  any door could produce it — rather than by reading the two spellings and
+  believing the comment between them.*
 
 - **D61′'s scope gap, closed at the shared form.** The one-player-two-seats
   guard lives in `GetInfoWindow` alone. `NewLiveGameSheet` and
@@ -472,11 +507,18 @@ today rather than an allocation.
   rehydrating an `ECOOpening` per comparison per render since the column sort
   landed — but the run is what decides whether any of them is real.
 
-**Gate.** ⌘U green, reported by Bera, on the whole of it — with the named
-expectation that `aSpecialMateCanOutnumberMatesWhileTheSpellingsDisagree`
-goes **red** and is rewritten in the same change, because a pin on a rule the
-milestone repeals is the one failure that means the work happened. Plus the
-manual checks each fix implies: the seat guard exercised from all three
+**Gate.** ⌘U green, reported by Bera, on the whole of it. **This gate said
+something different when it was written**, and the change is instructive: it
+named `aSpecialMateCanOutnumberMatesWhileTheSpellingsDisagree` as a pin that
+*must go red*, on the reasoning that a milestone repealing a rule should break
+the test holding it. That reasoning is sound and the premise was wrong — there
+was no rule to repeal, so the honest expectation is now the ordinary one, plus
+one new test that must be **green on its first run**:
+`annotationsDoNotSurviveImport`. A new pin passing immediately is usually a
+weak signal, and here it is the correct one, because the thing it pins was
+already true and merely unstated.
+
+Plus the manual checks each fix implies: the seat guard exercised from all three
 surfaces rather than from Get Info alone; the relaunch step for the
 `FocusedValue` question, with the answer written down whichever way it comes
 out; and the folder scan run against the real archive with the `#` column
