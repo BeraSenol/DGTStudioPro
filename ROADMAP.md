@@ -737,7 +737,43 @@ two places by decision (the board for its overlays, the panel for its
 checklist), so whichever folder it sits in, one consumer is elsewhere. It is
 recorded here so the next reader knows it was seen rather than missed.
 
-- **`GetInfoWindow` splits by tab.** 1,362 lines holding one enum, two views
+- **`GetInfoWindow` splits by tab — half done 6 Aug 2026, and the other half
+  needs a decision this bullet did not know it was asking for.**
+
+  **Landed, free:** `GetInfoRequest.swift` and `GetInfoMenuItem.swift` are out.
+  Both are independent types that touch nothing private on the window, so
+  extraction cost **zero** access changes. 1,362 → 1,234 lines.
+
+  **Blocked, and the blocker is a recorded decision.** The remaining six files
+  are all *extensions on `GetInfoWindow`*, and Swift's `private` is
+  file-scoped: an extension in another file cannot see it. The window declares
+  **18** private members in its body — two statics, two `@Environment`s, a
+  `@Query`, a `@FocusState`, and eleven `@State`s including all eight drafts —
+  and the tab renderers use them throughout. So the split costs eighteen
+  widenings to `internal`, which makes every piece of this window's `@State`
+  writable from anywhere in the module. This bullet anticipated "a visibility
+  widening… argued once at the type"; it did not anticipate that the number is
+  eighteen and that all of it is `@State`.
+
+  **The obvious escape is closed by D57′.** The idiomatic SwiftUI answer is to
+  extract each tab as its own `View` taking explicit inputs — which preserves
+  encapsulation and is why the language makes this awkward. It needs the eight
+  drafts bundled into one type to keep the interface sane, and **D57′
+  explicitly rejected a draft struct**: "the field is the unit of work —
+  `commitField(_:on:)` writes exactly the property its case names, so a stray
+  edit cannot ride along with another row's Return. A struct would make 'which
+  changed?' a diff, the shape D18′ rejected at `applyEdit`." That argument is
+  about correctness, not tidiness, and it outranks file size.
+
+  So the three real options are: **widen the eighteen** and accept a window
+  with no private state; **keep the file at 1,234** and treat the two free
+  extractions as the whole of it; or **revisit D57′'s draft-struct rejection**,
+  which is a decision about commit granularity wearing a refactor's clothes.
+  Not chosen here, because a file-size preference should not quietly overturn a
+  correctness argument.
+
+  *Original specification follows, unchanged, for whichever option is taken.*
+  1,362 lines holding one enum, two views
   and four extensions becomes eight files, and the seams are the decisions:
   `GetInfoRequest` (the routing type, carrying the `openWindow`-by-type trap
   D46′ minted and D53′ made a pattern), `GetInfoMenuItem`, `GetInfoWindow`
