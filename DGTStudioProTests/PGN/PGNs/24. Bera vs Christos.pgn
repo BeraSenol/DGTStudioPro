@@ -1,0 +1,76 @@
+[Event "DGT USB eBoard"]
+[Site "Hasselt, Limburg BEL"]
+[Date "2025.05.17"]
+[Round "2"]
+[White "Senol, Bera"]
+[Black "Dermentzoglou, Christos"]
+[Result "1-0"]
+[Board "DGT 3000448278"]
+[TimeControl "-"]
+
+1. d4 d5
+2. Bf4 Bf5
+3. e3 e6
+4. Nf3 c6
+5. Bd3 Bxd3
+6. Qxd3 Qb6
+7. Qc3 Bb4
+8. Ne5 Nf6
+9. O-O O-O
+10. Qb3 c5
+11. c3 c4
+12. Qxb4 Qxb4 
+13. cxb4 b5
+14. Nc3 a6
+15. a4 Nbd7
+16. axb5 axb5
+17. Nxb5 Nb6
+18. Nc7 Rab8
+19. Nc6 Rb7
+20. Ne7+ Kh8
+21. Bd6 Rd8
+22. Nb5 Ne4
+23. Rfd1 Nxd6
+24. Nxd5 Nxb5
+25. Nxb6 Rxb6
+26. Rdc1 Rc8
+27. h4 Rbc6
+28. Ra5 Nc7
+29. e4 Ne8
+30. b5 Rb6
+31. d5 Nd6
+32. f3 exd5
+33. exd5 Nxb5
+34. Re1 g6
+35. Re7 Kg7
+36. g4 c3
+37. bxc3 Rxc3
+38. Kg2 Rf6 
+39. Rxb5 Rfxf3
+40. Rb2 Kf6
+41. d6 Rg3+
+42. Kf2 Rcf3+
+43. Ke2 Rh3
+44. d7 Rh2+
+45. Kxf3 Kxe7
+46. Rxh2 Kxd7
+47. h5 g5
+48. Ke4 Ke6
+49. Rf2 f6
+50. Rf5 Kf7
+51. Kd5 Ke7
+52. Kc6 Ke6
+53. Ra5 Kf7
+54. Ra7+ Ke6
+55. Rxh7 Ke5
+56. h6 Kf4
+57. Rf7 Kxg4
+58. h7 Kf5
+59. h8=Q g4
+60. Qh5+ Kf4
+61. Rxf6+ Kg3
+62. Qe5+ Kg2
+63. Qe3 g3
+64. Rg6 Kh3
+65. Qxg3#
+1-0

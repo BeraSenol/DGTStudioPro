@@ -1,0 +1,46 @@
+[Event "DGT USB eBoard"]
+[Site "Hasselt, Limburg BEL"]
+[Date "2026.02.15"]
+[Round "4"]
+[White "Senol, Bera"]
+[Black "Baelus, Lorenzo"]
+[Result "0-1"]
+[Board "DGT 3000448278"]
+[TimeControl "-"]
+
+1. e4 f5
+2. e5 d5
+3. d4 Nc6
+4. Nf3 b6
+5. Bb5 Bb7
+6. O-O h6
+7. Qd3 e6
+8. b3 Qd7
+9. c4 O-O-O
+10. Nc3 Bb4
+11. Bd2 Nge7
+12. a3 dxc4
+13. bxc4 Ba5
+14. d5 exd5
+15. cxd5 Nxd5
+16. Nxd5 Qxd5
+17. Qxf5+ Kb8
+18. Bxa5 Qxb5
+19. Bc3 g6
+20. Qxg6 Rhg8
+21. Qxh6 Ne7
+22. Nd4 Qc4
+23. Rfc1 Rxg2+
+24. Kh1 Rxf2+
+25. Kg1 Qd5
+26. Kxf2 Qg2+
+27. Ke1 Qe4+
+28. Kd2 c5
+29. Re1 Qf5
+30. Qf6 cxd4
+31. Qxe7 dxc3+
+32. Kxc3 Qf3+
+33. Kb2 Rd2+
+34. Kc1 Qc3+
+35. Kb1 Qc2#
+0-1

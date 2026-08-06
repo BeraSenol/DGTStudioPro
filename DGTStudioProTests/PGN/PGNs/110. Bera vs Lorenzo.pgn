@@ -1,0 +1,67 @@
+[Event "DGT USB eBoard"]
+[Site "Hasselt, Limburg BEL"]
+[Date "2026.07.21"]
+[Round "10"]
+[White "Senol, Bera"]
+[Black "Baelus, Lorenzo"]
+[Result "0-1"]
+[Board "DGT 3000448278"]
+[TimeControl "-"]
+
+1. e4 e5
+2. Nf3 d6
+3. c3 Nc6
+4. d4 Nf6
+5. Bd3 Bg4
+6. O-O exd4
+7. h3 Bxf3
+8. Qxf3 dxc3
+9. Nxc3 Nd4
+10. Qe3 c5
+11. Qd2 g6
+12. Re1 Bg7
+13. Bc4 O-O
+14. Qd1 Re8
+15. Bg5 Ne6
+16. Bh4 Qd7
+17. Qc2 Nd4
+18. Qd3 a6
+19. Rad1 Rad8
+20. f3 Nc6
+21. Qf1 Ne5
+22. Bd5 b5
+23. a3 c4
+24. f4 Nc6
+25. Bg3 Rc8
+26. e5 dxe5
+27. fxe5 Nxd5
+28. Nxd5 Qe6
+29. Nf4 Qf5
+30. Rd5 Rxe5
+31. Red1 Rxd5
+32. Rxd5 Qe4
+33. Qd1 Bxb2
+34. Ne2 Ne7
+35. Rd8+ Rxd8
+36. Qxd8+ Kg7
+37. Bd6 Bd4+
+38. Nxd4 Qxd4+
+39. Kh2 Nf5
+40. Qf8+ Kf6
+41. Qd8+ Kg7
+42. Qf8+ Kf6
+43. Qd8+ Ke6
+44. Bc7 Qxd8
+45. Bxd8 c3
+46. Kg1 c2
+47. Kf2 c1=Q
+48. Ke2 Qxa3
+49. Bh4 Nxh4
+50. g3 Nf5
+51. g4 Ng3+
+52. Kd2 Ke5
+53. Kc2 Kd4
+54. Kd2 Qc3+
+55. Kd1 Kd3
+56. g5 Qd2#
+0-1

@@ -1,0 +1,24 @@
+[Event "DGT USB eBoard"]
+[Site "Trois-Ponts, Liège BEL"]
+[Date "2025.06.13"]
+[Round "3"]
+[White "Leben, Brecht"]
+[Black "Senol, Bera"]
+[Result "1-0"]
+[Board "DGT 3000448278"]
+[TimeControl "-"]
+
+1. e4 c6
+2. d3 d5
+3. d4 dxe4
+4. f3 exf3
+5. gxf3 Bf5
+6. Bd3 Bxd3
+7. Qxd3 Nf6
+8. h4 e6
+9. Rh2 Bd6
+10. Re2 O-O
+11. Nh3 Nh5
+12. Ng5 h6
+13. Qh7#
+1-0

@@ -1,0 +1,76 @@
+[Event "DGT USB eBoard"]
+[Site "Hasselt, Limburg BEL"]
+[Date "2026.07.17"]
+[Round "2"]
+[White "Vanmullem, Marco"]
+[Black "Baelus, Lorenzo"]
+[Result "1-0"]
+[Board "DGT 3000448278"]
+[TimeControl "-"]
+
+1. e4 f5
+2. exf5 d5
+3. Qh5+ g6
+4. fxg6 Nf6
+5. g7+ Nxh5
+6. gxh8=Q Nf6
+7. Bb5+ c6
+8. Bd3 h6
+9. Bg6+ Kd7
+10. Bf5+ e6
+11. Bh3 Qe7
+12. Nf3 Bg7
+13. Ne5+ Kc7
+14. Ng6 Qf7
+15. Ne5 Qe7
+16. Ng6 Qf7
+17. Bxe6 Qxg6
+18. Qxc8+ Kb6
+19. d3 Qe8
+20. Be3+ Ka6
+21. Na3 Qxc8
+22. Bxc8 Ne8
+23. c3 Nd6
+24. Bh3 b5
+25. Bf4 Nf7
+26. Bc8+ Kb6
+27. Be3+ Kc7
+28. Bh3 Nd6
+29. Bf4 h5
+30. Nc2 Na6
+31. Ne3 Nc5
+32. d4 Nd3+
+33. Kd2 Nxf4
+34. g3 Nxh3
+35. Rhf1 Ne4+
+36. Kd3 h4
+37. Nf5 Bf6
+38. f3 Nef2+
+39. Ke3 hxg3
+40. hxg3 Re8+
+41. Kd2 a5
+42. Rae1 Rxe1
+43. Kxe1 Nd3+
+44. Ke2 Nxb2
+45. Nh6 b4
+46. Ng4 Bg7
+47. cxb4 axb4
+48. Rb1 Bxd4
+49. f4 c5
+50. f5 c4
+51. f6 c3
+52. f7 Bg7
+53. Ne5 Bxe5
+54. f8=Q Bxg3
+55. Qh6 Nf4+
+56. Ke3 c2
+57. Qh7+ Kc6
+58. Qxc2+ Nc4+
+59. Kf3 Nh5
+60. Kg4 Nf6+
+61. Kxg3 Ne4+
+62. Kf4 Kc5
+63. Rh1 Kd4
+64. Rd1+ Ncd2
+65. Rxd2+ Nxd2
+66. Qxd2+ *

@@ -1,0 +1,30 @@
+[Event "DGT USB eBoard"]
+[Site "Hasselt, Limburg BEL"]
+[Date "2026.02.13"]
+[Round "38"]
+[White "Senol, Bera"]
+[Black "Heylen, Christophe"]
+[Result "0-1"]
+[Board "DGT 3000448278"]
+[TimeControl "300+5"]
+
+1. e4 {[%clk 00:05:04]} e5 {[%clk 00:05:05]}
+2. c3 {[%clk 00:05:04]} d5 {[%clk 00:04:38]}
+3. exd5 {[%clk 00:04:40]} e4 {[%clk 00:04:31]}
+4. Bc4 {[%clk 00:04:34]} Bc5 {[%clk 00:04:28]}
+5. Ne2 {[%clk 00:04:33]} Qh4 {[%clk 00:04:23]}
+6. d4 {[%clk 00:03:58]} exd3 {[%clk 00:04:03]}
+7. Nd4 {[%clk 00:03:58]} Qe4+ {[%clk 00:03:45]}
+8. Be3 {[%clk 00:03:55]} Qxg2 {[%clk 00:03:45]}
+9. Rf1 {[%clk 00:03:50]} Nf6 {[%clk 00:03:33]}
+10. Qa4+ {[%clk 00:03:40]} Bd7 {[%clk 00:03:29]}
+11. Bb5 {[%clk 00:03:40]} O-O {[%clk 00:03:29]}
+12. Bxd7 {[%clk 00:03:19]} Nbxd7 {[%clk 00:03:29]}
+13. Nd2 {[%clk 00:03:17]} Qxd5 {[%clk 00:03:17]}
+14. O-O-O {[%clk 00:03:10]} Nb6 {[%clk 00:03:12]}
+15. Qb3 {[%clk 00:02:57]} a5 {[%clk 00:02:57]}
+16. a4 {[%clk 00:02:47]} Ne4 {[%clk 00:02:31]}
+17. Nb5 {[%clk 00:02:36]} Bxe3 {[%clk 00:02:11]}
+18. Nxc7 {[%clk 00:02:10]} Bxd2+ {[%clk 00:02:09]}
+19. Rxd2 {[%clk 00:01:56]} Qxb3 {[%clk 00:02:00]}
+0-1

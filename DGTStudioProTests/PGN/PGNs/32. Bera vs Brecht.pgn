@@ -1,0 +1,39 @@
+[Event "DGT USB eBoard"]
+[Site "Trois-Ponts, Liège BEL"]
+[Date "2025.06.13"]
+[Round "2"]
+[White "Senol, Bera"]
+[Black "Leben, Brecht"]
+[Result "1-0"]
+[Board "DGT 3000448278"]
+[TimeControl "-"]
+
+1. e4 Nc6
+2. d4 Nf6
+3. d5 Nb4
+4. Qd4 Na6
+5. e5 c6
+6. exf6 Qa5+
+7. Bd2 exf6
+8. Bxa5 b6
+9. Bc3 c5
+10. Qe3+ Kd8
+11. d6 Bxd6
+12. Bb5 Nc7
+13. Qd3 a6
+14. Bc4 b5
+15. Bxf7 b4
+16. Qxd6 bxc3
+17. Nxc3 Re8+
+18. Bxe8 Nxe8
+19. Qf8 d6
+20. Nf3 Ra7
+21.O-O Rf7
+22. Qxf7 Bd7
+23. Rfe1 Bc6
+24. Rad1 Bxf3
+25. Rxd6+ Nxd6
+26. Qe7+ Kc8
+27.Qxd6 Bb7
+28. Re8#
+1-0

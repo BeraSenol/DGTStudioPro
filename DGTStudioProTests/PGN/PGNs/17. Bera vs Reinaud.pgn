@@ -1,0 +1,22 @@
+[Event "DGT USB eBoard"]
+[Site "Hasselt, Limburg BEL"]
+[Date "2025.05.11"]
+[Round "5"]
+[White "Senol, Bera"]
+[Black "Brouns, Reinaud"]
+[Result "1-0"]
+[Board "DGT 3000448278"]
+[TimeControl "-"]
+
+1. e4 b6
+2. d4 Na6
+3. Nf3 Bb7
+4. d5 e6
+5. c4 Qf6
+6. e5 Qg6
+7. Bd3 Qxg2
+8. Nc3 Bc5
+9. Rf1 Bxf2+
+10. Rxf2 O-O-O
+11. Rxg2
+1-0

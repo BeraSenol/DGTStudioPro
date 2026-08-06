@@ -1,0 +1,40 @@
+[Event "DGT USB eBoard"]
+[Site "Hasselt, Limburg BEL"]
+[Date "2025.07.09"]
+[Round "16"]
+[White "Senol, Bera"]
+[Black "Heylen, Christophe"]
+[Result "0-1"]
+[Board "DGT 3000448278"]
+[TimeControl "-"]
+
+1. e4 d5
+2. e5 c5
+3. c3 Nc6
+4. d4 cxd4
+5. cxd4 f6
+6. Nf3 fxe5
+7. dxe5 g6
+8. Bb5 a6
+9. Bxc6+ bxc6
+10. O-O Bg7
+11. Bf4 e6
+12. Nc3 Qb6
+13. b3 Ne7
+14. Na4 Qb4
+15. Rc1 Qxf4
+16. Nc5 Bxe5
+17. Nxe5 Qxe5
+18. Re1 Qd6
+19. b4 Nf5
+20. Qg4 O-O
+21. Re2 a5
+22. a3 Rb8
+23. Rce1 Re8
+24. Qg5 axb4
+25. axb4 Rxb4
+26. Qf6 Qxc5
+27. Rxe6 Bxe6
+28. Rxe6 Qc1+
+29. Re1 Qxe1#
+0-1
