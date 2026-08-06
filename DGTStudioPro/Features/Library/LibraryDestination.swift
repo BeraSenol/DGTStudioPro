@@ -493,7 +493,7 @@ internal struct LibraryDestination: View {
                 selectionCount: selectedPGNs.count,
                 queue: tabState.analysisQueue
             )
-            .inspectorColumnWidth(min: 310, ideal: 310, max: 400)
+            .inspectorColumnWidth(min: 335, ideal: 335, max: 400)
         }
         .toolbar { toolbarContent }
         // Tokens ahead of the text, inside the field. `suggestedTokens` is

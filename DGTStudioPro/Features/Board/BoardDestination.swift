@@ -365,7 +365,7 @@ internal struct BoardDestination: View {
                 style: boardStyle,
                 onMoveTapped: { index in game.jump(to: index + 1) }
             )
-            .inspectorColumnWidth(min: 310, ideal: 310, max: 400)
+            .inspectorColumnWidth(min: 350, ideal: 350, max: 400)
         }
     }
     
@@ -381,7 +381,7 @@ internal struct BoardDestination: View {
         mirrorBoard
             .inspector(isPresented: $tabState.boardInspectorPresented) {
                 liveInspector
-                    .inspectorColumnWidth(min: 310, ideal: 310, max: 400)
+                    .inspectorColumnWidth(min: 350, ideal: 350, max: 400)
             }
         // M4.3 — the resume offer. A modal fork, not a HUD banner,
         // because Decision #3 makes this a genuine either/or the player

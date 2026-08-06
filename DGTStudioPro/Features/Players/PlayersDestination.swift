@@ -291,7 +291,7 @@ internal struct PlayersDestination: View {
                     recentGames: selectedGames,
                     selectionCount: selectedKeys.count
                 )
-                .inspectorColumnWidth(min: 310, ideal: 310, max: 400)
+                .inspectorColumnWidth(min: 365, ideal: 365, max: 400)
             }
             .toolbar { toolbarContent }
             // `.searchScopes` is gone with the scope bar — the same three
