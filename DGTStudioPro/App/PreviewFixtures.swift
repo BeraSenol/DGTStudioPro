@@ -1,4 +1,3 @@
-#if DEBUG
 import Foundation
 
 /// Shared preview fixtures for the Players surfaces.
@@ -7,7 +6,22 @@ import Foundation
 /// are *derived* (D10′), so previews build them through the same pure folds
 /// production uses — a change to the comparator or the Glicko fold shows up
 /// in the canvas instead of silently diverging from a hand-written fixture.
-/// `#if DEBUG` keeps it out of the shipping binary.
+///
+/// **Not `#if DEBUG`, and the guard's removal on 6 Aug 2026 is the point.**
+/// This file carried one, with the reason "keeps it out of the shipping
+/// binary" — and it broke every Release build in the project's history,
+/// which is to say the first one. `#Preview` **compiles in Release**; it is
+/// stripped at link time, not excluded at compile time. So six preview blocks
+/// across the Players surfaces referenced a symbol that did not exist there,
+/// and nothing caught it because ⌘U and ⌘R both build Debug and Profile (⌘I)
+/// had never been run.
+///
+/// The guard was optimising for a shipping binary this app does not have —
+/// one person, one Mac, no release, no App Store, which is a standing input to
+/// every trade here. Removing it costs a few hundred bytes nobody ships and
+/// fixes the class rather than the instance. **The rule that replaces it: no
+/// symbol a `#Preview` touches may be `#if DEBUG`, unless every preview
+/// touching it is guarded too.** This was the app target's only such region.
 internal enum PreviewFixtures {
     
     /// Fixed epoch — previews must not shift with wall-clock time.
@@ -114,4 +128,3 @@ internal enum PreviewFixtures {
     
     internal static func topStats() -> PlayerStats { playerStats()[0] }
 }
-#endif

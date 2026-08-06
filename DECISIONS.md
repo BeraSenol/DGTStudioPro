@@ -590,6 +590,7 @@ Rejected: adopting and letting the 314 lines flatten (one mechanical commit, ful
 | Setting | Warnings | Errors |
 |---|---|---|
 | As configured (mode 5, strict concurrency at the default) | **0** | 0 |
+| *(all three rows are **Debug** — see the narrowing below)* | | |
 | Mode 5 + `SWIFT_STRICT_CONCURRENCY=complete` | **230** (+165 notes) | 0 |
 | `SWIFT_VERSION=6` | — | **1**, build stopped at 144 of 239 phases |
 
@@ -609,6 +610,8 @@ Rejected: adopting and letting the 314 lines flatten (one mechanical commit, ful
 
 - **A doc comment asserting a guarantee was introduced *during* an audit for that exact anti-pattern.** The first version of the UITest annotation's comment said the overrides inherit the class's isolation. The next build disproved it in three warnings. The comment now carries the real rule and why it forced the `async` spelling. Nobody is above the pattern; the defence is the build, not the care taken while writing.
 - **`Binding(present:)`'s caller count has been wrong twice, in opposite directions.** Its doc said five (stale the moment M5 and D40′ each added a site); the forward note below said six (it caught M5's and missed D40′'s). It is seven. Both corrected, and the count now carries a note that it is the enumerated-caller-list anti-pattern, kept only because the forward note needs to know how much disappears.
+
+**Narrowed 6 August 2026: every number above is a *Debug* measurement.** `build-for-testing` with the test plan builds the test configuration, so "zero diagnostics on a cold build of all three targets" is true of Debug and was never a claim about Release — a distinction nobody drew at the time, including this entry, which reads as though it covered the project. It did not, and the gap was not academic: the app **had never been built in Release at all** until Instruments was opened on 6 Aug, and it failed to compile, because `#Preview` compiles in Release and `PreviewFixtures` was `#if DEBUG`. That is a whole configuration this decision's evidence never touched. The mode-6 conclusion stands — isolation and `Sendable` checking do not vary by optimization level — but the *diagnostic count* is Debug's, and a Release count has still never been taken.
 
 Rejected: **fixing the sites but leaving the build settings alone** (burns warnings nobody would ever see again, and leaves the enforcement question exactly where it was); **`SWIFT_STRICT_CONCURRENCY=complete` in language mode 5 as the endpoint** (keeps the checking, avoids mode 6's other upcoming-feature semantics — a real hedge, and it was declined because the measurement had already shown mode 6 clean, so the hedge would have been protecting against a risk that had been priced); **recording the measurement and changing no code** (cheapest and fully honest, and it would have left 230 diagnostics latent behind a setting nobody has on, which is how the 295 became unfalsifiable in the first place).
 
