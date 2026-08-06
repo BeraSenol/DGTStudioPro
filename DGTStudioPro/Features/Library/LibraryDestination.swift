@@ -50,6 +50,11 @@ internal struct LibraryDestination: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
     @Environment(OpenGamesRegistry.self) private var openGames
+    /// App-global since 6 Aug 2026 — it was `tabState.analysisQueue` until the
+    /// queue window needed an owner a scene could reach (controller decision 2).
+    /// Read from the environment beside `openGames`, which is the precedent it
+    /// followed.
+    @Environment(AnalysisQueueController.self) private var analysisQueue
     @Query(sort: \PGN.importedAt, order: .reverse) private var games: [PGN]
     @State private var pendingDeletion: PGN?
     @State private var pendingDirtyDeletion: PGN?
@@ -74,7 +79,10 @@ internal struct LibraryDestination: View {
     // now, so this destination holds no presentation state for it. Nothing in
     // the app presents a modal over a model any more; the pattern is not
     // deprecated, there is just no live example left to copy.
-    @State private var isQueuePopoverPresented = false
+    // `isQueuePopoverPresented` was here until 6 Aug 2026. The queue's toolbar
+    // item opens a window now, and a window's presentation is the scene's own
+    // state — nothing about "is it showing" belongs to this destination any
+    // more, which is one of the quieter arguments for the move.
     
     // MARK: Search & Filters (2 Aug 2026 — native `.searchable`, restored
     // the same day after a custom toolbar field was tried and reverted: the
@@ -370,6 +378,15 @@ internal struct LibraryDestination: View {
             // menu's copy of ⌘⌫ is only known to *render*. Removing this line
             // without a home that certain would have retired the gesture rather
             // than narrowed it.
+            //
+            // **That home lasted a day.** The toolbar's Delete button was
+            // removed 6 Aug 2026 by request, so ⌘⌫ now rests on exactly the
+            // copy the paragraph above declined to trust. The narrowing still
+            // stands on its own merits — ⌫ was retired because being live was
+            // the problem — but the gesture's *survival* is now an open
+            // question rather than a settled one. `GameActionsMenu`'s delete
+            // item carries the full note; the boardless checklist is where it
+            // gets answered.
             .onAppear {
                 backfillEmptyNames()
                 backfillPlayerLinks()
@@ -488,13 +505,32 @@ internal struct LibraryDestination: View {
             // Move Text tab now. (Written above the call rather than inside the
             // argument list, where it read as a commented-out parameter and
             // matched every grep for the symbol it was announcing the death of.)
+            // `queue:` was the third argument here until 6 Aug 2026. The
+            // inspector threaded it into `LoadedSection` and **neither read
+            // it** — the control row that did was deleted by the sweep earlier
+            // the same day, and the parameter rode on for five preview call
+            // sites past its last consumer. Found by a grep that stripped
+            // comments first, which is the only reason it was found: three of
+            // the four remaining mentions were prose about a row that no longer
+            // exists, and a plain search for the symbol reported it live.
             LibraryInspectorView(
                 pgn: selectedPGN(in: games),
-                selectionCount: selectedPGNs.count,
-                queue: tabState.analysisQueue
+                selectionCount: selectedPGNs.count
             )
             .inspectorColumnWidth(min: 335, ideal: 335, max: 400)
         }
+        // The one write of the glyph's ambient state, for every mode view and
+        // every context menu under this destination. Applied here rather than
+        // per mode so the four branches cannot disagree about whether they
+        // have it — a mode that silently lacked it would show a stale green
+        // checkmark and nothing would fail.
+        //
+        // Cheap by construction: `runningID` changes once per game, and this
+        // body already re-renders on queue changes for the toolbar's count.
+        // Passing the controller instead would have every row observing the
+        // driver's per-ply progress, which is the cost this whole pass exists
+        // to remove.
+        .environment(\.analysisRunningGameID, analysisQueue.runningID)
         .toolbar { toolbarContent }
         // Tokens ahead of the text, inside the field. `suggestedTokens` is
         // every facet minus the ones already applied — offering a chip you
@@ -662,7 +698,7 @@ internal struct LibraryDestination: View {
         if !viewMode.ownsDetailPane {
             tabState.libraryInspectorPresented = true
         }
-        tabState.analysisQueue.enqueue([pgn], modelContext: modelContext)
+        analysisQueue.enqueue([pgn], modelContext: modelContext)
     }
     
     /// The two modes with an opinion about the inspector, in one place so
@@ -702,7 +738,7 @@ internal struct LibraryDestination: View {
             return
         }
         Self.logger?.info("Batch analyze requested: \(ordered.count) game(s)")
-        tabState.analysisQueue.enqueue(ordered, modelContext: modelContext)
+        analysisQueue.enqueue(ordered, modelContext: modelContext)
     }
     
     /// Split into named groups because `ToolbarContentBuilder` — like every
@@ -713,8 +749,15 @@ internal struct LibraryDestination: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         filterToolbarItem
-        ToolbarSpacer(.flexible)
-        analysisToolbarItems
+        ToolbarSpacer(.fixed)
+        // No `.fixed` break between these two since 6 Aug 2026, and the reason
+        // is the queue item's conditional presence rather than taste: it renders
+        // only while a batch is live or a failure is unacknowledged, so a spacer
+        // of its own would leave a gap with nothing on one side of it for most
+        // of the app's life — a break that only sometimes breaks something. It
+        // shares the pill with Import instead, which reads as one content group
+        // and does not move when the batch ends.
+        queueToolbarItem
         ToolbarSpacer(.fixed)
         transferToolbarItems
         ToolbarSpacer(.fixed)
@@ -766,11 +809,18 @@ internal struct LibraryDestination: View {
     /// and the identical treatment on the toolbar button that acts on them.
     /// Result tokens take no tint — a checkered flag has no state to signal,
     /// and colouring it would imply one.
+    ///
+    /// **These two pass their state as a literal and never consult the queue,
+    /// which is the point rather than an omission.** A token names a *facet* —
+    /// the set of games matching a stored predicate — and a facet is never
+    /// mid-analysis. `AnalysisGlyph.State` has three cases; a filter has two,
+    /// permanently, and a spinning chip would claim the filter itself was doing
+    /// something.
     @ViewBuilder
     private func tokenLabel(_ token: LibrarySearchToken) -> some View {
         switch token {
-        case .analyzed:   AnalysisLabel(analyzed: true, title: token.displayName)
-        case .unanalyzed: AnalysisLabel(analyzed: false, title: token.displayName)
+        case .analyzed:   AnalysisLabel(state: .analyzed, title: token.displayName)
+        case .unanalyzed: AnalysisLabel(state: .unanalyzed, title: token.displayName)
         case .result:     Label(token.displayName, systemImage: token.symbol)
         }
     }
@@ -841,20 +891,11 @@ internal struct LibraryDestination: View {
             .help("Import PGN files")
             .accessibilityIdentifier(AccessibilityID.libraryImportButton)
         }
-        ToolbarItem {
-            Button {
-                requestExport(ids: selectedPGNs)
-            } label: {
-                Label("Export", systemImage: "square.and.arrow.up")
-            }
-            .disabled(selectedPGNs.isEmpty)
-            .help(
-                selectedPGNs.count > 1
-                ? "Export \(selectedPGNs.count) selected games as PGN files"
-                : "Export the selected game as a PGN file"
-            )
-            .accessibilityIdentifier(AccessibilityID.libraryExportButton)
-        }
+        // The Export button sat here until 6 Aug 2026, removed by request with
+        // Analyze and Delete — see `queueToolbarItem` for the whole cut and what
+        // it costs. Export is the row menu's ⌘E now, and `requestExport(ids:)`
+        // keeps its callers there.
+        //
         // The scan reads `games` rather than asking the store, deliberately:
         // this is a `@Query`, so the item appears and disappears reactively as
         // rows are imported and stamped, where a `hasUnnumberedGames()` fetch
@@ -894,72 +935,61 @@ internal struct LibraryDestination: View {
         }
     }
     
+    /// What is left of the analysis group after 6 Aug 2026: the queue's own
+    /// status item, and nothing else.
+    ///
+    /// **Analyze, Delete and Export were removed from the toolbar by request**,
+    /// leaving Import, the optional Match Folder, the view-mode picker and the
+    /// inspector toggle. All three verbs are still reachable — every row's
+    /// context menu carries them, at every arity, with their counted plurals and
+    /// their keys. What went is the always-present copy that acted on the
+    /// selection.
+    ///
+    /// **Two costs, named rather than discovered.**
+    ///
+    /// The sharp one is ⌘⌫. The 5 Aug narrowing retired plain ⌫ and moved delete
+    /// onto *this toolbar button* specifically because a `keyboardShortcut` on
+    /// an always-present, already-`disabled`-guarded control is live whenever
+    /// the destination shows, while the row menu's copy is known only to
+    /// **render** — whether SwiftUI registers a `.contextMenu`'s shortcut with
+    /// the menu shut has never been measured here. Deleting the button hands
+    /// ⌘⌫, ⌘E and ⌘R back to that unmeasured copy. Accepted by request with the
+    /// alternative on the table (a `Commands` scene, which is the route this
+    /// project's own notes call owed if those keys turn out dead); the manual
+    /// check is the thing that will say which happened, and it is written to be
+    /// run rather than assumed.
+    ///
+    /// The quieter one: with no aggregate Analyze button there is no surface
+    /// showing "is my *selection* analyzed" at a glance. The row menu answers it
+    /// per right-click and the queue item below answers "is anything running",
+    /// which between them is the same information one gesture later.
+    ///
+    /// Sibling removal: `AnalysisGlyph`'s selection-scoped `state` overload was
+    /// minted hours earlier to fix this button and went with it — a door whose
+    /// only surface is gone is the D40′ lie one layer down. Its finding survives
+    /// at the surviving overload's doc.
     @ToolbarContentBuilder
-    private var analysisToolbarItems: some ToolbarContent {
-        ToolbarItem {
-            Button {
-                requestAnalysis(ids: selectedPGNs)
-            } label: {
-                // Aggregate glyph: the checkmark only once *every* selected
-                // game is analyzed — until then the button has work left,
-                // which is what the xmark says. An empty (disabled)
-                // selection reads as work too, harmlessly.
-                // Computed once and threaded into both the symbol and the
-                // tint: two independent evaluations of the same fold is how
-                // a green badge ends up on an xmark.
-                let allAnalyzed = {
-                    let games = gamesInDisplayOrder(selectedPGNs)
-                    return !games.isEmpty && games.allSatisfy(AnalysisGlyph.isAnalyzed)
-                }()
-                AnalysisLabel(analyzed: allAnalyzed)
-            }
-            // Queue-of-N since M-batch: any non-empty selection enqueues
-            // in display order (see `requestAnalysis(ids:)`). The old
-            // single-game-only guard died with the per-inspector driver
-            // it protected.
-            .disabled(selectedPGNs.isEmpty)
-            .help(
-                selectedPGNs.count > 1
-                ? "Queue \(selectedPGNs.count) selected games for analysis"
-                : "Analyze the selected game with Stockfish"
-            )
-            .accessibilityIdentifier(AccessibilityID.libraryAnalyzeButton)
-        }
-        ToolbarItem {
-            Button(role: .destructive) {
-                requestDeleteSelection()
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
-            // The app's one live spelling of delete-by-keyboard since plain ⌫
-            // was retired (5 Aug 2026 — see the note where `.onDeleteCommand`
-            // used to sit). Finder's Move to Trash key, on a control that is
-            // always present and already guarded, so the shortcut inherits the
-            // guard: an empty selection disables the button, and a disabled
-            // button's key equivalent does nothing rather than raising an
-            // alert about zero games.
-            .keyboardShortcut(.delete, modifiers: .command)
-            .disabled(selectedPGNs.isEmpty)
-            .help(selectedPGNs.count > 1 ? "Delete \(selectedPGNs.count) selected games" : "Delete selected game")
-            .accessibilityIdentifier(AccessibilityID.libraryDeleteButton)
-        }
+    private var queueToolbarItem: some ToolbarContent {
         // Visible only while a batch runs or a drained batch left
         // failures behind — see `queueStatusLabel` for the full rule.
-        if tabState.analysisQueue.queue.isActive || tabState.analysisQueue.queue.hasFailures {
+        if analysisQueue.queue.isActive || analysisQueue.queue.hasFailures {
             ToolbarItem {
                 Button {
-                    isQueuePopoverPresented.toggle()
+                    // Opens the window rather than a popover since 6 Aug 2026.
+                    // `openWindow(id:)`, not `(value:)`: there is exactly one
+                    // queue, so the scene is a singleton `Window` and there is
+                    // nothing to route — the wrapper type D46′ and D53′ each
+                    // had to mint is not needed a third time.
+                    //
+                    // Re-opening focuses the existing window rather than making
+                    // a second, which is `Window`'s whole contract and the
+                    // reason this needs no guard against double-clicks.
+                    openWindow(id: AnalysisQueueStatusWindowView.sceneID)
                 } label: {
                     queueStatusLabel
                 }
-                .help("Analysis queue")
+                .help("Show the analysis queue")
                 .accessibilityIdentifier(AccessibilityID.libraryQueueStatus)
-                .popover(
-                    isPresented: $isQueuePopoverPresented,
-                    arrowEdge: .bottom
-                ) {
-                    AnalysisQueueStatusView(controller: tabState.analysisQueue)
-                }
             }
         }
     }
@@ -996,22 +1026,41 @@ internal struct LibraryDestination: View {
         }
     }
     
-    /// The queue toolbar item's label: a spinner with "2/5" while the
+    /// The queue toolbar item's label: a **turning gear** with "2/18" while the
     /// run is live, a warning triangle with the counts once a drained
     /// run left failures behind. The item renders only in those two
     /// states — after a clean drain it disappears (the filled-in graphs
     /// are the visible result), and while failures linger it stays until
     /// the popover's Dismiss acknowledges them, so an error is never
     /// silently swallowed by the batch ending.
+    ///
+    /// **A gear rather than the `ProgressView` that was here** (6 Aug 2026, by
+    /// request, in the same cut that removed the Analyze button). Two reasons
+    /// beyond the ask. The spinner said "busy" in the system's generic
+    /// vocabulary while the app already had a specific one — `AnalysisGlyph`'s
+    /// gear means *engine analysis* everywhere else it appears, and after the
+    /// toolbar lost its Analyze button this is the only place that meaning is
+    /// visible without a right-click. And a bare indeterminate spinner beside a
+    /// count reads as two progress indicators disagreeing, since the count *is*
+    /// determinate.
+    ///
+    /// The count stays, which is the half a gear cannot carry: the popover holds
+    /// the current game, per-ply progress, Skip and Stop All, and none of that
+    /// is visible without opening it. "2/18" is what a long run needs at a
+    /// glance.
+    ///
+    /// Drawn through `AnalyzingGear` rather than an `Image` and a modifier here,
+    /// so this and `AnalysisLabel` cannot pick different motions — the one thing
+    /// about the gear that is still unsettled is its motion, and a second
+    /// spelling would mean fixing it twice.
     private var queueStatusLabel: some View {
         HStack(spacing: 6) {
-            if tabState.analysisQueue.queue.isActive {
-                ProgressView()
-                    .controlSize(.small)
+            if analysisQueue.queue.isActive {
+                AnalyzingGear()
             } else {
                 Image(systemName: "exclamationmark.triangle")
             }
-            Text("\(tabState.analysisQueue.queue.completedCount)/\(tabState.analysisQueue.queue.totalCount)")
+            Text("\(analysisQueue.queue.completedCount)/\(analysisQueue.queue.totalCount)")
                 .monospacedDigit()
         }
     }
@@ -1200,13 +1249,17 @@ internal struct LibraryDestination: View {
         return parts.joined(separator: " ")
     }
 
-    /// Routes a delete request for the current selection — the toolbar button
-    /// and, through its `keyboardShortcut`, ⌘⌫. (Plain ⌫ reached here until
-    /// 5 Aug 2026; see the note where `.onDeleteCommand` used to sit.)
-    private func requestDeleteSelection() {
-        requestDelete(ids: selectedPGNs)
-    }
-    
+    // `requestDeleteSelection()` was here until 6 Aug 2026. It forwarded the
+    // current selection to `requestDelete(ids:)` and had exactly one caller —
+    // the toolbar's trash button — so it went with it rather than staying as a
+    // one-line hop nothing takes. The delete routes that survive both come from
+    // the row menus and already carry their own id sets.
+    //
+    // Worth the comment rather than a silent deletion, because this symbol is
+    // where the ⌘⌫ trail ran: plain ⌫ reached it until 5 Aug, then only ⌘⌫ via
+    // the toolbar button, and now neither. `queueToolbarItem` carries what that
+    // costs.
+
     /// Routes a delete request for a specific set of game IDs (the context
     /// menu's contextual selection). One game reuses the single-game flow (with
     /// its dirty-changes confirmation); two or more go through a batch
@@ -1234,7 +1287,7 @@ internal struct LibraryDestination: View {
         for pgn in pgns {
             let id = pgn.persistentModelID
             // Before the store delete — see `performDelete` for the why.
-            tabState.analysisQueue.gameWasDeleted(id)
+            analysisQueue.gameWasDeleted(id)
             openGames.markClean(id)
             // Close the open tab (if any) before teardown, so it never renders
             // against a tombstoned PGN.
@@ -1289,7 +1342,7 @@ internal struct LibraryDestination: View {
         // pass on this game synchronously (the analysis walk checks its
         // cancellation flag before every PGN touch), so the engine never
         // writes into a tombstoned model.
-        tabState.analysisQueue.gameWasDeleted(id)
+        analysisQueue.gameWasDeleted(id)
         openGames.markClean(id)
         
         // Close the open tab (if any) before the model is torn down, so

@@ -376,9 +376,21 @@ Rejected: end-to-end sub-round support.
 
 Re-exporting into last time's folder should refresh the files — the export is a pure function of the Library rows. The alternatives are worse: a skip silently exports less than was selected, a unique-suffix rename breaks the D24′ filename convention, and a per-file modal is the fifty-dialog batch. The single-game path keeps NSSavePanel's own replace prompt.
 
-### D33′ — the evaluation bar: leading edge, flips with the board, label beneath
+### D33′ — the evaluation bar: leading edge, flips with the board, label beside *(label moved from beneath to beside, 7 Aug 2026 — see the amendment below)*
 
-Three product choices: **leading edge**; **bottom tracks the near player**, so the bar reads physically from either seat; an **always-visible numeric label** in a fixed slot *below* the bar.
+Three product choices: **leading edge**; **bottom tracks the near player**, so the bar reads physically from either seat; an **always-visible numeric label** ~~in a fixed slot *below* the bar~~ **in a fixed slot beside the bar, vertically centred**.
+
+**Amendment, 7 Aug 2026, by request: the bar is the board's exact height, pinned to the destination's leading edge, and the label sits in the gap.** Three changes with one cause between them, and the cause is arithmetic rather than taste.
+
+The bar was a `VStack { bar; label }` framed to the board's side length, so the *stack* got that height and the bar itself drew shorter than the board by the label plus its spacing. "A bar exactly as tall as the board" and "a label inside the bar's frame" are the same wish twice and only one can win. The label moved out to `BoardDestination`; `EvaluationBarView` is now only the bar.
+
+The bar also stopped travelling with the board. It sat immediately beside it and drifted as the window resized; it is pinned to the leading edge now and the board moves instead. That forced a `ZStack` where an `HStack` had been: in an `HStack` the board's centre is the centre of *what is left over*, so it sits off the window's centre by half the bar column. Two overlays each taking their own alignment let the board be centred in the whole surface while the bar is pinned to the edge of it.
+
+**What did not change is the part this decision argued hardest.** The label is still always visible (over hover-only and none), and it is still **not inside the bar** — a thin losing share swallows the text or forces a contrast dance, which is why the original put it below and why the new home is the gap rather than an overlay on the bar's trailing edge. Only the slot's owner moved.
+
+Named cost: `BoardDestination.evaluationLabelWidth` is **reserved, not measured**. The board's side length is derived from the width left after the bar column, so a slot that grew with the text would resize the board every time the score crossed a digit — a board that breathes between `0.0` and `-12.3`. Sized for the longest label the grammar below can produce.
+
+Named gap: the arrangement has **no preview witness**. It lives in `BoardDestination`, which is waived from previews, and `EvaluationBarView`'s previews now show the bar alone. The boardless checklist carries it, and `EvaluationBarView`'s preview doc says so rather than implying otherwise.
 
 `EvaluationBarReading` is the pure mapping and its fraction is `whiteWinProbability` **verbatim** — the bar and the inspector graph share one projection, so agreement is structural and mates clamp exactly as the graph clamps. A nil per-ply evaluation folds to `Evaluation.drawn`. The reading stays white-relative and perspective-free; the flip is one boolean of geometry in `EvaluationBarView`. Label grammar, pinned: signed pawns to one decimal, unsigned `0.0` for anything that rounds to zero, mates in the `evalTagContent` spelling. (`String(format:)` and not `.formatted()`, deliberately: the latter localizes the decimal separator and would break the pinned grammar.)
 

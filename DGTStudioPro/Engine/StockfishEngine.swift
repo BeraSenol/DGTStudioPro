@@ -2,7 +2,7 @@ import Foundation
 import os
 
 /// Manages a Stockfish chess engine subprocess and exposes analysis
-/// requests as `AsyncStream<Evaluation>` per call.
+/// requests as `AsyncStream<EngineProgress>` per call.
 ///
 /// The actor owns the UCI handshake, subprocess lifecycle, stdout line
 /// buffering, and side-to-move-relative → white-relative score conversion. All
@@ -76,7 +76,28 @@ internal actor StockfishEngine {
     private(set) var engineAuthor: String?
     
     // Analysis state — one active at a time in the eval-only phase.
-    private var currentContinuation: AsyncStream<Evaluation>.Continuation?
+    private var currentContinuation: AsyncStream<EngineProgress>.Continuation?
+
+    /// Holds the tablebase folder's security-scoped access open for the
+    /// engine's lifetime. Nil when no folder is configured or it would not
+    /// resolve; cleared at teardown, which is what closes the resource.
+    private var syzygyAccess: SyzygyLocation.Access?
+
+    /// Stockfish's own sentence about what it loaded, verbatim — "Found 290 WDL
+    /// and 290 DTZ tablebase files (up to 5-man)", or whatever this build says.
+    ///
+    /// **Stored raw rather than parsed into a count, and that is the decision.**
+    /// The wording has changed across Stockfish versions (older builds said
+    /// "Found 145 tablebases"), so any number extracted here is a guess about a
+    /// format the engine is free to change. Showing the engine's own words
+    /// cannot go stale and cannot be subtly wrong — and the question this
+    /// exists to answer is "did the subprocess see the files", where a
+    /// verbatim answer is strictly more informative than a parsed one.
+    ///
+    /// Nil when no `SyzygyPath` was sent, and — the case worth naming — also
+    /// nil if a path *was* sent and the engine said nothing about it, which
+    /// would itself be news.
+    internal private(set) var tablebaseReport: String?
     private var currentSideToMove: PieceColor = .white
     private var currentAnalysisID: UUID?
 
@@ -240,7 +261,23 @@ internal actor StockfishEngine {
             // used to sit above `uci`, outside it. Read fresh at every launch;
             // the engine relaunches per run (released at drain), so a Settings
             // change applies to the next analysis with no restart story.
-            for option in EngineConfiguration.current.uciOptionLines {
+            // Syzygy (7 Aug 2026): the folder is opened *here*, and the token
+            // is held on the actor for the engine's whole life. Releasing it
+            // when this scope ended would close the scoped resource under a
+            // subprocess that is still probing — the failure `SyzygyLocation`
+            // is arranged to make impossible by construction rather than by
+            // remembering.
+            //
+            // Nil when no folder is configured, when the bookmark no longer
+            // resolves (moved, renamed, unmounted volume), or when the sandbox
+            // refuses it. All three produce the same thing — no `SyzygyPath`
+            // line — because from the engine's side they are the same state:
+            // no tables. Telling them apart is Settings' verification job, and
+            // it has two numbers to do it with.
+            syzygyAccess = SyzygyLocation.access()
+            for option in EngineConfiguration.current(
+                syzygyPath: syzygyAccess?.path
+            ).uciOptionLines {
                 try writeLine(option)
             }
             
@@ -377,6 +414,18 @@ internal actor StockfishEngine {
         // Owed stale replies die with the process; a fresh start must not
         // eat its first real `bestmove` against a dead search's debt.
         staleBestMovesOwed = 0
+        // Releasing the token here is what closes the tablebase folder's
+        // security-scoped access, and teardown is the right place precisely
+        // because it is the one path *every* exit runs through — a clean
+        // `quit`, a timed-out handshake, a killed half-start, an EOF. A
+        // scoped resource left open by one of those is a leak the process
+        // exiting does not clean up.
+        //
+        // The report goes with it: it describes the tables a now-dead engine
+        // loaded, and a stale one on the next start would answer a question
+        // about a subprocess that no longer exists.
+        syzygyAccess = nil
+        tablebaseReport = nil
     }
     
     // MARK: Handshake (F4)
@@ -417,9 +466,15 @@ internal actor StockfishEngine {
     // MARK: Analysis
     
     /// Begins analysis of `fen` to `depth` plies. Returns an
-    /// `AsyncStream<Evaluation>` that yields progressively-deeper
+    /// `AsyncStream<EngineProgress>` that yields progressively-deeper
     /// evaluations as Stockfish reports them, then completes when
     /// `bestmove` arrives.
+    ///
+    /// **Yielded `EngineProgress` rather than a bare `Evaluation` since 6 Aug
+    /// 2026**, so a consumer can show the search rather than only its answer.
+    /// The extra fields were already parsed and already on the same line; what
+    /// changed is that they stop being discarded. `GameAnalysisDriver` still
+    /// stores only the evaluation, and only the last one per ply.
     ///
     /// All emitted evaluations are normalized to white's perspective.
     /// `depth` is required, not defaulted: the M11 review collapsed the twin
@@ -432,7 +487,7 @@ internal actor StockfishEngine {
     nonisolated internal func analyze(
         fen: FEN,
         depth: Int
-    ) -> AsyncStream<Evaluation> {
+    ) -> AsyncStream<EngineProgress> {
         AsyncStream { [weak self] continuation in
             Task { [weak self] in
                 await self?.beginAnalysis(
@@ -447,7 +502,7 @@ internal actor StockfishEngine {
     private func beginAnalysis(
         fen: FEN,
         depth: Int,
-        continuation: AsyncStream<Evaluation>.Continuation
+        continuation: AsyncStream<EngineProgress>.Continuation
     ) async {
         let analysisID = UUID()
         let priorContinuation = currentContinuation
@@ -534,9 +589,43 @@ internal actor StockfishEngine {
     
     /// Parses a single complete line from stdout and dispatches by
     /// response type.
+    /// Pulls Stockfish's tablebase sentence out of an `info string` line, or
+    /// nil for any other line.
+    ///
+    /// **Matched on "Found" plus "tablebase", not on the full sentence**, which
+    /// is what makes it survive the wording change that has already happened
+    /// once: builds up to roughly Stockfish 15 said "Found 145 tablebases",
+    /// current ones say "Found 290 WDL and 290 DTZ tablebase files (up to
+    /// 5-man)". Both contain those two words and no other `info string` this
+    /// engine emits does — the rest are processor counts, thread counts and
+    /// NNUE file names.
+    ///
+    /// Returns the text *after* `info string`, so the caller stores a sentence
+    /// rather than a protocol prefix. `nonisolated` and `static` so it is a
+    /// pure function of its input and testable without a subprocess.
+    nonisolated internal static func tablebaseReport(in line: String) -> String? {
+        let prefix = "info string "
+        guard line.hasPrefix(prefix) else { return nil }
+        let body = String(line.dropFirst(prefix.count))
+        guard body.contains("Found"), body.contains("tablebase") else { return nil }
+        return body
+    }
+
     private func handleStdoutLine(_ line: String) {
         Self.uciLogger?.debug("recv: \(line, privacy: .public)")
-        
+
+        // **Captured off the raw line, before parsing, and it has to be.**
+        // `UCIProtocol.parseInfo` consumes `string` to end-of-line and stores
+        // nothing — correctly, since `info string` is free-form engine chatter
+        // with no grammar to model. Teaching it to keep the text would put a
+        // `String?` on `UCIInfo` that is nil for every line but this family.
+        // One `hasPrefix` here is the smaller change and keeps the parser's
+        // subject the lines that *have* fields.
+        if let report = Self.tablebaseReport(in: line) {
+            tablebaseReport = report
+            Self.logger?.info("Syzygy: \(report, privacy: .public)")
+        }
+
         guard let response = UCIProtocol.parse(line) else {
             // `parse` returns nil for three different reasons and only one of
             // them is news. Empty lines are normal between sections. Option
@@ -564,9 +653,23 @@ internal actor StockfishEngine {
             // until the owed `bestmove` arrives, every info line belongs
             // to the dead search — see `staleBestMovesOwed`.
             guard staleBestMovesOwed == 0 else { return }
+            // **A line with no score is not progress, it is chatter.** Depth,
+            // node counts and `currmove` all arrive on scoreless lines too, and
+            // yielding those would give the window a search whose evaluation
+            // slot has nothing in it — which is why `EngineProgress.evaluation`
+            // is non-optional and this guard is what makes that honest. The
+            // rest of the fields ride along from the same line rather than
+            // being remembered across lines, so a value never mixes one
+            // iteration's depth with another's score.
             guard let score = info.score else { return }
-            let evaluation = score.toEvaluation(sideToMove: currentSideToMove)
-            currentContinuation?.yield(evaluation)
+            currentContinuation?.yield(
+                EngineProgress(
+                    evaluation: score.toEvaluation(sideToMove: currentSideToMove),
+                    depth: info.depth,
+                    nodes: info.nodes,
+                    nodesPerSecond: info.nodesPerSecond
+                )
+            )
 
         case .bestMove:
             // A stale reply from an abandoned search must not finish the

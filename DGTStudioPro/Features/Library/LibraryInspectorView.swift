@@ -15,15 +15,22 @@ internal struct LibraryInspectorView: View {
     /// destination always passes it.
     internal let selectionCount: Int
     
-    /// The tab's analysis queue. The inspector renders the queue's view
-    /// of the displayed game and routes every control through it — it
-    /// owns no driver of its own since M-batch (see
-    /// `AnalysisQueueController`, decision 1). That promotion also
-    /// retired the `pendingAnalysisID` one-shot relay this view used to
-    /// carry: toolbar and context-menu analyze only needed a routed
-    /// request because the driver lived in this view's `@State`; with
-    /// the controller reachable directly, they simply enqueue.
-    internal let queue: AnalysisQueueController
+    // `queue: AnalysisQueueController` was here until 6 Aug 2026, threaded
+    // straight through to `LoadedSection` and read by **neither**.
+    //
+    // Its doc claimed "the inspector renders the queue's view of the displayed
+    // game and routes every control through it", which was true until the
+    // sweep earlier the same day deleted `analysisControlRow` — the only thing
+    // that read it. The parameter then rode on through two types and five
+    // preview call sites, describing a feature that was gone.
+    //
+    // Worth the paragraph because of how it survived: a grep for `queue` in
+    // this file returned six hits and looked alive, and every one of them was a
+    // *comment* — including the comment explaining the row's own removal. The
+    // same trap the 6 Aug sweep records for `analysisControlRow` itself
+    // ("previous declaration scans counted a name mentioned in a comment as a
+    // reference"), caught this time by stripping comment lines before matching.
+    // That filter belongs in the sweep's grep, not in the reader's head.
 
     // `onEditMoves` was here until 5 Aug 2026 — an optional closure the
     // destination filled to draw the PGN header's Edit Moves pencil. It is
@@ -40,12 +47,10 @@ internal struct LibraryInspectorView: View {
     // MARK: Initializers
     internal init(
         pgn: PGN? = nil,
-        selectionCount: Int = 0,
-        queue: AnalysisQueueController
+        selectionCount: Int = 0
     ) {
         self.pgn = pgn
         self.selectionCount = selectionCount
-        self.queue = queue
     }
     
     // MARK: Body
@@ -58,9 +63,11 @@ internal struct LibraryInspectorView: View {
                 // .id forces SwiftUI to re-init this section when the
                 // user selects a different game, resetting per-game view
                 // state (the name-edit draft). It no longer tears down an
-                // analysis — the queue lives on the tab and keeps
-                // crunching while the user browses (decision 1).
-                LoadedSection(pgn: pgn, queue: queue)
+                // analysis — the queue outlives any one selection and keeps
+                // crunching while the user browses (decision 1). Since 6 Aug
+                // 2026 it outlives the *tab* too, which this comment used to
+                // name as the boundary (decision 2).
+                LoadedSection(pgn: pgn)
                     .id(pgn.id)
             }
             .listStyle(.sidebar)
@@ -84,11 +91,19 @@ internal struct LibraryInspectorView: View {
     /// The counting variant: same D26′ chrome, same outside-the-`List`
     /// contract, and the symbol the columns detail pane uses for the same
     /// state — two surfaces, one vocabulary for "you selected many".
+    ///
+    /// **The message pointed at the toolbar until 6 Aug 2026**, when Analyze,
+    /// Export and Delete were removed from it by request. Its twin in
+    /// `LibraryColumnsView.detail` carried the identical sentence and is
+    /// corrected in the same change — which is the argument for the "one
+    /// vocabulary" note above being about *wording* as much as symbols: two
+    /// surfaces sharing a sentence go stale together, and the only defence is
+    /// remembering they are two.
     private var multiSelectionState: some View {
         InspectorEmptyState(
             title: "\(selectionCount) Games Selected",
             systemImage: "document.on.document.fill",
-            message: "The toolbar's Analyze, Export and Delete act on the whole selection.",
+            message: "Right-click any selected game to analyze, export or delete the whole selection.",
             identifier: AccessibilityID.libraryInspectorMulti
         )
     }
@@ -98,7 +113,6 @@ private struct LoadedSection: View {
     
     // MARK: Stored Properties
     @Bindable var pgn: PGN
-    let queue: AnalysisQueueController
     
     // MARK: Private Properties
     @Environment(\.modelContext) private var modelContext
@@ -368,7 +382,6 @@ private struct LoadedSection: View {
             black: "Nepomniachtchi",
             result: .ongoing
         ),
-        queue: AnalysisQueueController()
     )
     .frame(width: 300, height: 700)
     .environment(InspectorSectionCollapse.preview)
@@ -385,14 +398,13 @@ private struct LoadedSection: View {
             name: "Game of the Century",
             result: .whiteWins
         ),
-        queue: AnalysisQueueController()
     )
     .frame(width: 300, height: 700)
     .environment(InspectorSectionCollapse.preview)
 }
 
 #Preview("Empty") {
-    LibraryInspectorView(queue: AnalysisQueueController())
+    LibraryInspectorView()
         .frame(width: 300, height:700)
         .environment(InspectorSectionCollapse.preview)
 }
@@ -401,7 +413,7 @@ private struct LoadedSection: View {
 /// or ⌘-click selection shows. No fixture reaches this by accident, which
 /// is the reason it has a preview.
 #Preview("Multi-Selection") {
-    LibraryInspectorView(selectionCount: 12, queue: AnalysisQueueController())
+    LibraryInspectorView(selectionCount: 12)
         .frame(width: 300, height: 700)
         .environment(InspectorSectionCollapse.preview)
 }
@@ -436,7 +448,6 @@ private struct LoadedSection: View {
             timeControl: "-",
             board: "DGT 3000448278"
         ),
-        queue: AnalysisQueueController()
     )
     .frame(width: 320, height:700)
     .environment(InspectorSectionCollapse.preview)

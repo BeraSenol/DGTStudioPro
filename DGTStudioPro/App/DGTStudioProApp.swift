@@ -33,6 +33,16 @@ internal struct DGTStudioProApp: App {
     /// `sharedContainer`. Used by the Library's delete path to decide
     /// whether closing a deleted game's tab needs a discard confirmation.
     @State private var openGames = OpenGamesRegistry()
+
+    /// The app's one engine-analysis queue (controller decision 2, reversed
+    /// from per-tab on 6 Aug 2026).
+    ///
+    /// Here for the reason `openGames` is here: one object, every window sees
+    /// the same one, and the queue window below could not be handed a
+    /// particular tab's instance in any case — a scene receives values, not
+    /// references. Injected into the main `WindowGroup` so destinations read it
+    /// from the environment, and read directly by the queue window's scene.
+    @State private var analysisQueue = AnalysisQueueController()
     
     // The three app-global DGT observables.
     //
@@ -218,6 +228,7 @@ internal struct DGTStudioProApp: App {
         WindowGroup("DGT Studio Pro", for: PersistentIdentifier.self) { $gameID in
             ContentView(loadedGameID: $gameID)
                 .environment(openGames)
+                .environment(analysisQueue)
                 .environment(dgtConnection)
                 .environment(dgtSession)
                 .environment(sessionLog)
@@ -292,6 +303,40 @@ internal struct DGTStudioProApp: App {
         }
         .modelContainer(sharedContainer)
         .defaultSize(width: 460, height: 520)
+
+        // 6 Aug 2026 — the analysis queue's own window, replacing the Library
+        // toolbar's popover.
+        //
+        // **A `Window`, not a `WindowGroup`, and this is the first scene in the
+        // app that needs no wrapper type.** D46′ and D53′ both had to mint one
+        // (`EvaluationGraphRequest`, `GetInfoRequest`) because
+        // `openWindow(value:)` routes by the value's type and the main group
+        // already claims `PersistentIdentifier`. There is nothing to route
+        // here: there is exactly one queue, so the window is a singleton opened
+        // by `openWindow(id:)` and the whole trap is sidestepped rather than
+        // paid for a third time. That is a *consequence* of decision 2 going
+        // app-global, and the cleanest evidence that it was the right call.
+        //
+        // `.defaultLaunchBehavior(.suppressed)` because a `Window` scene opens
+        // itself at launch otherwise — the opposite of the value-based groups
+        // above, which open none and needed `.presented` forced onto the main
+        // one. A queue window over an idle queue on every cold launch is a
+        // window nobody asked for.
+        //
+        // Not `.windowLevel(.floating)`, deliberately, and the D46′ split is
+        // the precedent: the graph floats because it is *read* while the board
+        // underneath is driven. This one is read the same way — but it also
+        // carries Stop All and per-row removal, so it takes clicks, and a
+        // window that owns destructive controls while sitting permanently over
+        // everything is the shape people file bugs about (the argument Get Info
+        // already makes one scene down).
+        Window("Analysis", id: AnalysisQueueStatusWindowView.sceneID) {
+            AnalysisQueueStatusWindowView()
+                .environment(analysisQueue)
+        }
+        .modelContainer(sharedContainer)
+        .defaultSize(width: 520, height: 560)
+        .defaultLaunchBehavior(.suppressed)
 
         Settings {
             SettingsView()

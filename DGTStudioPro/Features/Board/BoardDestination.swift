@@ -253,6 +253,25 @@ internal struct BoardDestination: View {
     /// relationship between two views rather than either one of them.
     private static let evaluationBarGap: CGFloat = 10
 
+    /// The slot the score label occupies, trailing of the bar (7 Aug 2026).
+    ///
+    /// **Reserved, not measured**, and that is the decision rather than a
+    /// shortcut. The board's side length is derived from the width left over
+    /// after this column, so a slot that grew and shrank with the text would
+    /// resize the *board* every time the evaluation crossed a digit — a
+    /// board that breathes as the score moves between `0.0` and `-12.3`.
+    ///
+    /// Sized for the widest thing `EvaluationBarReading.label` can produce: a
+    /// signed two-digit pawn score to one decimal (`-12.3`), which is longer
+    /// than any mate spelling (`#-9`). At `.caption` monospaced digits that is
+    /// comfortably inside 38 pt; the label truncates rather than pushing, so
+    /// being wrong here is a cosmetic clip and not a layout break.
+    ///
+    /// Here rather than on `EvaluationBarView` for the reason the gap is here:
+    /// the bar no longer draws the label, so this describes a relationship
+    /// between the bar and the board and belongs to neither.
+    private static let evaluationLabelWidth: CGFloat = 38
+
     /// The board itself, shared by the game view and the live mirror. Both
     /// render the same `BoardView` with the same padding, sizing, and
     /// `"board"` accessibility identifier — only the inputs differ. Keeping
@@ -297,22 +316,73 @@ internal struct BoardDestination: View {
         return Group {
             if let evaluation {
                 GeometryReader { geometry in
+                    // The board is square and takes whatever the shorter axis
+                    // allows once the bar column is reserved. The column is the
+                    // bar, the gap, and the widest the label can get — reserved
+                    // rather than measured, so the board does not resize as the
+                    // score changes width between "0.0" and "-12.3".
+                    let reserved = EvaluationBarView.width
+                        + Self.evaluationBarGap
+                        + Self.evaluationLabelWidth
                     let side = max(0, min(
-                        geometry.size.width - EvaluationBarView.width - Self.evaluationBarGap,
+                        geometry.size.width - reserved,
                         geometry.size.height
                     ))
-                    HStack(spacing: Self.evaluationBarGap) {
-                        EvaluationBarView(
-                            reading: evaluation,
-                            perspective: tabState.boardPerspective,
-                            style: boardStyle
-                        )
-                        // Height only: the bar states its own width, so
-                        // framing it here again would re-open the twin that
-                        // `EvaluationBarView.width` exists to close.
-                        .frame(height: side)
+
+                    // **Bar pinned to the destination's leading edge, board
+                    // centred in what is left** (7 Aug 2026, by request). The
+                    // bar used to sit immediately beside the board and travel
+                    // with it as the window resized; it now stays put and the
+                    // board moves, which is what "far leading side" means.
+                    //
+                    // A `ZStack` rather than an `HStack`, and the reason is the
+                    // centring: in an `HStack` the board's centre is the centre
+                    // of *what is left over*, so it drifts off the window's
+                    // centre by half the bar column. Two overlays each taking
+                    // their own alignment let the board be centred in the whole
+                    // surface while the bar is pinned to the edge of it.
+                    ZStack {
                         board
                             .frame(width: side, height: side)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                        HStack(spacing: Self.evaluationBarGap) {
+                            EvaluationBarView(
+                                reading: evaluation,
+                                perspective: tabState.boardPerspective,
+                                style: boardStyle
+                            )
+                            // Height only: the bar states its own width, so
+                            // framing it here again would re-open the twin that
+                            // `EvaluationBarView.width` exists to close.
+                            //
+                            // `side` exactly — the bar is now the board's
+                            // height rather than the board's height *minus a
+                            // label*, which is what it was while the label
+                            // shared its stack (see `EvaluationBarView`).
+                            .frame(height: side)
+
+                            // D33′'s always-visible label, rehoused. Vertically
+                            // centred against the bar and sitting in the gap,
+                            // never on the bar: a thin losing share would
+                            // swallow it, which is the objection D33′ raised
+                            // when it put the label below instead.
+                            //
+                            // Fixed width so the board's geometry above is a
+                            // constant. Leading-aligned inside that width, so
+                            // the text starts at a fixed distance from the bar
+                            // instead of creeping toward it as the score
+                            // shortens.
+                            Text(evaluation.label)
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .frame(
+                                    width: Self.evaluationLabelWidth,
+                                    alignment: .leading
+                                )
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }

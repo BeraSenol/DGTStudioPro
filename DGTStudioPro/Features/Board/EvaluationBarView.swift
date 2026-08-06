@@ -13,10 +13,24 @@ import SwiftUI
 /// stays white-relative (the label's sign never flips; `+1.5` means white
 /// is better from either seat).
 ///
-/// The always-visible tip label (D33′, over hover-only and none) sits in a
-/// fixed slot *below* the bar rather than floating inside it: inside, a
-/// thin losing share swallows the text or forces a contrast dance; a fixed
-/// slot never moves, never overlaps, and reads in both orientations.
+/// **The label is no longer this view's** (7 Aug 2026, by request). It sat in a
+/// fixed slot *below* the bar from D33′ until then, and the reason it left is
+/// arithmetic rather than taste: a `VStack { bar; label }` framed to the board's
+/// height gives the *stack* that height, so the bar itself drew shorter than the
+/// board by the label plus its spacing. Wanting a bar exactly as tall as the
+/// board and wanting a label inside the same frame are the same wish twice, and
+/// only one of them can win.
+///
+/// D33′'s argument for the label survives intact and is now `BoardDestination`'s
+/// to honour: **always visible, never inside the bar.** Inside, a thin losing
+/// share swallows the text or forces a contrast dance — which is also why the
+/// new home is the gap between bar and board rather than an overlay on the
+/// bar's trailing edge. What changed is which view owns the slot, not what the
+/// slot is for.
+///
+/// This view is therefore now *only* the bar, and `reading.label` is
+/// deliberately still read here — for the accessibility value, which must
+/// travel with the thing being described whatever the layout does.
 ///
 /// Rendered only beside an analysed archived game — presence is
 /// `BoardDestination`'s guard, absence-not-a-50/50-lie — and never on the
@@ -67,28 +81,20 @@ internal struct EvaluationBarView: View {
     // MARK: Body
     
     internal var body: some View {
-        VStack(spacing: 4) {
-            GeometryReader { geometry in
-                ZStack(alignment: .bottom) {
-                    Rectangle()
-                        .fill(topColor)
-                    Rectangle()
-                        .fill(bottomColor)
-                        .frame(height: geometry.size.height * bottomFraction)
-                }
-                .animation(.snappy(duration: 0.2), value: reading.whiteFraction)
+        GeometryReader { geometry in
+            ZStack(alignment: .bottom) {
+                Rectangle()
+                    .fill(topColor)
+                Rectangle()
+                    .fill(bottomColor)
+                    .frame(height: geometry.size.height * bottomFraction)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .strokeBorder(.gridBorder, lineWidth: 1)
-            }
-            
-            Text(reading.label)
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .fixedSize()
+            .animation(.snappy(duration: 0.2), value: reading.whiteFraction)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .strokeBorder(.gridBorder, lineWidth: 1)
         }
         .frame(width: Self.width)
         .accessibilityElement(children: .ignore)
@@ -100,6 +106,16 @@ internal struct EvaluationBarView: View {
 
 // MARK: Previews
 
+/// **These preview the bar and nothing else, as of 7 Aug 2026** — the score
+/// label moved to `BoardDestination`, which is waived from previews (it needs a
+/// session, a connection, a log, the queue and a container; a canvas for it
+/// would be a second app).
+///
+/// So the *arrangement* the request was about — bar pinned to the leading edge,
+/// exactly the board's height, label centred in the gap beside it — has no
+/// preview witness, and saying so is better than implying these cover it. The
+/// boardless checklist carries it instead. What these still witness is the part
+/// that is genuinely this view's: the fill split, the flip, and the mate clamp.
 #Preview("Drawn (nil folds here)") {
     EvaluationBarView(
         reading: EvaluationBarReading(nil),

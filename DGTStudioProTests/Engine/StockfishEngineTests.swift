@@ -87,8 +87,12 @@ struct StockfishEngineTests {
         let stream = engine.analyze(fen: .starting, depth: 10)
         var lastEval: Evaluation?
         var yieldCount = 0
-        for await evaluation in stream {
-            lastEval = evaluation
+        // `.evaluation` off `EngineProgress` since 6 Aug 2026 — the stream
+        // carries depth, nodes and speed alongside the score now, because the
+        // queue window shows the search rather than only its answer. These
+        // suites still assert the score, which is what they were written about.
+        for await progress in stream {
+            lastEval = progress.evaluation
             yieldCount += 1
         }
 
@@ -130,8 +134,8 @@ struct StockfishEngineTests {
 
         let stream = engine.analyze(fen: fen, depth: 10)
         var lastEval: Evaluation?
-        for await evaluation in stream {
-            lastEval = evaluation
+        for await progress in stream {
+            lastEval = progress.evaluation
         }
 
         let final = try #require(lastEval)
@@ -197,8 +201,8 @@ struct StockfishEngineTests {
         )
         let stream = engine.analyze(fen: fen, depth: 8)
         var evals: [Evaluation] = []
-        for await evaluation in stream {
-            evals.append(evaluation)
+        for await progress in stream {
+            evals.append(progress.evaluation)
         }
 
         // Single literal, deliberately: `#expect`'s comment is `Comment?`,

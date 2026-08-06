@@ -3,13 +3,22 @@ import os
 import SwiftData
 
 /// Drives a full-game engine pass: walks each ply of a ``PGN``, asks Stockfish
-/// for an evaluation at the requested depth, streams progressive-deepening
-/// results into ``PGN/evaluations`` so the graph animates as the search deepens,
-/// and saves once per ply so partial progress survives a crash.
+/// for an evaluation at the requested depth, records **one** evaluation per ply
+/// into ``PGN/evaluations``, and saves once per ply so partial progress survives
+/// a crash.
+///
+/// That sentence said "streams progressive-deepening results … so the graph
+/// animates as the search deepens" until 6 Aug 2026, and it was an accurate
+/// description of the thing making the app unusable during a batch. The walk
+/// now buffers the stream and writes its last value; the argument, and what it
+/// costs, is at the write site in ``runAnalysis(engine:pgn:depth:modelContext:)``.
 ///
 /// `@MainActor` so all SwiftData mutation happens on the context's actor — the
 /// engine's `AsyncStream` bridges back at each emission, while the subprocess
-/// work runs inside ``StockfishEngine`` without blocking.
+/// work runs inside ``StockfishEngine`` without blocking. **The per-emission
+/// hop is the cost that made the write rate matter**: every `info` line the
+/// engine prints resumes this actor, so anything done per emission is done on
+/// the thread drawing the UI.
 ///
 /// One driver per `AnalysisQueueController`, one controller per tab; views no
 /// longer instantiate drivers. The engine starts lazily on the first `analyze`
@@ -33,9 +42,36 @@ internal final class GameAnalysisDriver {
         case failed(message: String)
     }
     
+    // MARK: Live Search
+
+    /// What the engine is doing *right now*, for the queue window to render.
+    ///
+    /// **Deliberately here and not on the model, which is the whole point.**
+    /// The 6 Aug write-coalescing pass exists because `PGN.evaluations` was
+    /// being written per `info` line, and every such write re-encoded a Codable
+    /// array and invalidated every view observing that game. This is the same
+    /// per-line cadence with none of that: a small value on an object whose
+    /// only observers are the queue controller and the window, so a batch
+    /// running with the window closed costs one property write per line and
+    /// wakes nothing.
+    ///
+    /// Nil between plies and after a pass ends — a stale search left on screen
+    /// after the engine moved on is a read-out describing nothing, which is the
+    /// argument D46′'s hover read-out makes for clearing on exit.
+    internal struct Search: Equatable, Sendable {
+        /// 0-based ply index within the game.
+        internal let plyIndex: Int
+        internal let totalPlies: Int
+        /// The move whose resulting position is being searched, in SAN.
+        internal let san: String
+        internal let progress: EngineProgress
+    }
+
+    internal private(set) var search: Search?
+
     // MARK: Stored Properties
     internal private(set) var status: Status = .idle
-    
+
     private var engine: StockfishEngine?
     private var task: Task<Void, Never>?
     
@@ -137,6 +173,15 @@ internal final class GameAnalysisDriver {
         depth: Int,
         modelContext: ModelContext
     ) async {
+        // **`defer`, not a clear at each exit**, and this walk is why: there
+        // are five ways out of it — engine start failure, an unparseable SAN, a
+        // dead engine mid-pass, save failure past tolerance, and the ordinary
+        // end — and a live search left on screen after any of them describes an
+        // engine that has moved on. Four sites that must agree is the shape
+        // D40′ and D45′ both argue against; one `defer` makes the next exit
+        // somebody adds correct before they have written it.
+        defer { search = nil }
+
         // Warm up the engine on first analyze; later analyses on the same
         // driver skip this path because the actor's `isRunning` is already
         // true and start() throws .alreadyStarted, which we treat as a
@@ -221,19 +266,65 @@ internal final class GameAnalysisDriver {
             state = state.applying(move)
             let fen = FEN(state)
             
-            // The engine emits progressively deeper evals; updating the
-            // PGN on each emission lets the graph animate the search
-            // converging. The final emission carries the deepest result.
-            for await eval in engine.analyze(fen: fen, depth: depth) {
+            // **One write per ply, not one per emission** (6 Aug 2026).
+            //
+            // Stockfish prints an `info` line carrying a score on every
+            // iteration *and* again on every new best move, so one depth-18
+            // search yields tens of evaluations for a single ply. The loop used
+            // to write each of them into the model, which cost three things per
+            // emission and bought nothing that survived the next one:
+            //
+            //   - `evaluations` is a Codable array on a `@Model`, so
+            //     `evaluations[i] = x` is a read-modify-write of the *whole*
+            //     array — a full re-encode of every ply to record one.
+            //   - each write invalidates every view observing this `PGN`: the
+            //     inspector's evaluation `Canvas`, the bar, Get Info's coverage
+            //     rows, and every `AnalysisGlyph` site — several of which
+            //     respond by re-scanning the array that was just re-encoded.
+            //   - this is the main actor, so the loop hopped back to it per
+            //     emission. Across an 80-ply game that is thousands of round
+            //     trips through the thread drawing the UI, which is what made
+            //     the whole app feel wedged while a batch ran.
+            //
+            // **The stored result is unchanged.** The stream's last yield is
+            // the deepest search, and the deepest search is exactly what the
+            // old loop left behind after overwriting itself N times. What is
+            // genuinely given up is the sub-ply "watch it converge" flicker —
+            // one x-position twitching for a fraction of a second. The
+            // animation anyone actually reads is the curve growing a point per
+            // ply, and that is untouched.
+            //
+            // A cancelled ply now writes nothing rather than storing whatever
+            // depth it had reached when the stop landed, which is also the
+            // better answer: a shallow eval stored as final is a lie the graph
+            // draws, where a nil is a gap it honestly skips.
+            // The loop reads every emission and *stores* the last, which is the
+            // split the paragraph above is about: `search` is cheap live state
+            // for the window, `deepest` is the one thing that reaches the model.
+            var deepest: Evaluation?
+            for await progress in engine.analyze(fen: fen, depth: depth) {
                 if Task.isCancelled { break }
-                pgn.evaluations[index] = eval
+                deepest = progress.evaluation
+                search = Search(
+                    plyIndex: index,
+                    totalPlies: total,
+                    san: san,
+                    progress: progress
+                )
             }
-            
-            // If we exited the inner loop via cancellation, skip the
-            // progress/save updates — the outer loop will pick up the
+
+            // If we exited the inner loop via cancellation, skip the write and
+            // the progress/save updates — the outer loop will pick up the
             // cancellation on its next iteration and we don't want a
             // brief "still analyzing" flicker on the way out.
             if Task.isCancelled { break }
+
+            // Nil only when the stream yielded nothing at all, which means the
+            // engine died mid-ply; the `isRunning` guard below is what reports
+            // that. Leaving the slot nil rather than writing a placeholder
+            // keeps `evaluations` saying "this ply was never scored", which is
+            // what Get Info's "48 of 58" row reads.
+            if let deepest { pgn.evaluations[index] = deepest }
 
             // A dead engine finishes every remaining stream instantly, so
             // the old loop raced through the tail and landed on `.done`

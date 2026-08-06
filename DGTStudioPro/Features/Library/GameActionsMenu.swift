@@ -60,6 +60,15 @@ internal struct GameActionsMenu: View {
     internal let onExport: ([PGN]) -> Void
     internal let onDelete: ([PGN]) -> Void
 
+    /// Ambient rather than a sixth parameter, and this type is most of the
+    /// reason the environment value exists: three hosts build this menu, one of
+    /// them per card, and each carries its own previews. The argument is at the
+    /// value's declaration.
+    ///
+    /// Context menu content inherits the environment of the view the modifier
+    /// is attached to, so the destination's one write reaches all three.
+    @Environment(\.analysisRunningGameID) private var runningAnalysisID
+
     // MARK: Body
     internal var body: some View {
         if !games.isEmpty {
@@ -96,17 +105,19 @@ internal struct GameActionsMenu: View {
             Button {
                 onAnalyze(games)
             } label: {
-                // The toolbar's aggregate rule: checkmark only when the whole
-                // set is analyzed. Safe to spell as a bare `allSatisfy` here
-                // where the list host needed an emptiness guard beside it —
-                // the branch above already established the set is non-empty,
-                // and `allSatisfy` over nothing is vacuously true.
+                // The shared aggregate rule: running wins, then checkmark only
+                // when the whole set is analyzed. This site used to spell the
+                // second half as a bare `allSatisfy` — safe here, where the
+                // branch above establishes non-emptiness, and *not* safe at the
+                // toolbar, which guarded separately. Both spellings are gone
+                // into `AnalysisGlyph.state(of:runningID:)`, which is what makes
+                // the two menus' answers structurally the same one.
                 //
                 // The counted plural keeps its verb: "Analyzed 3 Games" would
                 // read as a claim about what happened rather than a menu item
                 // you can click.
                 AnalysisLabel(
-                    analyzed: games.allSatisfy(AnalysisGlyph.isAnalyzed),
+                    state: AnalysisGlyph.state(of: games, runningID: runningAnalysisID),
                     title: games.count > 1 ? "Analyze \(games.count) Games" : nil
                 )
             }
@@ -145,17 +156,28 @@ internal struct GameActionsMenu: View {
                     systemImage: "trash"
                 )
             }
-            // Finder's Move to Trash.
+            // Finder's Move to Trash — and **the app's only copy of ⌘⌫ since
+            // 6 Aug 2026**, which is a materially different claim from the one
+            // this comment made a day earlier.
             //
-            // **This comment said the opposite until 5 Aug 2026** — that plain
-            // ⌫ was "already live through `LibraryDestination.onDeleteCommand`,
-            // so this is the second spelling of one verb rather than a new
-            // door". Both halves were true when written and neither is now: ⌫
-            // was retired by request, precisely because being live was the
-            // problem (one keystroke from a focused row, and its failure mode
-            // is a multi-selection you forgot about). The live copy of ⌘⌫ is
-            // the toolbar Delete button's; this one mirrors it in the menu,
-            // and both land on the same confirmation.
+            // The trail, because it has now reversed twice and the current state
+            // is the least safe of the three. Plain ⌫ was live through
+            // `LibraryDestination.onDeleteCommand` and was retired 5 Aug by
+            // request, precisely because being live was the problem — one
+            // keystroke from a focused row, failing on a multi-selection you had
+            // forgotten about. ⌘⌫ then moved onto the toolbar's Delete button,
+            // deliberately *not* here, because a `keyboardShortcut` on an
+            // always-present, already-guarded control is live whenever the
+            // destination shows while this copy is known only to **render** —
+            // nobody has measured whether SwiftUI registers a `.contextMenu`'s
+            // shortcut with the menu shut. On 6 Aug the toolbar button was
+            // removed by request and this became the only copy there is.
+            //
+            // So the outstanding measurement stopped being academic: if these
+            // keys are dead, delete-by-keyboard is gone from the app entirely
+            // and nothing says so. Accepted with the alternative on the table (a
+            // menu-bar `Commands` scene, which is what would carry them for
+            // certain); the boardless checklist is where it gets answered.
             .keyboardShortcut(.delete, modifiers: .command)
         }
     }
@@ -182,9 +204,15 @@ internal struct GameActionsMenu: View {
 /// the regression, because it is where a still-singular Open would render as an
 /// absence nobody notices.)*
 ///
-/// The analyzed/unanalyzed split rides along on the singular row: `Analyze`
-/// versus `Re-analyze` is `AnalysisGlyph.isAnalyzed`'s aggregate rule, and
-/// a fixture with no evaluations is the unanalyzed side of it.
+/// The analysis state rides along on the singular row through
+/// `AnalysisGlyph.state(of:runningID:)`, and both fixtures below have no
+/// evaluations, so every row here shows the unanalyzed side of it.
+///
+/// **The `.analyzing` state is not previewable here and that is worth naming.**
+/// It comes from `\.analysisRunningGameID`, which a canvas leaves nil — and
+/// injecting one would mean minting a `PersistentIdentifier`, which needs a
+/// container. `AnalysisGlyph`'s own previews cover the three states against the
+/// label; what this file's previews are for is *arity*, which is orthogonal.
 #Preview("Every Arity") {
     let one = PGN(
         event: "World Championship",

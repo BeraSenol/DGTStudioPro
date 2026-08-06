@@ -198,17 +198,21 @@ internal struct ContentView: View {
         } message: { tag in
             Text("The tag is removed from the sidebar. No games are affected.")
         }
-        .onDisappear {
-            // Tab teardown. `ContentView` is the window/tab root: it
-            // disappears when the tab closes, never on destination
-            // switches (those recreate the *detail* views only) — which
-            // is exactly the boundary the analysis queue should die at.
-            // A batch survives Board↔Library round-trips (TabState's
-            // whole purpose) and stands down with its tab, releasing the
-            // Stockfish subprocess.
-            let analysisQueue = tabState.analysisQueue
-            Task { await analysisQueue.shutdown() }
-        }
+        // `.onDisappear` stood here until 6 Aug 2026 and tore the analysis
+        // queue down on tab close: `ContentView` is the window/tab root, so it
+        // disappears when a tab closes and never on a destination switch, which
+        // made it exactly the right boundary for a *per-tab* queue.
+        //
+        // The queue is app-global now (controller decision 2), and the same
+        // hook on an app-global object means closing any window stands down a
+        // batch that some other window started — including the queue window
+        // watching it. So it went with the ownership rather than being narrowed.
+        //
+        // What replaces it is nothing, and that is decision 4 working as
+        // written: the run releases the subprocess when the queue drains, and
+        // app quit closes stdin, which a UCI engine treats as quit. The
+        // accepted consequence is that a batch outlives the tab that started
+        // it — named at the controller rather than discovered here.
     }
     
     // MARK: Tag CRUD (M-prs.5)

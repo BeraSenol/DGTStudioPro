@@ -360,6 +360,19 @@ internal enum AccessibilityID {
     internal static let settingsEngineDepthStepper     = "settings.engineDepthStepper"
     internal static let settingsEngineHashPicker       = "settings.engineHashPicker"
     internal static let settingsEngineThreadsStepper   = "settings.engineThreadsStepper"
+
+    /// Syzygy tablebases (7 Aug 2026). The three probe controls render only
+    /// once a folder is configured — **conditionally present**, the
+    /// `libraryBackfillButton` shape, so a future query asserting their absence
+    /// is asserting "no tablebases are set up" rather than "the controls were
+    /// lost". `settingsSyzygyVerify` is the one worth having: it drives the
+    /// check that answers whether the engine subprocess can read the folder at
+    /// all, which is the section's whole subject.
+    internal static let settingsSyzygyChoose           = "settings.syzygy.choose"
+    internal static let settingsSyzygyVerify           = "settings.syzygy.verify"
+    internal static let settingsSyzygyProbeDepthStepper = "settings.syzygy.probeDepthStepper"
+    internal static let settingsSyzygyProbeLimitStepper = "settings.syzygy.probeLimitStepper"
+    internal static let settingsSyzygy50MoveToggle     = "settings.syzygy.fiftyMoveToggle"
     internal static let settingsPieceAnimationSlider   = "settings.pieceAnimationSlider"
     
     // MARK: Library
@@ -372,8 +385,14 @@ internal enum AccessibilityID {
     internal static let libraryModeGallery     = "library.mode.gallery"
     internal static let libraryViewModePicker  = "library.viewModePicker"
     internal static let libraryImportButton    = "library.importButton"
-    internal static let libraryAnalyzeButton   = "library.analyzeButton"
-    internal static let libraryDeleteButton    = "library.deleteButton"
+    // `libraryAnalyzeButton` and `libraryDeleteButton` removed 6 Aug 2026 with
+    // the toolbar buttons they named, by request. **No successors**, and this
+    // is the fourth such removal in two days — a run this file's header bet
+    // against when it kept the registry after D51′ deleted the suite. All three
+    // verbs live on in `GameActionsMenu`, which is a `.contextMenu`: its items
+    // are built on demand and are not addressable the way a toolbar button is,
+    // so the registry structurally cannot name the replacement. If this keeps
+    // happening, the header's bet is what needs re-reading, not the entries.
     internal static let libraryGamesTable      = "library.gamesTable"
     internal static let libraryInspectorToggle = "library.inspectorToggle"
     /// D26′ — the shared `InspectorEmptyState`. Distinct from
@@ -449,12 +468,42 @@ internal enum AccessibilityID {
     
     /// Analysis-queue toolbar family (M-batch). `queue.status` *had* a
     /// UITest witness (asserted absent while the queue was idle — gone
-    /// with the suite, D51′); the popover internals were always
+    /// with the suite, D51′); the queue's internals were always
     /// manual-checklist territory, since clicking Analyze in a UI test
     /// would spin live Stockfish passes.
+    ///
+    /// This one names the Library toolbar's indicator, which still lives on the
+    /// Library. Its *contents* moved out on 6 Aug 2026 — the button opens the
+    /// queue window now instead of a popover, and the window's identifiers are
+    /// the `analysis.queue.*` group below.
     internal static let libraryQueueStatus  = "library.queue.status"
-    internal static let libraryQueuePopover = "library.queue.popover"
-    internal static let libraryQueueStopAll = "library.queue.stopAll"
+
+    // `libraryQueuePopover` and `libraryQueueStopAll` removed 6 Aug 2026 with
+    // `AnalysisQueueStatusView`, and unlike the last four removals in this file
+    // **these have successors** — `analysisQueueWindow` and
+    // `analysisQueueStopAll` immediately below. Recorded rather than quietly
+    // renamed because the prefix change is the interesting part: they were
+    // `library.*` when the queue was a Library popover over a per-tab
+    // controller, and the queue is neither of those now (controller decision
+    // 2). An identifier that still said `library.` would be describing where
+    // the affordance used to live.
+
+    /// The analysis queue's own window (6 Aug 2026), replacing the Library
+    /// toolbar popover.
+    ///
+    /// `analysis.` rather than `library.`, because the queue is app-global and
+    /// the window is a singleton scene reached from the Window menu as well as
+    /// from the Library's indicator — naming it after one of its entry points
+    /// would be the same mistake the retired prefix made.
+    internal static let analysisQueueWindow  = "analysis.queue.window"
+    internal static let analysisQueueSkip    = "analysis.queue.skip"
+    internal static let analysisQueueStopAll = "analysis.queue.stopAll"
+    /// The drained-batch acknowledgement. Distinct from `stopAll` and never
+    /// coexisting with it — the footer renders exactly one, on
+    /// `queue.isActive` — but a shared identifier across two verbs is how a
+    /// future query ends up asserting that "the button is there" while the
+    /// button does the opposite thing.
+    internal static let analysisQueueClear   = "analysis.queue.clear"
     
     /// The clearable filter chip (M-prs.6) — the Library's one visible
     /// indicator that it's narrowed, and for a programmatic `.player`
@@ -462,12 +511,16 @@ internal enum AccessibilityID {
     internal static let libraryFilterChip      = "library.filterChip"
     internal static let libraryFilterChipClear = "library.filterChip.clear"
     
-    /// The Library's Export affordances, now split. The two *context menus*
-    /// — list rows and cards — never coexist, since the view-mode picker
-    /// guarantees only one mode is mounted, so they keep sharing
-    /// `libraryExport`. The toolbar button coexists with both and carries its
-    /// own, which is what made a query against the shared name ambiguous.
-    internal static let libraryExportButton = "library.export.button"
+    // `libraryExportButton` removed 6 Aug 2026 with the toolbar's Export button.
+    //
+    // Its doc is the part worth keeping, because the split it recorded has now
+    // collapsed back: Export was one name until a toolbar button appeared
+    // alongside the row menus and made a query against the shared name
+    // ambiguous, so it took its own. With the button gone the ambiguity goes
+    // with it — the two *context menus*, list rows and cards, never coexist
+    // (the view-mode picker guarantees one mounted mode), so `libraryExport`
+    // below is once again unambiguous on its own. A split that outlived its
+    // cause would have read as a rule rather than as the workaround it was.
     /// D58′'s backfill (M12.5). **Conditionally present**, unlike every other
     /// identifier in this group: the button exists only while some game lacks
     /// an ordinal, so a future suite asserting its absence is asserting the

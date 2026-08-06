@@ -46,6 +46,12 @@ internal struct LibraryListView: View {
     @AppStorage(StorageKeys.libraryColumns)
     private var columnCustomization = TableColumnCustomization<PGN>()
 
+    /// Ambient, written once by `LibraryDestination` — the Analysis column's
+    /// cells need it to tell "analyzed" from "on the engine right now", and a
+    /// parameter for it would be a sixth argument every host has to thread.
+    /// The argument is at the environment value's declaration.
+    @Environment(\.analysisRunningGameID) private var runningAnalysisID
+
     /// Click a header once to sort ascending, twice to reverse — `Table`'s own
     /// behaviour, bound rather than built (5 Aug 2026).
     ///
@@ -137,6 +143,63 @@ internal struct LibraryListView: View {
             .customizationID("white")
             TableColumn("Black", value: \.blackDisplayName) { Text($0.blackDisplayName) }
                 .customizationID("black")
+
+            // 7 Aug 2026, by request — the analysis state per row, and clicking
+            // it queues that game.
+            //
+            // **This is the tenth column, which is the ceiling.**
+            // `TableColumnBuilder` is a result builder and result builders top
+            // out at ten statements — a lesson already on this project's
+            // build-diagnostics list, arrived at here from the other direction.
+            // An eleventh column does not warn: it fails to type-check, and
+            // `Table`'s diagnostics in that state are famously unhelpful. The
+            // remedy when it happens is a `Group` around a subset, not deleting
+            // a column to make room.
+            //
+            // **The only column with a control in it**, which is why it is
+            // worth arguing rather than just adding. Every other cell here
+            // renders a fact; this one renders a fact *and* the verb that
+            // changes it. That is defensible exactly because the two are the
+            // same thing to a reader: "not analyzed" and "analyze this" are one
+            // thought, and making the state its own button is fewer moving
+            // parts than a state column beside an action column.
+            //
+            // **Deliberately not sortable, unlike every other column here**, and
+            // the reason is motion rather than difficulty. `filteredGames`
+            // sorts once per render, so a table sorted on analysis state would
+            // reshuffle every time a game finished — eighteen reshuffles during
+            // an eighteen-game batch, each one moving the row you were about to
+            // click. The token chips already answer "show me the unanalyzed
+            // ones" without moving anything, which is the better tool for the
+            // question a sort would be asked for.
+            TableColumn("Analysis") { game in
+                Button {
+                    // The singular set, not `selectedPGNs`: clicking a row's
+                    // button is a statement about *that* row. Routed through
+                    // the same closure the context menu uses, so the count
+                    // threshold and display-order resolution in
+                    // `requestAnalysis(ids:)` apply identically.
+                    onAnalyzeIDs([game.id])
+                } label: {
+                    AnalysisLabel(
+                        state: AnalysisGlyph.state(
+                            of: [game],
+                            runningID: runningAnalysisID
+                        )
+                    )
+                }
+                // `.borderless`, or every row grows a bordered button and the
+                // table stops reading as a table. It also keeps the click from
+                // being swallowed before the row's own selection handling.
+                .buttonStyle(.borderless)
+                // Live while analyzing rather than disabled: `AnalysisQueue`
+                // skips an id already running, so a second click is a no-op
+                // instead of a second pass — the argument at
+                // `AnalysisGlyph.actionTitle`, made good here.
+                .help("Analyze this game with Stockfish")
+            }
+            .width(min: 96, ideal: 116, max: 160)
+            .customizationID("analysis")
             // The raw value, so the order is the PGN vocabulary's own — 0-1,
             // 1-0, 1/2-1/2, * — rather than `GameResult`'s declaration order.
             // Neither is meaningful as a ranking; this one at least matches

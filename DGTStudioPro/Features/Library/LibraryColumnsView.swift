@@ -47,6 +47,11 @@ internal struct LibraryColumnsView: View {
     /// The roster rows never need it: `RosterSummary` speaks PGN's own `?`.
     private static let noValue = RosterSummary.displayUnknown
 
+    /// Ambient rather than a parameter — the argument is at the environment
+    /// value's own declaration. Nil in every preview below, which is the
+    /// honest reading there.
+    @Environment(\.analysisRunningGameID) private var runningAnalysisID
+
     // MARK: Computed Properties
 
     /// The single selected game, or nil when the selection is empty *or*
@@ -211,10 +216,16 @@ internal struct LibraryColumnsView: View {
         if let game = selectedGame {
             gameDetail(game)
         } else if selectedPGNs.count > 1 {
+            // Said "The toolbar's Analyze, Export and Delete…" until 6 Aug 2026,
+            // when those three buttons were removed by request — a sentence on
+            // screen naming controls that no longer exist, and the *only* thing
+            // on either multi-selection surface that says where the bulk verbs
+            // live. Corrected in the same change as the removal, per the
+            // two-homes rule, and its twin in `LibraryInspectorView` with it.
             ContentUnavailableView(
                 "\(selectedPGNs.count) Games Selected",
                 systemImage: "square.on.square",
-                description: Text("The toolbar's Analyze, Export and Delete act on the whole selection.")
+                description: Text("Right-click any selected game to analyze, export or delete the whole selection.")
             )
         } else {
             ContentUnavailableView(
@@ -301,7 +312,16 @@ internal struct LibraryColumnsView: View {
                 Button {
                     onAnalyze(game)
                 } label: {
-                    AnalysisLabel(analyzed: AnalysisGlyph.isAnalyzed(game))
+                    // The one-element array is the shared rule's singular
+                    // spelling (see `AnalysisGlyph.state(of:runningID:)`), not
+                    // an adaptation — asking the array directly is what let
+                    // this button claim "Analyzed" at ply one.
+                    AnalysisLabel(
+                        state: AnalysisGlyph.state(
+                            of: [game],
+                            runningID: runningAnalysisID
+                        )
+                    )
                 }
                 .help("Analyze this game with Stockfish")
             }

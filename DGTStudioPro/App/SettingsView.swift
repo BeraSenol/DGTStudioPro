@@ -150,6 +150,14 @@ internal struct SettingsView: View {
                     + "engine next launches."
                 )
             }
+
+            // 7 Aug 2026 — Syzygy. Its own file rather than another forty lines
+            // here, because unlike the three steppers above it carries a state
+            // machine: a folder that has to be re-openable across launches, and
+            // a verification that starts an engine to ask what it loaded. That
+            // check is the section's reason for existing — see its doc for the
+            // sandbox question it is built to answer.
+            SyzygySettingsSection()
             
             Section {
                 Toggle("Keep the Mac awake during play", isOn: $inhibitor.isEnabled)

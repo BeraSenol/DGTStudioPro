@@ -79,17 +79,23 @@ internal final class TabState {
     /// opens, so the two never fight.
     internal var libraryInspectorPresented: Bool = true
 
-    /// The tab's engine-analysis queue. A batch must survive destination
-    /// switches (it keeps crunching while the user peeks at the Board)
-    /// and outlive any one inspector selection — exactly the class of
-    /// state this type exists to preserve, so the controller is owned
-    /// here rather than as destination `@State`. Per-tab like everything
-    /// else on `TabState`: two tabs hold at most one engine each. A
-    /// `let` holding a reference type keeps `TabState` itself a
-    /// method-free property bag (its M9 waiver rationale); all behavior
-    /// lives on `AnalysisQueueController`.
-    internal let analysisQueue = AnalysisQueueController()
-    
+    // `analysisQueue` lived here until 6 Aug 2026 — `let analysisQueue =
+    // AnalysisQueueController()`, one engine queue per tab.
+    //
+    // It moved to `DGTStudioProApp` and reaches destinations through the
+    // environment (controller decision 2, which carries the argument). The half
+    // of its rationale that belonged to *this* type is worth keeping, because
+    // it is the reason it was here and not destination `@State`: a batch must
+    // survive Board↔Library switches, which is exactly the class of state
+    // `TabState` exists to preserve. What did not survive is the other half —
+    // that per-tab was *right* rather than merely sufficient. Two tabs meant
+    // two Stockfish subprocesses fighting over one Mac, and one person cannot
+    // watch two batches.
+    //
+    // Nothing replaced it here, deliberately: a `TabState` property forwarding
+    // to an app-global object would be a second door onto one queue, and the
+    // destinations that need it read the environment directly.
+
     // MARK: Players Destination
 
     internal var playersInspectorPresented: Bool = true

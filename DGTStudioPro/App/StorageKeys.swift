@@ -126,4 +126,21 @@ internal enum StorageKeys {
     internal static let analysisDepth = "analysisDepth"
     internal static let engineHashMB  = "engineHashMB"
     internal static let engineThreads = "engineThreads"
+
+    // Syzygy endgame tablebases (7 Aug 2026). Four options plus a location,
+    // and the location is two keys rather than one for a reason argued at
+    // `SyzygyLocation`: the bookmark is the thing that opens the folder, the
+    // path is a label Settings can render without holding a scoped resource
+    // open on every body pass.
+    //
+    // Absent keys read as Stockfish's own defaults — probe depth 1, 50-move
+    // rule on, probe limit 7 — which is the same "absent means the documented
+    // default" contract the three engine keys above have, and here it also
+    // means an app that has never been told about tablebases sends nothing
+    // about them.
+    internal static let syzygyBookmark    = "syzygyBookmark"
+    internal static let syzygyDisplayPath = "syzygyDisplayPath"
+    internal static let syzygyProbeDepth  = "syzygyProbeDepth"
+    internal static let syzygy50MoveRule  = "syzygy50MoveRule"
+    internal static let syzygyProbeLimit  = "syzygyProbeLimit"
 }
