@@ -994,7 +994,7 @@ extension GetInfoWindow {
             case .white:
                 let proposed = seatValue(draftWhite)
                 guard proposed != pgn.white else { return }
-                guard !seatsCollide(proposed, opposite: pgn.black) else {
+                guard !Player.seatsNameOnePlayer(proposed, pgn.black) else {
                     draftWhite = pgn.white
                     fieldRefusal = Self.sameSeatRefusal(proposed)
                     return
@@ -1005,7 +1005,7 @@ extension GetInfoWindow {
             case .black:
                 let proposed = seatValue(draftBlack)
                 guard proposed != pgn.black else { return }
-                guard !seatsCollide(proposed, opposite: pgn.white) else {
+                guard !Player.seatsNameOnePlayer(proposed, pgn.white) else {
                     draftBlack = pgn.black
                     fieldRefusal = Self.sameSeatRefusal(proposed)
                     return
@@ -1059,27 +1059,6 @@ extension GetInfoWindow {
     private func seatValue(_ draft: String) -> String {
         let trimmed = draft.trimmingCharacters(in: .whitespaces)
         return trimmed.isEmpty ? RosterSummary.unknownTag : trimmed
-    }
-
-    /// Whether committing `proposed` into one seat would put a single player on
-    /// both sides of the game (D61′).
-    ///
-    /// **Compares identities, not strings**, which is the whole of it: `"Lopez,
-    /// Ruy"` and `"Ruy Lopez"` are one player under D23′'s one-way transform,
-    /// so a raw `!=` would let the two seats be spelled differently and still
-    /// name the same person. `Player.identity(forTag:)` is the resolver's own
-    /// answer, which is why it is asked here rather than restated.
-    ///
-    /// **Two unknown seats are not one player**, and that exemption is the
-    /// reason this returns `false` on a nil identity rather than treating nil
-    /// as a value. `?` is the *absence* of a player (D9′), and a game with both
-    /// seats unknown is two absences — the commonest shape in an imported
-    /// archive, and refusing it would make the window unable to edit anything
-    /// about such a game.
-    private func seatsCollide(_ proposed: String, opposite: String) -> Bool {
-        guard let proposedIdentity = Player.identity(forTag: proposed),
-              let oppositeIdentity = Player.identity(forTag: opposite) else { return false }
-        return proposedIdentity == oppositeIdentity
     }
 
     /// The refusal, in the reader's terms — naming the player rather than the

@@ -126,6 +126,35 @@ internal struct LiveGameRosterForm: View {
                         identifier: AccessibilityID.formBlackPicker(identifierPrefix)
                     )
                 }
+
+                // D61′'s guard, arriving here 6 Aug 2026 (M12.2) — the anchor
+                // named this form as where it belonged, because the two seats
+                // are one `Roster` and the check needs no drafts to compare.
+                //
+                // A warning plus a disabled button rather than Get Info's
+                // revert-and-alert, and the difference is the commit model
+                // rather than taste. Get Info commits per field on Return or
+                // focus loss, so by the time it can object the value is
+                // already going to the store and the only honest response is
+                // to put it back. These sheets stage everything behind one
+                // button, so nothing has been committed yet and there is
+                // nothing to revert — the reader is mid-edit, and reverting a
+                // field they are still typing into would be the rudest
+                // possible reading of the same rule. Same predicate, two
+                // shapes, the D57′ pattern of one window holding two commit
+                // models for one reason.
+                if roster.seatsNameOnePlayer {
+                    Label(
+                        "\(PlayerName.displayForm(of: roster.white)) can’t play both sides. "
+                        + "Give one seat a different name, or clear it to “\(RosterSummary.unknownTag)”.",
+                        systemImage: "exclamationmark.triangle.fill"
+                    )
+                    .font(.callout)
+                    .foregroundStyle(.orange)
+                    .accessibilityIdentifier(
+                        AccessibilityID.formSeatConflict(identifierPrefix)
+                    )
+                }
             }
             
             Section("Event") {
@@ -254,9 +283,19 @@ internal struct NewLiveGameSheet: View {
                 
                 Spacer()
                 
+                // D61′ (M12.2): a game cannot start with one player on both
+                // sides. The form above says why in words; this stops the
+                // gesture. Both read `roster.seatsNameOnePlayer` — one
+                // predicate, called twice, which is D40′'s remedy rather than
+                // two guards that happen to agree.
+                //
+                // The enabling value is producible in both directions, checked
+                // at minting per D40′: a fresh roster is `?` against `?`, two
+                // absences and not a collision, so this ships enabled.
                 Button("Start Game", action: startTapped)
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
+                    .disabled(roster.seatsNameOnePlayer)
                     .accessibilityIdentifier(AccessibilityID.liveNewGameStart)
             }
             .padding()
@@ -444,4 +483,27 @@ internal struct EditLiveGameDetailsSheet: View {
         ),
         onSave: { _ in }
     )
+}
+
+/// D61′'s seat guard, which nothing else renders (M12.2).
+///
+/// The two seats are spelled **differently on purpose** — tag form against
+/// display form, one player under D23′. A preview using the same string twice
+/// would render the same warning while proving only that `==` works, which is
+/// the weaker half of what this guard does.
+///
+/// Worth having as a preview rather than trusting the code: the warning is a
+/// branch that appears mid-`Form`, pushing the sections below it, and the
+/// 4 August lesson is that a branch nobody has rendered has layout nobody has
+/// checked — the galleries' placeholder shipped without its greedy frame for
+/// exactly this reason. Look at the wrap on a narrow sheet.
+#Preview("Roster Form, Seats Collide") {
+    @Previewable @State var roster = LiveGame.Roster(
+        event: "Club Night",
+        white: "Lopez, Ruy",
+        black: "Ruy Lopez"
+    )
+
+    LiveGameRosterForm(roster: $roster)
+        .frame(width: 420, height: 380)
 }

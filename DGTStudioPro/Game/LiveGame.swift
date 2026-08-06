@@ -60,6 +60,23 @@ internal final class LiveGame {
         /// untouched.
         internal var board: String?
 
+        /// Whether this roster puts one player on both sides (D61′).
+        ///
+        /// A forwarding accessor, not a second rule: `Player.seatsNameOnePlayer`
+        /// owns the comparison and this spells it for the shape the forms hold.
+        /// The `contentHash` precedent — one recipe, two spellings (D39′) —
+        /// except the pair here is a value and its accessor rather than two
+        /// functions, so there is nothing to keep in step.
+        ///
+        /// Worth stating once: this is reachable at all because a nested type
+        /// does **not** inherit its enclosing type's global-actor isolation
+        /// (D44′). `LiveGame` is `@MainActor`, `Roster` is not, and
+        /// `Player.seatsNameOnePlayer` is nonisolated — so a form, a sheet and a
+        /// nonisolated suite can all ask.
+        internal var seatsNameOnePlayer: Bool {
+            Player.seatsNameOnePlayer(white, black)
+        }
+
         internal init(
             event: String = "?",
             site: String = "?",

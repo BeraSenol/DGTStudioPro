@@ -51,6 +51,73 @@ struct PlayerIdentityTests {
         #expect(Player.identity(forTag: "Carlsen, Magnus") != Player.identity(forTag: "Nepo"))
     }
 
+    // MARK: The Seat Guard (D61′)
+
+    /// **These are new on 6 August 2026 (M12.2), and their absence was the
+    /// finding.** D61′ shipped the seat guard as `GetInfoWindow.seatsCollide`
+    /// with no test of its own — the suite above pinned its *input* and nothing
+    /// pinned the predicate. A rule living inside one of its consumers is hard
+    /// to test and easy to forget to extend, which is exactly what happened:
+    /// the two live sheets refused nothing for a day.
+    ///
+    /// The spelling that matters is the one below — different spellings of one
+    /// player must collide. A raw `!=` passes every other test in this suite
+    /// and fails this one.
+    @Test func differentSpellingsOfOnePlayerCollide() {
+        #expect(Player.seatsNameOnePlayer("Lopez, Ruy", "Ruy Lopez"))
+        #expect(Player.seatsNameOnePlayer("Senol, Bera", "senol,   BERA"))
+    }
+
+    @Test func twoDifferentPlayersDoNotCollide() {
+        #expect(!Player.seatsNameOnePlayer("Carlsen, Magnus", "Nepomniachtchi, Ian"))
+        #expect(!Player.seatsNameOnePlayer("Şenol, Bera", "Senol, Bera"))
+    }
+
+    /// Two absences are not one player (D9′) — the exemption without which the
+    /// commonest imported shape, both seats `?`, would refuse every edit to
+    /// either seat.
+    @Test(arguments: [("?", "?"), ("", ""), ("?", ""), ("   ", "?")])
+    func twoUnknownSeatsNeverCollide(_ pair: (String, String)) {
+        #expect(!Player.seatsNameOnePlayer(pair.0, pair.1))
+    }
+
+    /// One known seat against an unknown one is a normal game, not a collision
+    /// — the arm that would break if the nil guard were written as "unknown
+    /// equals unknown".
+    @Test func aKnownSeatAgainstAnUnknownOneDoesNotCollide() {
+        #expect(!Player.seatsNameOnePlayer("Carlsen, Magnus", "?"))
+        #expect(!Player.seatsNameOnePlayer("?", "Carlsen, Magnus"))
+    }
+
+    /// The `Roster` accessor forwards rather than restating (D39′'s one recipe,
+    /// two spellings). Asserted *against the predicate* rather than against a
+    /// literal `true`, so the two cannot drift into disagreement while both
+    /// keep passing — the `EvaluationGraphReading` rule.
+    ///
+    /// Nonisolated on purpose, and load-bearing: `Roster` is nested in the
+    /// `@MainActor` `LiveGame` and does **not** inherit that isolation (D44′).
+    /// If someone annotates `Roster`, this stops compiling rather than going
+    /// red — which is the correct severity for an isolation claim.
+    @Test func theRosterAccessorAgreesWithThePredicate() {
+        let collides = LiveGame.Roster(white: "Lopez, Ruy", black: "Ruy Lopez")
+        let distinct = LiveGame.Roster(white: "Carlsen, Magnus", black: "Nepo")
+        let unknown  = LiveGame.Roster()
+
+        #expect(collides.seatsNameOnePlayer
+                == Player.seatsNameOnePlayer(collides.white, collides.black))
+        #expect(distinct.seatsNameOnePlayer
+                == Player.seatsNameOnePlayer(distinct.white, distinct.black))
+        #expect(unknown.seatsNameOnePlayer
+                == Player.seatsNameOnePlayer(unknown.white, unknown.black))
+
+        // The values themselves, so the agreement above can't be vacuous by
+        // both sides being wrong together — the M5 lesson about two guards
+        // agreeing on a value neither could produce.
+        #expect(collides.seatsNameOnePlayer)
+        #expect(!distinct.seatsNameOnePlayer)
+        #expect(!unknown.seatsNameOnePlayer)
+    }
+
     // MARK: Agreement with the resolver
 
     /// The identity this produces is the key a `Player` actually carries.

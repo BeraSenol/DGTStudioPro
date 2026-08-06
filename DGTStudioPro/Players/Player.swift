@@ -118,4 +118,41 @@ internal final class Player: Identifiable {
         guard !display.isEmpty, display != RosterSummary.unknownTag else { return nil }
         return normalizedKey(for: display)
     }
+
+    /// Whether two seat tags name a single player (D61′) — the app's one
+    /// spelling of "these seats collide".
+    ///
+    /// **Compares identities, not strings**, which is the whole of it: `"Lopez,
+    /// Ruy"` and `"Ruy Lopez"` are one player under D23′'s one-way transform,
+    /// so a raw `!=` would let the two seats be spelled differently and still
+    /// name the same person — the failure that looks most like the guard
+    /// working. `identity(forTag:)` one function up is the resolver's own
+    /// answer, which is why it is asked rather than restated.
+    ///
+    /// **Two unknown seats are two absences, not one player**, and that
+    /// exemption is why a nil identity returns `false` rather than being
+    /// treated as a value. `?` is the absence of a player (D9′), so a game with
+    /// both seats unknown — the commonest shape in an imported archive — would
+    /// otherwise refuse every edit to either seat, which would make the guard
+    /// useless on exactly the games most in need of editing.
+    ///
+    /// **Here rather than on a view (6 Aug 2026, M12.2).** D61′ shipped this
+    /// as `GetInfoWindow.seatsCollide` and recorded the gap in its own anchor:
+    /// the two live sheets edit seats through `LiveGameRosterForm` and refused
+    /// nothing, so the three surfaces deliberately unified for the seat menu
+    /// one request earlier were deliberately different for the guard one
+    /// request later. A predicate reachable from all of them is what closes
+    /// that, and a rule living in one of its consumers is what let it open.
+    ///
+    /// Scope, so the asymmetry stays a decision: this guards **edit doors
+    /// only**. `PGNStore.retag` still rewrites a self-play game's two seats in
+    /// one pass (`selfPlayRewritesBothSeats`), `PlayerStats.headToHead` still
+    /// returns nil for a player against themselves, and `importPGN` still
+    /// admits a file that records one — Decision #3's shape, where a file may
+    /// say things the app would never author.
+    internal static func seatsNameOnePlayer(_ one: String, _ other: String) -> Bool {
+        guard let oneIdentity = identity(forTag: one),
+              let otherIdentity = identity(forTag: other) else { return false }
+        return oneIdentity == otherIdentity
+    }
 }

@@ -318,6 +318,13 @@ internal enum AccessibilityID {
     /// checklist: the sheet is unreachable in a boardless UI run.
     internal static func formWhitePicker(_ prefix: String) -> String { "\(prefix).white.picker" }
     internal static func formBlackPicker(_ prefix: String) -> String { "\(prefix).black.picker" }
+    /// The seat-collision warning under the two seat fields (D61′, M12.2).
+    /// Named because it is the *only* evidence the guard fired on these two
+    /// sheets — unlike Get Info, which raises an alert a reader cannot miss,
+    /// here the refusal is a line of text plus a disabled button, and a
+    /// disabled button with no visible reason is the thing this identifier
+    /// exists to let a future suite prove is present.
+    internal static func formSeatConflict(_ prefix: String) -> String { "\(prefix).seatConflict" }
     
     // MARK: Archive Confirmation (M5)
     

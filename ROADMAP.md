@@ -421,20 +421,49 @@ today rather than an allocation.
   any door could produce it — rather than by reading the two spellings and
   believing the comment between them.*
 
-- **D61′'s scope gap, closed at the shared form.** The one-player-two-seats
-  guard lives in `GetInfoWindow` alone. `NewLiveGameSheet` and
-  `EditGameInfoSheet` both edit seats through `LiveGameRosterForm` and refuse
-  nothing — so the three surfaces that were *deliberately unified* for the
-  seat menu one request earlier are deliberately different for the guard one
-  request later. D61′ names this as a real gap and names the remedy: the
-  check moves into the shared form, where the two seats are one `Roster` and
-  the comparison is cheaper than it is in Get Info's two independent drafts.
+- ~~**D61′'s scope gap, closed at the shared form.**~~ — **landed 6 August
+  2026.** The guard lived in `GetInfoWindow` alone while `NewLiveGameSheet` and
+  `EditGameInfoSheet` refused nothing, so the three surfaces *deliberately
+  unified* for the seat menu one request earlier were deliberately different
+  for the guard one request later.
 
-  The import asymmetry is untouched and must stay so — a PGN on disk may
-  legitimately record one person on both sides, `selfPlayRewritesBothSeats`
-  pins that the store still handles one, and `headToHeadIgnoresSelfPlay` pins
-  that the folds do. **What is being closed is one door minting them, not the
-  concept.**
+  **Landed:** `Player.seatsNameOnePlayer(_:_:)` beside `identity(forTag:)` as
+  the one predicate, `LiveGame.Roster.seatsNameOnePlayer` forwarding for the
+  shape the forms hold, and `GetInfoWindow.seatsCollide` **deleted** — a rule
+  living inside one of its consumers is what let the gap open, so extracting it
+  is the fix rather than a tidy-up. The form renders an inline warning; both
+  hosts disable their primary button; Get Info keeps its revert-and-alert.
+
+  **Same predicate, two shapes, and the reason is the commit model.** Get Info
+  commits per field on Return or focus loss, so by the time it can object the
+  value is already going to the store and reverting is the only honest
+  response. The sheets stage behind one button, so nothing is committed and
+  there is nothing to revert — reverting a field the reader is still typing
+  into would be the rudest reading of the same rule. D57′'s pattern, across
+  three surfaces instead of one window.
+
+  **Gating the archive sheet is safe and the opposite would have been a trap**,
+  which is the thing this bullet did not know when it was written:
+  `EditGameInfoSheet` appears *after* the game is archived, so a disabled Save
+  strands nothing — Done dismisses unconditionally and the game is already in
+  the Library. Blocking it before checking that would have made a played game
+  unsaveable on a typo.
+
+  **The find underneath: D61′ shipped with no test of its own.**
+  `PlayerIdentityTests` pinned the guard's *input* and nothing pinned the
+  predicate, so the case that matters — two spellings of one player colliding —
+  was unasserted, and a raw `!=` would have passed the entire suite. Six pins
+  now, including both unknown-seat exemptions and the accessor asserted against
+  the predicate rather than a literal.
+
+  The import asymmetry is untouched, as required: `selfPlayRewritesBothSeats`
+  and `headToHeadIgnoresSelfPlay` both stand, and `importPGN` still admits a
+  file recording one person on both sides. **What closed is one door minting
+  them, not the concept.**
+
+  Registry: one entry, `formSeatConflict(_:)` — the first minted since
+  `players.rankingPicker`, and named because on these two sheets the refusal is
+  a line of text and a greyed button rather than an alert.
 
 - **The three unconsumed symbols, each decided rather than swept.**
   `DGTSerialPort.isOpen` (the app target's one symbol with no consumer),

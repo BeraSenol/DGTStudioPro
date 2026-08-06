@@ -117,12 +117,22 @@ internal struct EditGameInfoSheet: View {
                 
                 Spacer()
                 
+                // D61′ (M12.2). Safe to gate here, and the reason is worth
+                // stating because the opposite would be a trap: this sheet
+                // appears *after* the game is archived, so a disabled Save
+                // strands nothing — the game is already in the Library and
+                // **Done** dismisses without applying edits, unconditionally.
+                // What is blocked is introducing a collision by editing, which
+                // is exactly D61′'s scope: one door minting them, not the
+                // concept. A game that somehow already holds one still
+                // archives, still exports, and still opens here.
                 Button("Save Changes") {
                     onSave(normalized(roster))
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
+                .disabled(roster.seatsNameOnePlayer)
                 .accessibilityIdentifier(AccessibilityID.archiveSave)
             }
             .padding()
