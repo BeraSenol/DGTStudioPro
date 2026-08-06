@@ -760,7 +760,28 @@ recorded here so the next reader knows it was seen rather than missed.
   rather than `fileprivate` scattered. That is a visibility widening and it
   should be argued once at the type, not eight times.
 
-- **Three merges, and only three.** `LastMove.swift` is four lines and folds
+- ~~**Three merges, and only three.**~~ — **landed 6 August 2026.** 140 app
+  sources to 137. `LastMove` into `Move`, `FEN+Parsing` into `FEN`,
+  `GameState+Replay` into `GameState`.
+
+  **Method, because it is the transferable part of a merge with no compiler
+  to hand.** The two small ones were retyped and then **diffed against their
+  originals with comments stripped** — both came back identical, which is the
+  only reason retyping was acceptable at all. The 209-line one was
+  *concatenated* rather than retyped, because a transcription check that
+  passes is evidence about that transcription and nothing about the next one.
+  Then three structural checks: every moved declaration present exactly once,
+  braces balanced per file, and no symbol referenced from a file that no
+  longer exists. That is what can be verified by reading; the compiler is
+  still owed.
+
+  *One check misfired and is worth recording, since it is the fourth time this
+  shape has appeared in two days: a grep for duplicate top-level declarations
+  flagged `extension FEN {` and `extension GameState {`, which are multiple
+  extensions of one type — legal, normal, and invisible to a line-oriented
+  check. A first run that needs interpreting is a check nobody runs twice.*
+
+  Original reasoning, unchanged: `LastMove.swift` is four lines and folds
   into `Move.swift` — it is a `Move` plus context and there is no reading
   under which it earns a file. `FEN+Parsing` folds into `FEN.swift`, which
   puts the boundary-hardening rules beside the type they harden. And

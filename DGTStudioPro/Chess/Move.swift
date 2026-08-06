@@ -127,7 +127,25 @@ internal struct Move: Equatable, Hashable, Sendable {
         if isCastling       { raw |= castlingFlag }
         if isEnPassant      { raw |= enPassantFlag }
         if isDoublePawnPush { raw |= doublePawnPushFlag }
-        
+
         return Move(rawValue: raw)
     }
+}
+
+// MARK: - Last Move
+
+/// The two squares a board highlights after a move (`SquareHighlight.lastMove`).
+///
+/// **Deliberately not a `Move`**, which is the only thing about it worth
+/// stating: the highlight layer needs from-and-to and nothing else, while a
+/// `Move` carries piece, capture, promotion and three flags packed into a
+/// `UInt32`. Views that render a highlight have no business decoding that, and
+/// a board being *reviewed* often has a from/to with no `Move` behind it.
+///
+/// Filed here rather than in its own four-line file since M13 (6 Aug 2026):
+/// it is a `Move` narrowed to what a view needs, so the type it is a narrowing
+/// of is where a reader looks for it.
+internal struct LastMove: Equatable, Sendable {
+    internal let from: Square
+    internal let to: Square
 }
