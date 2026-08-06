@@ -57,6 +57,17 @@ live in one namespace with the legacy tags, not two, so the next free number
 is `max` over the sources and both documents — never over the roadmap alone.*
 
 *Next free milestone number: **M15**.
+
+*Revised 6 August 2026 (later): **⌘U reported green by Bera**, discharging the
+gate on the em-dash pass (`09df7ed`), the roadmap itself (`389b7a5`), and
+M12.1 (`f6c4b6c`) and M12.2 (`a09a3fe`) — four commits, one run. Worth one
+line because two of them predicted their own results and both predictions were
+the weak kind: M12.1's `annotationsDoNotSurviveImport` was expected green on
+its first run, which is normally a sign a pin is decorative and here was
+correct because the thing it pins was already true and merely unstated; and
+M12.2 changed behaviour on three surfaces with six new pins behind it. **M12.3
+is not in that run** — it landed after, and is doc-and-comment work with no
+behaviour change, so its own gate is the cheap one.*
 The three measurements this revision rests on, with their methods, so the next
 pass re-runs rather than inherits: 140 app sources and 91 test sources
 (`find … -name '*.swift'`); 30,332 app lines of which 11,587 are comments
@@ -465,19 +476,45 @@ today rather than an allocation.
   `players.rankingPicker`, and named because on these two sheets the refusal is
   a line of text and a greyed button rather than an alert.
 
-- **The three unconsumed symbols, each decided rather than swept.**
-  `DGTSerialPort.isOpen` (the app target's one symbol with no consumer),
-  `OpenGamesRegistry.markDirty` (honest pre-wiring — its read side is live in
-  `LibraryDestination`'s delete path, and it goes live with no wiring the day
-  an editor defers its writes), and `BoardView.selectedSquare` (built
-  capability for a surface never decided).
+- ~~**The three unconsumed symbols, each decided rather than swept.**~~ —
+  **landed 6 August 2026. All three kept, all three now written down.**
+  `markDirty` joins the test-only-by-decision list, where it already belonged
+  in fact: `OpenGamesRegistryTests` covers it end to end. `isOpen` and
+  `selectedSquare` keep their places with the disposition argued at the
+  declaration rather than only in the register.
 
-  These are not one item three times. `markDirty` and `selectedSquare` each
-  point at something already on the Horizon — a deferring editor, and a
-  click-to-move / position-setup surface — so the decision for each is *earn
-  a consumer, or join the test-only-by-decision list*, and D41′ is the
-  precedent for the third possibility. `isOpen` has no such sibling waiting,
-  which is exactly why it has outlived two sweeps.
+  **The framing was wrong, and that is the finding.** This bullet called them
+  "three unconsumed symbols", which is what a declaration-name scan reports.
+  Two of them are deeper: they carry **unreachable branches in their
+  consumers**, which no name scan can see. Nothing calls `markDirty`, so
+  `LibraryDestination.delete`'s discard-confirmation arm can never execute —
+  and `markClean` *is* called twice, on a set that can only ever be empty.
+  `BoardView.selectedSquare` takes its default at every call site, so
+  `BoardView.squareHighlight`'s `.selected` insert is dead **and** so is
+  `SquareView`'s tint arm: two dead branches behind one unset property.
+
+  That is the M10 reachability lesson one level further in. M10 recorded that
+  a token cross-reference proves a name is *used*, never that a user can reach
+  it; M12.3 adds that it says nothing about whether a consumer's **branch** can
+  execute. A branch whose condition can never be true is the D40′ shape
+  wherever it appears, and D40′'s own prescription is a comment at the branch —
+  which all three now carry.
+
+  **The preview wrinkle, kept and labelled.** `SquareView`'s preview passes
+  `.selected` directly, so the tint renders on canvas while the app cannot
+  produce it. D51′ records that a preview witnessing an arrangement the app
+  does not have reads as evidence the arrangement is checked — same hazard,
+  opposite cause: D51′'s had been *retired*, this one has never been
+  *reached*. Kept so a future click-to-move surface starts from a style
+  someone has looked at, and now saying so in both places.
+
+  `isOpen` stays the odd one and its paragraph says why: `markDirty` and
+  `selectedSquare` are pre-wiring with a named future consumer and a dead
+  branch resting on them, while `isOpen` is a plain accessor with nothing
+  resting on it at all. Nothing is dead because of it; it is simply not asked.
+  Still not D41′'s disposition — `createdAt` had a better sibling, and this has
+  none, since `DGTConnection.status` answers a different question one layer up
+  and the two can disagree during a teardown.
 
 - **The launch-time `FocusedValue` warning, discriminated.**
   `FocusedValue update tried to update multiple times per frame` fires at

@@ -274,6 +274,11 @@ internal struct BoardView: View {
         if square == checkSquare {
             result.insert(.check)
         }
+        // Unreachable today: `selectedSquare` takes its default at every call
+        // site, so this insert never fires and `SquareView`'s tint arm never
+        // renders outside its own preview (M12.3, 6 Aug 2026). Kept as
+        // pre-wiring — a click-to-move or position-setup surface turns all
+        // three on by passing one value.
         if square == selectedSquare {
             result.insert(.selected)
         }

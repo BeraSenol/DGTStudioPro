@@ -1114,6 +1114,21 @@ internal struct LibraryDestination: View {
     /// Entry point from the "Delete Game?" confirmation. Routes to a
     /// second discard confirmation if the game is open with unsaved
     /// changes; otherwise deletes and closes immediately.
+    ///
+    /// **The first arm is unreachable today, by design rather than by
+    /// accident** (recorded 6 Aug 2026, M12.3). Nothing calls
+    /// `OpenGamesRegistry.markDirty`: every edit surface in the app —
+    /// `applyEdit`, `applyMovetextEdit`, Get Info's per-field commits — writes
+    /// through the store when the reader acts, so no tab ever holds
+    /// uncommitted state and `isDirty` is permanently `false`.
+    ///
+    /// Named here because a `disabled`-shaped branch whose condition can never
+    /// be true is the D40′ shape, and the defence D40′ prescribes is to say so
+    /// at the site rather than to discover it at the next sweep. This one is
+    /// kept rather than deleted: the registry is suited, the branch is three
+    /// lines, and an editor that defers its write — inline annotations, a live
+    /// movetext buffer — turns it on by calling `markDirty` and nothing else.
+    /// If that editor never arrives, this arm and the registry go together.
     private func delete(_ pgn: PGN) {
         if openGames.isDirty(pgn.persistentModelID) {
             pendingDirtyDeletion = pgn

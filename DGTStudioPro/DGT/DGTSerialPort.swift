@@ -94,6 +94,23 @@ internal actor DGTSerialPort: DGTPortProviding {
     
     internal init() {}
     
+    /// Whether the port currently holds a file descriptor.
+    ///
+    /// **The app target's one symbol with no consumer, kept by decision**
+    /// (6 Aug 2026, M12.3, after three sweeps found it and left it). Deliberately
+    /// *not* D41′'s disposition: `Player.createdAt` was deleted because
+    /// `PlayerStats.firstPlayed` already answered its question better, and this
+    /// has no such sibling — nothing else can say whether the descriptor is
+    /// live. `DGTConnection.status` answers a different question, one layer up,
+    /// about the *session* rather than the file handle, and the two can
+    /// disagree during a teardown.
+    ///
+    /// It is also the odd one of M12.3's three: `markDirty` and
+    /// `selectedSquare` are pre-wiring with a named future consumer, while this
+    /// is a plain accessor over private state with no branch resting on it.
+    /// Nothing is dead because of it; it simply is not asked. That makes it the
+    /// cheapest of the three to keep and the weakest to justify, which is why
+    /// the disposition is written here rather than only in the register.
     internal var isOpen: Bool { fileDescriptor >= 0 }
     
     // MARK: Open / Close

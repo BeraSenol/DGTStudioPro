@@ -61,6 +61,14 @@ internal struct SquareView: View {
                     .opacity(0.5)
             }
             
+            // Pre-wiring: nothing in the running app sets `.selected`, because
+            // `BoardView.selectedSquare` takes its default at every call site
+            // (the physical board is the input). This arm is therefore
+            // unreachable outside the preview below, which passes the option
+            // directly — recorded 6 Aug 2026 (M12.3) rather than left for the
+            // next reader to work out from two files. Kept because a
+            // click-to-move or position-setup surface needs exactly this and
+            // would have to pass a value and nothing more.
             if highlight.contains(.selected) {
                 Rectangle().strokeBorder(
                     Color.accentColor,
@@ -113,6 +121,14 @@ internal struct SquareView: View {
             piece: .empty, isLightSquare: true,
             highlight: .check, squareSize: 80, style: .walnut
         )
+        // `.selected` is **pre-wiring, not a state the app can enter** — see
+        // the body above. It renders here and nowhere else, and that is worth
+        // labelling rather than leaving to be inferred: D51′ records that a
+        // preview witnessing an arrangement the app does not have reads as
+        // evidence the arrangement is still checked. Same hazard, opposite
+        // cause — that one had been retired, this one has never been reached.
+        // The tint is kept on canvas so a future click-to-move surface starts
+        // from a style someone has actually looked at.
         SquareView(
             piece: .empty, isLightSquare: true,
             highlight: .selected, squareSize: 80, style: .walnut
