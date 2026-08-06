@@ -468,6 +468,11 @@ internal enum AccessibilityID {
     /// `libraryExport`. The toolbar button coexists with both and carries its
     /// own, which is what made a query against the shared name ambiguous.
     internal static let libraryExportButton = "library.export.button"
+    /// D58′'s backfill (M12.5). **Conditionally present**, unlike every other
+    /// identifier in this group: the button exists only while some game lacks
+    /// an ordinal, so a future suite asserting its absence is asserting the
+    /// job is done rather than that the control was lost.
+    internal static let libraryBackfillButton = "library.backfill.button"
     internal static let libraryExport       = "library.export"
     
     /// `gameCard.Quick Mate`, … — one per Library card, keyed by the game's

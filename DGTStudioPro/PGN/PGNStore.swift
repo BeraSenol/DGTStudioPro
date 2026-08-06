@@ -151,6 +151,137 @@ internal struct PGNStore {
         return try modelContext.fetch(descriptor).first?.libraryIndex
     }
     
+    /// What a folder scan did, reported rather than logged-and-forgotten
+    /// (M12.5). Every field is a count or a list of filenames; no models cross
+    /// this boundary, the `HashCollision` rule.
+    internal struct LibraryIndexBackfill: Sendable, Equatable {
+        /// Rows that had no ordinal and now carry the one their file named.
+        internal var stamped: Int = 0
+        /// Matched a row that already had an ordinal — left alone, see below.
+        internal var alreadyNumbered: Int = 0
+        /// Parsed cleanly and matched no row in the Library. **A finding, not
+        /// an error**: it means the folder holds a game the Library does not.
+        internal var unmatched: [String] = []
+        /// Filename carries no `<digits>.` ordinal, so there was nothing to
+        /// stamp. Skipped before parsing — see the ordering note at the call.
+        internal var unnumbered: [String] = []
+        /// Unreadable or unparseable. Kept separate from `unmatched` because
+        /// the remedies differ: one is a broken file, the other a missing game.
+        internal var skipped: [String] = []
+
+        internal var scanned: Int {
+            stamped + alreadyNumbered + unmatched.count + unnumbered.count + skipped.count
+        }
+    }
+
+    /// Whether any game is still missing its ordinal — the question the
+    /// Library toolbar asks to decide whether the backfill affordance exists
+    /// at all (D40′: an affordance that cannot act should not be on screen).
+    ///
+    /// Predicated and limited, the `highestLibraryIndex` shape: "is there at
+    /// least one" is a question a `FetchDescriptor` answers whole, and the
+    /// alternative materializes every game with its full `moves` array to
+    /// check one `Int?` on each body pass.
+    internal func hasUnnumberedGames() throws -> Bool {
+        var descriptor = FetchDescriptor<PGN>(predicate: #Predicate { $0.libraryIndex == nil })
+        descriptor.fetchLimit = 1
+        return try !modelContext.fetch(descriptor).isEmpty
+    }
+
+    /// Matches PGN files in `folder` to Library rows by content hash and
+    /// stamps each match with the ordinal its **filename** carries (D58′).
+    ///
+    /// **Why this door has to exist.** D58′ reads the ordinal at the import
+    /// door, from the URL — so every game imported before it has `nil`, the app
+    /// never stored the URL it came from, and re-importing is refused as a
+    /// duplicate. The pre-D58′ archive is therefore unreachable by every other
+    /// door in the app, which is a gap D58′ named and did not close.
+    ///
+    /// **Matching is by content hash, not by filename**, which is the whole
+    /// design. The folder this was built for spells filenames with full display
+    /// names (`47. Bera Senol vs Christophe Heylen.pgn`) while
+    /// `PGNSerializer.fileName` writes given names only — D58′ records that
+    /// discrepancy — so a name-based match would miss exactly the files this
+    /// exists to read. The hash is what already decides "same game" everywhere
+    /// else, and reusing it means this door inherits every folding rule without
+    /// restating one.
+    ///
+    /// **Stamps only where the row has no ordinal.** A scan that overwrites is
+    /// a scan that can renumber the archive from a stale or partial folder, and
+    /// the failure would be silent and total. `alreadyNumbered` counts the
+    /// skips so a re-run reports "nothing to do" rather than looking like it
+    /// failed.
+    ///
+    /// **The ordinal is read before the file is parsed**, which is an ordering
+    /// choice rather than an accident: parsing is the expensive half, and a
+    /// file whose name carries no `<digits>.` has nothing to give however well
+    /// it parses. On the folder this targets that is the difference between
+    /// reading every game and reading the numbered ones.
+    ///
+    /// Non-recursive by decision: "point at the PGN folder" is the gesture, and
+    /// descending would let a nested export directory renumber the archive from
+    /// files the reader did not mean to offer.
+    ///
+    /// One transaction. Failures inside the loop are collected rather than
+    /// thrown — a folder with one unreadable file should still stamp the other
+    /// forty, and the report names what it skipped.
+    internal func backfillLibraryIndices(from folder: URL) throws -> LibraryIndexBackfill {
+        var report = LibraryIndexBackfill()
+
+        let names = try FileManager.default
+            .contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension.lowercased() == "pgn" }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+
+        for url in names {
+            let name = url.lastPathComponent
+
+            guard let index = PGNSerializer.libraryIndex(fromFileName: name) else {
+                report.unnumbered.append(name)
+                continue
+            }
+
+            guard let text = try? String(contentsOf: url, encoding: .utf8),
+                  let parsed = try? parse(text) else {
+                report.skipped.append(name)
+                continue
+            }
+
+            // `parse` builds a detached `PGN` and does not insert — the same
+            // property `importPGN` relies on when it throws `.duplicate`
+            // without leaving a row behind. Nothing here reaches `insertNewGame`.
+            guard let row = try existingPGN(withHash: Self.contentHash(for: parsed)) else {
+                report.unmatched.append(name)
+                continue
+            }
+
+            guard row.libraryIndex == nil else {
+                report.alreadyNumbered += 1
+                continue
+            }
+
+            row.libraryIndex = index
+            report.stamped += 1
+        }
+
+        // Outside the loop: N saves for N files leaves a half-stamped archive
+        // behind any mid-loop failure, the `deleteOrphanedPlayers` argument.
+        // `libraryIndex` is outside the content hash (D58′), so nothing here
+        // needs `refreshHash` — stamping a filing number cannot change what
+        // game a row is.
+        if report.stamped > 0 { try modelContext.save() }
+
+        Self.logger?.info(
+            """
+            Library index backfill: stamped=\(report.stamped) \
+            alreadyNumbered=\(report.alreadyNumbered) unmatched=\(report.unmatched.count) \
+            unnumbered=\(report.unnumbered.count) skipped=\(report.skipped.count)
+            """
+        )
+
+        return report
+    }
+
     /// The second door (M5): archives a finished live game into the
     /// Library. Shares `contentHash` with import — one hash, two doors —
     /// so a game that was also imported (or archived twice, e.g. by the

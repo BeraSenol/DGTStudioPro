@@ -70,7 +70,9 @@ is not in that run** — it landed after, and is doc-and-comment work with no
 behaviour change, so its own gate is the cheap one.*
 The three measurements this revision rests on, with their methods, so the next
 pass re-runs rather than inherits: 140 app sources and 91 test sources
-(`find … -name '*.swift'`); 30,332 app lines of which 11,587 are comments
+(`find … -name '*.swift'`) — **92 test sources from M12.5 that afternoon,
+which is this line demonstrating its own point within the day**; 30,332 app
+lines of which 11,587 are comments
 (`grep -rh '^\s*///'` and its `//` sibling); `PROJECT-INSTRUCTIONS.md` at
 335 KB (`wc -c`).*
 
@@ -525,13 +527,71 @@ today rather than an allocation.
   two restored board windows both writing `\.activeGame` in one frame, which
   D51′'s restoration saga makes more than hypothetical.
 
-  **One step separates them: quit with a single board window open, relaunch.**
-  That is the whole of this bullet's cost, and it is on the list because the
-  arrangement it implicates is D53′'s trigger-binding pattern in its third
-  use — so if the first candidate is the cause, the fix is a decision about a
-  pattern rather than a tidy-up of one call site.
+  ~~**One step separates them: quit with a single board window open,
+  relaunch.**~~ **Narrowed by reading, 6 Aug 2026, and the step it proposed is
+  now the wrong one.** The first candidate is *sufficient on its own and needs
+  only one window*, which the bullet assumed was what the test would rule out.
+  The chain is all in `BoardDestination`'s modifier stack and none of it
+  depends on a second window: `.onAppear { loadIfNeeded() }` (line 207) fires
+  during the first render and mutates `tabState.boardGame`, which invalidates
+  the body and re-evaluates it **inside the same frame**; both passes publish
+  `\.activeGame` (190) and `\.boardGetInfoRequest` (195); and line 197 mints
+  `$getInfoRequested` fresh on each pass, which SwiftUI cannot dedupe because
+  `Binding` is not `Equatable`. Two publishes, one frame, one window.
 
-- **The library-index backfill, built.** D58′ shipped with a stated gap:
+  So a relaunch with a single window is now *expected* to warn, and seeing it
+  warn proves nothing. **What is still unsettled is which key**, and that is a
+  fact about SwiftUI's dedupe behaviour rather than about this code:
+  `\.activeGame` publishes a `Game`, a reference type, so if SwiftUI compares
+  by identity the second pass dedupes and only the `Binding` warns. The
+  informative step is therefore to read the **log line itself** and see whether
+  it names a key — not to count windows.
+
+  Deliberately **not fixed on this reasoning.** The obvious remedy is moving
+  `loadIfNeeded()` off `.onAppear`, which changes when the Board loads for a
+  warning the instructions already class as redundant-work rather than
+  incorrect — and the arrangement it implicates is D53′'s trigger-binding
+  pattern in its third use, so it is a decision about a pattern rather than a
+  tidy-up. Guessing at a fix for something nobody has observed is how the 295
+  got into the open items list.
+
+- ~~**The library-index backfill, built.**~~ — **landed 6 August 2026.**
+  `PGNStore.backfillLibraryIndices(from:)` matches PGN files in a chosen folder
+  to Library rows **by content hash** and stamps each match with the ordinal
+  its filename carries. `hasUnnumberedGames()` is the affordance's own
+  question, and the Library toolbar's third transfer item exists **only while
+  it answers true** — the `queueStatusLabel` shape in the same toolbar, and the
+  honest one for a job that retires itself: run it once and the button is gone,
+  rather than sitting greyed out forever (D40′).
+
+  Matching by hash rather than filename is the load-bearing choice and the one
+  most likely to be "simplified" later, so it has its own pin: D58′ records
+  that the working folder spells filenames with full display names while
+  `PGNSerializer.fileName` writes given names only, so a name-based match would
+  miss exactly the files this exists to read. Two more guards pinned because
+  their failure would be silent and total: an existing ordinal is **never**
+  overwritten (a scan that renumbers from a stale folder is worse than one that
+  does nothing), and a filename with digits but no period is a year in a title
+  rather than an ordinal. Ten pins, including `hasUnnumberedGames` producible
+  both ways — the D40′ check run at minting.
+
+  Reported rather than logged: the alert always fires, including on "matched
+  none of them", because a scan that finishes silently is indistinguishable
+  from one that never ran, and the commonest real failure is pointing at the
+  wrong folder. Unmatched files are phrased as a finding rather than a fault —
+  a file the Library does not hold is a game not yet imported.
+
+  **Two stale claims fell out on the way**, both in `LibraryDestination` and
+  neither related to the feature. The transfer group's doc described "a single
+  `ToolbarItem`" with "the explicit `Divider`" over code holding **two**
+  `ToolbarItem`s and no `Divider` at all. And `Binding(present:)`'s doc — the
+  one that argues counts belong in commands rather than prose — carried "it is
+  currently eight" beside that argument; it was **nine** when written and is
+  eleven now. Corrected, and the second is recorded at the site as the fourth
+  time that particular number has been wrong.
+
+  *Superseded bullet text follows, kept because it is the specification the
+  door was built to and the rejections still hold.* D58′ shipped with a stated gap:
   every game imported before it gets `nil`, the app never stored the URL it
   imported through, and re-importing is refused as a duplicate — so the
   existing archive **cannot be backfilled by any door that exists**. The `#`

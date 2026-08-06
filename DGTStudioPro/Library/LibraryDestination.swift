@@ -62,6 +62,13 @@ internal struct LibraryDestination: View {
     @State private var selectedPGNs: Set<PGN.ID> = []
     @State private var importProgress: ImportProgress?
 
+    /// D58′'s backfill result, held for its report alert (M12.5). Two pieces of
+    /// state rather than one enum because they are not alternatives in the way
+    /// that shape implies: a report is the normal outcome including "nothing
+    /// matched", while a failure means the folder itself could not be read.
+    @State private var backfillReport: PGNStore.LibraryIndexBackfill?
+    @State private var backfillFailure: String?
+
     // `editingMovetext` was here until D59′ — the `.sheet(item:)` subject
     // driving D18′'s editor. Gone with the sheet: the editor is a Get Info tab
     // now, so this destination holds no presentation state for it. Nothing in
@@ -300,6 +307,25 @@ internal struct LibraryDestination: View {
                         lead: "\(game.name) will be permanently deleted."
                     ))
                 }
+            )
+            // M12.5. Always reports, including "nothing matched" — a scan that
+            // finishes silently is indistinguishable from a scan that did not
+            // run, and this one is invoked rarely enough that the reader has no
+            // other way to tell. The `deleteOrphanedPlayers` argument: the
+            // dialog is doing the showing as well as the telling.
+            .alert(
+                "Matched \(backfillReport?.stamped ?? 0) Games",
+                isPresented: Binding(present: $backfillReport),
+                presenting: backfillReport,
+                actions: { _ in Button("OK") {} },
+                message: { report in Text(Self.backfillMessage(for: report)) }
+            )
+            .alert(
+                "Couldn’t Read That Folder",
+                isPresented: Binding(present: $backfillFailure),
+                presenting: backfillFailure,
+                actions: { _ in Button("OK") {} },
+                message: { reason in Text(reason) }
             )
             .alert(
                 "Discard Unsaved Changes?",
@@ -776,13 +802,27 @@ internal struct LibraryDestination: View {
     // own vocabulary, because the raw value is the app's one rendering of a
     // result and a label that hides it makes the reader translate.
     
-    /// The Library's two file doors, in and out — one toolbar cell, with a
-    /// vertical divider between them. A single `ToolbarItem` (not two split
-    /// by a `ToolbarSpacer`) so the pair shares one capsule: they are the
-    /// two directions of the same job, and the explicit `Divider` marks the
-    /// direction change inside it. Identifiers, helps and the disabled
-    /// state stay on the individual buttons, so identifier lookups and the
-    /// per-button affordances are unmoved by the shared container.
+    /// The Library's file doors: in, out, and — only when it has work —
+    /// reconcile.
+    ///
+    /// **This doc claimed something the code does not do, corrected 6 Aug 2026
+    /// (M12.5).** It read "one toolbar cell… A single `ToolbarItem` (not two
+    /// split by a `ToolbarSpacer`)… the explicit `Divider` marks the direction
+    /// change inside it." There are **two** `ToolbarItem`s here and there is no
+    /// `Divider` anywhere in this group. What survives is the part that was
+    /// load-bearing and is still true: no `ToolbarSpacer` separates them, which
+    /// is what makes adjacent items share a capsule, and identifiers, helps and
+    /// disabled state stay on the individual buttons so per-button affordances
+    /// are unaffected by the grouping. Code is truth; the arrangement changed
+    /// under a doc that kept describing the old one.
+    ///
+    /// The third item is **present only while some game lacks an ordinal**,
+    /// which is the `queueStatusLabel` shape three groups down rather than a
+    /// new idea. A backfill retires itself: run it once against the folder and
+    /// every row is numbered, at which point the affordance has nothing to do
+    /// and D40′ says it should not be on screen greyed out. Conditional
+    /// presence also keeps a rare one-off out of a toolbar the forward notes
+    /// already call crowded.
     @ToolbarContentBuilder
     private var transferToolbarItems: some ToolbarContent {
         ToolbarItem {
@@ -814,6 +854,23 @@ internal struct LibraryDestination: View {
                 : "Export the selected game as a PGN file"
             )
             .accessibilityIdentifier(AccessibilityID.libraryExportButton)
+        }
+        // The scan reads `games` rather than asking the store, deliberately:
+        // this is a `@Query`, so the item appears and disappears reactively as
+        // rows are imported and stamped, where a `hasUnnumberedGames()` fetch
+        // per body pass would cost more and still need invalidating by hand.
+        // O(n) over an `Int?` per render, which joins the known-costs census
+        // well below the `GameRecord`-per-row folds already on it.
+        if games.contains(where: { $0.libraryIndex == nil }) {
+            ToolbarItem {
+                Button {
+                    presentBackfillPanel()
+                } label: {
+                    Label("Match Folder", systemImage: "number.square")
+                }
+                .help("Fill in missing library numbers by matching a folder of PGN files")
+                .accessibilityIdentifier(AccessibilityID.libraryBackfillButton)
+            }
         }
     }
     
@@ -982,9 +1039,44 @@ internal struct LibraryDestination: View {
         panel.allowedContentTypes = [UTType(filenameExtension: "pgn") ?? .plainText]
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
-        
+
         if panel.runModal() == .OK {
             importURLs(panel.urls)
+        }
+    }
+
+    /// D58′'s backfill (M12.5): point at the folder the PGNs live in and let
+    /// the content hash decide which row each file is.
+    ///
+    /// Directory mode, `PGNExporter.exportBatch`'s panel shape — the same
+    /// gesture pointed the other way, and a fresh panel selection carries its
+    /// own sandbox grant for the session, so no bookmark is involved.
+    ///
+    /// Synchronous, unlike `importURLs`: this reads and parses files but writes
+    /// one `Int?` per match and never resolves players, classifies or rehashes,
+    /// so it is a fraction of an import's work per file and has no progress to
+    /// report. If a folder ever gets large enough for that to be wrong, the
+    /// import pipeline's `ImportProgress` is the shape to copy.
+    private func presentBackfillPanel() {
+        let panel = NSOpenPanel()
+        panel.title = "Match Folder to Library"
+        panel.prompt = "Match"
+        panel.message = "Choose the folder your PGN files live in. "
+            + "Games already in the Library will take the number their file carries."
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = false
+        guard panel.runModal() == .OK, let folder = panel.url else { return }
+
+        do {
+            backfillReport = try PGNStore(modelContext: modelContext)
+                .backfillLibraryIndices(from: folder)
+        } catch {
+            Self.logger?.error(
+                "Library index backfill failed: \(error.localizedDescription, privacy: .public)"
+            )
+            backfillReport = nil
+            backfillFailure = error.localizedDescription
         }
     }
     
@@ -1057,6 +1149,55 @@ internal struct LibraryDestination: View {
         ? "\(subject) is in no other game and will be removed from Players."
         : "\(subject) are in no other games and will be removed from Players."
         return lead + " " + clause + more
+    }
+
+    /// The backfill report in the reader's terms (M12.5).
+    ///
+    /// **Leads with what did not happen when nothing did**, because the two
+    /// outcomes a reader will actually hit are "it filled everything in" and
+    /// "it found none of my games", and the second is the one that needs
+    /// explaining rather than a bare zero. The commonest cause is pointing at
+    /// the wrong folder, so the message says so instead of listing filenames
+    /// that would all be wrong together.
+    ///
+    /// `unmatched` is deliberately phrased as a **finding, not a fault**: a
+    /// file the Library does not hold is a game you have not imported, which is
+    /// worth knowing and is not an error. Capped at three names on the
+    /// `sweepMessage` precedent — this is the only place these filenames are
+    /// ever shown, and a bare count would ask the reader to trust a number
+    /// about files they have never seen.
+    private static func backfillMessage(for report: PGNStore.LibraryIndexBackfill) -> String {
+        guard report.scanned > 0 else {
+            return "That folder has no PGN files in it."
+        }
+        guard report.stamped > 0 || report.alreadyNumbered > 0 else {
+            return "Scanned \(report.scanned) file\(report.scanned == 1 ? "" : "s") and matched "
+            + "none of them to games in your Library. If these are your games, "
+            + "check that you picked the folder they were imported from."
+        }
+
+        var parts: [String] = []
+        if report.stamped > 0 {
+            parts.append("Numbered \(report.stamped) game\(report.stamped == 1 ? "" : "s").")
+        }
+        if report.alreadyNumbered > 0 {
+            parts.append("\(report.alreadyNumbered) already had a number and were left alone.")
+        }
+        if !report.unmatched.isEmpty {
+            let shown = report.unmatched.prefix(3).joined(separator: ", ")
+            let more = report.unmatched.count > 3
+            ? " and \(report.unmatched.count - 3) more"
+            : ""
+            parts.append("\(report.unmatched.count) file\(report.unmatched.count == 1 ? " is" : "s are") "
+                         + "not in your Library yet (\(shown)\(more)).")
+        }
+        if !report.unnumbered.isEmpty {
+            parts.append("\(report.unnumbered.count) filename\(report.unnumbered.count == 1 ? " carries" : "s carry") no number.")
+        }
+        if !report.skipped.isEmpty {
+            parts.append("\(report.skipped.count) couldn’t be read.")
+        }
+        return parts.joined(separator: " ")
     }
 
     /// Routes a delete request for the current selection — the toolbar button
@@ -1262,9 +1403,14 @@ extension Binding where Value == Bool {
     /// a defect here. The 2027 SDK's item-based `alert` /
     /// `confirmationDialog` retire every call site and this helper with them.
     ///
-    /// No caller count here on purpose — it has been wrong three times (five,
-    /// six, seven; it is currently eight). The count lives in the command,
-    /// D42′'s rule: `grep -rn 'Binding(present:' DGTStudioPro/`.
+    /// No caller count here on purpose — it has been wrong four times now
+    /// (five, six, seven, and "currently eight", which was **nine** when it was
+    /// written and is eleven today). The fourth was found on 6 Aug 2026 by
+    /// running the command in the next sentence, which is the entire argument:
+    /// a number written beside the instruction not to write numbers still went
+    /// stale, and it went stale *silently*, because nothing about a wrong count
+    /// fails. The count lives in the command, D42′'s rule:
+    /// `grep -rn 'Binding(present:' DGTStudioPro/`.
     internal init<T>(present source: Binding<T?>) {
         self.init(
             get: { source.wrappedValue != nil },
