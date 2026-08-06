@@ -89,59 +89,43 @@ internal struct LibraryDestination: View {
     // system field claims the toolbar's trailing edge and that isn't
     // negotiable, but native search behavior won over field placement.)
     @State private var searchText = ""
-    /// The non-text facets, as chips inside the search field (3 Aug 2026).
+    /// The non-text facets, as chips inside the search field.
     ///
-    /// Replaced a `GameResult?` / `Bool?` pair driven by the toolbar menu, which
-    /// was wrong twice over: single-valued, so "decisive games" was
-    /// inexpressible; and announced only by a filled glyph, which says *that*
-    /// something narrows the list and never *what*. A chip says both and carries
-    /// its own remove button.
-    ///
-    /// The menu stays the discoverable entry point — `suggestedTokens` surface
-    /// only while the field is focused — and its glyph tracks `!tokens.isEmpty`.
+    /// Chips rather than the old `GameResult?` / `Bool?` pair, which was
+    /// single-valued (so "decisive games" was inexpressible) and announced only
+    /// by a filled glyph, which says *that* something narrows and never *what*.
+    /// The menu stays the discoverable entry point; its glyph tracks
+    /// `!tokens.isEmpty`.
     @State private var searchTokens: [LibrarySearchToken] = []
 
-    /// The list mode's column sort (5 Aug 2026).
+    /// The list mode's column sort.
     ///
-    /// **Defaults to `#` descending** — the ordinal the folder on disk has kept
-    /// since before the app existed (D58′), rather than `importedAt`, which is
-    /// only when *this app* first saw a file. Re-importing an old game moves it
-    /// to the top under the old default and leaves it in place under this one.
+    /// **Defaults to `#` descending** — the ordinal the folder on disk kept
+    /// before the app existed (D58′), not `importedAt`, which is only when this
+    /// app first saw a file. Re-importing an old game leaves it in place.
     ///
-    /// **One comparator, not two**: `#` twice reproduces the launch order
-    /// exactly, where a hidden tiebreaker would make it a state no click can
-    /// return to. The cost is that ties are unordered by contract —
-    /// `libraryIndex` is documented not unique, and `sorted(using:)` is not
-    /// guaranteed stable. Deterministic in practice, and relied on for
-    /// *display* only; D10′'s total-tiebreak rule governs the pure folds.
+    /// **One comparator, not two**, so `#` twice reproduces the launch order
+    /// exactly; a hidden tiebreaker would make it a state no click can return
+    /// to. Cost: ties are unordered by contract — `libraryIndex` is not unique
+    /// and `sorted(using:)` is not stable. Display only; D10′'s total-tiebreak
+    /// rule governs the pure folds. Un-indexed games sort to the bottom.
     ///
-    /// Un-indexed games sort to the **bottom** — `Optional`'s ordering under a
-    /// reversed comparator, and the right answer besides.
+    /// **Owned here rather than in `LibraryListView`**, which is the point:
+    /// `filteredGames` applies it last, so D24′'s export numbering, the queue's
+    /// running order and D56′'s tab order all see what the reader sees. Inside
+    /// the table it would reorder pixels while those three read the unsorted
+    /// array — nothing fails, the filenames just stop matching the screen.
     ///
-    /// **Owned here rather than in `LibraryListView`**, which is the point of
-    /// the change: `filteredGames` applies it as the last narrowing stage, so
-    /// D24′'s export numbering, the analysis queue's running order and D56′'s
-    /// tab order all see what the reader sees. Left inside the table, the sort
-    /// would reorder pixels while those three read the *unsorted* array —
-    /// nothing fails, the filenames just stop matching the screen.
-    ///
-    /// `@State`, not `TabState`, and deliberately not persisted: every launch
-    /// opens on `#` descending.
+    /// Not persisted: every launch opens on `#` descending.
     @State private var sortOrder: [KeyPathComparator<PGN>] = Self.defaultSortOrder
 
-    /// The launch order, stated **once**.
+    /// The launch order, stated **once** — the `@State` initializer above and
+    /// every mode view's previews would otherwise repeat it (D25′'s
+    /// twin-read-site shape, whose harmless-looking version here is a canvas
+    /// that stops showing what the app opens on).
     ///
-    /// The `@State` initializer above and the previews across this file's mode
-    /// views would otherwise each repeat it — D25′'s twin-read-site shape. A
-    /// preview drifting from the shipped default is its harmless-looking
-    /// version: the canvas stops showing what the app opens on, and nothing
-    /// fails.
-    ///
-    /// **Computed rather than stored** (`noGamePlaceholder`'s spelling), and
-    /// `nonisolated` because `View` conformance would otherwise infer
-    /// `@MainActor` onto it and lock out previews for no reason.
-    /// `KeyPathComparator` is `Sendable` by `SortComparator`'s refinement, so
-    /// nothing here needs an opt-out.
+    /// Computed rather than stored, and `nonisolated` because `View`
+    /// conformance would otherwise infer `@MainActor` and lock out previews.
     internal nonisolated static var defaultSortOrder: [KeyPathComparator<PGN>] {
         [KeyPathComparator(\PGN.libraryIndex, order: .reverse)]
     }
@@ -202,20 +186,17 @@ internal struct LibraryDestination: View {
                 )
             }
         }
-        // Sorting is the LAST stage, and the one that makes "display order" mean
-        // what the reader sees. The stages above *remove* rows and compose in
-        // any order; this only permutes, and must come last regardless — sorting
-        // a set you are about to filter is work thrown away.
+        // Sorting is the LAST stage — the stages above *remove* rows and
+        // compose in any order, this only permutes, and sorting a set you are
+        // about to filter is work thrown away.
         //
-        // Unconditional rather than `sortOrder.isEmpty ? result : …`: `#`
-        // descending is the default now and nothing in `Table`'s header
-        // behaviour empties the array, so that branch's condition cannot be
-        // produced — the `.disabled(…)` shape D40′ names.
+        // Unconditional rather than `sortOrder.isEmpty ? result : …`: nothing
+        // in `Table`'s header behaviour empties the array, so that branch's
+        // condition cannot be produced — the `.disabled(…)` shape D40′ names.
         //
-        // Cost, accepted: the Library sorts every render. Invisible for `#`, an
-        // `Int?` compare; not for **ECO**, whose comparator goes through
-        // `opening` and rehydrates per comparison. Known-costs census, not
-        // optimized ahead of M7.
+        // Cost, accepted: the Library sorts every render. Invisible for `#`,
+        // not for **ECO**, whose comparator rehydrates per comparison.
+        // Known-costs census.
         return result.sorted(using: sortOrder)
     }
     
@@ -261,29 +242,26 @@ internal struct LibraryDestination: View {
     /// ⌘A over all four view modes, as the system's own Edit ▸ Select All
     /// rather than a shortcut of this destination's invention.
     ///
-    /// `.onCommand` puts the action in the responder chain, which both enables
-    /// the menu item and gives it its shortcut. Three things fall out of that
-    /// rather than being designed: ⌘A inside the search field still selects
-    /// *text*, because the field answers first; list and columns are `Table`s,
-    /// so `NSTableView` answers and this never fires — producing the identical
-    /// set, since the table was built from the same narrowed array; and icons
-    /// and gallery have no such responder, so for them this is the whole
-    /// feature.
+    /// `.onCommand` rides the responder chain, which both enables the menu item
+    /// and gives it its shortcut. Three things fall out rather than being
+    /// designed: ⌘A in the search field still selects *text* (the field answers
+    /// first); list and columns are `Table`s, so `NSTableView` answers and this
+    /// never fires — producing the identical set, since the table was built
+    /// from the same array; and icons and gallery have no such responder, so
+    /// for them this is the whole feature.
     ///
     /// **Selects what the render painted, not what `filteredGames` would answer
-    /// at action time** — the opposite of `gamesInDisplayOrder` above, for the
-    /// opposite reason. That re-derives because a destructive action against a
-    /// stale list is the failure to prevent; this one *is* the visible state, so
-    /// "select all" must mean the rows on screen. The narrowing is unchanged
-    /// either way: a hidden game stays out of every bulk action.
+    /// now** — the opposite of `gamesInDisplayOrder`, for the opposite reason.
+    /// That re-derives because a destructive action against a stale list is the
+    /// failure to prevent; this one *is* the visible state.
     ///
-    /// Nil on an empty list rather than a closure assigning an empty set, so the
-    /// system disables Edit ▸ Select All — both arms producible, the D40′ check
-    /// run at minting.
+    /// Nil on an empty list rather than a closure assigning an empty set, so
+    /// the system disables Edit ▸ Select All — both arms producible, the D40′
+    /// check run at minting.
     ///
-    /// Not reached, named so it isn't read as an oversight: the icons grid's
-    /// `anchorID` is `@State` a destination cannot touch, so after ⌘A the next
-    /// arrow steps from the last card *clicked*.
+    /// Named so it is not read as an oversight: the icons grid's `anchorID` is
+    /// `@State` a destination cannot touch, so after ⌘A the next arrow steps
+    /// from the last card *clicked*.
     private func selectAll(_ games: [PGN]) {
         selectedPGNs = Set(games.map(\.id))
     }
@@ -366,27 +344,17 @@ internal struct LibraryDestination: View {
                     ))
                 }
             )
-            // `.onDeleteCommand` stood here until 5 Aug 2026: **plain ⌫ no
-            // longer deletes.** Asymmetry of cost — ⌫ sits one keystroke from
-            // where your hands already are with a row focused, and its failure
-            // mode is a multi-selection you forgot you had. ⌘⌫ is Finder's key
-            // for the verb and no slipped finger reaches it.
+            // `.onDeleteCommand` stood here: **plain ⌫ no longer deletes.**
+            // Asymmetry of cost — ⌫ is one keystroke from where your hands
+            // already are with a row focused, and its failure mode is a
+            // multi-selection you forgot about. No slipped finger reaches ⌘⌫.
             //
-            // The shortcut moved to the toolbar's Delete button, not here: a
-            // `keyboardShortcut` on an always-present, already-`disabled`-guarded
-            // control is live whenever this destination shows, where the context
-            // menu's copy of ⌘⌫ is only known to *render*. Removing this line
-            // without a home that certain would have retired the gesture rather
-            // than narrowed it.
-            //
-            // **That home lasted a day.** The toolbar's Delete button was
-            // removed 6 Aug 2026 by request, so ⌘⌫ now rests on exactly the
-            // copy the paragraph above declined to trust. The narrowing still
-            // stands on its own merits — ⌫ was retired because being live was
-            // the problem — but the gesture's *survival* is now an open
-            // question rather than a settled one. `GameActionsMenu`'s delete
-            // item carries the full note; the boardless checklist is where it
-            // gets answered.
+            // ⌘⌫ went to the toolbar's Delete button rather than here, because
+            // a shortcut on an always-present guarded control is live while the
+            // row menu's copy is only known to *render*. **That button has
+            // since been removed**, so ⌘⌫ now rests on exactly the copy that
+            // reasoning declined to trust — an open question, not a settled
+            // one. `GameActionsMenu`'s delete item carries the note.
             .onAppear {
                 backfillEmptyNames()
                 backfillPlayerLinks()
@@ -500,19 +468,13 @@ internal struct LibraryDestination: View {
         .inspector(isPresented: $tabState.libraryInspectorPresented) {
             // `onEditMoves:` was a fourth argument here until 5 Aug 2026,
             // passed only when a single game was selected so the pencil would
-            // not render over an empty or multi selection. Both the argument
-            // and the pencil went with the movetext door, which is Get Info's
-            // Move Text tab now. (Written above the call rather than inside the
-            // argument list, where it read as a commented-out parameter and
-            // matched every grep for the symbol it was announcing the death of.)
-            // `queue:` was the third argument here until 6 Aug 2026. The
-            // inspector threaded it into `LoadedSection` and **neither read
-            // it** — the control row that did was deleted by the sweep earlier
-            // the same day, and the parameter rode on for five preview call
-            // sites past its last consumer. Found by a grep that stripped
-            // comments first, which is the only reason it was found: three of
-            // the four remaining mentions were prose about a row that no longer
-            // exists, and a plain search for the symbol reported it live.
+            // not render over an empty or multi selection. Both went with the
+            // movetext door, which is Get Info's Move Text tab now.
+            //
+            // `queue:` followed it. The inspector threaded it into
+            // `LoadedSection` and **neither read it** — found only by a grep
+            // that stripped comments first, since every surviving mention was
+            // prose about the row that had consumed it.
             LibraryInspectorView(
                 pgn: selectedPGN(in: games),
                 selectionCount: selectedPGNs.count
@@ -520,16 +482,13 @@ internal struct LibraryDestination: View {
             .inspectorColumnWidth(min: 335, ideal: 335, max: 400)
         }
         // The one write of the glyph's ambient state, for every mode view and
-        // every context menu under this destination. Applied here rather than
-        // per mode so the four branches cannot disagree about whether they
-        // have it — a mode that silently lacked it would show a stale green
-        // checkmark and nothing would fail.
+        // context menu here. Applied once rather than per mode, so the four
+        // branches cannot disagree — a mode silently lacking it would show a
+        // stale green checkmark and nothing would fail.
         //
-        // Cheap by construction: `runningID` changes once per game, and this
-        // body already re-renders on queue changes for the toolbar's count.
-        // Passing the controller instead would have every row observing the
-        // driver's per-ply progress, which is the cost this whole pass exists
-        // to remove.
+        // `runningID` changes once per game, and this body already re-renders
+        // on queue changes. Passing the controller instead would have every row
+        // observing the driver's per-ply progress.
         .environment(\.analysisRunningGameID, analysisQueue.runningID)
         .toolbar { toolbarContent }
         // Tokens ahead of the text, inside the field. `suggestedTokens` is
@@ -803,19 +762,14 @@ internal struct LibraryDestination: View {
     /// One token, rendered — used by both the chip inside the search field
     /// and the row in the Filter menu, so the two cannot drift.
     ///
-    /// The analysis pair carries the same tinted badge it wears everywhere
-    /// else in the Library, through `AnalysisGlyph`'s one colour source: a
-    /// green checkmark next to "Analyzed" in the menu, a red one on the chip,
-    /// and the identical treatment on the toolbar button that acts on them.
-    /// Result tokens take no tint — a checkered flag has no state to signal,
-    /// and colouring it would imply one.
+    /// The analysis pair carries the same tinted badge it wears everywhere else
+    /// in the Library, through `AnalysisGlyph`'s one colour source. Result
+    /// tokens take no tint — a checkered flag has no state to signal.
     ///
-    /// **These two pass their state as a literal and never consult the queue,
-    /// which is the point rather than an omission.** A token names a *facet* —
-    /// the set of games matching a stored predicate — and a facet is never
-    /// mid-analysis. `AnalysisGlyph.State` has three cases; a filter has two,
-    /// permanently, and a spinning chip would claim the filter itself was doing
-    /// something.
+    /// **These two pass their state as a literal and never consult the queue**,
+    /// which is the point: a token names a *facet*, and a facet is never
+    /// mid-analysis. `State` has three cases; a filter has two, permanently,
+    /// and a spinning chip would claim the filter itself was working.
     @ViewBuilder
     private func tokenLabel(_ token: LibrarySearchToken) -> some View {
         switch token {
@@ -855,24 +809,19 @@ internal struct LibraryDestination: View {
     /// The Library's file doors: in, out, and — only when it has work —
     /// reconcile.
     ///
-    /// **This doc claimed something the code does not do, corrected 6 Aug 2026
-    /// (M12.5).** It read "one toolbar cell… A single `ToolbarItem` (not two
-    /// split by a `ToolbarSpacer`)… the explicit `Divider` marks the direction
-    /// change inside it." There are **two** `ToolbarItem`s here and there is no
-    /// `Divider` anywhere in this group. What survives is the part that was
-    /// load-bearing and is still true: no `ToolbarSpacer` separates them, which
-    /// is what makes adjacent items share a capsule, and identifiers, helps and
-    /// disabled state stay on the individual buttons so per-button affordances
-    /// are unaffected by the grouping. Code is truth; the arrangement changed
-    /// under a doc that kept describing the old one.
+    /// Two `ToolbarItem`s with **no `ToolbarSpacer` between them**, which is
+    /// what makes adjacent items share a capsule. Identifiers, helps and
+    /// disabled state stay on the individual buttons, so per-button affordances
+    /// are unaffected by the grouping.
     ///
-    /// The third item is **present only while some game lacks an ordinal**,
-    /// which is the `queueStatusLabel` shape three groups down rather than a
-    /// new idea. A backfill retires itself: run it once against the folder and
-    /// every row is numbered, at which point the affordance has nothing to do
-    /// and D40′ says it should not be on screen greyed out. Conditional
-    /// presence also keeps a rare one-off out of a toolbar the forward notes
-    /// already call crowded.
+    /// (This doc described a single item and a `Divider` for a while — neither
+    /// existed. The arrangement changed under a doc that kept describing the
+    /// old one.)
+    ///
+    /// The third item is **present only while some game lacks an ordinal** —
+    /// the `queueStatusLabel` shape. A backfill retires itself: run it once and
+    /// every row is numbered, at which point D40′ says it should not sit on
+    /// screen greyed out.
     @ToolbarContentBuilder
     private var transferToolbarItems: some ToolbarContent {
         ToolbarItem {
@@ -935,39 +884,28 @@ internal struct LibraryDestination: View {
         }
     }
     
-    /// What is left of the analysis group after 6 Aug 2026: the queue's own
-    /// status item, and nothing else.
+    /// What is left of the analysis group: the queue's status item, and nothing
+    /// else.
     ///
-    /// **Analyze, Delete and Export were removed from the toolbar by request**,
-    /// leaving Import, the optional Match Folder, the view-mode picker and the
-    /// inspector toggle. All three verbs are still reachable — every row's
-    /// context menu carries them, at every arity, with their counted plurals and
-    /// their keys. What went is the always-present copy that acted on the
-    /// selection.
+    /// **Analyze, Delete and Export were removed from the toolbar by request.**
+    /// All three are still on every row's context menu at every arity; what
+    /// went is the always-present copy acting on the selection.
     ///
-    /// **Two costs, named rather than discovered.**
+    /// **Two costs, named rather than discovered.** The sharp one is ⌘⌫: delete
+    /// was moved onto *this button* precisely because a `keyboardShortcut` on
+    /// an always-present, already-guarded control is live whenever the
+    /// destination shows, while the row menu's copy is known only to **render**.
+    /// Removing the button hands ⌘⌫, ⌘E and ⌘R back to that unmeasured copy —
+    /// accepted by request, with a `Commands` scene as the remedy if they turn
+    /// out dead, and the manual check as the thing that says which.
     ///
-    /// The sharp one is ⌘⌫. The 5 Aug narrowing retired plain ⌫ and moved delete
-    /// onto *this toolbar button* specifically because a `keyboardShortcut` on
-    /// an always-present, already-`disabled`-guarded control is live whenever
-    /// the destination shows, while the row menu's copy is known only to
-    /// **render** — whether SwiftUI registers a `.contextMenu`'s shortcut with
-    /// the menu shut has never been measured here. Deleting the button hands
-    /// ⌘⌫, ⌘E and ⌘R back to that unmeasured copy. Accepted by request with the
-    /// alternative on the table (a `Commands` scene, which is the route this
-    /// project's own notes call owed if those keys turn out dead); the manual
-    /// check is the thing that will say which happened, and it is written to be
-    /// run rather than assumed.
+    /// The quieter one: nothing now shows "is my *selection* analyzed" at a
+    /// glance. The row menu answers per right-click and the queue item answers
+    /// "is anything running", which is the same information one gesture later.
     ///
-    /// The quieter one: with no aggregate Analyze button there is no surface
-    /// showing "is my *selection* analyzed" at a glance. The row menu answers it
-    /// per right-click and the queue item below answers "is anything running",
-    /// which between them is the same information one gesture later.
-    ///
-    /// Sibling removal: `AnalysisGlyph`'s selection-scoped `state` overload was
-    /// minted hours earlier to fix this button and went with it — a door whose
-    /// only surface is gone is the D40′ lie one layer down. Its finding survives
-    /// at the surviving overload's doc.
+    /// `AnalysisGlyph`'s selection-scoped `state` overload went with the
+    /// button — a door whose only surface is gone is the D40′ lie one layer
+    /// down. Its finding survives at the surviving overload.
     @ToolbarContentBuilder
     private var queueToolbarItem: some ToolbarContent {
         // Visible only while a batch runs or a drained batch left
@@ -1026,33 +964,25 @@ internal struct LibraryDestination: View {
         }
     }
     
-    /// The queue toolbar item's label: a **turning gear** with "2/18" while the
-    /// run is live, a warning triangle with the counts once a drained
-    /// run left failures behind. The item renders only in those two
-    /// states — after a clean drain it disappears (the filled-in graphs
-    /// are the visible result), and while failures linger it stays until
-    /// the popover's Dismiss acknowledges them, so an error is never
-    /// silently swallowed by the batch ending.
+    /// A **turning gear** with "2/18" while the run is live, a warning triangle
+    /// with the counts once a drained run left failures behind. The item
+    /// renders only in those two states: a clean drain hides it (the filled-in
+    /// graphs are the result), and failures keep it until the window's Clear
+    /// acknowledges them, so an error is never swallowed by the batch ending.
     ///
-    /// **A gear rather than the `ProgressView` that was here** (6 Aug 2026, by
-    /// request, in the same cut that removed the Analyze button). Two reasons
-    /// beyond the ask. The spinner said "busy" in the system's generic
-    /// vocabulary while the app already had a specific one — `AnalysisGlyph`'s
-    /// gear means *engine analysis* everywhere else it appears, and after the
-    /// toolbar lost its Analyze button this is the only place that meaning is
-    /// visible without a right-click. And a bare indeterminate spinner beside a
-    /// count reads as two progress indicators disagreeing, since the count *is*
-    /// determinate.
+    /// **A gear rather than a `ProgressView`.** The spinner said "busy" in the
+    /// system's generic vocabulary while `AnalysisGlyph`'s gear means *engine
+    /// analysis* everywhere else — and with the toolbar's Analyze button gone,
+    /// this is the only place that meaning is visible without a right-click. A
+    /// bare indeterminate spinner beside a count also reads as two progress
+    /// indicators disagreeing, since the count *is* determinate.
     ///
-    /// The count stays, which is the half a gear cannot carry: the popover holds
-    /// the current game, per-ply progress, Skip and Stop All, and none of that
-    /// is visible without opening it. "2/18" is what a long run needs at a
-    /// glance.
+    /// The count stays, being the half a gear cannot carry: current game,
+    /// per-ply progress, Skip and Stop All all live in the window.
     ///
-    /// Drawn through `AnalyzingGear` rather than an `Image` and a modifier here,
-    /// so this and `AnalysisLabel` cannot pick different motions — the one thing
-    /// about the gear that is still unsettled is its motion, and a second
-    /// spelling would mean fixing it twice.
+    /// Drawn through `AnalyzingGear` so this and `AnalysisLabel` cannot pick
+    /// different motions — the gear's motion is the part still unsettled, and a
+    /// second spelling would mean fixing it twice.
     private var queueStatusLabel: some View {
         HStack(spacing: 6) {
             if analysisQueue.queue.isActive {
@@ -1200,21 +1130,18 @@ internal struct LibraryDestination: View {
         return lead + " " + clause + more
     }
 
-    /// The backfill report in the reader's terms (M12.5).
+    /// The backfill report in the reader's terms.
     ///
-    /// **Leads with what did not happen when nothing did**, because the two
-    /// outcomes a reader will actually hit are "it filled everything in" and
-    /// "it found none of my games", and the second is the one that needs
-    /// explaining rather than a bare zero. The commonest cause is pointing at
-    /// the wrong folder, so the message says so instead of listing filenames
-    /// that would all be wrong together.
+    /// **Leads with what did not happen when nothing did.** The two outcomes a
+    /// reader hits are "it filled everything in" and "it found none of my
+    /// games", and the second needs explaining rather than a bare zero — the
+    /// commonest cause is the wrong folder, so the message says so.
     ///
-    /// `unmatched` is deliberately phrased as a **finding, not a fault**: a
-    /// file the Library does not hold is a game you have not imported, which is
-    /// worth knowing and is not an error. Capped at three names on the
-    /// `sweepMessage` precedent — this is the only place these filenames are
-    /// ever shown, and a bare count would ask the reader to trust a number
-    /// about files they have never seen.
+    /// `unmatched` is phrased as a **finding, not a fault**: a file the Library
+    /// does not hold is a game not imported. Capped at three names on the
+    /// `sweepMessage` precedent — the only place these filenames are shown, and
+    /// a bare count would ask the reader to trust a number about files they
+    /// have never seen.
     private static func backfillMessage(for report: PGNStore.LibraryIndexBackfill) -> String {
         guard report.scanned > 0 else {
             return "That folder has no PGN files in it."
@@ -1316,13 +1243,12 @@ internal struct LibraryDestination: View {
     /// through the store when the reader acts, so no tab ever holds
     /// uncommitted state and `isDirty` is permanently `false`.
     ///
-    /// Named here because a `disabled`-shaped branch whose condition can never
-    /// be true is the D40′ shape, and the defence D40′ prescribes is to say so
-    /// at the site rather than to discover it at the next sweep. This one is
-    /// kept rather than deleted: the registry is suited, the branch is three
-    /// lines, and an editor that defers its write — inline annotations, a live
-    /// movetext buffer — turns it on by calling `markDirty` and nothing else.
-    /// If that editor never arrives, this arm and the registry go together.
+    /// Named here because a branch whose condition can never be true is the
+    /// D40′ shape, and D40′'s defence is to say so at the site rather than
+    /// discover it at the next sweep. Kept rather than deleted: the registry is
+    /// suited, the branch is three lines, and any editor that defers its write
+    /// turns it on by calling `markDirty` alone. If none arrives, this arm and
+    /// the registry go together.
     private func delete(_ pgn: PGN) {
         if openGames.isDirty(pgn.persistentModelID) {
             pendingDirtyDeletion = pgn
@@ -1456,13 +1382,10 @@ extension Binding where Value == Bool {
     /// a defect here. The 2027 SDK's item-based `alert` /
     /// `confirmationDialog` retire every call site and this helper with them.
     ///
-    /// No caller count here on purpose — it has been wrong four times now
-    /// (five, six, seven, and "currently eight", which was **nine** when it was
-    /// written and is eleven today). The fourth was found on 6 Aug 2026 by
-    /// running the command in the next sentence, which is the entire argument:
-    /// a number written beside the instruction not to write numbers still went
-    /// stale, and it went stale *silently*, because nothing about a wrong count
-    /// fails. The count lives in the command, D42′'s rule:
+    /// No caller count here on purpose — it has been wrong four times, most
+    /// recently in a sentence written *beside* the instruction not to write
+    /// counts. Nothing about a wrong count fails, so it goes stale silently.
+    /// The count lives in the command (D42′):
     /// `grep -rn 'Binding(present:' DGTStudioPro/`.
     internal init<T>(present source: Binding<T?>) {
         self.init(
