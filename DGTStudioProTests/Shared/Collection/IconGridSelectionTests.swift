@@ -5,9 +5,17 @@ import Testing
 /// The icons grids' shared selection grammar (2 Aug 2026 — born in
 /// `LibraryIconsView`, extracted when the Players grid became its second
 /// host). Nonisolated deliberately: index math and rect normalization, no
-/// view rendered. The 6-column geometry is the shipped
-/// `CollectionGridMetrics.columnCount`, spelled literally here so a
-/// metrics change moves these expectations consciously.
+/// view rendered.
+///
+/// **The 6 below stopped being the shipped constant on 7 Aug 2026** and is
+/// now just a number these cases are written against. It used to be
+/// `CollectionGridMetrics.columnCount`, spelled literally so a metrics change
+/// would move the expectations consciously; the count is derived from window
+/// width now, so there is no constant to track and the literal is the whole
+/// truth. That is a *strengthening* rather than a loss — this suite tests the
+/// stepping grammar at an arbitrary width, and `CollectionViewOptionsTests`
+/// owns which width yields which count. Two questions, two suites, neither
+/// standing in for the other.
 struct IconGridSelectionTests {
 
     private let columns = 6

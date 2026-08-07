@@ -39,8 +39,13 @@ internal enum StorageKeys {
     internal static let collectionViewMode = "collectionViewMode"
     // `playersSortOrder` was here until 5 Aug 2026 — D48′'s rank/name toggle,
     // stored as a `PlayersSortOrder` raw value. Removed with the picker it
-    // backed: the Players list sorts by column header now, and that sort is
-    // deliberately session-only, so there is nothing left to persist.
+    // backed: the Players list sorts by column header now.
+    //
+    // The clause "and that sort is deliberately session-only, so there is
+    // nothing left to persist" stood here until 7 Aug 2026 and is now false —
+    // see `playersSort` below, which persists it again for a reason that did
+    // not exist when this was written. The key is still dead; only the
+    // justification decayed, which is the more common of the two.
     //
     // The stored value lingers in `UserDefaults` unread, on `collectionViewMode`'s
     // precedent four lines up: a leftover key costs nothing and a migration is
@@ -59,9 +64,15 @@ internal enum StorageKeys {
     /// as an unknown ranking method on the first launch after this ships, and
     /// silently fall back — a migration disguised as a coincidence.
     ///
-    /// Persisted where the column sort deliberately is not, and the difference
-    /// is the point: a sort is the question being asked right now, while a
-    /// ranking method is a standing statement about what the ladder measures.
+    /// **Both persist now (7 Aug 2026), and the distinction they were
+    /// contrasted on has moved rather than dissolved.** This line read
+    /// "persisted where the column sort deliberately is not… a sort is the
+    /// question being asked right now, while a ranking method is a standing
+    /// statement about what the ladder measures." The second half is still
+    /// exactly right and is still why these are two keys: the method decides
+    /// what rank 1 *means* and travels with the player into every ordering,
+    /// while the sort decides only what order the rows appear in. What stopped
+    /// being true is the first half — see `playersSort`.
     internal static let playersRanking = "playersRanking"
 
     // The two list-mode tables' column layouts — which columns are shown,
@@ -150,6 +161,40 @@ internal enum StorageKeys {
     // default" contract the three engine keys above have, and here it also
     // means an app that has never been told about tablebases sends nothing
     // about them.
+    // View Options (7 Aug 2026): the icons grids' geometry and both
+    // collection destinations' sorts. All four have an owning type
+    // (`CollectionViewOptions`), so like `preventSleepDuringPlay` none is a
+    // documented twin — the defaults are stated once, in that type's `init`.
+    //
+    // **Four keys at once, in a namespace that says above that a third dead
+    // key would need a sweep.** Worth separating the two complaints: the note
+    // at `playersSortOrder` is about keys nobody reads any more, and these are
+    // four live values with one reader each. The geometry pair is deliberately
+    // *not* per-destination — an icon size is a preference about browsing and
+    // travels, which is `collectionViewMode`'s argument — while the sorts are
+    // deliberately per-destination, because the two tables share no columns.
+    //
+    // The measurements are read with `object(forKey:)` rather than
+    // `double(forKey:)`: the latter answers 0 for an absent key, 0 is outside
+    // both ranges, and clamping it would hand every fresh install the floor
+    // while looking like a stored preference.
+    //
+    // `librarySort` / `playersSort` hold `"<field>:<forward|reverse>"` — one
+    // key per destination rather than a field key and a direction key, argued
+    // at `CollectionSort.storedValue`. An unparseable value is dropped and the
+    // destination opens on its default (D45′'s retired-raw-value rule), so
+    // removing a column costs no migration.
+    //
+    // **This reverses a recorded rule** and the reversal is the point: the
+    // column sort was session-only by decision — "a sort is the question being
+    // asked right now" — which was right while the only door was a table
+    // header, and reads as a bug once a panel offers the same choice beside a
+    // size that does persist.
+    internal static let collectionIconSize    = "collectionIconSize"
+    internal static let collectionGridSpacing = "collectionGridSpacing"
+    internal static let librarySort           = "librarySort"
+    internal static let playersSort           = "playersSort"
+
     internal static let syzygyBookmark    = "syzygyBookmark"
     internal static let syzygyDisplayPath = "syzygyDisplayPath"
     internal static let syzygyProbeDepth  = "syzygyProbeDepth"

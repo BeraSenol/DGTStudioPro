@@ -47,6 +47,18 @@ internal struct LibraryDestination: View {
     // The `.list` default is the documented twin of PlayersDestination's.
     @AppStorage(StorageKeys.collectionViewMode) private var viewMode: CollectionViewMode = .list
     @Environment(\.modelContext) private var modelContext
+
+    /// The View Options panel's subject (7 Aug 2026). Read here rather than
+    /// only in the icons grid because this destination owns the *sort*, which
+    /// the panel sets and the table header also sets — see `sortOrder`.
+    @Environment(CollectionViewOptions.self) private var options
+
+    /// Read back from the scene the line above publishes into. Circular by
+    /// appearance only: `focusedSceneValue` publishes to the *scene*, and
+    /// `@FocusedValue` resolves the **key** window's — so this is nil whenever
+    /// another window is front, which is exactly the signal the mirror needs.
+    @FocusedValue(\.collectionViewOptionsSubject) private var focusedSubject
+
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
     @Environment(OpenGamesRegistry.self) private var openGames
@@ -66,6 +78,56 @@ internal struct LibraryDestination: View {
     @State private var pendingBatchOpen: [PGN]?
     @State private var selectedPGNs: Set<PGN.ID> = []
     @State private var importProgress: ImportProgress?
+
+    /// What this destination's `GameRecord` projection depends on.
+    ///
+    /// **Content, plus an analysis signal, and the second half is why this is
+    /// its own type rather than a bare `CollectionFoldKey`.** Players can key
+    /// on content alone because nothing it folds reads `evaluations`. The
+    /// Library does read them, twice: the backlog count in the subtitle, and
+    /// `TagRule.analyzed` behind a smart tag. Keying on content alone would
+    /// leave both frozen for as long as an analysis ran, which is precisely
+    /// when they are being watched.
+    ///
+    /// **The signal is the queue's own counters, never the array.** Asking
+    /// `evaluations` whether anything changed is the work being avoided, so the
+    /// key reads what the queue already knows: which game is running, and how
+    /// many have drained. Both move once per *game*; the driver's
+    /// `modelContext.save()` moves once per *ply*. That ratio is the entire
+    /// win — an 80-ply pass reprojects once instead of eighty times.
+    ///
+    /// **The behaviour change this ships with, named rather than discovered.**
+    /// The backlog count used to drop the moment a game's first ply was scored,
+    /// because `hasScoredPly` is true after one. It now drops when that game
+    /// leaves the queue. That reads better — a game halfway through a pass is
+    /// not an analyzed game — but it is a change, and it is the kind that would
+    /// otherwise be found six months later and mistaken for a bug.
+    ///
+    /// `hasFailures` rides along because a failed pass ends without advancing
+    /// `completedCount` in a way this can rely on, and a drained-with-failures
+    /// batch must still settle the count.
+    private struct FoldKey: Equatable {
+        let content: CollectionFoldKey
+        let running: PersistentIdentifier?
+        let completed: Int
+        let hasFailures: Bool
+    }
+
+    /// The Library's `GameRecord` projection, memoized.
+    ///
+    /// The projection itself is not new — `LibraryFilter` built one per game
+    /// per render, and the subtitle decoded `evaluations` per game per render
+    /// on top of it. What is new is that both now read one array that is
+    /// rebuilt only when `FoldKey` moves.
+    ///
+    /// **Accepted cost, stated because it is a real regression on one path.**
+    /// An unfiltered Library used to decode only `evaluations` for its backlog
+    /// count; it now projects a full `GameRecord`, which decodes `moves` as
+    /// well. That is twice the work on a miss, in exchange for misses becoming
+    /// rare — and one projection with two consumers rather than two walks that
+    /// could answer "analyzed?" differently, which is the same argument
+    /// `AnalysisGlyph` already makes for owning that question.
+    @State private var foldCache = CollectionFoldCache<FoldKey, [GameRecord]>()
 
     /// D58′'s backfill result, held for its report alert (M12.5). Two pieces of
     /// state rather than one enum because they are not alternatives in the way
@@ -116,8 +178,34 @@ internal struct LibraryDestination: View {
     /// the table it would reorder pixels while those three read the unsorted
     /// array — nothing fails, the filenames just stop matching the screen.
     ///
-    /// Not persisted: every launch opens on `#` descending.
-    @State private var sortOrder: [KeyPathComparator<PGN>] = Self.defaultSortOrder
+    /// **Persisted since 7 Aug 2026, reversing a recorded rule.** It read
+    /// "not persisted: every launch opens on `#` descending", and the argument
+    /// behind that was real — a sort is the question being asked right now,
+    /// where a ranking method is a standing statement. What broke it is the
+    /// View Options panel: the same choice now sits beside an icon size that
+    /// *does* persist, and a panel where one control survives a relaunch and
+    /// the one above it silently does not is not a subtle distinction, it is a
+    /// bug report. The value lives in `CollectionViewOptions`.
+    ///
+    /// **A derived binding, not `@State`, so there is exactly one sort.** The
+    /// table header writes comparators; the panel writes a field and a
+    /// direction; both land in the same stored value, and each renders what the
+    /// other set. Keeping local state in step with the panel would be the
+    /// twin-read-site pattern with a round trip in it.
+    ///
+    /// The `set` arm **keeps the old sort when the round trip fails**, rather
+    /// than falling back to the default. A comparator `LibrarySortField` cannot
+    /// name — a column added with a `sortUsing:` and no case — should leave the
+    /// sort alone, not silently reset it to `#` under the reader's hands.
+    private var sortOrder: Binding<[KeyPathComparator<PGN>]> {
+        Binding(
+            get: { options.librarySort.comparators },
+            set: { newValue in
+                guard let sort = CollectionSort<LibrarySortField>(comparators: newValue) else { return }
+                options.librarySort = sort
+            }
+        )
+    }
 
     /// The launch order, stated **once** — the `@State` initializer above and
     /// every mode view's previews would otherwise repeat it (D25′'s
@@ -143,23 +231,50 @@ internal struct LibraryDestination: View {
     
     // MARK: Computed Properties
     
-    /// Sidebar filter → search → menu filters → sort, narrowing only, so the
-    /// stages compose without caring about each other. Every downstream
-    /// consumer (`selectedPGN`, `gamesInDisplayOrder`, and therefore batch
-    /// analyze/export/delete) reads the same narrowed list: a hidden game is
+    /// Every game paired with its record, memoized on `FoldKey`.
+    ///
+    /// Zipped rather than looked up by identifier: `records` is built by
+    /// mapping `games` in order, so index *is* the correspondence and a
+    /// dictionary would add hashing to restate what the array already says.
+    /// The pairing is what `LibraryFilter.matches(_:record:)` requires and
+    /// cannot check.
+    private var pairedGames: [(game: PGN, record: GameRecord)] {
+        let records = foldCache.value(
+            for: FoldKey(
+                content: CollectionFoldKey(games: games),
+                running: analysisQueue.runningID,
+                completed: analysisQueue.queue.completedCount,
+                hasFailures: analysisQueue.queue.hasFailures
+            )
+        ) {
+            games.map(\.gameRecord)
+        }
+        // `pair in (pair.0, pair.1)`, not `{ (game: $0, record: $1) }` —
+        // `map` over a zipped sequence takes the pair as **one** argument, and
+        // the two-parameter spelling is the tuple splat Swift removed in 3.0.
+        // It reads like it should work, which is why it is worth a line.
+        return zip(games, records).map { pair in (game: pair.0, record: pair.1) }
+    }
+
+    /// Sidebar filter → search → menu filters, narrowing only, so the stages
+    /// compose without caring about each other. Every downstream consumer
+    /// (`selectedPGN`, `gamesInDisplayOrder`, and therefore batch
+    /// analyze/export/delete) reads this same narrowed set: a hidden game is
     /// out of every bulk action, never silently included.
     ///
-    /// **Render reads it once; actions re-derive it fresh.** `coreContent`
-    /// folds this a single time per pass and threads the result onward
-    /// (`PlayersDestination`'s arrangement, adopted after the walk was found
-    /// running three to four times a render). `gamesInDisplayOrder` calls it
-    /// directly on purpose — an action fires long after the fold that painted
-    /// the screen, and a stale narrowed list is what bulk actions must not act
-    /// on.
-    private var filteredGames: [PGN] {
-        var result = games
+    /// **Narrowed but not sorted**, which is the one place this differs from
+    /// the `filteredGames` it was split out of. Sorting is `filteredGames`'
+    /// last stage and stays there; the only other consumer is the subtitle's
+    /// backlog count, which is an order-independent question. Sorting here
+    /// would sort an array on behalf of a caller that counts it.
+    ///
+    /// Each game keeps its record so that count reads the same projection the
+    /// filters did, rather than walking `evaluations` a second time to answer a
+    /// question the projection already holds.
+    private var narrowedPairs: [(game: PGN, record: GameRecord)] {
+        var result = pairedGames
         if let filter {
-            result = result.filter { filter.matches($0) }
+            result = result.filter { filter.matches($0.game, record: $0.record) }
         }
         // The emptiness guard only skips the walk — an empty query matches
         // everything by the matcher's own contract.
@@ -169,35 +284,56 @@ internal struct LibraryDestination: View {
             // row of the walk.
             let query = SearchMatch.Query(searchText)
             result = result.filter {
-                query.matches(fields: searchFields(of: $0))
+                query.matches(fields: searchFields(of: $0.game))
             }
         }
         if !searchTokens.isEmpty {
-            // `AnalysisGlyph.isAnalyzed`, not a bare `isEmpty` check: the
-            // filter and the gear glyphs must answer "analyzed?" the same
-            // way, and that type is the one spelling. The token rule itself
-            // (OR within a facet, AND across facets) lives on the token, so
-            // this stays a projection and never a second opinion.
+            // `record.hasAnalysis` is `AnalysisGlyph.isAnalyzed`'s own input —
+            // `PGN+GameRecord` builds it from `hasScoredPly`, which is the
+            // property that type forwards to. So this is still one spelling of
+            // "analyzed?", now read off the projection instead of decoding the
+            // array again per row. The token rule itself (OR within a facet,
+            // AND across facets) lives on the token, so this stays a projection
+            // and never a second opinion.
             result = result.filter {
                 LibrarySearchToken.admit(
                     searchTokens,
-                    result: $0.result,
-                    isAnalyzed: AnalysisGlyph.isAnalyzed($0)
+                    result: $0.record.result,
+                    isAnalyzed: $0.record.hasAnalysis
                 )
             }
         }
-        // Sorting is the LAST stage — the stages above *remove* rows and
-        // compose in any order, this only permutes, and sorting a set you are
-        // about to filter is work thrown away.
-        //
-        // Unconditional rather than `sortOrder.isEmpty ? result : …`: nothing
-        // in `Table`'s header behaviour empties the array, so that branch's
-        // condition cannot be produced — the `.disabled(…)` shape D40′ names.
-        //
-        // Cost, accepted: the Library sorts every render. Invisible for `#`,
-        // not for **ECO**, whose comparator rehydrates per comparison.
-        // Known-costs census.
-        return result.sorted(using: sortOrder)
+        return result
+    }
+
+    /// The narrowed list in display order — what every consumer outside the
+    /// render pass wants.
+    ///
+    /// **Render reads it once; actions re-derive it fresh.** `coreContent`
+    /// takes `narrowedPairs` a single time per pass and threads both halves
+    /// onward (`PlayersDestination`'s arrangement, adopted after the walk was
+    /// found running three to four times a render). `gamesInDisplayOrder` calls
+    /// this directly on purpose — an action fires long after the fold that
+    /// painted the screen, and a stale narrowed list is what bulk actions must
+    /// not act on. Re-deriving is cheap now that the projection underneath is
+    /// memoized; before, this was the expensive path taken for safety.
+    ///
+    /// Sorting is the LAST stage — the stages above *remove* rows and compose
+    /// in any order, this only permutes, and sorting a set you are about to
+    /// filter is work thrown away.
+    ///
+    /// Unconditional rather than `sortOrder.isEmpty ? result : …`: nothing in
+    /// `Table`'s header behaviour empties the array, so that branch's condition
+    /// cannot be produced — the `.disabled(…)` shape D40′ names.
+    ///
+    /// Cost, accepted: the Library sorts every render. Invisible for `#`, not
+    /// for **ECO**, whose comparator rehydrates per comparison. Known-costs
+    /// census.
+    /// `map { $0.game }` rather than `map(\.game)` — key paths do not reach
+    /// tuple elements, which this project has recorded once already and which
+    /// fails at compile rather than at run time.
+    private var filteredGames: [PGN] {
+        narrowedPairs.map { $0.game }.sorted(using: sortOrder.wrappedValue)
     }
     
     /// The model side of the `LibraryFilter` split: the pure matcher takes
@@ -355,6 +491,30 @@ internal struct LibraryDestination: View {
             // since been removed**, so ⌘⌫ now rests on exactly the copy that
             // reasoning declined to trust — an open question, not a settled
             // one. `GameActionsMenu`'s delete item carries the note.
+            // Publishes this destination as the View Options panel's subject
+            // (7 Aug 2026). Scene-scoped, so the panel and the ⌘J menu item
+            // follow whichever tab is frontmost — and a Board tab publishes
+            // nothing, which is what disables the item there. Carries the mode
+            // as well as the destination: the panel's grid section exists only
+            // for icons, and a gallery has no columns to give.
+            .focusedSceneValue(
+                \.collectionViewOptionsSubject,
+                CollectionViewOptionsSubject(collection: .library, mode: viewMode)
+            )
+            // Mirrors the focused subject into the app-global options object,
+            // which is what the View Options panel actually reads. The latch
+            // lives *here* rather than in the panel because this view is on
+            // screen while its own window is key — the panel never is at the
+            // moment a collection is front, so its own `@FocusedValue` was
+            // always nil by its first render.
+            //
+            // Only non-nil writes land: focus moving to the panel (or to a
+            // Board tab) must leave the panel describing the collection you
+            // opened it from, which is what Finder's ⌘J does.
+            .onChange(of: focusedSubject, initial: true) { _, newValue in
+                guard let newValue else { return }
+                options.activeSubject = newValue
+            }
             .onAppear {
                 backfillEmptyNames()
                 backfillPlayerLinks()
@@ -379,8 +539,17 @@ internal struct LibraryDestination: View {
     /// pinned to an arbitrary modifier.)
     private var coreContent: some View {
         // One walk per render — see `filteredGames`'s doc. Every render-time
-        // consumer below reads this local; none re-runs the filter.
-        let games = filteredGames
+        // consumer below reads these locals; none re-runs the filter.
+        //
+        // Taken as pairs so the subtitle's backlog count reads the records this
+        // walk already produced. It used to be `games.count(where:
+        // { !AnalysisGlyph.isAnalyzed($0) })`, which decoded every game's
+        // `evaluations` array on every render — the one unconditional blob
+        // decode in this destination, and therefore the one that fired on every
+        // drag callback and every per-ply save during a batch.
+        let narrowed = narrowedPairs
+        let games = narrowed.map { $0.game }.sorted(using: sortOrder.wrappedValue)
+        let unanalyzedCount = narrowed.count { !$0.record.hasAnalysis }
         // Typed explicitly rather than left to a ternary's inference, and
         // hoisted out of the modifier so the nil arm reads as the decision it
         // is: no games means no Edit ▸ Select All, disabled by the system.
@@ -457,7 +626,7 @@ internal struct LibraryDestination: View {
         .navigationSubtitle(
             DestinationSubtitle.library(
                 selected: selectedPGNs.count,
-                unanalyzed: games.count(where: { !AnalysisGlyph.isAnalyzed($0) })
+                unanalyzed: unanalyzedCount
             ) ?? ""
         )
         .dropDestination(for: URL.self) { urls, _ in
@@ -582,7 +751,7 @@ internal struct LibraryDestination: View {
                 onAnalyzeIDs: { requestAnalysis(ids: $0) },
                 onExportIDs:  { requestExport(ids: $0) },
                 onDeleteIDs:  { requestDelete(ids: $0) },
-                sortOrder:    $sortOrder
+                sortOrder:    sortOrder
             )
             .accessibilityIdentifier(AccessibilityID.libraryModeList)
         case .columns:
@@ -594,7 +763,7 @@ internal struct LibraryDestination: View {
                 onAnalyze: requestAnalysis,
                 onExport:  requestExport,
                 onDelete:  { pendingDeletion = $0 },
-                sortOrder: $sortOrder
+                sortOrder: sortOrder
             )
             .accessibilityIdentifier(AccessibilityID.libraryModeColumns)
         case .gallery:

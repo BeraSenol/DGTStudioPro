@@ -389,8 +389,30 @@ internal enum AccessibilityID {
     internal static let settingsSyzygy50MoveToggle     = "settings.syzygy.fiftyMoveToggle"
     internal static let settingsPieceAnimationSlider   = "settings.pieceAnimationSlider"
     
+    // MARK: View Options (7 Aug 2026)
+
+    // The ⌘J panel. `showViewOptions` names the *command*, not a control, and
+    // it is deliberately one identifier across five hosts — the View menu and
+    // four grid backgrounds — because they are one verb. That is the opposite
+    // of the per-host treatment `gameCard`/`gameRow` get, and the reason is
+    // that those address a *row*, which differs per host, while this addresses
+    // an action, which does not.
+    //
+    // Worth a line against the header's standing bet: two removals with no
+    // successor control (`library.editMoves`, the orphan sweep's pair) had
+    // this registry tracking a shrinking share of the app. `players.rankingPicker`
+    // broke that run and these six continue it — the panel is affordances all
+    // the way down, so the bet is holding rather than eroding.
+    internal static let showViewOptions          = "viewOptions.show"
+    internal static let viewOptionsUnavailable   = "viewOptions.unavailable"
+    internal static let viewOptionsSortField     = "viewOptions.sort.field"
+    internal static let viewOptionsSortDirection = "viewOptions.sort.direction"
+    internal static let viewOptionsIconSize      = "viewOptions.grid.iconSize"
+    internal static let viewOptionsSpacing       = "viewOptions.grid.spacing"
+    internal static let viewOptionsUseDefaults   = "viewOptions.grid.useDefaults"
+
     // MARK: Library
-    
+
     internal static let libraryContent         = "library.content"
     internal static let libraryEmptyState      = "library.emptyState"
     internal static let libraryModeIcons       = "library.mode.icons"

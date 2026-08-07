@@ -7,13 +7,20 @@ import SwiftUI
 ///
 /// **Keyboard.** The grid itself is the focusable — cards stay
 /// plain-clickable and a card click hands the grid focus, so arrows work
-/// immediately after any selection. Index math, not geometry: the column
-/// count is fixed (`CollectionGridMetrics.columnCount`), so left/right are
+/// immediately after any selection. Index math, not geometry: left/right are
 /// ±1 in reading order (wrapping rows, as Finder reads) and up/down are
 /// ±columnCount, with Finder's edge grammar — top row holds on up, a
 /// bottom-row overflow lands on the last card. The stepping is
 /// `IconGridSelection.destination` — shared with the Players grid, suited
 /// once.
+///
+/// **The column count stopped being a constant on 7 Aug 2026** (it was
+/// `CollectionGridMetrics.columnCount`, a hard 6) and is now derived from the
+/// container width and the View Options icon size. The index math is
+/// unchanged — what changed is where its one input comes from, and the reason
+/// the grid is *not* `.adaptive`: SwiftUI never reports the count an adaptive
+/// grid chose, so the arrows would step by a number the layout had no reason
+/// to agree with. See `containerWidth`.
 ///
 /// **Rubber band.** Cards report frames via `onGeometryChange` into an
 /// `IconGridFrameStore` — a reference box, not `@State`, because nothing in
@@ -59,6 +66,23 @@ internal struct LibraryIconsView: View {
 
     // MARK: Private Properties
 
+    @Environment(CollectionViewOptions.self) private var options
+
+    /// The container width, mirrored out of the `GeometryReader` so the arrow
+    /// keys can ask the same question the layout asked.
+    ///
+    /// **One number, two readers, and they must not fork.** The grid packs
+    /// `options.columnCount(containerWidth:)` columns and `move(_:proxy:)`
+    /// steps by it — that is exactly why the grid is not `.adaptive`, which
+    /// never reports the count it chose. Layout reads the proxy directly (so
+    /// it is never a frame behind); `move` reads the box, which has settled
+    /// long before a key press. Both call the one function.
+    ///
+    /// A **box**, not `@State`: see `IconGridWidthBox`, which carries the
+    /// account of why the first version of this line brought the "Geometry
+    /// action is cycling between duplicate values" warning back.
+    @State private var containerWidth = IconGridWidthBox()
+
     /// Realized cards' frames in `gridSpace` — see `IconGridFrameStore`
     /// for why this is a box and not observed state. Entries for deleted
     /// games go stale until their cell vanishes, so the sweep re-checks
@@ -72,15 +96,17 @@ internal struct LibraryIconsView: View {
 
     // MARK: Body
     var body: some View {
+        GeometryReader { geometry in
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVGrid(
-                    columns: CollectionGridMetrics.columns,
-                    spacing: CollectionGridMetrics.spacing
+                    columns: options.columns(containerWidth: geometry.size.width),
+                    spacing: options.spacing
                 ) {
                     ForEach(games) { game in
                         LibraryGameCardView(
                             game: game,
+                            glyphWidth: options.glyphWidth,
                             isSelected: selectedPGNs.contains(game.id),
                             onSelect:  { select(game) },
                             onOpen:    { open(game) },
@@ -112,7 +138,7 @@ internal struct LibraryIconsView: View {
                         }
                     }
                 }
-                .padding(CollectionGridMetrics.inset)
+                .padding(CollectionViewOptions.inset)
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -122,6 +148,13 @@ internal struct LibraryIconsView: View {
                     anchorID = nil
                     isFocused = true
                 }
+                // The background's own context menu (7 Aug 2026). It sits
+                // on the same `contentShape` the clear-selection tap uses, so
+                // it covers the gutters too — a right-click *between* cards is
+                // a background right-click, which is what Finder does and what
+                // a reader trying to reach this will actually aim at. A card's
+                // own menu wins over its own bounds, so the two never compete.
+                .contextMenu { ShowViewOptionsButton() }
                 .gesture(rubberBandGesture)
                 // Content-anchored, deliberately: see the rubber-band doc
                 // above. The space, the gesture's coordinates and the band
@@ -147,6 +180,15 @@ internal struct LibraryIconsView: View {
             .onMoveCommand { direction in
                 move(direction, proxy: proxy)
             }
+            // A box write from a geometry action — free, and invisible to
+            // the render pass. The transform quantizes so `onGeometryChange`'s
+            // own duplicate-value comparison has a stable input.
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                IconGridWidthBox.quantized(proxy.size.width)
+            } action: { width in
+                containerWidth.width = width
+            }
+        }
         }
     }
 
@@ -197,6 +239,19 @@ internal struct LibraryIconsView: View {
                         .filter { cardFrames.frames[$0.id]?.intersects(band) == true }
                         .map(\.id)
                 )
+                // **Guarded, because most frames of a drag cross nothing new.**
+                // This fires per drag callback, and `selectedPGNs` is `@State`
+                // on `LibraryDestination` — so an unguarded write invalidated
+                // that body at pointer rate, and its body re-narrows and
+                // re-sorts the Library. Extending a band across a gutter, or
+                // simply holding still, wrote an identical `Set` and paid for
+                // it. The equality check is a set compare over ids; the render
+                // it skips is the whole destination.
+                //
+                // `anchorID` rides inside the guard rather than beside it: it
+                // is derived from `crossed` alone, so an unchanged sweep cannot
+                // move it, and the `first(where:)` walk is skipped with it.
+                guard crossed != selectedPGNs else { return }
                 selectedPGNs = crossed
                 anchorID = crossed.isEmpty ? nil : games.first { crossed.contains($0.id) }?.id
             }
@@ -213,7 +268,7 @@ internal struct LibraryIconsView: View {
             target = IconGridSelection.destination(
                 from: current,
                 direction: direction,
-                columnCount: CollectionGridMetrics.columnCount,
+                columnCount: options.columnCount(containerWidth: containerWidth.width),
                 count: games.count
             )
         } else {
@@ -267,6 +322,7 @@ private func iconsPreviewGames() -> [PGN] {
         onDelete: { _ in }
     )
     .frame(width: 900, height: 480)
+    .environment(PreviewFixtures.viewOptions())
     .modelContainer(for: PGN.self, inMemory: true)
 }
 
@@ -282,5 +338,6 @@ private func iconsPreviewGames() -> [PGN] {
         onDelete: { _ in }
     )
     .frame(width: 720, height: 480)
+    .environment(PreviewFixtures.viewOptions())
     .modelContainer(for: PGN.self, inMemory: true)
 }

@@ -152,13 +152,33 @@ private struct ProfileSection: View {
         //
         // Closed UNRESOLVED (D51′). Three flow tests failed here with the
         // pencil and the menu not resolving by identifier while this
-        // identifier resolved fine; `.accessibilityElement(children:
-        // .contain)` ahead of this line changed nothing, so the shadowing
-        // explanation is disproved rather than merely unconfirmed. The
-        // suite — and § Zero's hierarchy instrument with it — was deleted
-        // 3 Aug 2026 before the cause was found (AUDIT-2026-08-01.md § Zero
-        // records what was ruled out). If a UI suite ever returns, expect
-        // these three to fail again for the same unknown reason.
+        // identifier resolved fine. The suite was deleted 3 Aug 2026 before
+        // the cause was found; if a UI suite ever returns, expect these three
+        // to fail again for the same unknown reason.
+        //
+        // What was ruled out, inlined here 7 Aug 2026 when the audit document
+        // holding it was deleted — a ruled-out cause is worth more than an
+        // untried one, and a citation into a file that no longer exists is
+        // worth less than nothing:
+        //
+        //   - **Shadowing is disproved, not merely unconfirmed.** M8 moved
+        //     this identifier from a `Section` onto a `CollapsibleSection`
+        //     whose subtree contains both header controls, and the failures
+        //     read `No matches found` rather than "not hittable" — the
+        //     signature of an absent element rather than a covered one.
+        //     `.accessibilityElement(children: .contain)` ahead of this line
+        //     changed nothing; all nine failures reproduced identically.
+        //   - **The three-inspector discriminator was a coincidence of
+        //     shape.** Players (identifier on the collapsible, two controls
+        //     inside) failed; Rankings (on the collapsible, no controls) and
+        //     Library (on inner content) passed. One difference, one failure
+        //     set — the form a real finding takes, and here it was
+        //     pattern-matching against whichever diff was in front of me.
+        //   - **What survives and is independently checkable:** the controls
+        //     *render*. A resolved `playersInspectorProfile` proves
+        //     `stats != nil` and a drawn `ProfileSection`, since the empty
+        //     branch carries a different identifier. They exist on screen and
+        //     are not addressable by identifier. Cause unknown.
         .accessibilityIdentifier(AccessibilityID.playersInspectorProfile)
     }
 }

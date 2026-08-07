@@ -6,169 +6,28 @@ dates, sequence only. Updates to this file arrive as a complete `.md`, same as
 the instructions. When a milestone lands, it moves to the Landed section at the
 bottom with its gate evidence — the roadmap is also the record of what shipped.*
 
-*Revised 4 August 2026 (evening): **M10 entered retroactively and moved
-straight to Landed** — it had shipped in `7390227` with zero references in
-either document, which is the first time in this roadmap's life that a whole
-milestone existed only in code. Two decisions minted at recording time, to
-close the two surfaces it left wired to nothing: **D53′** (Get Info is one
-window over three subjects and the app's rename door) and **D54′** (movetext
-is read-only everywhere but the Library), and **D55′** (one display glyph for
-every unknown, minted after ⌘U came back red on four pins asserting the
-contract it replaced). The standing
-counter-grep that would have caught this — milestone numbers in the code
-against milestone numbers in these two documents — is now on the sweep list.*
+*Next free milestone number: **M15.** The next free D-number lives in
+`DECISIONS.md`, which owns it — this file repeats no count, because repeating
+one is what caused it to drift eight numbers behind the instructions on 5 August.*
 
-*Revised 7 August 2026: **the 7 August day enters as a Landed entry**, on the
-5 August precedent — two requests, two decisions (**D65′**, **D66′**), no
-milestone. The schedulable half is unchanged: M7's two gated items still stand
-(Instruments-with-board; the ~September GM re-read). Next free D-number lives
-in `DECISIONS.md` and is not repeated here — that ownership was settled on
-6 August after this line had drifted eight numbers behind the instructions,
-and repeating it is what caused the drift.*
+***M11 is not a roadmap milestone**, and the reason is a finding rather than a
+preference. It is the pre-roadmap **decoupling review**, live in ten source
+comments, in the same provenance class as M7.2 and M-prs.1. Roadmap milestones
+had stopped at M10, so the next free *roadmap* number and the next free *tag*
+number had quietly diverged by one — and nothing would have failed if the
+collision had shipped, because the counter-grep asks whether a tag appears in
+these documents and both meanings share a string. The transferable rule:
+**milestone numbers live in one namespace with the legacy tags**, so the next
+free number is `max` over the sources and every document, never over the roadmap
+alone.*
 
-*Revised 5 August 2026: **the 5 August day entered as a Landed entry**, the
-2–4 August burst's precedent for work that ships outside milestone discipline.
-Eight decisions across the day — **D56′** through **D63′** — none of them a
-milestone, and the roadmap's schedulable half is unchanged: M7's two gated
-items remain (Instruments-with-board; the ~September GM re-read). Next free:
-**D64′**. That number was **D56′** in this file until now, eight behind the
-instructions, which is the same drift the instructions' own header produced on
-the same day and the reason both counts now point at one owner: the
-instructions' header is the source, this line repeats it.*
+*Revision history was trimmed to this block on 7 August 2026, in the same pass
+that trimmed the instructions. Each revision's narrative is in `git log`; the
+Landed entries below are the record of what shipped, which is the part that was
+ever read twice.*
 
-*Revised 6 August 2026: **three refinement milestones added — M12, M13, M14**
-— the first entries on this roadmap that schedule no feature. M7's Instruments
-item is absorbed into M12 rather than left standing beside it, because the run
-was always a gate on something and now it is a gate on something scheduled;
-M7's remaining bullet is the ~September GM re-read, which is the only thing on
-this roadmap that waits on a date. Base: `ef92d96` plus a working tree dirty
-with 36 modified sources — named rather than discovered, and **⌘U is owed on
-it before M12 starts**, since the last reported run predates the four
-doc-compression commits. The ordering is the argument and it is written into
-M12: stability, then structure, then reading. **No D-numbers are penciled** —
-three M12 bullets will each take one at recording time. *(They took none —
-see M12's own preamble. The day minted **D64′** for M13's layout instead, and
-`DECISIONS.md` owns the next free number since M14.)*
-
-**M11 is skipped, and the reason is a finding rather than a preference.**
-These three were drafted as M11–M13 and renumbered, because `M11` is already
-taken: it is the pre-roadmap **decoupling review**, live in ten source
-comments across `SettingsView`, `StorageKeys`, `BoardDestination`,
-`StockfishEngine`, `PGNStore` and `PGNStoreTests`, in the same provenance
-class as M7.2 and M-prs.1. Roadmap milestones stopped at M10, so the next
-free *roadmap* number and the next free *tag* number had quietly diverged by
-one — and nothing would have failed if the collision had shipped. The
-counter-grep would have come back clean, because it asks whether a tag in the
-sources appears in these documents and both meanings share a string. A reader
-grepping `M11` would have got two unrelated things and no way to tell them
-apart. **Caught by running the check rather than by trusting it**, which is
-the only method with a record here. The transferable rule: milestone numbers
-live in one namespace with the legacy tags, not two, so the next free number
-is `max` over the sources and both documents — never over the roadmap alone.*
-
-*Next free milestone number: **M15**.
-
-*Revised 6 August 2026 (later): **⌘U reported green by Bera**, discharging the
-gate on the em-dash pass (`09df7ed`), the roadmap itself (`389b7a5`), and
-M12.1 (`f6c4b6c`) and M12.2 (`a09a3fe`) — four commits, one run. Worth one
-line because two of them predicted their own results and both predictions were
-the weak kind: M12.1's `annotationsDoNotSurviveImport` was expected green on
-its first run, which is normally a sign a pin is decorative and here was
-correct because the thing it pins was already true and merely unstated; and
-M12.2 changed behaviour on three surfaces with six new pins behind it. **M12.3
-is not in that run** — it landed after, and is doc-and-comment work with no
-behaviour change, so its own gate is the cheap one.*
-The three measurements this revision rests on, with their methods, so the next
-pass re-runs rather than inherits: 140 app sources and 91 test sources
-(`find … -name '*.swift'`) — **92 test sources from M12.5 that afternoon,
-which is this line demonstrating its own point within the day**; 30,332 app
-lines of which 11,587 are comments
-(`grep -rh '^\s*///'` and its `//` sibling); `PROJECT-INSTRUCTIONS.md` at
-335 KB (`wc -c`).*
-
-*Revised 2 August 2026 (second): **M9 added by request and moved to Landed in
-the same pass** — Players and Rankings merged into one destination (D48′): the
-ladder becomes Players' default sort with a persisted name toggle, rank and
-rating render in every mode, one profile grid states each fact once, and the
-Rankings folder's six files retire along with three open items. The
-schedulable half is empty again; **M7's two gated items remain**.*
-
-*Revised 2 August 2026: **M6 moved to Landed** — the animation mechanism
-decided and built as **D47′**, `SquareView.pieceID` retired with its story
-resolved, and the milestone's own goal sentence corrected by its own
-constraint line: the mirror glides only what is *proven* (see the entry's
-gate evidence for the reasoning, which is the milestone's real finding).
-Base `7bf733f` — the four commits of the same day's audit/review pass — and
-the tree was **clean** on arrival at M6 itself, the audits having been
-committed first. **What is left is M7's two gated items** (Instruments,
-which needs Bera and a board; the Xcode 27 GM re-read, ~September). The
-roadmap's schedulable half is now empty.*
-
-*Revised 29 July 2026 (evening): **M8 added** (two inspector-chrome features
-requested by Bera); **M1 moved to Landed** with its gate evidence.*
-
-*Revised 30 July 2026: **M2, M3, M4 and M5 moved to Landed**, each with gate
-evidence, after a working day that ran M2 → M3 → M4 → a post-M4 conformance
-audit → M5. The base is `f98cd6a` (M2, committed green); everything after it is
-`415ef51` (M3), `06d15c9` (M4), `2187a37` (audit), `79e537f` (a mechanical
-resource move), `6a41bc9` and `0a21fc9` (M5's two batches). **No milestone
-input remains outstanding** — M4's ECO table source, the last one only Bera
-could supply, was picked and bundled. What remains scheduled is **M6, M7 and
-M8**, reorderable on appetite.*
-
-*Revised 30 July 2026 (later): the **M5 epilogue** moved to Landed — the
-Players editing UITest M5 recorded as its honest gap, plus **D40′**, the
-orphan sweep the test's own preparation turned up. Base `3f785a3`. M6, M7 and
-M8 remain, unchanged and still reorderable.*
-
-*Revised 1 August 2026: **M8 moved to Landed — both items, in one pass**, the
-first milestone to be delivered whole in a single session. Two decisions,
-**D45′** (collapsible sections) and **D46′** (the magnifier window), plus a
-prerequisite neither item declared: **eight of the app's fifteen inspector
-section headers went through `InspectorSectionHeader` and seven did not**, so
-"every `InspectorSectionHeader` grows a chevron" would have reached barely half
-the app. Base `f64b8d4`, and the tree was **not** clean — D44′ was sitting in it
-uncommitted, the sixth such find in seven passes. Seven commits, 211 → 217
-sources, ⌘U green at both review points. **What is left is M6, and M7's two
-gated items** (Instruments, which needs Bera and a board; the Xcode 27 GM
-re-read, ~September).*
-
-*Revised 31 July 2026 (third): **M7's `RosterSummary` experiment run and
-closed** (D44′) — the item D43′ explicitly left open, and the last of this
-milestone's non-gated work. The `@MainActor` on the live-projection init was
-unnecessary and its stated reason was false: a global actor isolates a type's
-members, not the types nested inside it. Deleted, and pinned from a
-nonisolated suite so restoring it is a compile error. Base `f64b8d4`, and the
-tree was **clean** on arrival — the first pass in four that did not open by
-finding its predecessor uncommitted. **What is left is M6, M8, and M7's two
-gated items** (Instruments, which needs Bera and a board; the Xcode 27 GM
-re-read, ~September). Every roadmap item that can be closed from a keyboard
-alone is now closed.*
-
-*Revised 31 July 2026 (second): **two more M7 items closed — one as a
-correction, one by landing it** (D43′). The warning triage had no population:
-a cold build of all three targets emits **zero** compiler diagnostics, and the
-"295" this file scheduled work against is unattributable. The item's real
-content was the bullet below it — the 230 diagnostics the project had never
-asked for. Measured, fixed in three annotations, and the project now builds in
-**Swift language mode 6**. Base `c93f54f`. **M6, M8, and M7's remaining two**
-(Instruments; the Xcode 27 GM re-read) are what is left — and only Instruments
-is actionable before September.*
-
-*Revised 31 July 2026: **M7's swift-format item closed by declining it**
-(D42′) — the first roadmap item retired as a decision rather than delivered
-as work, because the entry rested on a `.swift-format` that was never
-committed. `.DS_Store` untracked in the same pass, so `git status` — the
-sweep's mandated first command — stops reading permanent noise. Base
-`abf9e0c`. **M6, M8 and M7's remaining three items** are what is left; M7's
-three each need a build or a board.*
-
-*Revised 30 July 2026 (last): the **between-milestone sweep** moved to Landed
-— the first standalone run of M5's own agreement, which found the epilogue
-uncommitted, minted **D41′**, folded the columns grids onto their shared
-metrics, and closed the inspector-header AX question with a passing test.
-Base `3f785a3`. **M6, M7 and M8 remain** — still reorderable on appetite, and
-now the only things left on this roadmap.*
+**Currently scheduled:** M7's two gated items, and nothing else. Everything that
+can be closed from a keyboard alone is closed.
 
 ---
 
@@ -1058,29 +917,27 @@ milestone a consolidation rather than a deletion.
   records why the decision went the way it did, not why this function does not
   use `hasSuffix` here.
 
-- **The review and audit documents: kept, and labelled. Decided 6 August
-  2026.** `AUDIT-2026-08-01.md`, `CODE-REVIEW-2026-08-01.md` and
-  `CODE-REVIEW-2026-08-04.md` are 76 KB of findings, all applied and all
-  recorded in the instructions. They are **history, not memory** — and the
-  disposition follows from that rather than from their size: they are never
-  read on a working pass, so they cost nothing per sitting, and their filenames
-  already date them. Folding them into `DECISIONS.md` would put process notes
-  in a file that holds outcomes; deleting them would discard the one thing the
-  summaries cannot preserve, which is *how* the findings were reached.
+- ~~**The review and audit documents: kept, and labelled. Decided 6 August
+  2026.**~~ **Reversed by request, 7 August 2026 — all three deleted.** The
+  decision that stood here was that they are *history, not memory*: never read
+  on a working pass, costing nothing per sitting, and holding the one thing the
+  summaries cannot preserve, which is **how** the findings were reached.
 
-  What they earn instead is one line in the instructions saying what they are,
-  so a future reader does not mistake an applied finding for an open one. The
-  bar for a fourth: a review document is worth keeping when its method is
-  reusable, not when its findings are interesting.
+  What changed is that the method half was answerable. Every check those
+  documents demonstrated has since been lifted into the instructions' Working
+  agreements **as a runnable command** — the counter-grep, the comment-stripped
+  declaration scan, the `.disabled(…)` census, the prohibited-token sweep. A
+  method written as a command is more durable than a method shown once in a
+  narrative, which is the same argument that moved the registry count into a
+  grep (D42′). What is genuinely lost is the *reasoning trail* of three
+  particular investigations, and it is in `git log`.
 
-  *Original specification follows.*
-  `AUDIT-2026-08-01.md`, `CODE-REVIEW-2026-08-01.md` and
-  `CODE-REVIEW-2026-08-04.md` are 76 KB of findings that have all been applied
-  and are all recorded in the instructions. They are history, not memory. The
-  decision is whether they are archived, folded into `DECISIONS.md`'s
-  provenance notes, or kept — and it is a decision rather than a sweep,
-  because their value is that they show the *process* that found things, which
-  is the one thing the instructions' summaries cannot preserve.
+  One dangling citation was the whole cost of the deletion, and it was found by
+  grep rather than by memory: `PlayersInspectorView` cited
+  `AUDIT-2026-08-01.md § Zero` for what had been ruled out about the three
+  unresolved Players flow tests. That paragraph is **inlined at the site** now.
+  A citation into a file that no longer exists is worth less than nothing — it
+  reads as evidence that a record exists.
 
 **Gate.** ⌘U green (nothing here touches behaviour, which is exactly why the
 run matters — a doc-comment pass that changes code is a doc-comment pass that
@@ -1178,6 +1035,91 @@ decided.
 ---
 
 ## Landed
+
+### The 7 August evening — collection folds memoized, documents trimmed *(recorded 7 August 2026)*
+
+Two requests, one of them a performance pass and one a documentation pass. **No
+D-number**, and the omission is a decision: nothing here reverses a recorded rule
+or mints vocabulary. The one behaviour change is named below and at its site.
+
+**The finding, which was not the one on the census.** Both collection
+destinations folded the whole Library in `body`, which is correct and cheap when
+`body` runs on data changes. It does not. Three triggers ran it far more often,
+and none of them was on the known-costs list:
+
+- **A rubber-band drag** wrote the selection on every drag callback, and the
+  selection is `@State` on the destination — so `Glicko1.histories`,
+  `PlayerStats.index` and two array sorts ran at pointer rate over a library that
+  had not changed.
+- **A search keystroke**, because both destinations narrow *downstream* of the
+  fold.
+- **A batch analysis**, and this was the sharpest: `GameAnalysisDriver` saves once
+  per ply, a save invalidates every `@Query`, so an 80-ply game re-folded the
+  whole Library eighty times if Players happened to be open. The app was already
+  busy at exactly that moment.
+
+**What made it expensive rather than merely repeated** is that `PGN.gameRecord`
+decodes two Codable blobs off the model — `moves` and `evaluations` — so the fold
+was *n* × two blob decodes, not *n* × a struct copy. `AnalysisGlyph.isAnalyzed`
+in the Library's subtitle was a third, unconditional, on every render.
+
+**The mechanism:** `CollectionFoldKey`, an exact fingerprint built from two
+stored scalars per game, and `CollectionFoldCache`, a one-entry memo in the
+`IconGridFrameStore` box idiom so it can be written from inside `body`. Players
+keys on content alone. **The Library composes an analysis signal from the
+queue's own counters** — `runningID`, `completedCount`, `hasFailures` — because
+its backlog count and `TagRule.analyzed` genuinely track analysis, and those
+counters move once per *game* where the save moves once per *ply*. That ratio is
+the whole win.
+
+**Two fields in the key, and the second is the one a future reader will think is
+redundant.** `contentHash` folds everything either fold reads *except*
+classification, which D24′ and D34′ keep outside the hash on purpose — so a
+motif backfill would change the Special Mates column while every hash stayed
+byte-identical. `aChangedCheckmateMovesTheKey` is the pin.
+
+**Exact, not hashed.** A `Hasher` fingerprint is allocation-free and one `Int` to
+compare, and it was rejected: a 64-bit digest is one collision away from a
+silently stale ladder, and the failure renders perfectly and looks like data.
+
+**The behaviour change, priced rather than discovered.** The Library's backlog
+count used to drop the instant a game's first ply was scored (`hasScoredPly` is
+true after one). It now drops when that game leaves the queue. That reads better
+— a game halfway through a pass is not analyzed — but it is a change, and it is
+documented at `LibraryDestination.FoldKey` as well as here.
+
+**Accepted regression, on one path.** An unfiltered Library used to decode only
+`evaluations`; it now builds a full `GameRecord`, which decodes `moves` too.
+Twice the work on a miss, in exchange for misses becoming rare, and one
+projection with two consumers rather than two walks that could disagree about
+"analyzed?".
+
+Also: both rubber-band gestures now guard on an unchanged selection, and
+`LibraryFilter.matches` takes the record rather than projecting one per call.
+
+**Nine tests**, split by isolation — `CollectionFoldKeyTests` nonisolated over
+the value algebra, `CollectionFoldCacheTests` `@MainActor` for the models it
+builds, with a note at the suite that the annotation is about the `@Model`s and
+**not** a claim about the cache's isolation (D44′'s lesson).
+
+**The documentation pass, same sitting.** The three review documents deleted
+(see M14's struck bullet), the revision narrative cut from this file and the
+instructions, every struck open item dropped, and the manual checks reorganised
+from twenty-four dated per-decision lists into *owed* / *board-required* /
+*standing boardless*. `PROJECT-INSTRUCTIONS.md` went 650 → ~430 lines and lost
+roughly half its words.
+
+**Three stale counts corrected in the process, all three found by measuring
+rather than by reading:** sources 239 → **247** on disk (148 app, 99 test),
+tracked 239; the accessibility registry 146 → **153**. The instructions had
+carried the pre-View-Options figures.
+
+**Gate.** ⌘U owed — not run, and not claimed. The counter-grep is clean across
+the three surviving documents. No toolchain was available to compile in, so the
+performance pass is **unbuilt**; if anything fails it will be the labelled-tuple
+arithmetic in `narrowedPairs`, where key paths do not reach tuple elements and
+`map` over a zipped sequence takes one argument. Both are avoided deliberately
+and both are noted at the site.
 
 ### The 7 August day — ten checkmate types, and sleep through a batch *(recorded 7 August 2026)*
 

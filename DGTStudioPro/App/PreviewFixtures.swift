@@ -127,4 +127,52 @@ internal enum PreviewFixtures {
     }
     
     internal static func topStats() -> PlayerStats { playerStats()[0] }
+
+    /// A `CollectionViewOptions` on a wiped scratch suite.
+    ///
+    /// **Never `.standard`**, and here that rule has teeth in both
+    /// directions. A canvas *reading* the developer's own icon size renders a
+    /// layout nobody chose to test — the M1 ambient-`UserDefaults` leak. A
+    /// canvas *writing* one is worse: these previews drive a live slider, so a
+    /// canvas bound to the standard suite would edit the running app's
+    /// preferences from Xcode.
+    ///
+    /// Wiped on every call rather than merely named, so a preview cannot
+    /// inherit what the last one left behind — `UITestSeed.scratchDefaults`'
+    /// discipline, outliving the suite it was written for (D51′).
+    ///
+    /// **`subject:` is not optional-by-accident, and defaulting it to nil was a
+    /// defect rather than a convenience.** `activeSubject` is deliberately
+    /// unpersisted session state (see its declaration), so a fixture built from
+    /// a scratch suite has none — which meant the *Library — Icons* and
+    /// *Library — Gallery* previews both rendered the **No Collection in
+    /// Front** arm, identically to the preview named for it. Three canvases,
+    /// one branch, and each read as evidence that its own branch was checked.
+    ///
+    /// Found 7 Aug 2026 while restyling the sliders those previews are the only
+    /// witness for. The D51′ lesson in a new place: a preview witnessing
+    /// something the view is not showing is worse than no preview.
+    ///
+    /// `iconSize` / `spacing` are overridable so a canvas can sit at an extreme
+    /// — the label's width behaviour across a digit boundary is visual and
+    /// nothing else can see it.
+    @MainActor
+    internal static func viewOptions(
+        subject: CollectionViewOptionsSubject? = nil,
+        iconSize: CGFloat? = nil,
+        spacing: CGFloat? = nil
+    ) -> CollectionViewOptions {
+        let suite = "preview.collectionViewOptions"
+        // A suite that will not open is a broken canvas, not a broken app, and
+        // falling back to `.standard` here is exactly the leak above. An
+        // in-memory volatile domain has no persistence to leak into.
+        let defaults = UserDefaults(suiteName: suite) ?? UserDefaults(suiteName: nil) ?? .standard
+        defaults.removePersistentDomain(forName: suite)
+
+        let options = CollectionViewOptions(defaults: defaults)
+        options.activeSubject = subject
+        if let iconSize { options.iconSize = iconSize }
+        if let spacing { options.spacing = spacing }
+        return options
+    }
 }

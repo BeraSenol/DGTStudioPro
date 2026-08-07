@@ -11,10 +11,28 @@ internal enum LibraryFilter {
     case smartTag(SmartTag)
     case player(Player)
 
-    internal func matches(_ pgn: PGN) -> Bool {
+    /// Takes the record alongside the model since 7 Aug 2026, rather than
+    /// projecting one per call.
+    ///
+    /// `pgn.gameRecord` decodes two Codable arrays off the model (`moves` and
+    /// `evaluations`), and this ran once per game per render — so an active
+    /// smart tag put two blob decodes per game on every keystroke, click and
+    /// drag callback. The caller memoizes the projection now
+    /// (`CollectionFoldKey`), which it can only do if the projection is passed
+    /// in rather than taken here.
+    ///
+    /// **The record must be `pgn`'s own**, which is the trap the signature
+    /// cannot state: handing over a mismatched pair type-checks and silently
+    /// filters the Library against the wrong game. The one caller zips the two
+    /// arrays it already holds in the same order.
+    ///
+    /// The `.player` arm ignores the record deliberately — a link comparison
+    /// is the M-prs.1 identity door and a projection would flatten it back to
+    /// the raw tags that door exists to bypass.
+    internal func matches(_ pgn: PGN, record: GameRecord) -> Bool {
         switch self {
         case .smartTag(let tag):
-            return tag.matches(pgn.gameRecord)
+            return tag.matches(record)
         case .player(let player):
             // Resolved links, never raw tags — the M-prs.1 identity door.
             return pgn.whitePlayer?.persistentModelID == player.persistentModelID

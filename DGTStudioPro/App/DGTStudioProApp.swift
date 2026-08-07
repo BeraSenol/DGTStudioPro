@@ -88,6 +88,19 @@ internal struct DGTStudioProApp: App {
     /// has anything to choose between.
     @State private var inspectorCollapse = InspectorSectionCollapse(defaults: .standard)
 
+    /// 7 Aug 2026 — the View Options panel's subject: icon size, grid spacing,
+    /// and both collection destinations' sorts. `inspectorCollapse`'s
+    /// arrangement exactly, and for its reasons: app-owned because the state is
+    /// shared across tabs (an icon size is a statement about browsing, not
+    /// about the window it was set in), injected into the `WindowGroup` because
+    /// destinations read it, and handed `.standard` explicitly because the
+    /// injectable seam exists for the previews rather than for this site.
+    ///
+    /// It is also injected into the View Options scene itself, which is the one
+    /// place the value is *written* — a panel bound to a different instance
+    /// than the grids read would be a slider that moves nothing.
+    @State private var viewOptions = CollectionViewOptions(defaults: .standard)
+
     // The struct is `@MainActor` (above), so this init runs on the main actor
     // and may touch the `@MainActor` members of the DGT objects it wires. The
     // module's default actor isolation is `nonisolated`, so without that
@@ -247,6 +260,7 @@ internal struct DGTStudioProApp: App {
                 .environment(dgtSession)
                 .environment(sessionLog)
                 .environment(inspectorCollapse)
+                .environment(viewOptions)
             // No `.defaultAppStorage(_:)` here any more. It redirected every
             // `@AppStorage` in the tab to a wiped scratch suite under the
             // `-uiTestSeed` argument, so a UI run couldn't read — or write —
@@ -271,6 +285,11 @@ internal struct DGTStudioProApp: App {
             // D12′ editor; the sidebar header's + is pointer-only (see
             // `SmartTagCommands` for the evidence).
             SmartTagCommands()
+            // 7 Aug 2026 — View ▸ Show View Options (⌘J). The publishing side
+            // is `.focusedSceneValue(\.collectionViewOptionsSubject, …)` on
+            // both collection destinations, so the item is enabled only when a
+            // Library or Players tab is in front and disabled over a Board.
+            CollectionViewOptionsCommands()
         }
         
         // M8 (D46′) — the enlarged evaluation graph. A separate group so it can
@@ -286,6 +305,7 @@ internal struct DGTStudioProApp: App {
         // same night — the D46′ anchor records the round trip.)
         WindowGroup("Evaluation", for: EvaluationGraphRequest.self) { $request in
             EvaluationGraphWindow(request: request)
+                .fullScreenAuxiliary()
         }
         .modelContainer(sharedContainer)
         .defaultSize(width: 720, height: 420)
@@ -314,6 +334,7 @@ internal struct DGTStudioProApp: App {
         WindowGroup("Info", for: GetInfoRequest.self) { $request in
             GetInfoWindow(request: request)
                 .environment(dgtSession)
+                .fullScreenAuxiliary()
         }
         .modelContainer(sharedContainer)
         .defaultSize(width: 460, height: 520)
@@ -347,10 +368,43 @@ internal struct DGTStudioProApp: App {
         Window("Analysis", id: AnalysisQueueStatusWindowView.sceneID) {
             AnalysisQueueStatusWindowView()
                 .environment(analysisQueue)
+                .fullScreenAuxiliary()
         }
         .modelContainer(sharedContainer)
         .defaultSize(width: 520, height: 560)
         .defaultLaunchBehavior(.suppressed)
+
+        // 7 Aug 2026 — Finder's ⌘J for the two collection destinations.
+        //
+        // A `Window` and not a `WindowGroup`, the Analysis scene's precedent
+        // one block up and for the same reason: there is exactly one panel, so
+        // it opens by `id` and needs no wrapper type to keep
+        // `openWindow(value:)` unambiguous. Third scene in a row to sidestep
+        // the trap D46′ and D53′ each had to pay for.
+        //
+        // No `modelContainer`: the panel reads and writes `CollectionViewOptions`
+        // and touches no model. Withholding it is the check — if this window
+        // ever needs the store, that is a signal the panel has grown into
+        // something other than a view-options panel.
+        //
+        // `.floating`, unlike Get Info and Analysis, and the D46′ split is the
+        // precedent read the other way: the graph floats because it is read
+        // while the board underneath is driven, and this is *worse* than that —
+        // its whole purpose is to be manipulated while watching the grid behind
+        // it resize. A panel that sinks behind the window it is resizing is
+        // useless in the one moment it exists for. The counter-argument that
+        // kept Get Info and Analysis unfloated (a window owning the keyboard
+        // over everything) does not apply: this one carries sliders and
+        // pickers, no destructive control and no text entry.
+        Window("View Options", id: CollectionViewOptionsWindow.sceneID) {
+            CollectionViewOptionsWindow()
+                .environment(viewOptions)
+                .fullScreenAuxiliary()
+        }
+        .defaultSize(width: 340, height: 300)
+        .defaultLaunchBehavior(.suppressed)
+        .windowResizability(.contentMinSize)
+        .windowLevel(.floating)
 
         Settings {
             SettingsView()

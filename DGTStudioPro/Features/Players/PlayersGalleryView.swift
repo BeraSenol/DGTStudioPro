@@ -31,6 +31,15 @@ internal struct PlayersGalleryView: View {
         .onMoveCommand { direction in
             move(direction)
         }
+        // The whole gallery is the background target (7 Aug 2026), unlike the
+        // icons grids where the menu rides the grid's own `contentShape`.
+        // A gallery has almost no empty space to aim at — a preview pane and a
+        // strip of thumbnails, both of which are content — so scoping this to
+        // "background" would have made it unreachable in the one mode that
+        // needs the panel most, since a filmstrip cannot be resized and sort is
+        // the only thing left to set. Card menus still win over their own
+        // bounds, so this is what a right-click anywhere *else* finds.
+        .contextMenu { ShowViewOptionsButton() }
     }
 
     /// ← / → step the filmstrip; ↑ / ↓ hold — `LibraryGalleryView.move`'s

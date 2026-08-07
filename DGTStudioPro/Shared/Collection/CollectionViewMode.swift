@@ -69,25 +69,22 @@ internal enum CollectionViewMode: String, CaseIterable, Identifiable {
 /// The three grids differ in element type and in callbacks, so it would have
 /// to be generic over its content anyway, and it would hide the `LazyVGrid`
 /// that each view's previews exist to exercise.
-internal enum CollectionGridMetrics {
-    
-    /// Six columns at a 120pt floor: wide enough that a two-line name is the
-    /// exception, narrow enough that wrapping shows itself before the window
-    /// is unreasonably wide.
-    internal static let columnCount = 6
-    internal static let minimumColumnWidth: CGFloat = 120
-    
-    /// Both axes — the gutters read square.
-    internal static let spacing: CGFloat = 16
-    
-    /// Applied to the grid, not the `ScrollView`, so it scrolls with the
-    /// content the way a Finder icon view's does.
-    internal static let inset: CGFloat = 16
-    
-    internal static var columns: [GridItem] {
-        Array(
-            repeating: GridItem(.flexible(minimum: minimumColumnWidth), spacing: spacing),
-            count: columnCount
-        )
-    }
-}
+// `CollectionGridMetrics` stood here until 7 Aug 2026, when the geometry
+// stopped being constant and moved to `CollectionViewOptions`. Every value
+// survives the move with its meaning intact and its number unchanged:
+// `minimumColumnWidth` 120 is now `defaultIconSize`, `spacing` 16 is the
+// default rather than the only answer, and `inset` is still a constant there
+// because it insets the grid from the window's dividers — chrome, not cards,
+// which is why it is the one number the panel does not offer.
+//
+// `columnCount = 6` is the one that did not survive, and it is the whole
+// reason for the move: six columns was a *statement about width* written as a
+// constant, so a wide window spread six cards thin and a narrow one crushed
+// them. It is derived from width now.
+//
+// The doc above it is worth keeping in summary, because the finding outlives
+// the type: parity between the two icons grids was once three private copies
+// of these constants plus three different insets, and an identically-built
+// card rendered ~5pt narrower in one destination than the other at the same
+// window width. One reader-facing owner is what makes that unrepresentable —
+// `CollectionViewOptions` is now that owner, and it is injected once.

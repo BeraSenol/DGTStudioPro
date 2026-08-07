@@ -34,6 +34,23 @@ internal struct PlayersIconsView: View {
 
     // MARK: Private Properties
 
+    @Environment(CollectionViewOptions.self) private var options
+
+    /// The container width, mirrored out of the `GeometryReader` so the arrow
+    /// keys can ask the same question the layout asked.
+    ///
+    /// **One number, two readers, and they must not fork.** The grid packs
+    /// `options.columnCount(containerWidth:)` columns and `move(_:proxy:)`
+    /// steps by it — that is exactly why the grid is not `.adaptive`, which
+    /// never reports the count it chose. Layout reads the proxy directly (so
+    /// it is never a frame behind); `move` reads the box, which has settled
+    /// long before a key press. Both call the one function.
+    ///
+    /// A **box**, not `@State`: see `IconGridWidthBox`, which carries the
+    /// account of why the first version of this line brought the "Geometry
+    /// action is cycling between duplicate values" warning back.
+    @State private var containerWidth = IconGridWidthBox()
+
     /// Realized cards' frames in `gridSpace` — a box, not observed state
     /// (see `IconGridFrameStore`); the sweep re-checks membership against
     /// `players` rather than trusting the keys.
@@ -46,11 +63,12 @@ internal struct PlayersIconsView: View {
 
     // MARK: Body
     var body: some View {
+        GeometryReader { geometry in
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVGrid(
-                    columns: CollectionGridMetrics.columns,
-                    spacing: CollectionGridMetrics.spacing
+                    columns: options.columns(containerWidth: geometry.size.width),
+                    spacing: options.spacing
                 ) {
                     ForEach(players) { player in
                         // Rank always rides the card (D48′) — in name order
@@ -81,7 +99,7 @@ internal struct PlayersIconsView: View {
                         }
                     }
                 }
-                .padding(CollectionGridMetrics.inset)
+                .padding(CollectionViewOptions.inset)
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -91,6 +109,13 @@ internal struct PlayersIconsView: View {
                     anchorKey = nil
                     isFocused = true
                 }
+                // The background's own context menu (7 Aug 2026). It sits
+                // on the same `contentShape` the clear-selection tap uses, so
+                // it covers the gutters too — a right-click *between* cards is
+                // a background right-click, which is what Finder does and what
+                // a reader trying to reach this will actually aim at. A card's
+                // own menu wins over its own bounds, so the two never compete.
+                .contextMenu { ShowViewOptionsButton() }
                 .gesture(rubberBandGesture)
                 // Content-anchored, deliberately — see the type doc.
                 .coordinateSpace(name: Self.gridSpace)
@@ -114,6 +139,15 @@ internal struct PlayersIconsView: View {
             .onMoveCommand { direction in
                 move(direction, proxy: proxy)
             }
+            // A box write from a geometry action — free, and invisible to
+            // the render pass. The transform quantizes so `onGeometryChange`'s
+            // own duplicate-value comparison has a stable input.
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                IconGridWidthBox.quantized(proxy.size.width)
+            } action: { width in
+                containerWidth.width = width
+            }
+        }
         }
     }
 
@@ -137,6 +171,14 @@ internal struct PlayersIconsView: View {
                         .filter { cardFrames.frames[$0.id]?.intersects(band) == true }
                         .map(\.id)
                 )
+                // The Library grid's guard, and it bought more here — see
+                // `LibraryIconsView` for the argument. `selectedKeys` is
+                // `@State` on `PlayersDestination`, whose body folds the whole
+                // Library, so every frame of a sweep that crossed nothing new
+                // used to re-run `Glicko1.histories` and `PlayerStats.index`.
+                // The memo took most of that; this takes the rest of the
+                // render.
+                guard crossed != selectedKeys else { return }
                 selectedKeys = crossed
                 anchorKey = crossed.isEmpty ? nil : players.first { crossed.contains($0.id) }?.id
             }
@@ -153,7 +195,7 @@ internal struct PlayersIconsView: View {
             target = IconGridSelection.destination(
                 from: current,
                 direction: direction,
-                columnCount: CollectionGridMetrics.columnCount,
+                columnCount: options.columnCount(containerWidth: containerWidth.width),
                 count: players.count
             )
         } else {
@@ -178,10 +220,13 @@ internal struct PlayersIconsView: View {
         onShowInLibrary: { _ in }
     )
     .frame(width: 720, height: 420)
+    .environment(PreviewFixtures.viewOptions())
 }
 
 /// Wide enough for a full row — wrapping only shows itself with more players
-/// than one row holds; the column count lives in `CollectionGridMetrics`.
+/// than one row holds. The column count is derived from this frame's width
+/// and the View Options icon size, so the 860 here is load-bearing: it is
+/// what makes this preview show two rows rather than one.
 /// Preselected with *two* cards, the state the single-select grid could
 /// never render.
 #Preview("Wraps To Two Rows, Multi") {
@@ -195,6 +240,7 @@ internal struct PlayersIconsView: View {
         onShowInLibrary: { _ in }
     )
     .frame(width: 860, height: 420)
+    .environment(PreviewFixtures.viewOptions())
 }
 
 #Preview("Empty") {
@@ -202,4 +248,5 @@ internal struct PlayersIconsView: View {
 
     PlayersIconsView(players: [], selectedKeys: $selection, onShowInLibrary: { _ in })
         .frame(width: 720, height: 420)
+        .environment(PreviewFixtures.viewOptions())
 }

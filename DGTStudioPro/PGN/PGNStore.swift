@@ -304,7 +304,37 @@ internal struct PGNStore {
         // authority, and a number reused there is a number the user themselves
         // reused. A stored mark would be a second source of truth for a value
         // whose first source is a directory listing.
-        pgn.libraryIndex = (try? highestLibraryIndex()).flatMap { $0 + 1 }
+        // **`?? 0` inside the `do`, not `flatMap` outside it, and the
+        // difference is a whole class of unnumbered game.** The line here was
+        // `(try? highestLibraryIndex()).flatMap { $0 + 1 }` until 7 Aug 2026,
+        // which reads as "one past the highest" and is — except that
+        // `highestLibraryIndex()` returns nil when *nothing* carries an
+        // ordinal, `try?` flattens `Int??` to `Int?`, and `flatMap` then
+        // short-circuits to nil. So the door handed no ordinal at all to every
+        // game archived into a Library where none had been stamped yet: an
+        // empty install, and every pre-D58′ archive until `Match Folder` has
+        // run once. "The first game is number one" was the intent and was
+        // never the behaviour.
+        //
+        // The two nil causes are separated because they want opposite
+        // answers. *No games numbered* is a real empty run and its successor
+        // is 1. *The fetch failed* is not an empty Library — treating it as
+        // one would file a new game as #1 behind forty others, and D32′ has
+        // export overwrite a same-named file silently, so the collision is
+        // paid in a lost file rather than a warning. Nil is the honest answer
+        // there, and `Match Folder` can still reach it.
+        //
+        // Caught rather than thrown: an ordinal must never fail an archive.
+        // Archive-first, exactly once, never lost — a game is not worth less
+        // because the Library could not be counted.
+        do {
+            pgn.libraryIndex = (try highestLibraryIndex() ?? 0) + 1
+        } catch {
+            pgn.libraryIndex = nil
+            Self.logger?.error(
+                "Could not read the highest library index; archiving unnumbered: \(error)"
+            )
+        }
         let hash = Self.contentHash(for: pgn)
         
         if let existing = try existingPGN(withHash: hash) {

@@ -52,6 +52,32 @@ struct PGNStoreArchiveTests {
     private static func libraryCount(in context: ModelContext) throws -> Int {
         try context.fetchCount(FetchDescriptor<PGN>())
     }
+
+    /// An importable game that is *not* the archive fixture.
+    ///
+    /// All seven roster tags, because `importPGN` throws
+    /// `.missingRequiredTags` on anything less — a two-tag literal reads fine
+    /// and never reaches the door it was written to set up. Deliberately a
+    /// different pairing and event from `roster()`, so a row seeded through
+    /// this helper can never dedupe against the game the test then archives:
+    /// the ordinal assertions would still pass on the *existing* row's number
+    /// and would be asserting nothing.
+    ///
+    /// `[Result "*"]` is admitted here on purpose — the import door takes it,
+    /// only the archive door refuses it (Decision #3).
+    private static func importableText() -> String {
+        """
+        [Event "Elsewhere"]
+        [Site "Elsewhere"]
+        [Date "2026.05.15"]
+        [Round "1"]
+        [White "Carlsen"]
+        [Black "Nepo"]
+        [Result "*"]
+
+        1. d4 d5 *
+        """
+    }
     
     // MARK: Insert
     
@@ -193,5 +219,73 @@ struct PGNStoreArchiveTests {
         #expect(rearchived.deduplicated == true)
         #expect(rearchived.pgn.persistentModelID == result.pgn.persistentModelID)
         #expect(try Self.libraryCount(in: context) == 1)
+    }
+
+    // MARK: The Ordinal (D58′)
+
+    /// **The pin the 7 Aug fix exists for.** `highestLibraryIndex()` returns
+    /// nil when nothing carries an ordinal, and the old `flatMap` spelling
+    /// turned that into "no ordinal" rather than "the run starts here" — so
+    /// the first game archived into a fresh install was unnumbered, and so was
+    /// every game archived into a pre-D58′ archive until `Match Folder` ran.
+    ///
+    /// This is the arm the shipped code could not reach: every other ordinal
+    /// test seeds a numbered row first, which is exactly the condition that
+    /// hid the bug.
+    @Test func theFirstGameArchivedIntoAnEmptyLibraryIsNumberOne() throws {
+        let context = try Self.makeContext()
+        let store = PGNStore(modelContext: context)
+
+        let result = try store.archive(Self.finishedGame())
+
+        #expect(result.pgn.libraryIndex == 1)
+    }
+
+    /// The same arm one step further out, and the one that actually bit: a
+    /// Library with *games* in it but none numbered is still an empty run.
+    /// Asserting only the empty-container case above would pass while this
+    /// failed, because "no rows" and "no ordinals" are different states that
+    /// the same nil represents.
+    @Test func aLibraryOfUnnumberedGamesStillStartsItsRunAtOne() throws {
+        let context = try Self.makeContext()
+        let store = PGNStore(modelContext: context)
+        let existing = try store.importPGN(text: Self.importableText())
+        #expect(existing.libraryIndex == nil, "precondition: the row carries no ordinal")
+
+        let result = try store.archive(Self.finishedGame())
+
+        #expect(result.pgn.libraryIndex == 1)
+    }
+
+    /// `max + 1` once a run exists — and deliberately `max`, not `count`. A
+    /// folder's numbering is neither gapless nor dense (D58′), so a Library
+    /// holding one game at 47 continues at 48 rather than at 2.
+    @Test func anArchivedGameContinuesTheHighestRun() throws {
+        let context = try Self.makeContext()
+        let store = PGNStore(modelContext: context)
+        let existing = try store.importPGN(text: Self.importableText())
+        existing.libraryIndex = 47
+
+        let result = try store.archive(Self.finishedGame())
+
+        #expect(result.pgn.libraryIndex == 48)
+    }
+
+    /// A deduplicated archive returns the row that was already there, so it
+    /// keeps *that* row's ordinal and mints nothing. Worth pinning because the
+    /// assignment happens before the hash probe: the new ordinal is computed
+    /// for a `PGN` that is then discarded, and a future reader tidying that
+    /// ordering would have no other witness that the discard is intended.
+    @Test func aDeduplicatedArchiveKeepsTheExistingOrdinal() throws {
+        let context = try Self.makeContext()
+        let store = PGNStore(modelContext: context)
+
+        let first = try store.archive(Self.finishedGame())
+        first.pgn.libraryIndex = 12
+
+        let second = try store.archive(Self.finishedGame())
+
+        #expect(second.deduplicated == true)
+        #expect(second.pgn.libraryIndex == 12)
     }
 }

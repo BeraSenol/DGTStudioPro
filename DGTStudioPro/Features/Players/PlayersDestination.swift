@@ -32,9 +32,16 @@ internal struct RankedPlayer: Identifiable, Hashable {
 // stands — rank is the default read, and renders in every ordering because it
 // is a fact about the player rather than a position in the current sort.
 //
-// Genuinely lost: the picker's choice survived a relaunch and the column sort
-// does not. Accepted — a sort is the question being asked now, not a standing
-// preference, and the default is stated in code below rather than in defaults.
+// "Genuinely lost: the picker's choice survived a relaunch and the column sort
+// does not" stood here until 7 Aug 2026, and it is **restored rather than
+// struck**: the column sort persists again, through `CollectionViewOptions`.
+// What made the loss acceptable was that a sort is the question being asked
+// now rather than a standing preference — true while a table header was the
+// only door, and false the moment the View Options panel offered the same
+// choice beside an icon size that does persist. Nothing about the picker came
+// back; two controls answering one question is still the twin-read-site shape,
+// and the panel is a *reader and writer of the same value* the header uses
+// rather than a second source.
 
 /// The Players destination (M-prs.3; absorbed Rankings in D48′): the four
 /// `CollectionViewMode`s over the ranked ladder, in rank order by default
@@ -74,13 +81,27 @@ internal struct PlayersDestination: View {
     /// view saw it, so ordering by the badge number reproduces the comparator
     /// without restating it.
     ///
-    /// Owned here rather than in `PlayersListView` for `LibraryDestination`'s
-    /// reason: `displayed` applies it, so the search below and everything
-    /// downstream see one order. Less load-bearing than the Library's — Players
-    /// has no export numbering and no tab order — but the two destinations
-    /// stay parallel under the collection-destination parity invariant, and a
-    /// reader who learns one has learned the other.
-    @State private var sortOrder: [KeyPathComparator<RankedPlayer>] = Self.defaultSortOrder
+    /// Applied in `displayed`, so the search below and everything downstream
+    /// see one order. Less load-bearing than the Library's — Players has no
+    /// export numbering and no tab order — but the two destinations stay
+    /// parallel under the collection-destination parity invariant, and a reader
+    /// who learns one has learned the other.
+    ///
+    /// **Persisted and derived since 7 Aug 2026**, where it used to be
+    /// `@State`: the value lives in `CollectionViewOptions`, so the table
+    /// header and the View Options panel write the same one and each renders
+    /// what the other set. A failed round trip keeps the current sort rather
+    /// than resetting to the ladder — see the Library's twin for the full
+    /// argument.
+    private var sortOrder: Binding<[KeyPathComparator<RankedPlayer>]> {
+        Binding(
+            get: { options.playersSort.comparators },
+            set: { newValue in
+                guard let sort = CollectionSort<PlayersSortField>(comparators: newValue) else { return }
+                options.playersSort = sort
+            }
+        )
+    }
 
     /// How the ladder is ordered (D62′) — what rank 1 means, not what order the
     /// rows appear in. Persisted, unlike the column sort one property up; see
@@ -99,6 +120,15 @@ internal struct PlayersDestination: View {
         [KeyPathComparator(\RankedPlayer.rank)]
     }
     @Environment(\.modelContext) private var modelContext
+
+    /// The View Options panel's subject (7 Aug 2026) — see `sortOrder`.
+    @Environment(CollectionViewOptions.self) private var options
+
+    /// Read back from the scene the line above publishes into. Circular by
+    /// appearance only: `focusedSceneValue` publishes to the *scene*, and
+    /// `@FocusedValue` resolves the **key** window's — so this is nil whenever
+    /// another window is front, which is exactly the signal the mirror needs.
+    @FocusedValue(\.collectionViewOptionsSubject) private var focusedSubject
     @Query(sort: \PGN.importedAt, order: .reverse) private var games: [PGN]
 
     // The `registry` @Query lived here for D40′'s sweep — a second query over
@@ -115,6 +145,31 @@ internal struct PlayersDestination: View {
     /// is a counted state, never "the first of the set wearing one
     /// player's face".
     @State private var selectedKeys: Set<PlayerStats.ID> = []
+
+    /// The three folds this destination cannot render without, memoized
+    /// together because they share one input and one cost.
+    ///
+    /// Together rather than three caches: they are computed from the same
+    /// `records` in one pass, and splitting them would mean projecting the
+    /// Library three times to save nothing.
+    private struct Fold {
+        let records: [GameRecord]
+        let histories: [String: [Glicko1.Sample]]
+        let stats: [PlayerStats]
+    }
+
+    /// Memoized on content, so selection, search text, view mode and the
+    /// analysis driver's per-ply saves stop re-folding the whole Library.
+    ///
+    /// **The key is content only** — see `CollectionFoldKey` for what it
+    /// deliberately omits. Nothing folded here reads `evaluations`, which is
+    /// what lets a batch analysis run without this destination paying for it.
+    ///
+    /// The ranking method is **not** in the key, and that is a decision rather
+    /// than an oversight: `PlayerRanking.ranked` sorts an already-folded array
+    /// of players, which is cheap next to projecting every game, so switching
+    /// the ladder's method stays instant and costs no recompute.
+    @State private var foldCache = CollectionFoldCache<CollectionFoldKey, Fold>()
 
     // MARK: Search (2 Aug 2026)
     @State private var searchText = ""
@@ -182,12 +237,19 @@ internal struct PlayersDestination: View {
 
     // MARK: Derived Data (D48′)
 
-    /// Builds the ranked ladder from an already-computed projection and
+    /// Builds the ranked ladder from an already-computed player index and
     /// rating-history map — `RankingsDestination.ranked`'s exact shape,
     /// moved with the merge. Pure and `static` so it can't reach for
     /// instance state and silently re-derive: `body` folds once and threads.
+    ///
+    /// **Takes `stats` rather than `records` since 7 Aug 2026.** It used to run
+    /// `PlayerStats.index(of:)` itself, which put the expensive half of the
+    /// fold inside the one function that has to re-run when the *ranking
+    /// method* changes. The index moved into the memoized fold and this kept
+    /// the pairing, which is the cheap half — so switching between Wins, Win %
+    /// and Rating now sorts an array instead of re-projecting the Library.
     private static func ranked(
-        from records: [GameRecord],
+        from stats: [PlayerStats],
         histories: [String: [Glicko1.Sample]],
         by method: PlayerRanking
     ) -> [RankedPlayer] {
@@ -197,7 +259,7 @@ internal struct PlayersDestination: View {
         // keeps `PlayerRanking` free of any knowledge that histories are keyed
         // by `stats.key`, which is this destination's business.
         method.ranked(
-            PlayerStats.index(of: records).map {
+            stats.map {
                 (stats: $0, rating: histories[$0.key]?.last?.rating)
             }
         )
@@ -205,10 +267,24 @@ internal struct PlayersDestination: View {
 
     // MARK: Body
     internal var body: some View {
-        // Fold once per render, then thread down (see the Derived Data note).
-        let records = games.map(\.gameRecord)
-        let histories = Glicko1.histories(from: records)
-        let ranked = Self.ranked(from: records, histories: histories, by: ranking)
+        // Fold once per *change*, then thread down. This read used to be three
+        // unconditional folds per render (see the Derived Data note, which
+        // records the same finding one level down — it caught the folds running
+        // three times a render and did not catch the render running per drag
+        // callback). `CollectionFoldKey` carries the whole argument; the short
+        // version is that the inputs are content, and a click, a keystroke and
+        // an engine's per-ply save are not.
+        let fold = foldCache.value(for: CollectionFoldKey(games: games)) {
+            let records = games.map(\.gameRecord)
+            return Fold(
+                records: records,
+                histories: Glicko1.histories(from: records),
+                stats: PlayerStats.index(of: records)
+            )
+        }
+        let records = fold.records
+        let histories = fold.histories
+        let ranked = Self.ranked(from: fold.stats, histories: histories, by: ranking)
         // Rank is computed under D11′ regardless of display order — the sort
         // only decides sequence, never the number on the badge. That sentence
         // predates the column sort and survives it unchanged, which is the
@@ -220,7 +296,7 @@ internal struct PlayersDestination: View {
         // there means "no sort at all", while here there is always exactly one
         // comparator and the guard would be checking for a state that cannot
         // occur.
-        let displayed = ranked.sorted(using: sortOrder)
+        let displayed = ranked.sorted(using: sortOrder.wrappedValue)
         // Search narrows the *list only*. `selected` / `history` below read
         // the full ladder, so a player filtered out of view keeps their
         // inspector profile — searching is about finding, not deselecting.
@@ -307,6 +383,26 @@ internal struct PlayersDestination: View {
                 prompt: "Search Players"
             ) { token in
                 Label(token.displayName, systemImage: token.symbol)
+            }
+            // The Library destination's twin — see there for why the subject
+            // carries the mode as well as the destination.
+            .focusedSceneValue(
+                \.collectionViewOptionsSubject,
+                CollectionViewOptionsSubject(collection: .players, mode: viewMode)
+            )
+            // Mirrors the focused subject into the app-global options object,
+            // which is what the View Options panel actually reads. The latch
+            // lives *here* rather than in the panel because this view is on
+            // screen while its own window is key — the panel never is at the
+            // moment a collection is front, so its own `@FocusedValue` was
+            // always nil by its first render.
+            //
+            // Only non-nil writes land: focus moving to the panel (or to a
+            // Board tab) must leave the panel describing the collection you
+            // opened it from, which is what Finder's ⌘J does.
+            .onChange(of: focusedSubject, initial: true) { _, newValue in
+                guard let newValue else { return }
+                options.activeSubject = newValue
             }
             .onAppear {
                 // Players must work even if Library was never visited this
@@ -433,7 +529,7 @@ internal struct PlayersDestination: View {
                 case .list:
                     PlayersListView(players: players, selectedKeys: $selectedKeys,
                                     onShowInLibrary: showInLibrary,
-                                    sortOrder: $sortOrder)
+                                    sortOrder: sortOrder)
                 case .columns:
                     // Flat list + detail since the Finder-column redesign
                     // (2 Aug 2026): the list follows `players`' display
@@ -447,7 +543,7 @@ internal struct PlayersDestination: View {
                                        selectedKeys: $selectedKeys,
                                        recentGames: selectedGames,
                                        onShowInLibrary: showInLibrary,
-                                       sortOrder: $sortOrder)
+                                       sortOrder: sortOrder)
                 case .gallery:
                     PlayersGalleryView(players: players, selectedKeys: $selectedKeys,
                                        onShowInLibrary: showInLibrary)

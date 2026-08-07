@@ -103,3 +103,37 @@ internal final class IconGridFrameStore<ID: Hashable> {
     internal var frames: [ID: CGRect] = [:]
     internal init() {}
 }
+
+/// The grid's measured container width, on the same terms and for the same
+/// reason (7 Aug 2026).
+///
+/// **This shipped as `@State` first and reproduced the warning on the first
+/// launch**, four times over — which is the fifth instance of a lesson this
+/// file already carried in writing, one declaration above. The shape is
+/// identical: a geometry action wrote observed state, the write invalidated
+/// the view, the invalidation re-entered layout, and layout produced another
+/// geometry report. Nothing in `body` reads this — the layout reads the
+/// `GeometryReader`'s proxy directly, and only `move(_:proxy:)` reads the
+/// stored width, from a key-press closure long after layout has settled. So
+/// the write must be invisible to the render pass, which is what a box is.
+///
+/// Kept separate from `IconGridFrameStore` rather than folded in as another
+/// property: the frames are per-card and keyed, this is one number for the
+/// container, and a store holding both would tempt a future reader into
+/// clearing them together.
+internal final class IconGridWidthBox {
+    internal var width: CGFloat = 0
+    internal init() {}
+
+    /// Half-point quantization, the `stableFrame` rule applied to a scalar.
+    ///
+    /// The box write cannot cycle, but `onGeometryChange` compares its
+    /// *transform's* output by exact equality and warns when consecutive
+    /// passes alternate between values it has seen. A flexible-column grid
+    /// divides non-integer widths freely, so the raw width wobbles sub-point;
+    /// rounding to the half-point grid puts the boundaries at .25/.75, where
+    /// layout never rests. A column count is indifferent to half a point.
+    internal static func quantized(_ width: CGFloat) -> CGFloat {
+        (width * 2).rounded() / 2
+    }
+}

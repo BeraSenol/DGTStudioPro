@@ -8,8 +8,16 @@ reading.** Authored 5 August 2026 against the tree at **`75a02d3`** plus that
 day's uncommitted work — column sorting, and D59′'s move of the movetext editor
 into Get Info — read from source, not from a description of the source. Every
 node traces to a file that was open at the time; the decision citations were
-verified to resolve against `PROJECT-INSTRUCTIONS.md` by the grep below rather
-than by recollection.
+verified to resolve against the D-anchors by the grep below rather than by
+recollection.
+
+**Re-pointed 7 August 2026.** Both greps below read `DECISIONS.md`, which has
+owned the anchors since M14 split them out of `PROJECT-INSTRUCTIONS.md`. As
+written they read the instructions, and against that file grep 1 returned **ten
+false positives** — decisions cited correctly by the diagrams and no longer
+*mentioned* in the document being grepped. A check pointed at the wrong file
+fails loudly here, which is lucky; the same mistake on grep 2 fails silently, by
+under-reporting the gap.
 
 **Naming the base *and* the delta is the point**, not pedantry: a diagram set
 that cites a commit while describing a working tree is a claim about the
@@ -94,19 +102,20 @@ checked, and check 4 is not a substitute for opening them.
 
 ## Standing greps
 
-Run from the repo root, with `PROJECT-INSTRUCTIONS.md` in it. Both are written to
-be run verbatim by someone who was not there — the method belongs in the command,
-not in the person who wrote it.
+Run from the repo root, against `DECISIONS.md` — the anchors' owner since M14.
+Both are written to be run verbatim by someone who was not there: the method
+belongs in the command, not in the person who wrote it.
 
 **1. Citations to decisions that do not exist** — catches a typo or an invented
 number:
 
 ```bash
 comm -23 <(grep -ohE "D[0-9]+′" Diagrams/*.mermaid | sort -u) \
-         <(grep -ohE "D[0-9]+′" PROJECT-INSTRUCTIONS.md | sort -u)
+         <(grep -ohE "D[0-9]+′" DECISIONS.md | sort -u)
 ```
 
-Expected output: **empty**. Current denominator: 35 distinct decisions cited.
+Expected output: **empty** — verified 7 August 2026. Current denominator: **36**
+distinct decisions cited (this line said 35; re-measured rather than carried).
 
 Note the `′` (U+2032 PRIME). It is load-bearing: `D13` and `D13′` do not grep
 against each other, so a diagram set that drops the primes is one whose every
@@ -117,7 +126,7 @@ else.
 
 ```bash
 comm -13 <(grep -ohE "D[0-9]+′" Diagrams/*.mermaid | sort -u) \
-         <(grep -ohE "^### D[0-9]+′" PROJECT-INSTRUCTIONS.md | grep -ohE "D[0-9]+′" | sort -u)
+         <(grep -ohE "^### D[0-9]+′" DECISIONS.md | grep -ohE "D[0-9]+′" | sort -u)
 ```
 
 This one is **expected non-empty**, which makes it the weaker of the two. Its
@@ -143,7 +152,29 @@ remembered, so that a seventeenth entry is visibly new:
 | D51′ | The UI test target deleted — process |
 | D52′ | Merge removed — a deletion |
 
-Sixteen. Anything else appearing is unrecorded drawable behaviour.
+Sixteen — **and the current output is twenty-four.** The eight new ones are
+`D61′`–`D68′`, every decision minted after these diagrams were drawn on 5 August.
+That is the check doing exactly what it was built for, on its first run against
+the correct file.
+
+**They are listed rather than triaged, deliberately.** Assigning each a
+"why not drawn" row without re-reading the diagrams against the current tree
+would be inventing justifications to make a check come back clean, which is the
+failure this whole document is written against. What is owed is one pass with the
+five `.mermaid` files open:
+
+| Untriaged | First read, to be confirmed or overturned |
+|---|---|
+| D61′ | A commit-path guard — **likely a real gap** |
+| D65′ | Ten motifs, precedence narrowest-first; refines D34′, which **is** drawn — **likely a real gap** |
+| D66′ | A second sleep-inhibition cause with its own gate; D14′ and D25′ are both drawn — **likely a real gap** |
+| D67′ | One spelling of "is there analysis to show" — a guard, possibly drawable |
+| D62′ | Ladder ordering — a sort, presentation rather than flow |
+| D63′ | Logging owner and policy — cross-cutting process |
+| D64′ | Folder layout — structure |
+| D68′ | Extends D67′'s spelling to tag rules; the "extends X, X is drawn" pattern |
+
+Anything appearing beyond these eight is unrecorded drawable behaviour.
 
 ---
 

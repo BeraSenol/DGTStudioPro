@@ -1,26 +1,24 @@
 # DGT Studio Pro — Decisions
 
 *Split out of `PROJECT-INSTRUCTIONS.md` on 6 August 2026 (M14), **verbatim and
-append-only**. Nothing here was rewritten in the move: a decision re-worded
-while being relocated is a decision silently re-decided, and this project has
-caught smaller versions of that repeatedly.*
+append-only**. Nothing here was rewritten in the move, and nothing here is
+rewritten now: a decision re-worded while being relocated is a decision silently
+re-decided.*
 
-*Why the whole set moved rather than only the superseded entries: "which
-anchors are still cited daily" is a judgement that needs re-making every
-sitting, and a rule that needs re-judging is one this project replaces with a
-mechanism wherever it can. Superseded entries (D22′'s two placeholders, D40′'s
-sweep, D54′'s door, D38′'s merge half) stay in place, struck where they were
-overturned, because the reasoning that produced them is the reason the
-replacement is trusted.*
+***This file was deliberately left alone by the 7 August simplification pass**,
+which trimmed every other document. Superseded entries — D22′'s two
+placeholders, D40′'s sweep, D54′'s door, D38′'s merge half — stay in place,
+struck where they were overturned, because the reasoning that produced a
+decision is the reason its replacement is trusted. That is the opposite of the
+revision narrative the other documents lost, which recorded how a **sentence**
+changed rather than why a **decision** did. Only this preamble was touched.*
 
-*`PROJECT-INSTRUCTIONS.md` is the owner of everything else and cites D-numbers
-without restating them. **This file is now the owner of the next-free
-number** — one owner, per the rule the header of the other document had to
-learn twice.*
+***This file owns the next-free number.*** `PROJECT-INSTRUCTIONS.md` owns
+everything else and cites D-numbers without restating their arguments.
 
-*Two checks belong to this split and are named in ROADMAP.md's M14 gate: the
-milestone counter-grep now reads all three documents, and every D-number cited
-in a source must resolve to an anchor that exists here.*
+*Two checks belong to the split, named in ROADMAP.md's M14 gate: the milestone
+counter-grep reads every document, and every D-number cited in a source must
+resolve to an anchor that exists here.*
 
 ---
 
