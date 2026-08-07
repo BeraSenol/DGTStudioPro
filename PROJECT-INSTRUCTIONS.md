@@ -77,10 +77,32 @@ regions.
 work. Owed on the current tree. Never claimed — ⌘U runs locally and Bera
 reports.
 
-**Untracked files a tracked file references will not build.** Two of the eight
-are in that state right now (`CollectionFold.swift` and its suite). This has
-been the single most-repeated finding in this document's life; `git status` has
-caught it every time and the prose has never once prevented it.
+**Untracked files a tracked file references will not build.** **Five** of the
+eight are in that state right now — `CollectionFold.swift`,
+`CollectionSortField.swift`, `CollectionViewOptions.swift`,
+`Features/ViewOptions/CollectionViewOptionsWindow.swift` and
+`FullScreenAuxiliary.swift`, referenced between them by `DGTStudioProApp`,
+`StorageKeys`, `PreviewFixtures`, both destinations and all four grid views.
+This has been the single most-repeated finding in this document's life;
+`git status` has caught it every time and the prose has never once prevented it.
+
+*This paragraph said "Two of the eight … (`CollectionFold.swift` and its
+suite)" until 8 August 2026, which is the fourth species — a count over a set,
+inside the sentence warning about the very class of error. The count was
+arrived at by naming the two files the writer had open rather than by running
+anything, and the check takes one command:*
+
+```bash
+for f in $(git status --short | awk '$1=="??" && $2 ~ /\.swift$/ {print $2}'); do
+  for t in $(grep -oE '(struct|enum|class|protocol|func) [A-Za-z_][A-Za-z0-9_]*' "$f" | awk '{print $2}' | sort -u); do
+    git ls-files '*.swift' | xargs grep -ln "\b$t\b" 2>/dev/null | grep -q . && { echo "$f"; break 2; }
+  done
+done | sort -u
+```
+
+*Read the output as "these will not build until staged", not as a file count:
+one untracked file can be referenced from a dozen tracked ones, which is why
+naming the files beats naming a number.*
 
 ### Built and in use
 
@@ -555,7 +577,12 @@ emitting half; `DGTSessionLog.clear()`; `FEN.startingString`;
 `DGTSessionRecording.decoded(from:)` and `.reconstructions(from:quiescence:)`;
 `AnalysisQueueController.shutdown()` (teardown, not a feature — one line from an
 app-termination hook); `OpenGamesRegistry.markDirty` (dormant with a *named*
-future consumer and a live read side).
+future consumer and a live read side); `CollectionFoldCache.isCached` (the
+property worth pinning is *that a hit is a hit*, and a cache whose only door
+computes on demand cannot be asked that question without also answering it —
+argued at the declaration, listed here 8 Aug 2026 because a waiver argued in one
+place and absent from the register is a waiver that is implied rather than
+written).
 
 **Compiler warnings — one entry.**
 

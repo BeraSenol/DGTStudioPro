@@ -32,15 +32,44 @@ import SwiftData
 /// `LibraryDestination.FoldKey` is the worked example, and it uses the queue's
 /// own counters rather than re-reading the array this key skips.
 ///
-/// **Two fields, and each earns its place.** `contentHash` folds event, site,
-/// date, round, both seat tags, the result and the movetext (the one-hash
-/// invariant), so it moves whenever anything a fold reads moves — a rename
-/// rehashes through `retag`, a metadata edit through `applyEdit`.
-/// `specialCheckmate` is the exception that forced a second field: D24′ and
-/// D34′ keep classification *outside* the hash on purpose, and
-/// `PlayerStats.specialMatesDelivered` reads it, so a classification backfill
-/// would otherwise change the ladder without moving the key. Adding a field
-/// here is cheap; forgetting one is a stale ladder nothing complains about.
+/// **The rule is that `Row` mirrors `GameRecord` field for field, and it is
+/// stated as a rule because the first version did not.** `contentHash` folds
+/// event, site, date, round, both seat tags, the result and the movetext (the
+/// one-hash invariant), so it moves whenever anything *it* covers moves — a
+/// rename rehashes through `retag`, a metadata edit through `applyEdit`. Every
+/// other field here exists because the projection reads something the hash
+/// deliberately excludes, and the hash's own exclusion list (D24′, D58′) is
+/// therefore the checklist for this type:
+///
+///   - `checkmate` — `PlayerStats.specialMatesDelivered` and
+///     `TagRule.checkmateType` read it.
+///   - `opening` — `TagRule.opening` reads it. Classification is outside the
+///     hash by D24′ and D34′.
+///   - `white` / `black` — the **resolved links**, which the hash does not
+///     cover because it folds the seat *tags*. `PlayerStats.index` keys the
+///     whole ladder on these.
+///   - `name` / `isTimed` — `TagRule.name` and `TagRule.timed`.
+///
+/// **This was wrong on three of those four when it shipped, and the shape of
+/// the miss is worth more than the fix.** The key carried `contentHash` plus
+/// `checkmate`, and the reasoning that produced it was correct as far as it
+/// went: it asked what `PlayerStats` reads, found `specialCheckmate`, and
+/// stopped — while `classify(_:using:)` writes **four** columns in one call and
+/// `specialCheckmate` is nil for every game that is not a smothered or
+/// back-rank mate. So `backfillClassifications` stamped an ECO code on a game,
+/// the hash did not move, the checkmate did not move, and the memo handed back
+/// a record whose `opening` was still nil — an `opening contains Sicilian`
+/// smart tag failing to match a row whose ECO column, reading the model
+/// directly, showed the code. `backfillPlayerLinks` had the same shape one
+/// door over, and worse: it runs from `PlayersDestination.onAppear` under a
+/// comment promising the ladder works on a cold launch, and the memo was
+/// defeating exactly that.
+///
+/// The lesson the old text already carried and did not apply to itself:
+/// **adding a field here is cheap; forgetting one is a stale fold nothing
+/// complains about.** The remedy is the mirror rule above — a reader checks
+/// this type by reading `GameRecord`'s stored properties beside it, which is a
+/// question with an answer, where "did I think of everything?" is not.
 ///
 /// **Exact, not hashed.** The obvious spelling is a `Hasher` fingerprint —
 /// allocation-free, one `Int` to compare. It was rejected: a 64-bit digest is
@@ -50,20 +79,63 @@ import SwiftData
 /// come from the same model instances, so the fast path is what actually runs —
 /// which is still two orders of magnitude under one blob decode.
 ///
-/// Building the key touches only stored scalars: no `moves`, no `evaluations`,
-/// no relationship traversal. That is the property that makes it worth building
-/// on every render.
+/// Building the key decodes nothing: no `moves`, no `evaluations`, no blob off
+/// the model. It does read the two player relationships, which is the one cost
+/// that is not free and is stated rather than buried — see `Row.white`.
 internal struct CollectionFoldKey: Equatable, Sendable {
 
     /// One game's contribution, as values — so a suite can build a key without
     /// a container (D10′'s posture applied to a cache key).
+    ///
+    /// **Everything after `checkmate` is defaulted**, on `GameRecord`'s own
+    /// precedent and for its reason: the fixtures and the call order stay
+    /// source-stable while the app's one construction below passes every field
+    /// explicitly. The defaults are fixture ergonomics, not hiding places — a
+    /// row built with none of them is a row claiming a game with no opening, no
+    /// links, no name and no clock, which is a real state rather than a
+    /// shortcut.
     internal struct Row: Equatable, Sendable {
         internal let contentHash: String
         internal let checkmate: SpecialCheckmate?
+        internal let opening: ECOOpening?
+        internal let name: String
+        internal let isTimed: Bool
 
-        internal init(contentHash: String, checkmate: SpecialCheckmate?) {
+        /// The resolved players' identifiers, not their names.
+        ///
+        /// **Identity is enough because a `Player`'s name cannot move under
+        /// it.** `GameRecord.Side` carries `normalizedName` and `name`; the
+        /// first is derived from the second and the second is fixed at
+        /// creation by D9′'s first-seen-casing rule. The only transition the
+        /// hash misses is therefore nil → linked (`backfillPlayerLinks`), and
+        /// an identifier reports that without materializing two strings per
+        /// game per render.
+        ///
+        /// **Accepted cost, named because it is the one thing here that is not
+        /// a stored scalar:** this faults the relationship on every key build,
+        /// where before only a cache *miss* paid it. It is bounded by the row
+        /// cache — `Player` rows number in the dozens against hundreds of
+        /// games, and they are already registered in the context by the time
+        /// any destination renders. Known-costs census.
+        internal let white: PersistentIdentifier?
+        internal let black: PersistentIdentifier?
+
+        internal init(
+            contentHash: String,
+            checkmate: SpecialCheckmate?,
+            opening: ECOOpening? = nil,
+            name: String = "",
+            isTimed: Bool = false,
+            white: PersistentIdentifier? = nil,
+            black: PersistentIdentifier? = nil
+        ) {
             self.contentHash = contentHash
             self.checkmate = checkmate
+            self.opening = opening
+            self.name = name
+            self.isTimed = isTimed
+            self.white = white
+            self.black = black
         }
     }
 
@@ -83,10 +155,23 @@ extension CollectionFoldKey {
     /// incidental: both destinations fold an ordered array, and a reordering
     /// that produced an equal key would be a fold reused against a sequence it
     /// was not computed from.
+    ///
+    /// **Every argument is passed explicitly, defaults notwithstanding.** This
+    /// is the one place the mirror rule is enforceable by eye: the argument
+    /// list below should read against `PGN.gameRecord`'s, and a field added
+    /// there without one here is the defect this type exists to prevent.
     internal init(games: [PGN]) {
         self.init(
             rows: games.map {
-                Row(contentHash: $0.contentHash, checkmate: $0.specialCheckmate)
+                Row(
+                    contentHash: $0.contentHash,
+                    checkmate: $0.specialCheckmate,
+                    opening: $0.opening,
+                    name: $0.name,
+                    isTimed: $0.timeControl != nil,
+                    white: $0.whitePlayer?.persistentModelID,
+                    black: $0.blackPlayer?.persistentModelID
+                )
             }
         )
     }

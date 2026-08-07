@@ -1,5 +1,9 @@
 import Testing
 import Foundation
+// `MemberImportVisibility` is on (D43′), so the container the link test builds
+// needs this here — a transitive import through `@testable` does not carry
+// members. The value-level suite below still touches no SwiftData type.
+import SwiftData
 @testable import DGTStudioPro
 
 /// `CollectionFoldKey`'s algebra, over values.
@@ -10,11 +14,33 @@ import Foundation
 @Suite("Collection Fold — Key")
 struct CollectionFoldKeyTests {
 
+    /// Mirrors `Row`'s own defaulting, so a test names only the field it is
+    /// about and every other one stays at the "nothing stamped yet" value.
     private static func row(
         _ hash: String,
-        _ checkmate: SpecialCheckmate? = nil
+        _ checkmate: SpecialCheckmate? = nil,
+        opening: ECOOpening? = nil,
+        name: String = "",
+        isTimed: Bool = false
     ) -> CollectionFoldKey.Row {
-        .init(contentHash: hash, checkmate: checkmate)
+        .init(
+            contentHash: hash,
+            checkmate: checkmate,
+            opening: opening,
+            name: name,
+            isTimed: isTimed
+        )
+    }
+
+    /// `ECOOpening`'s rehydrating initializer takes `variation` without a
+    /// default — deliberately, since D35′ makes nil the one spelling of "no
+    /// variation" and a default would let a caller mean it by omission.
+    private static func opening(
+        _ code: String,
+        _ family: String,
+        _ variation: String? = nil
+    ) -> ECOOpening {
+        ECOOpening(code: code, family: family, variation: variation)
     }
 
     @Test("An empty library equals an empty library")
@@ -42,7 +68,17 @@ struct CollectionFoldKeyTests {
     /// every hash stays byte-identical. A key built from `contentHash` alone
     /// looks obviously sufficient and would freeze the Special Mates column
     /// against a fold that had genuinely changed.
-    @Test("A classification backfill moves the key with no hash change")
+    ///
+    /// **This test was titled "A classification backfill moves the key" and
+    /// covered only the motif**, which is the narrower half of one call:
+    /// `PGNStore.classify(_:using:)` writes `ecoCode`, `ecoFamily`,
+    /// `ecoVariation` *and* `specialCheckmate` together, and the motif is nil
+    /// for every game that is not a smothered or back-rank mate. So the title
+    /// quantified over a backfill while the body exercised the rarer of its two
+    /// outcomes, and the ECO half — which had no case at all — was broken. The
+    /// title now names what it checks; `anEcoStampMovesTheKey` below is the
+    /// other half.
+    @Test("A stamped mate motif moves the key with no hash change")
     func aChangedCheckmateMovesTheKey() {
         #expect(
             CollectionFoldKey(rows: [Self.row("a", nil)])
@@ -51,6 +87,53 @@ struct CollectionFoldKeyTests {
         #expect(
             CollectionFoldKey(rows: [Self.row("a", .backRank)])
             != CollectionFoldKey(rows: [Self.row("a", .smothered)])
+        )
+    }
+
+    /// The half the suite was missing, and the one a real backfill hits most.
+    ///
+    /// A game classified as an ordinary line gets three ECO columns and a nil
+    /// motif, so the test above stays green while `TagRule.opening` filters
+    /// against a record whose `opening` is still nil. Asserted across all three
+    /// columns rather than on the code alone: `TagRule.opening` matches
+    /// `ECOOpening.fullName`, which reads family and variation too.
+    @Test("An ECO stamp moves the key, motif or no motif")
+    func anEcoStampMovesTheKey() {
+        #expect(
+            CollectionFoldKey(rows: [Self.row("a")])
+            != CollectionFoldKey(rows: [
+                Self.row("a", nil, opening: Self.opening("B20", "Sicilian Defense"))
+            ])
+        )
+        // Variation too, because `TagRule.opening` matches `fullName` rather
+        // than the code — a key watching `ecoCode` alone would pass the line
+        // above and still freeze a `contains Smith-Morra` rule.
+        #expect(
+            CollectionFoldKey(rows: [
+                Self.row("a", nil, opening: Self.opening("B20", "Sicilian Defense"))
+            ])
+            != CollectionFoldKey(rows: [
+                Self.row(
+                    "a", nil,
+                    opening: Self.opening("B20", "Sicilian Defense", "Smith-Morra Gambit")
+                )
+            ])
+        )
+    }
+
+    /// `PGN.name` is outside the hash by design and `backfillEmptyNames()`
+    /// rewrites it; `timeControl` is outside by D24′ and Get Info's Equipment
+    /// section edits it without moving the hash. `TagRule.name` and
+    /// `TagRule.timed` read both.
+    @Test("Name and clock move the key with no hash change")
+    func nameAndClockMoveTheKey() {
+        #expect(
+            CollectionFoldKey(rows: [Self.row("a", nil, name: "1. Bera vs Reinaud")])
+            != CollectionFoldKey(rows: [Self.row("a", nil, name: "1. Bera vs Heylen")])
+        )
+        #expect(
+            CollectionFoldKey(rows: [Self.row("a", nil, isTimed: false)])
+            != CollectionFoldKey(rows: [Self.row("a", nil, isTimed: true)])
         )
     }
 
@@ -117,6 +200,76 @@ struct CollectionFoldCacheTests {
         game.specialCheckmate = .backRank
 
         #expect(CollectionFoldKey(games: [game]) != before)
+    }
+
+    /// The ECO half of the same call, over models — `classify(_:using:)` writes
+    /// three opening columns beside the motif and the motif is nil for any game
+    /// that is not a smothered or back-rank mate.
+    ///
+    /// Over models rather than values because that is where the miss lived: the
+    /// value-level suite could have carried an `opening` case from the start and
+    /// still passed with `init(games:)` dropping the field on the floor. This is
+    /// the one that would have gone red.
+    @Test("An ECO stamp moves the key, over models")
+    func ecoStampMovesTheKeyOverModels() {
+        let game = PGN(moves: ["e4", "c5"], contentHash: "fixed")
+        let before = CollectionFoldKey(games: [game])
+
+        game.ecoCode = "B20"
+        game.ecoFamily = "Sicilian Defense"
+
+        #expect(CollectionFoldKey(games: [game]) != before)
+        #expect(game.specialCheckmate == nil, "the motif must stay nil, or this proves nothing")
+    }
+
+    /// `backfillPlayerLinks()` resolves a seat the content hash cannot see: the
+    /// hash folds the seat **tags**, and the link is a relationship filled in
+    /// afterwards. `PlayerStats.index(of:)` keys the whole ladder on the link,
+    /// and the backfill runs from `PlayersDestination.onAppear` — so a key blind
+    /// to this froze the ladder in the state it had *before* the pass that
+    /// exists to populate it.
+    ///
+    /// **Inserted into a container, unlike its siblings above**, because
+    /// `persistentModelID` on an uninserted model is a temporary identifier and
+    /// this test's whole subject is that the identifier changes for the right
+    /// reason. The tag strings never move here, so a green result cannot be the
+    /// hash doing the work.
+    @Test("Resolving a seat link moves the key with no hash change")
+    func aResolvedLinkMovesTheKeyOverModels() throws {
+        let container = try ModelContainer(
+            for: PGN.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = ModelContext(container)
+
+        let game = PGN(moves: ["e4"], contentHash: "fixed")
+        let player = Player(name: "Bera Senol")
+        context.insert(game)
+        context.insert(player)
+
+        let hashBefore = game.contentHash
+        let before = CollectionFoldKey(games: [game])
+
+        game.whitePlayer = player
+
+        #expect(CollectionFoldKey(games: [game]) != before)
+        #expect(game.contentHash == hashBefore, "the hash must not move, or this proves nothing")
+    }
+
+    /// `PGN.name` is outside the hash and `backfillEmptyNames()` rewrites it;
+    /// `timeControl` is outside by D24′ and Get Info's Equipment section edits
+    /// it. `TagRule.name` and `TagRule.timed` read both off the record.
+    @Test("Name and clock move the key, over models")
+    func nameAndClockMoveTheKeyOverModels() {
+        let game = PGN(moves: ["e4"], contentHash: "fixed")
+
+        let beforeName = CollectionFoldKey(games: [game])
+        game.name = "1. Bera vs Reinaud"
+        #expect(CollectionFoldKey(games: [game]) != beforeName)
+
+        let beforeClock = CollectionFoldKey(games: [game])
+        game.timeControl = "600+5"
+        #expect(CollectionFoldKey(games: [game]) != beforeClock)
     }
 
     // MARK: Cache behaviour

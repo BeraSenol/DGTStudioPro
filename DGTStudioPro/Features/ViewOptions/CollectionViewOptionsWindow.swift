@@ -317,7 +317,22 @@ internal struct CollectionViewOptionsCommands: Commands {
 
     internal var body: some Commands {
         CommandGroup(after: .toolbar) {
+            // **⌘J is applied here and nowhere else, which is the fix for a
+            // defect the extraction introduced.** The shortcut used to live on
+            // `ShowViewOptionsButton` itself, and that button has five hosts —
+            // this menu plus four grid backgrounds — so a Library in icons mode
+            // registered ⌘J twice and a reader could not tell which copy
+            // answered. `GameActionsMenu` names that outcome as the one to
+            // watch for ⌘R and ⌘E: not dead keys, but *live and ambiguous*.
+            //
+            // A menu item is the right owner because it is the copy whose
+            // enablement is producible both ways — `subject == nil` over a
+            // Board tab, non-nil over a collection — so the key inherits that
+            // guard for free. The context-menu copies stay bare: they render a
+            // verb you have already reached with the pointer, and a key
+            // equivalent on them advertises an owner they do not have.
             ShowViewOptionsButton()
+                .keyboardShortcut("j", modifiers: .command)
                 .disabled(subject == nil)
         }
     }
@@ -331,6 +346,20 @@ internal struct CollectionViewOptionsCommands: Commands {
 /// smaller scale: the item's *wording* is what must not fork, because a menu
 /// and a keyboard shortcut naming the same verb differently is two features as
 /// far as the reader is concerned.
+///
+/// **It carries the label and the action, deliberately not the shortcut.** The
+/// first version declared ⌘J here, which is the obvious place right up until
+/// you count the hosts: five copies of one key, at least two of them live
+/// whenever a collection destination is in front. What is shared between hosts
+/// is the *verb*; a key equivalent is a claim to own it globally, and exactly
+/// one host can make that claim. It is applied at
+/// `CollectionViewOptionsCommands`, which is also the only host with a
+/// producible enablement guard for it to inherit.
+///
+/// (The key is named here in prose rather than written as a `keyboardShortcut`
+/// call, so that grepping for this app's shortcut declarations finds the one
+/// site that owns it and not a comment about it — the standing lesson that a
+/// check whose output carries noise is a check that gets read past.)
 internal struct ShowViewOptionsButton: View {
 
     @Environment(\.openWindow) private var openWindow
@@ -339,7 +368,6 @@ internal struct ShowViewOptionsButton: View {
         Button("Show View Options") {
             openWindow(id: CollectionViewOptionsWindow.sceneID)
         }
-        .keyboardShortcut("j", modifiers: .command)
         .accessibilityIdentifier(AccessibilityID.showViewOptions)
     }
 }

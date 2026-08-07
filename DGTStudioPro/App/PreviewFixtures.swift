@@ -163,10 +163,24 @@ internal enum PreviewFixtures {
         spacing: CGFloat? = nil
     ) -> CollectionViewOptions {
         let suite = "preview.collectionViewOptions"
-        // A suite that will not open is a broken canvas, not a broken app, and
-        // falling back to `.standard` here is exactly the leak above. An
-        // in-memory volatile domain has no persistence to leak into.
-        let defaults = UserDefaults(suiteName: suite) ?? UserDefaults(suiteName: nil) ?? .standard
+        // **The fallback chain here was `?? UserDefaults(suiteName: nil) ?? .standard`
+        // under a comment claiming the middle rung was "an in-memory volatile
+        // domain [with] no persistence to leak into".** There is no such
+        // initializer: `init?(suiteName:)` is documented to return the
+        // *standard* defaults when handed nil. So both rungs were `.standard`,
+        // and the paragraph above — which opens **Never `.standard`** — was
+        // guarded by a fallback that did the one thing it forbids. A canvas
+        // driving these sliders would have edited the running app's
+        // preferences from Xcode.
+        //
+        // One rung now, and it is unreachable rather than merely unlikely:
+        // `init?(suiteName:)` fails only for a reserved name — the app's own
+        // bundle identifier or `NSGlobalDomain` — and this is a literal that is
+        // neither. Left as `.standard` rather than force-unwrapped because a
+        // trap in a preview helper takes the whole canvas down, and the honest
+        // statement is that the arm cannot be produced rather than that it
+        // would be safe if it were.
+        let defaults = UserDefaults(suiteName: suite) ?? .standard
         defaults.removePersistentDomain(forName: suite)
 
         let options = CollectionViewOptions(defaults: defaults)
