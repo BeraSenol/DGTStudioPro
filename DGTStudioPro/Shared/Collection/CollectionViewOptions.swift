@@ -116,12 +116,24 @@ internal final class CollectionViewOptions {
         }
     }
 
+    internal var playersSort: CollectionSort<PlayersSortField> {
+        didSet {
+            guard playersSort != oldValue else { return }
+            defaults.set(playersSort.storedValue, forKey: StorageKeys.playersSort)
+        }
+    }
+
+    // MARK: Session State
+
     /// Which collection surface the View Options panel should describe.
     ///
     /// **Session state, deliberately unpersisted** — every other property here
     /// is a preference, and this is a fact about what is on screen right now.
     /// Restoring it would point a restored panel at a window that may not
-    /// exist.
+    /// exist. Filed below the four preferences under its own `MARK` rather
+    /// than between the two sorts, where it split a pair that reads as one
+    /// fact; the distinction it is on the wrong side of is the whole reason it
+    /// has no `didSet`.
     ///
     /// **Written by the destinations, read by the panel — and the panel must
     /// not read focus itself.** The first version had the window hold
@@ -136,13 +148,6 @@ internal final class CollectionViewOptions {
     /// That is also what makes it retarget correctly across tabs: focus
     /// changes fire in the destination, where `.onAppear` would not.
     internal var activeSubject: CollectionViewOptionsSubject?
-
-    internal var playersSort: CollectionSort<PlayersSortField> {
-        didSet {
-            guard playersSort != oldValue else { return }
-            defaults.set(playersSort.storedValue, forKey: StorageKeys.playersSort)
-        }
-    }
 
     // MARK: Initialization
 

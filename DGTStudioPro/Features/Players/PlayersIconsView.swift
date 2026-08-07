@@ -64,90 +64,90 @@ internal struct PlayersIconsView: View {
     // MARK: Body
     var body: some View {
         GeometryReader { geometry in
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVGrid(
-                    columns: options.columns(containerWidth: geometry.size.width),
-                    spacing: options.spacing
-                ) {
-                    ForEach(players) { player in
-                        // Rank always rides the card (D48′) — in name order
-                        // too, because the rank is a fact about the player,
-                        // not about the current sort.
-                        PlayerCardView(
-                            stats: player.stats,
-                            isSelected: selectedKeys.contains(player.id),
-                            onSelect: { select(player) },
-                            rank: player.rank,
-                            onShowInLibrary: { onShowInLibrary(player.id) }
-                        )
-                        .id(player.id)
-                        .onGeometryChange(for: CGRect.self) { geometry in
-                            // Half-point quantization — the warning's
-                            // fourth correction, shared with the Library
-                            // grid; `.integral`'s floor/ceil flipped whole
-                            // points at the integer anchors layout rests
-                            // on. The account lives on
-                            // `IconGridSelection.stableFrame`.
-                            IconGridSelection.stableFrame(
-                                geometry.frame(in: .named(Self.gridSpace))
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVGrid(
+                        columns: options.columns(containerWidth: geometry.size.width),
+                        spacing: options.spacing
+                    ) {
+                        ForEach(players) { player in
+                            // Rank always rides the card (D48′) — in name order
+                            // too, because the rank is a fact about the player,
+                            // not about the current sort.
+                            PlayerCardView(
+                                stats: player.stats,
+                                isSelected: selectedKeys.contains(player.id),
+                                onSelect: { select(player) },
+                                rank: player.rank,
+                                onShowInLibrary: { onShowInLibrary(player.id) }
                             )
-                        } action: { frame in
-                            // A box write: free, and invisible to the
-                            // render pass — no invalidation, no loop.
-                            cardFrames.frames[player.id] = frame
+                            .id(player.id)
+                            .onGeometryChange(for: CGRect.self) { geometry in
+                                // Half-point quantization — the warning's
+                                // fourth correction, shared with the Library
+                                // grid; `.integral`'s floor/ceil flipped whole
+                                // points at the integer anchors layout rests
+                                // on. The account lives on
+                                // `IconGridSelection.stableFrame`.
+                                IconGridSelection.stableFrame(
+                                    geometry.frame(in: .named(Self.gridSpace))
+                                )
+                            } action: { frame in
+                                // A box write: free, and invisible to the
+                                // render pass — no invalidation, no loop.
+                                cardFrames.frames[player.id] = frame
+                            }
+                        }
+                    }
+                    .padding(CollectionViewOptions.inset)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        // Empty space, or the gutters between cards — a card's
+                        // own tap wins before this fires.
+                        selectedKeys.removeAll()
+                        anchorKey = nil
+                        isFocused = true
+                    }
+                    // The background's own context menu (7 Aug 2026). It sits
+                    // on the same `contentShape` the clear-selection tap uses, so
+                    // it covers the gutters too — a right-click *between* cards is
+                    // a background right-click, which is what Finder does and what
+                    // a reader trying to reach this will actually aim at. A card's
+                    // own menu wins over its own bounds, so the two never compete.
+                    .contextMenu { ShowViewOptionsButton() }
+                    .gesture(rubberBandGesture)
+                    // Content-anchored, deliberately — see the type doc.
+                    .coordinateSpace(name: Self.gridSpace)
+                    .overlay(alignment: .topLeading) {
+                        if let band = rubberBand {
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color.accentColor.opacity(0.15))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .strokeBorder(Color.accentColor.opacity(0.6), lineWidth: 1)
+                                )
+                                .frame(width: band.width, height: band.height)
+                                .offset(x: band.minX, y: band.minY)
+                                .allowsHitTesting(false)
                         }
                     }
                 }
-                .padding(CollectionViewOptions.inset)
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    // Empty space, or the gutters between cards — a card's
-                    // own tap wins before this fires.
-                    selectedKeys.removeAll()
-                    anchorKey = nil
-                    isFocused = true
+                .focusable()
+                .focusEffectDisabled()
+                .focused($isFocused)
+                .onMoveCommand { direction in
+                    move(direction, proxy: proxy)
                 }
-                // The background's own context menu (7 Aug 2026). It sits
-                // on the same `contentShape` the clear-selection tap uses, so
-                // it covers the gutters too — a right-click *between* cards is
-                // a background right-click, which is what Finder does and what
-                // a reader trying to reach this will actually aim at. A card's
-                // own menu wins over its own bounds, so the two never compete.
-                .contextMenu { ShowViewOptionsButton() }
-                .gesture(rubberBandGesture)
-                // Content-anchored, deliberately — see the type doc.
-                .coordinateSpace(name: Self.gridSpace)
-                .overlay(alignment: .topLeading) {
-                    if let band = rubberBand {
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(Color.accentColor.opacity(0.15))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 2)
-                                    .strokeBorder(Color.accentColor.opacity(0.6), lineWidth: 1)
-                            )
-                            .frame(width: band.width, height: band.height)
-                            .offset(x: band.minX, y: band.minY)
-                            .allowsHitTesting(false)
-                    }
+                // A box write from a geometry action — free, and invisible to
+                // the render pass. The transform quantizes so `onGeometryChange`'s
+                // own duplicate-value comparison has a stable input.
+                .onGeometryChange(for: CGFloat.self) { proxy in
+                    IconGridWidthBox.quantized(proxy.size.width)
+                } action: { width in
+                    containerWidth.width = width
                 }
             }
-            .focusable()
-            .focusEffectDisabled()
-            .focused($isFocused)
-            .onMoveCommand { direction in
-                move(direction, proxy: proxy)
-            }
-            // A box write from a geometry action — free, and invisible to
-            // the render pass. The transform quantizes so `onGeometryChange`'s
-            // own duplicate-value comparison has a stable input.
-            .onGeometryChange(for: CGFloat.self) { proxy in
-                IconGridWidthBox.quantized(proxy.size.width)
-            } action: { width in
-                containerWidth.width = width
-            }
-        }
         }
     }
 

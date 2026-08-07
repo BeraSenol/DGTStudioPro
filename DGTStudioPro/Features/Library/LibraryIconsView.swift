@@ -97,98 +97,98 @@ internal struct LibraryIconsView: View {
     // MARK: Body
     var body: some View {
         GeometryReader { geometry in
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVGrid(
-                    columns: options.columns(containerWidth: geometry.size.width),
-                    spacing: options.spacing
-                ) {
-                    ForEach(games) { game in
-                        LibraryGameCardView(
-                            game: game,
-                            glyphWidth: options.glyphWidth,
-                            isSelected: selectedPGNs.contains(game.id),
-                            onSelect:  { select(game) },
-                            onOpen:    { open(game) },
-                            onAnalyze: { onAnalyze(game) },
-                            onExport:  { onExport(game) },
-                            onDelete:  { onDelete(game) }
-                        )
-                        .id(game.id)
-                        .onGeometryChange(for: CGRect.self) { geometry in
-                            // Fourth correction on the "cycling between
-                            // duplicate values" warning, each one a real
-                            // layer: viewport → content anchoring (a frame
-                            // shouldn't mean scroll offset), `@State` → box
-                            // (the observer shouldn't re-enter layout),
-                            // exact → quantized comparison — and now
-                            // `.integral` → half-point rounding, because
-                            // floor/ceil put the flip boundaries exactly on
-                            // the integers layout rests on and turned
-                            // sub-point wobble into the whole-point A/B the
-                            // warning names. The rule and the full account
-                            // live on `IconGridSelection.stableFrame`.
-                            IconGridSelection.stableFrame(
-                                geometry.frame(in: .named(Self.gridSpace))
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVGrid(
+                        columns: options.columns(containerWidth: geometry.size.width),
+                        spacing: options.spacing
+                    ) {
+                        ForEach(games) { game in
+                            LibraryGameCardView(
+                                game: game,
+                                glyphWidth: options.glyphWidth,
+                                isSelected: selectedPGNs.contains(game.id),
+                                onSelect:  { select(game) },
+                                onOpen:    { open(game) },
+                                onAnalyze: { onAnalyze(game) },
+                                onExport:  { onExport(game) },
+                                onDelete:  { onDelete(game) }
                             )
-                        } action: { frame in
-                            // A box write: free, and invisible to the
-                            // render pass — no invalidation, no loop.
-                            cardFrames.frames[game.id] = frame
+                            .id(game.id)
+                            .onGeometryChange(for: CGRect.self) { geometry in
+                                // Fourth correction on the "cycling between
+                                // duplicate values" warning, each one a real
+                                // layer: viewport → content anchoring (a frame
+                                // shouldn't mean scroll offset), `@State` → box
+                                // (the observer shouldn't re-enter layout),
+                                // exact → quantized comparison — and now
+                                // `.integral` → half-point rounding, because
+                                // floor/ceil put the flip boundaries exactly on
+                                // the integers layout rests on and turned
+                                // sub-point wobble into the whole-point A/B the
+                                // warning names. The rule and the full account
+                                // live on `IconGridSelection.stableFrame`.
+                                IconGridSelection.stableFrame(
+                                    geometry.frame(in: .named(Self.gridSpace))
+                                )
+                            } action: { frame in
+                                // A box write: free, and invisible to the
+                                // render pass — no invalidation, no loop.
+                                cardFrames.frames[game.id] = frame
+                            }
+                        }
+                    }
+                    .padding(CollectionViewOptions.inset)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        // Empty space, or the gutters between cards — a card's
+                        // own tap wins before this fires.
+                        selectedPGNs.removeAll()
+                        anchorID = nil
+                        isFocused = true
+                    }
+                    // The background's own context menu (7 Aug 2026). It sits
+                    // on the same `contentShape` the clear-selection tap uses, so
+                    // it covers the gutters too — a right-click *between* cards is
+                    // a background right-click, which is what Finder does and what
+                    // a reader trying to reach this will actually aim at. A card's
+                    // own menu wins over its own bounds, so the two never compete.
+                    .contextMenu { ShowViewOptionsButton() }
+                    .gesture(rubberBandGesture)
+                    // Content-anchored, deliberately: see the rubber-band doc
+                    // above. The space, the gesture's coordinates and the band
+                    // overlay all live on this container, inside the scroll.
+                    .coordinateSpace(name: Self.gridSpace)
+                    .overlay(alignment: .topLeading) {
+                        if let band = rubberBand {
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color.accentColor.opacity(0.15))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .strokeBorder(Color.accentColor.opacity(0.6), lineWidth: 1)
+                                )
+                                .frame(width: band.width, height: band.height)
+                                .offset(x: band.minX, y: band.minY)
+                                .allowsHitTesting(false)
                         }
                     }
                 }
-                .padding(CollectionViewOptions.inset)
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    // Empty space, or the gutters between cards — a card's
-                    // own tap wins before this fires.
-                    selectedPGNs.removeAll()
-                    anchorID = nil
-                    isFocused = true
+                .focusable()
+                .focusEffectDisabled()
+                .focused($isFocused)
+                .onMoveCommand { direction in
+                    move(direction, proxy: proxy)
                 }
-                // The background's own context menu (7 Aug 2026). It sits
-                // on the same `contentShape` the clear-selection tap uses, so
-                // it covers the gutters too — a right-click *between* cards is
-                // a background right-click, which is what Finder does and what
-                // a reader trying to reach this will actually aim at. A card's
-                // own menu wins over its own bounds, so the two never compete.
-                .contextMenu { ShowViewOptionsButton() }
-                .gesture(rubberBandGesture)
-                // Content-anchored, deliberately: see the rubber-band doc
-                // above. The space, the gesture's coordinates and the band
-                // overlay all live on this container, inside the scroll.
-                .coordinateSpace(name: Self.gridSpace)
-                .overlay(alignment: .topLeading) {
-                    if let band = rubberBand {
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(Color.accentColor.opacity(0.15))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 2)
-                                    .strokeBorder(Color.accentColor.opacity(0.6), lineWidth: 1)
-                            )
-                            .frame(width: band.width, height: band.height)
-                            .offset(x: band.minX, y: band.minY)
-                            .allowsHitTesting(false)
-                    }
+                // A box write from a geometry action — free, and invisible to
+                // the render pass. The transform quantizes so `onGeometryChange`'s
+                // own duplicate-value comparison has a stable input.
+                .onGeometryChange(for: CGFloat.self) { proxy in
+                    IconGridWidthBox.quantized(proxy.size.width)
+                } action: { width in
+                    containerWidth.width = width
                 }
             }
-            .focusable()
-            .focusEffectDisabled()
-            .focused($isFocused)
-            .onMoveCommand { direction in
-                move(direction, proxy: proxy)
-            }
-            // A box write from a geometry action — free, and invisible to
-            // the render pass. The transform quantizes so `onGeometryChange`'s
-            // own duplicate-value comparison has a stable input.
-            .onGeometryChange(for: CGFloat.self) { proxy in
-                IconGridWidthBox.quantized(proxy.size.width)
-            } action: { width in
-                containerWidth.width = width
-            }
-        }
         }
     }
 
