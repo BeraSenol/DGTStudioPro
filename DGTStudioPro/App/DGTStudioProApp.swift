@@ -42,7 +42,13 @@ internal struct DGTStudioProApp: App {
     /// particular tab's instance in any case — a scene receives values, not
     /// references. Injected into the main `WindowGroup` so destinations read it
     /// from the environment, and read directly by the queue window's scene.
-    @State private var analysisQueue = AnalysisQueueController()
+    ///
+    /// Constructed in `init()` rather than inline since D66′, joining the DGT
+    /// observables for the same reason they are there: something has to be
+    /// *wired* to it once, and `init()` is the only place that runs exactly
+    /// once. `SleepInhibitor` now observes this queue, and an inline default
+    /// cannot be read from `init()` before the stored properties are assigned.
+    @State private var analysisQueue: AnalysisQueueController
     
     // The three app-global DGT observables.
     //
@@ -167,11 +173,18 @@ internal struct DGTStudioProApp: App {
         
         session.loadPendingDraft()
         
-        // M-ux.2 (D14′) — start the inhibition observer. Wired here, once,
-        // like every other hook: the content closure runs per tab, and two
-        // tabs must not race one token.
+        // M-ux.2 (D14′, widened by D66′) — start the inhibition observer.
+        // Wired here, once, like every other hook: the content closure runs
+        // per tab, and two tabs must not race one token.
+        //
+        // The queue is constructed here rather than inline for exactly this:
+        // the inhibitor has to be handed the same instance every window sees,
+        // and there is only one because the controller went app-global on
+        // 6 Aug. Under the per-tab controller this line could not have been
+        // written at all.
+        let analysis = AnalysisQueueController()
         let inhibitor = SleepInhibitor()
-        inhibitor.observe(session: session, connection: connection)
+        inhibitor.observe(session: session, connection: connection, analysis: analysis)
         
         // M7.2 — reconnect to the remembered board at launch (the Settings
         // toggle and the remembered-device check both live inside the
@@ -202,6 +215,7 @@ internal struct DGTStudioProApp: App {
         _dgtSession = State(initialValue: session)
         _sessionLog = State(initialValue: log)
         _sleepInhibitor = State(initialValue: inhibitor)
+        _analysisQueue = State(initialValue: analysis)
     }
     
     var body: some Scene {

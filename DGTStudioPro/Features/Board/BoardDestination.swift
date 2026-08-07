@@ -414,15 +414,23 @@ internal struct BoardDestination: View {
             checkSquare: game.checkSquare,
             ghostSquare: nil,
             ghostPiece:  nil,
-            // M3 (D33′): the bar exists iff the game carries analysis —
-            // `evaluations.isEmpty` is the `hasAnalysis` projection's exact
-            // truth, so bar presence and the "Analyzed" tag rule can't
-            // disagree. Per-ply nil (ply 0, a skipped ply) folds to the
-            // neutral reading inside `EvaluationBarReading`, matching the
-            // graph's `?? 0.5` below.
-            evaluation:  pgn.evaluations.isEmpty
-                ? nil
-                : EvaluationBarReading(game.currentEvaluation)
+            // M3 (D33′): the bar exists iff the game carries analysis, which
+            // is `hasScoredPly` and **was** `!evaluations.isEmpty` until
+            // 7 Aug 2026. The old spelling is true of an all-nil array, so a
+            // pass that scored nothing drew a full-height bar pinned at dead
+            // even — a fabricated 50/50, not an absence. The comment here
+            // used to call `isEmpty` "the `hasAnalysis` projection's exact
+            // truth"; it still is, and that projection is asking the same
+            // wrong question (see the note at `PGN.hasScoredPly`).
+            //
+            // Per-ply nil (ply 0, a skipped ply inside a scored game) still
+            // folds to the neutral reading inside `EvaluationBarReading`,
+            // matching the graph's `?? 0.5` below — that fallback is right
+            // *within* an analysed game and only wrong as a stand-in for the
+            // whole of one.
+            evaluation:  pgn.hasScoredPly
+                ? EvaluationBarReading(game.currentEvaluation)
+                : nil
         )
         .inspector(isPresented: $tabState.boardInspectorPresented) {
             BoardInspectorView(

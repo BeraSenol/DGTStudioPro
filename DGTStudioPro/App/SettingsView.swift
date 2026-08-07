@@ -160,15 +160,32 @@ internal struct SettingsView: View {
             SyzygySettingsSection()
             
             Section {
-                Toggle("Keep the Mac awake during play", isOn: $inhibitor.isEnabled)
-                    .accessibilityIdentifier(AccessibilityID.settingsPreventSleepToggle)
+                Toggle(
+                    "Keep the Mac awake during play",
+                    isOn: $inhibitor.preventsSleepDuringPlay
+                )
+                .accessibilityIdentifier(AccessibilityID.settingsPreventSleepDuringPlayToggle)
+
+                Toggle(
+                    "Keep the Mac awake during analysis",
+                    isOn: $inhibitor.preventsSleepDuringAnalysis
+                )
+                .accessibilityIdentifier(AccessibilityID.settingsPreventSleepDuringAnalysisToggle)
             } header: {
                 Text("Energy")
             } footer: {
+                // One footer for two toggles, and it names each cause's own
+                // consequence rather than generalising over them — "keeps the
+                // Mac awake" is what they share, and the *reason* is the part
+                // a reader is deciding between. The display sentence is last
+                // because it is true of both and is the question anyone asks
+                // second (D14′'s non-goal, still structural).
                 Text(
-                    "While a game or a board recording is in progress, keeps "
-                    + "the Mac from sleeping and dropping the board "
-                    + "connection. The display is still allowed to dim."
+                    "During play, keeps the Mac from sleeping and dropping the "
+                    + "board connection mid-think. During analysis, keeps a "
+                    + "batch from stalling part-way through — a long queue can "
+                    + "outlast the idle timer. The display is still allowed to "
+                    + "dim either way."
                 )
             }
         }

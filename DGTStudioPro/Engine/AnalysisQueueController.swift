@@ -2,7 +2,7 @@ import Foundation
 import os
 import SwiftData
 
-/// Per-tab owner of batch engine analysis: the transport around
+/// The app's owner of batch engine analysis: the transport around
 /// `AnalysisQueue`'s pure decisions. Resolves queued
 /// `PersistentIdentifier`s to models, walks each game through the one
 /// `GameAnalysisDriver`, and records outcomes back into the queue.

@@ -28,7 +28,7 @@ Locked product decisions #1–#8 and their interpretation flags were recorded in
 
 Old milestone and finding tags (M7.2, M-prs.1, F1–F9…) survive in code comments and below as provenance only — they identify where a decision came from; they schedule nothing.
 
-D-numbers are sequential and never reused. Next free number: **D65′**. (D64′ minted 6 Aug 2026 for M13's layout — the last entry in this file.) (This line said D47′ until the 3 Aug audit — it had not been advanced since the M6 revision while the header above was; the header is the owner and this line now just repeats it.)
+D-numbers are sequential and never reused. Next free number: **D69′**. (D68′ minted 7 Aug 2026 for the smart-tag rule joining that spelling — the last entry in this file.) (This line said D47′ until the 3 Aug audit — it had not been advanced since the M6 revision while the header above was; the header is the owner and this line now just repeats it.)
 
 ### D9′ — Player is a machine-managed @Model
 
@@ -90,7 +90,7 @@ Settable hook session.onDesync: (() -> Void)?, wired once in App.init() beside o
 
 Rejected: onChange(of: needsRecovery) in the mirror — couples the board surface to audio, fires on the manual-result exit too, and re-fires on recompute unless separately guarded.
 
-### D14′ — a live game or an active recording inhibits idle system sleep
+### D14′ — a live game or an active recording inhibits idle system sleep *(batch analysis joined as a second, separately gated cause — D66′)*
 
 Predicate (dgtSession.liveGame != nil) || dgtConnection.isRecording — the union deliberately covers both readings of "recording" (live SAN capture and board-stream recording). D25′ gates the whole predicate behind a user preference; the live form is isEnabled && (…).
 
@@ -177,13 +177,13 @@ Computed and stored on PGN:
 
 (a) **ECO code** — longest-prefix match of the opening moves against a bundled ECO table. Pure core, engine-free, with its own suite. Built in M4 as `ECOClassifier` (pure, table-injected) plus `ECOTable` (bundle I/O, split out so the classifier stays inside the chess core's no-I/O contract). Stored columns are `ecoCode` / `ecoFamily` / `ecoVariation` — three, not two, because D35′ splits the source name.
 
-(b) **SpecialCheckmate** — an enum when the result is mate, detected from the final position by pure Position / GameState predicates, no engine input. The case list is deliberately tight: smothered and backRank. Ordinary mates and non-mates classify nil. The classifier reads the final position only, and delegates to the shared Square offset tables and Position+Attack ray primitives. Wired in M4 through `GameClassification`, which replays via `GameState.replay` and only for a game that claims `#`.
+(b) **SpecialCheckmate** — an enum when the result is mate, detected from the final position by pure Position / GameState predicates, no engine input. ~~The case list is deliberately tight: smothered and backRank.~~ **Widened to ten by D65′ (7 Aug 2026); the *tightness* was never the case count and it stands unchanged** — each case is still defined so it cannot false-positive on an unrelated mate, which is what makes a stored value mean something. Ordinary mates and non-mates classify nil. The classifier reads the final position only, and delegates to the shared Square offset tables and Position+Attack ray primitives. Wired in M4 through `GameClassification`, which replays via `GameState.replay` and only for a game that claims `#`.
 
 Games predating the fields lack them until the backfill reaches them. Movetext edits re-derive both.
 
 Revised by D34′: this decision recorded classification as *analysis-time* work. The second half of its reasoning stands (the doors still don't classify); the first half did not survive contact, because it made an opening name cost a full depth-18 pass over an already-analysed archive.
 
-Rejected, and still rejected: classifying at import or archive; the loose "any mate on the back rank" reading; enumerating the long tail before a surface shows them.
+Rejected, and still rejected: classifying at import or archive; the loose "any mate on the back rank" reading. ~~Enumerating the long tail before a surface shows them~~ — **spent rather than reversed (D65′)**: this rejection was contingent on a condition, three surfaces arrived on 5 Aug that meet it, and the clause expired on its own terms.
 
 ### D20′ — the inspector headline is a pure formatter carrying the pairing
 
@@ -272,7 +272,7 @@ Witness status: PGNSerializerTests is landed and committed, with its resources �
 
 Rejected: emitting only the tags that carry values; the standard's wrapping; a tagForm derivation to fix the picker.
 
-### D25′ — idle-sleep inhibition is a user preference
+### D25′ — idle-sleep inhibition is a user preference *(a second, independent preference added by D66′ for batch analysis; the shape below is what it was built from)*
 
 D14′'s behaviour is opt-out, behind StorageKeys.preventSleepDuringPlay with a Settings toggle in the Energy section. Absent reads as true, preserving pre-toggle behaviour.
 
@@ -394,7 +394,7 @@ Named gap: the arrangement has **no preview witness**. It lives in `BoardDestina
 
 `EvaluationBarReading` is the pure mapping and its fraction is `whiteWinProbability` **verbatim** — the bar and the inspector graph share one projection, so agreement is structural and mates clamp exactly as the graph clamps. A nil per-ply evaluation folds to `Evaluation.drawn`. The reading stays white-relative and perspective-free; the flip is one boolean of geometry in `EvaluationBarView`. Label grammar, pinned: signed pawns to one decimal, unsigned `0.0` for anything that rounds to zero, mates in the `evalTagContent` spelling. (`String(format:)` and not `.formatted()`, deliberately: the latter localizes the decimal separator and would break the pinned grammar.)
 
-Presence is game-level and lives at the wiring: `pgn.evaluations.isEmpty` gates the bar entirely, and only the review branch ever passes a reading. `boardSurface` builds the `BoardView` once and branches layout, with explicit `GeometryReader` math because `BoardView` is strictly square.
+Presence is game-level and lives at the wiring: ~~`pgn.evaluations.isEmpty` gates the bar entirely~~ — **`pgn.hasScoredPly` since D67′ (7 Aug 2026)**; the old spelling was true of a full-length all-nil array and put a 50/50 bar on a game that had scored nothing. Only the review branch ever passes a reading. `boardSurface` builds the `BoardView` once and branches layout, with explicit `GeometryReader` math because `BoardView` is strictly square.
 
 **Correction (audit).** The bar's width was stated twice and the two statements disagreed — `.frame(width: 20)` in the view, `evaluationBarWidth = 16` in the caller's geometry. It is now `EvaluationBarView.width`, stated once by the view that draws it; the caller frames height only and keeps `evaluationBarGap`. Note the caller's own doc had claimed the constants existed so "the geometry and any future reader agree", which is the kind of comment that reads as a guarantee and was describing a wish.
 
@@ -976,3 +976,87 @@ M13, 6 August 2026. `App/` is the shell; `Features/{Board,Library,Players,SmartT
 **What the move cost in documentation was almost nothing, and that is a finding about the code.** The path sweep expected a hundred stale citations and found **one**. **Zero source comments cite a folder at all** — the codebase names types, so a reorganization cannot invalidate it. A proposal to "stop citing paths in docs" turned out to describe what the code already did.
 
 Rejected: **`Core/ Model/ Feature/`** (above); **nesting the substrate under `Domain/`** (most symmetric top level — three entries — and it rewrites every anchor that names a folder for no gain a reader feels); **no `Features/` level at all**, leaving the five surfaces beside the five substrate folders (smallest diff, and it leaves the distinction implicit, which is the thing this decision exists to make explicit); **feature-owned everything**, where Board keeps its own pure types (fewest cross-folder hops, and it puts `PieceIdentity` and the evaluation readings out of reach of the purity argument that governs them).
+
+
+### D65′ — the checkmate vocabulary grows to ten, and precedence is the decision
+
+By request, 7 August 2026. `SpecialCheckmate` gains `anastasia`, `arabian`, `opera`, `boden`, `epaulette`, `gueridon`, `dovetail` and `hook`. No schema change, no new type, no new file — every consumer already drove off `allCases`, `displayName` and the raw value, so the picker, the Library column, Get Info and the tag rule all widened for free.
+
+**This is D19′'s deferral expiring on its own terms rather than being overturned**, and the distinction is worth the sentence. That decision rejected "enumerating the long tail *before a surface shows them*" — a rejection with a condition attached, which is the rare kind that can be discharged instead of argued with. Three surfaces arrived on 5 Aug: the Library's Checkmate Type column, Players' Special Mates count, and `TagRule.checkmateType`'s picker. The condition was met two days before anyone noticed it had been.
+
+**What did *not* change is the bar, which was never the case count.** D19′ said "deliberately small and tight", and the tightness is the half that mattered: each case is defined so it cannot false-positive on an unrelated mate. Ten cases held to that bar is the same decision as two; ten loose ones would be a different one.
+
+**Precedence is the whole content of the widening.** A mate can honestly fit two shapes — an Arabian in the corner is also a rook check along a rank; an Opera mate is a back-rank rook mate with a bishop behind it — and the stored column holds one value. The order is narrowest-first, stated as an array rather than an `if`-chain so a reader can see it, and it is the thing a future edit is most likely to change without noticing.
+
+Most pairs never collide: `smothered`'s checker is a knight, `boden`'s a bishop, `gueridon`'s and `dovetail`'s a queen, so none can reach the rook motifs; `anastasia` needs an edge file and `epaulette` two on-board rank neighbours, which an edge-file king cannot have. Three pairs do overlap and each has its own pin. **`arabian` before `hook` is a tie-break rather than a specificity call** — neither is a subset of the other, since Arabian adds the corner and Hook adds the pawn link — and the corner wins because it is the stronger visual signature and the older name. `aCornerHookIsCalledArabian` is the test to change if that call ever changes; it is the only place the choice is observable.
+
+**The Boden recogniser was tightened by measurement, and that is the paragraph worth keeping.** As first written — bishop check, a crossing bishop, one friendly neighbour — it fired on **2.2% of a 1,500-mate sample, roughly five times any other named motif**. The samples were not Boden's mates: they were middlegame positions that happened to own two bishops while a queen did the actual work. Requiring *every* flight square to be self-blocked or bishop-covered says what the motif means, and drops it to 0.3%, in line with its siblings. **Reasoning produced the wrong recogniser and a distribution caught it** — the eight predicates all read equally plausible on the page, and only one of them was wrong.
+
+**Every fixture was verified against an independent move generator before landing.** One near-miss position written by hand had its bishop covering one flight square instead of two, so the king could still run and the "mate" was not mate — a test that would have passed for entirely the wrong reason, since `classify` guards on `isCheckmate` and returns `nil` for an honest reason on a non-mate. That is this domain's standing hazard rather than a slip: a hand-made mate fixture fails silently, in the passing direction.
+
+**Consequences, named rather than discovered.** Players' **Special Mates** count will rise on existing games — the field is derived and backfills, so an archive reclassifies without asking. `PlayerStats.specialMatesDelivered` counts `specialCheckmate != nil` and is unchanged; what changed is how often that is true. The standing open item it feeds — `endedInMate` spelling the mate question `hasSuffix` while the classifier spells it `contains` — is untouched and no more visible than it was. And `SmartTagEditorView`'s comment that "every motif the classifier can produce is a motif a game can carry, so none of them is a dead rule" was an unchecked claim when written and now has `everyCaseIsProducible` behind it.
+
+Rejected: **storing a set of motifs per game** (truest — a mate really can be two things — and it is a schema change on `PGN`, a rewrite of the tag rule's equals/notEquals semantics, and a column that renders lists); **broadest-first precedence**, keeping `backRank` ahead of `opera` and `arabian` (fewer surprising labels, and the exotic names would then almost never appear, which is most of the reason for adding them); **the endgame workhorses** — supported-queen, box and ladder mates (by far the commonest in real play, and they would take Special Mates from a handful to most decided games, at which point the badge stops meaning "rare"; the basic queen mate is pinned as `nil` by `theBasicQueenMateIsNotSpecial` so the exclusion is deliberate rather than incidental); **deriving precedence from `allCases`** so the enum's order governs (one list instead of two, and it makes reordering the smart-tag picker silently change what games classify as).
+
+
+### D66′ — batch analysis is a second sleep-inhibition cause, with its own gate
+
+By request, 7 August 2026. `SleepInhibitor` holds its activity while a batch is draining as well as while a game is live, behind a **separate** preference — `StorageKeys.preventSleepDuringAnalysis`, absent reads true, its own Settings row.
+
+**Two gates rather than one widened gate, and the reason is that the two causes share only their remedy.** Play is minutes and needs the *serial link* alive across a think; a batch is potentially hours and needs the *engine* alive across a drain. Someone who wants a queue to finish overnight and someone who wants the Mac asleep the moment they step away from the board are the same person on different evenings. Widening `preventSleepDuringPlay` would additionally have forced a choice between renaming that key — silently resetting every stored choice, the D36′ trap — and keeping a key whose name describes half of what it does.
+
+**The predicate left the waiver, and that is the substantive change.** D14′'s was `isEnabled && (liveGame != nil || isRecording)` — one gate, two causes, nothing to extract, and the waiver register said exactly that. Two gates over two causes is a different animal: `allowsAnalysis && playing` compiles, reads plausibly, and means the analysis preference is guarding the board. That defect has no symptom until someone turns one toggle off and watches the wrong thing happen hours later, so the decision is now a pure function — `SleepInhibitor.activityReason(playing:analyzing:allowsPlay:allowsAnalysis:)` — with `gatesDoNotCross` running each cause against only the *other* gate. The waiver narrows to the `ProcessInfo` token, which is genuinely transport.
+
+**It returns the reason rather than a `Bool`,** because the reason is not decoration: `pmset -g assertions` prints it, and that is this type's only diagnostic surface. A caller told "yes, inhibit" without being told why would have to re-derive the cause it had just computed. Both causes at once name both, joined — an activity held for two reasons that names one of them is the same lie in a smaller font, and it would only ever appear while analyzing during a live game, which is exactly the session nobody is watching Console for.
+
+**A cause can now change while inhibition is continuously held**, which D14′ could not express and which is why `setInhibited` takes a reason instead of a `Bool`. The guard compares reasons, not held-versus-not, so a game archiving out from under a still-draining batch re-opens the activity under the new reason. `token = reason.map { ActivityToken(reason: $0) }` constructs the new token before releasing the old, so the process never sits un-inhibited across that handover; the obvious `token = nil` first would open exactly that window.
+
+**This was only writable because the queue went app-global on 6 Aug** (controller decision 2). Against the per-tab controller, the inhibitor would have needed to ask "is *any* tab analyzing" and there was deliberately no door for that — the same absence that decision cites as its proximate cause. `AnalysisQueueController` moved from an inline `@State` default to `App.init()` to be wired, joining the DGT observables for their reason: an inline default cannot be read from `init()` before the stored properties are assigned.
+
+**The `@ObservationIgnored` trap, checked rather than assumed.** D14′ records that `DGTConnection.recorder` must *not* be `@ObservationIgnored` or `isRecording` never registers with the tracking loop. `queue.isActive` has the identical requirement one level down, and the controller happens to carry no `@ObservationIgnored` at all. Verified rather than trusted, because the failure mode is a batch running with the Mac asleep and nothing on screen to suggest why.
+
+**Display sleep is still not inhibited, under either cause** — inherited from D14′ rather than reopened. An overnight batch wants the panel dark more than a game does. Structural: breaking it takes naming a second `ProcessInfo` option.
+
+Two renames rode along, both forced by the second instance rather than mechanical tidying — the D61′ move where `ResultRefusal` became `FieldRefusal` because a second refusing field turned a heading from a literal into a value. `SleepInhibitor.isEnabled` → `preventsSleepDuringPlay`, and the registry's `settingsPreventSleepToggle` → `settingsPreventSleepDuringPlayToggle`, recorded at the symbol. **Neither storage key moved.**
+
+**Manual check, since the token stays waived:** start a batch of ten with the analysis toggle on, run `pmset -g assertions`, and confirm an assertion whose reason names engine analysis. Let it drain and confirm it lifts. Turn the toggle off mid-batch and confirm it lifts *on that edge* rather than at the end — that is the observable-property half of D25′ doing its job. Then, with both toggles on, start a batch during a live game and confirm the reason names both causes; archive the game and confirm the assertion survives with the reason narrowed to analysis alone.
+
+Rejected: **one widened toggle** (one gate, one default, no new key — and it either renames the stored key or keeps a name describing half its job, and it makes an overnight batch and a five-minute game one policy); **no gate at all for analysis** (smallest change, defensible since a batch is user-initiated and finite, and it leaves one of two causes ignoring a preference the other honours, which is the kind of asymmetry that reads as a bug); **inhibiting display sleep during analysis** (a batch has nothing to look at, so this is strictly worse than the play case that already declined it); **a single reason constant naming both causes always** (no `heldReason`, no token handover, and `pmset` would report a live game during a batch that started after the game ended).
+
+
+### D67′ — "is there analysis to show" has one spelling, and it is not `!isEmpty`
+
+Found 7 August 2026 from a report that two analysed games drew "no data points, a flat line". `PGN.hasScoredPly` — `evaluations.contains { $0 != nil }` — is the question, and the evaluation bar and the graph window both ask it. `AnalysisGlyph.isAnalyzed` forwards rather than restating.
+
+**The bug is that the old gate asked whether the array existed.** `GameAnalysisDriver` resets `evaluations` to `Array(repeating: nil, count: moves.count)` *before* it walks, so a pass that starts and scores nothing leaves a full-length, all-nil array. That array is not empty and contains no analysis. Every consumer mapped it through `?? 0.5` and drew a curve of pure fallback — lying exactly on the 50/50 midline `EvaluationGraphView` strokes unconditionally, which is indistinguishable from "the chart is broken".
+
+**What makes this worth a number rather than a fix is the shape of the failure, not its size.** The symptom appears on the *drawing* surface while the fault is in the *engine* path, and the app simultaneously reports the game as analysed — so the report arrives as a chart bug and every instinct sends the reader to the chart code. D46′'s window already had a correct answer for this state and was walking past it to draw the fabricated one; the empty state existed and could not be reached.
+
+**The comment that documented the divergence is the reason it survived.** `AnalysisGlyph` recorded both spellings by name, noted that they "disagreed on a non-empty all-nil array", and concluded that the bar/graph gate "keeps its own `isEmpty` on purpose: it asks 'is there anything to draw', not 'did a pass run'." The reasoning was right and the conclusion was backwards — an all-nil array has nothing to draw, so the gate claiming that question was the one drawing something. A comment that names a divergence and calls it deliberate is the hardest kind to re-examine, because it has already answered the question a reader would ask. Left visible at the site.
+
+**A second finding was claimed here and was wrong; the retraction is left in place because it is the more useful of the two.** This entry originally said `GetInfoWindow`'s Analysis comment — "the same predicate the glyphs, the toolbar aggregate and the search chips read" — was false, on the grounds that `TagRule.analyzed` reads `GameRecord.hasAnalysis`. It isn't false. `LibraryDestination` hands `AnalysisGlyph.isAnalyzed($0)` to `LibrarySearchToken.admit`, so the chips read the correct spelling and always did. The comment named glyphs, toolbar and chips, and was accurate about all three.
+
+What produced the error is worth more than the finding would have been: `TagRule.analyzed → hasAnalysis` was followed to its source, "chips" was read as covering it, and `admit`'s **caller** was never opened — the parameter is named `isAnalyzed` and takes a `Bool`, so nothing about the call site is visible from the function. That is this project's own recorded rule arriving from the inside: *a token cross-reference proves a name is used, never that a particular consumer reaches it.* It was written in a paragraph arguing that an assertion of unity gets read as evidence of unity, by someone who had just read an assertion of *dis*unity as evidence of disunity, one hour after writing the rule down.
+
+**`GameRecord.hasAnalysis` was the one door still on the old spelling** — consumed by `TagRule.analyzed` alone, not by the chips. Left open here and closed the same hour by **D68′**.
+
+**Scope, stated because it is narrower than "everywhere":** the Library inspector's inline 100 pt strip is untouched and still renders for every game. It has always drawn a bare baseline for an unanalysed one — `EvaluationGraphView` returns early below two points — so all-nil and never-analysed already look the same there, and gating it would remove a strip that reads correctly as "nothing here".
+
+**Not restored by this:** the two games that prompted it. Their evaluations are gone — the reset destroyed them before the walk — and only re-analysing brings them back. What changed is that the next occurrence says so instead of looking like a drawing fault.
+
+Rejected: **fixing only the graph window** (it is where the report came from, and the bar had the identical gate one file away); **making the `?? 0.5` fallback nil-aware per point** (draws gaps instead of a false line, more faithful per-ply, and it answers a game-level question at ply level — D33′ deliberately puts presence at the wiring); **changing `hasAnalysis` in the same pass** (closes the divergence completely, and it silently re-points every saved tag that filters on analysis — *taken up by D68′ within the hour, by request, which is the difference between riding a rendering fix and being asked for*); **leaving it and documenting the trap** (cheapest, and the trap had already been documented once, which is exactly how it survived).
+
+
+### D68′ — the smart-tag rule joins the one spelling, and saved tags change meaning
+
+By request, 7 August 2026, immediately after D67′ and reversing that entry's own rejection of doing it. `GameRecord.hasAnalysis` is `hasScoredPly` rather than `!evaluations.isEmpty`. `TagRule.analyzed` is its only consumer, so this is the last door on the old spelling and the only one that reaches stored user state.
+
+**What changes:** a saved "Analyzed" smart tag stops matching a game whose pass scored nothing, and a "not analyzed" rule starts matching it. **Matching changes for already-saved tags; accepted at decision time** — D30′'s own sentence, and the second time this project has knowingly re-pointed live rules rather than grandfathering them.
+
+**Why the reversal is legitimate rather than a same-hour flip-flop.** D67′ rejected this *as a rider* — "it silently re-points every saved tag" was an objection to doing it invisibly inside a rendering fix, not to doing it. Asked for directly, it is neither silent nor a rider: it gets its own entry, its own argument and its own line in the manual checks. The rejection stands as written for anyone tempted to fold it into an unrelated pass.
+
+**The alternative was worse than the churn.** Leaving it meant a stalled game reading *analysed* to one surface and *unanalysed* to the other five — and the tag rule is the surface a person uses to go **find** such games. A smart tag called "Not Analyzed" that cannot see the games most in need of re-analysis is precisely wrong at the moment it matters.
+
+**One stale pin, found by grepping the old rule's words rather than the door's name.** `GameRecordTests` asserted `record.hasAnalysis` against `evaluations = [nil, nil]` with the message *"a non-empty evaluations array means a pass ran"* — the repealed belief written out as prose, in a suite this pass had no reason to open. That is the `applyEditRelinksAndKeepsOrphanedPlayer` shape from D60′, and the same grep caught it: search for what the old rule **said**, not for what it was called.
+
+Rejected: **grandfathering saved tags** (no machinery exists to version a rule's semantics, and inventing it for one boolean would be a migration system built for a bug); **a third state** — analysed / stalled / never-run, exposed as its own facet (most honest, and it mints vocabulary and a chip for a state that should be rare and is a *failure*, not a category); **leaving `hasAnalysis` alone** (D67′'s position, correct for D67′'s scope and wrong once the question was asked on its own terms).

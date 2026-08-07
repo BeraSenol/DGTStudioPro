@@ -247,7 +247,10 @@ private struct TagRuleRow: View {
         case .checkmateType:
             // `allCases` here, unlike `.result` above: every motif the
             // classifier can produce is a motif a game can carry, so none of
-            // them is a dead rule.
+            // them is a dead rule. That was an unchecked claim until D65′ —
+            // `everyCaseIsProducible` is what stands behind it now, and it is
+            // what stops a case being added to the enum, appearing in this
+            // menu, and never classifying anything.
             Picker("Checkmate Type", selection: $rule.specialCheckmate) {
                 ForEach(SpecialCheckmate.allCases, id: \.self) { pattern in
                     Text(pattern.displayName).tag(pattern)

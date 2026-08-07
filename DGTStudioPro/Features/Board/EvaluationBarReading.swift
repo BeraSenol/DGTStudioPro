@@ -18,9 +18,16 @@ import Foundation
 /// renders both at 0.5 (`?? 0.5` at its call site), so the bar does too.
 /// *Game-level* absence — an unanalysed game shows no bar at all — is
 /// deliberately not this type's job: presence is the wiring's one-line
-/// guard on `pgn.evaluations.isEmpty` (the `hasAnalysis` projection's exact
-/// truth), because "absence, not a 50/50 lie" is about whether the bar
-/// exists, not what it reads.
+/// guard on `pgn.hasScoredPly`, because "absence, not a 50/50 lie" is about
+/// whether the bar exists, not what it reads.
+///
+/// That guard read `pgn.evaluations.isEmpty` until D67′ (7 Aug 2026),
+/// described here as "the `hasAnalysis` projection's exact truth" — which it
+/// was, and both were asking the wrong question. A game whose pass scored
+/// nothing carries a full-length all-nil array, so the bar existed and showed
+/// exactly the 50/50 lie this paragraph names. `hasAnalysis` followed the
+/// same hour (D68′), so the sentence is true again and now says something
+/// worth saying: bar presence and the "Analyzed" tag rule are one predicate.
 ///
 /// The reading is **white-relative and perspective-free**: `whiteFraction`
 /// and the label's sign always describe white, whatever the board's

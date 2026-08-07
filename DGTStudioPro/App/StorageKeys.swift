@@ -110,6 +110,18 @@ internal enum StorageKeys {
     // step. That's the shape the other three should eventually take.
     internal static let preventSleepDuringPlay = "preventSleepDuringPlay"
 
+    // Batch analysis (D66′): the second idle-sleep gate, separate from the
+    // one above by decision rather than by oversight. Same "absent reads as
+    // true" semantics and the same single-read-site shape.
+    //
+    // Two keys and not one because the two causes have nothing in common but
+    // their remedy: play is minutes and needs the *serial link* alive, while a
+    // batch is potentially hours and needs the *engine* alive. Widening
+    // `preventSleepDuringPlay` to cover both would also have meant either
+    // renaming it — silently resetting the stored choice, the D36′ trap — or
+    // leaving a key whose name describes half of what it does.
+    internal static let preventSleepDuringAnalysis = "preventSleepDuringAnalysis"
+
     // Inspector chrome (M8, D45′): the sections the user has folded shut,
     // as an array of `InspectorSection` raw values. The *collapsed* ones are
     // stored, not the expanded ones, which is what makes "sections default

@@ -681,8 +681,17 @@ extension GetInfoWindow {
             Section("Analysis") {
                 // One spelling of "analyzed?", `AnalysisGlyph`'s — the same
                 // predicate the glyphs, the toolbar aggregate and the search
-                // chips read. A bare `evaluations.isEmpty` here would be a
-                // second opinion about the one question this app asks most.
+                // chips read (`LibraryDestination` hands it to
+                // `LibrarySearchToken.admit`). A bare `evaluations.isEmpty`
+                // here would be a second opinion about the one question this
+                // app asks most.
+                //
+                // Since D67′ that predicate is `PGN.hasScoredPly`, and since
+                // D68′ so is `GameRecord.hasAnalysis` — so the smart-tag rule
+                // joins this list and the sentence above is now true of every
+                // surface without exception. It was true when written; the
+                // one door that had drifted was the tag rule, which is not
+                // named here and was never claimed.
                 LabeledContent(
                     "Analyzed",
                     value: AnalysisGlyph.isAnalyzed(pgn) ? "Yes" : "No"

@@ -28,7 +28,13 @@ extension PGN {
             name: name,
             round: round,
             plyCount: moves.count,
-            hasAnalysis: !evaluations.isEmpty,
+            // `hasScoredPly`, not `!evaluations.isEmpty` (D68′). This was the
+            // last door on the old spelling and the only one that reaches
+            // stored user state: `TagRule.analyzed` is its sole consumer, so
+            // a saved "Analyzed" tag now stops matching a game whose pass
+            // scored nothing. That change is the point rather than a side
+            // effect — see D68′ for why a matching change is accepted here.
+            hasAnalysis: hasScoredPly,
             isTimed: timeControl != nil,
             opening: opening,
             specialCheckmate: specialCheckmate

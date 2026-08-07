@@ -65,7 +65,12 @@ internal struct EvaluationGraphWindow: View {
     // MARK: Body
     internal var body: some View {
         Group {
-            if let pgn, !pgn.evaluations.isEmpty {
+            // `hasScoredPly`, not `!evaluations.isEmpty` (7 Aug 2026): an
+            // all-nil array passed the old gate and reached `graph(for:)`,
+            // whose `?? 0.5` map then drew a flat curve on the midline
+            // instead of the empty state two lines down. The window had a
+            // correct answer for this case and was walking past it.
+            if let pgn, pgn.hasScoredPly {
                 graph(for: pgn)
             } else {
                 unavailable

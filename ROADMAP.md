@@ -18,6 +18,14 @@ contract it replaced). The standing
 counter-grep that would have caught this — milestone numbers in the code
 against milestone numbers in these two documents — is now on the sweep list.*
 
+*Revised 7 August 2026: **the 7 August day enters as a Landed entry**, on the
+5 August precedent — two requests, two decisions (**D65′**, **D66′**), no
+milestone. The schedulable half is unchanged: M7's two gated items still stand
+(Instruments-with-board; the ~September GM re-read). Next free D-number lives
+in `DECISIONS.md` and is not repeated here — that ownership was settled on
+6 August after this line had drifted eight numbers behind the instructions,
+and repeating it is what caused the drift.*
+
 *Revised 5 August 2026: **the 5 August day entered as a Landed entry**, the
 2–4 August burst's precedent for work that ships outside milestone discipline.
 Eight decisions across the day — **D56′** through **D63′** — none of them a
@@ -1170,6 +1178,87 @@ decided.
 ---
 
 ## Landed
+
+### The 7 August day — ten checkmate types, and sleep through a batch *(recorded 7 August 2026)*
+
+Two requests, both widenings of something that already existed, **no new source
+files** — 238 tracked and 238 on disk, unchanged. Base `601ae50`, clean.
+⌘U reported green by Bera, which here also discharges the compile gate.
+
+**D65′ — the checkmate vocabulary grows to ten.** `anastasia`, `arabian`,
+`opera`, `boden`, `epaulette`, `gueridon`, `dovetail`, `hook` join `smothered`
+and `backRank`. No schema change and no new type: every consumer already drove
+off `allCases`, `displayName` and the raw value, so the smart-tag picker, the
+Library's Checkmate Type column, Get Info and the tag rule widened for free.
+D19′'s deferral — "enumerating the long tail *before a surface shows them*" —
+expired on its own terms rather than being overturned, the three surfaces
+having arrived on 5 August. Precedence is narrowest-first and stated as data.
+
+*Gate evidence.* One reference fixture per motif, all ten reachable
+(`everyCaseIsProducible` — the D40′ producible-value rule pointed at an enum);
+the three overlapping pairs pinned individually, including
+`aCornerHookIsCalledArabian`, which records a genuine tie-break rather than a
+specificity call and is the test to change if that call ever changes; raw
+values pinned on literals, since they ride `PGN.specialCheckmate` and every
+saved rule blob; `theBasicQueenMateIsNotSpecial` pinning the *exclusion* of the
+endgame workhorses so it reads as deliberate.
+
+*The finding, and it is not a feature.* The Boden recogniser was **wrong on
+first writing and only a distribution caught it** — it fired on 2.2% of a
+1,500-mate sample against 0.3% for every sibling, because a middlegame position
+with two bishops usually has a queen doing the work. Eight predicates, all
+equally plausible on the page. Separately, a hand-written near-miss fixture
+turned out not to be mate at all, which would have **passed** — `classify`
+guards on `isCheckmate` and returns nil honestly. Every FEN in the suite is now
+verified against an independent generator before landing.
+
+**D66′ — batch analysis inhibits idle sleep, on its own gate.**
+`StorageKeys.preventSleepDuringAnalysis`, absent reads true, its own Energy
+row. Two preferences rather than one widened one: play is minutes and needs the
+serial link, a batch is hours and needs the engine. Only writable because the
+queue went app-global on 6 August (controller decision 2) — the per-tab
+controller had no door for "is any tab analyzing", which that decision names as
+its own proximate cause.
+
+*Gate evidence.* The predicate **left the waiver register**: one gate over two
+causes had nothing to extract, two gates over two causes can be crossed
+(`allowsAnalysis && playing` compiles and reads fine), so it is now the pure
+`activityReason(playing:analyzing:allowsPlay:allowsAnalysis:)` with
+`gatesDoNotCross` running each cause against only the other gate. Both
+defaults, both keys' independence, and the both-causes-named case are pinned.
+The token stays waived; `pmset -g assertions` is its witness and D66′ carries
+the run sheet.
+
+*Owed, and outside ⌘U by decision:* the `pmset` sequence — in particular
+flipping the analysis toggle **mid-batch**, which an implementation that only
+releases at drain would pass every automated test while failing.
+
+**D67′ and D68′ — one spelling of "is there analysis to show".** From a bug
+report, not a plan: two analysed games drew "no data points, a flat line".
+`GameAnalysisDriver` resets `evaluations` to full-length nils *before* it
+walks, so a pass that scores nothing leaves a non-empty array holding no
+analysis — which `!evaluations.isEmpty` admits and `?? 0.5` then draws as a
+curve lying on the graph's own midline. `PGN.hasScoredPly` is the predicate
+now; the bar, the graph window, the glyph and (D68′) `GameRecord.hasAnalysis`
+all ask it. **D68′ changes what saved smart tags match**, on D30′'s precedent.
+
+*Gate evidence.* `PGNScoredPlyTests`, whose middle case is the whole suite —
+empty-versus-scored is a distinction *both* spellings get right, so a test
+covering only those two would have passed against the defect. `GameRecordTests`
+turns red by design: it pinned the repealed rule, and its assertion message was
+the repealed belief written out as prose.
+
+*Two findings, one of them a retraction.* The comment that let this survive
+did not merely assert a guarantee — it **named the divergence and ruled it
+intentional**, which pre-answers the question a reader arrives with. And a
+second such comment was reported and the report was wrong: the search chips
+were on the correct predicate all along, because `admit` takes a bare `Bool`
+and the call site is invisible from the function. Both are recorded at D67′.
+
+*Not fixed by any of it:* the two games. Their evaluations were destroyed by
+the reset before the walk, and only re-analysing restores them. The cause —
+Syzygy, or `staleBestMovesOwed` — is still unidentified and needs the engine
+log during a re-run.
 
 ### M10 — Get Info, and three affordances removed *(shipped 4 August 2026 in `7390227`; **recorded 4 August 2026, evening**)*
 

@@ -4,11 +4,27 @@ import SwiftUI
 /// The analysis-state glyph: a gear badged with a checkmark when analyzed, an
 /// xmark when not, bare while the engine has it.
 ///
-/// One home for the symbol, the tint *and* the predicate. Two sites once
-/// spelled "analyzed?" differently — `contains { $0 != nil }` against
-/// `!isEmpty` — and disagreed on a non-empty all-nil array. D33′'s bar/graph
-/// gate keeps its own `isEmpty` on purpose: it asks "is there anything to
-/// draw", not "did a pass run".
+/// One home for the symbol and the tint. **The predicate moved to
+/// `PGN.hasScoredPly` on 7 Aug 2026** and this type forwards to it.
+///
+/// The paragraph that stood here recorded the two spellings — `contains
+/// { $0 != nil }` against `!isEmpty` — noted that they "disagreed on a
+/// non-empty all-nil array", and concluded that D33′'s bar/graph gate "keeps
+/// its own `isEmpty` on purpose: it asks 'is there anything to draw', not
+/// 'did a pass run'."
+///
+/// **The reasoning was right and the conclusion was backwards.** An all-nil
+/// array has nothing to draw — every point on the curve it produces comes
+/// from the `?? 0.5` fallback, so the gate that claimed to ask "is there
+/// anything to draw" was the one drawing a fabricated line. `!isEmpty` asks
+/// whether the array exists, which stopped being a proxy for anything the
+/// moment `GameAnalysisDriver` began resetting it to full-length nils before
+/// the walk. Both gates ask `hasScoredPly` now, and the divergence this
+/// paragraph documented as deliberate is closed rather than explained.
+///
+/// Left visible rather than deleted: a comment that names a divergence and
+/// argues it is intentional is the hardest kind to re-examine, because it has
+/// already answered the question a reader would ask.
 internal enum AnalysisGlyph {
 
     // MARK: State
@@ -33,10 +49,14 @@ internal enum AnalysisGlyph {
         case analyzed
     }
 
-    /// "Has been analyzed", spelled once: any ply carries a recorded
-    /// evaluation.
+    /// "Has been analyzed", spelled once — on `PGN`, which owns the question.
+    ///
+    /// A forwarding accessor, not a second rule: the `LiveGame.Roster`
+    /// → `Player.seatsNameOnePlayer` shape. Kept rather than replaced at the
+    /// call sites because the glyph's own vocabulary reads better here, and
+    /// because a type that renders "analyzed?" should be able to say the word.
     internal static func isAnalyzed(_ game: PGN) -> Bool {
-        game.evaluations.contains { $0 != nil }
+        game.hasScoredPly
     }
 
     /// The glyph's state for the games a caller is rendering.

@@ -48,8 +48,15 @@ struct SmartTagModelTests {
     /// Each default, semantically. The first three must match what their
     /// enum ancestors matched (the old suite's contract, carried forward);
     /// "Smothered Mates" has no ancestor and is pinned on its own terms — a
-    /// seeded tag whose rule was never exercised is a rule nobody has
-    /// checked, and this one is the only surface `SpecialCheckmate` has.
+    /// seeded tag whose rule was never exercised is a rule nobody has checked.
+    ///
+    /// **The clause "and this one is the only surface `SpecialCheckmate` has"
+    /// is struck** (7 Aug 2026). True at M4; false since 5 Aug, when the
+    /// Library's Checkmate Type column and Get Info both began rendering the
+    /// motif — the fourth species of stale claim, a sentence that was correct
+    /// when written and decayed when something adjacent shipped. What survives
+    /// is the narrower true version: this is the only place the seeded tag's
+    /// *rule* is exercised.
     @Test func defaultTagsMatchTheirAncestors() {
         let tags = Dictionary(
             uniqueKeysWithValues: SmartTag.defaultTags().map { ($0.name, $0) }

@@ -355,11 +355,25 @@ internal enum AccessibilityID {
     internal static let settingsAutoConnectToggle      = "settings.autoConnectToggle"
     internal static let settingsEraseLibraryButton     = "settings.eraseLibraryButton"
     internal static let settingsIllegalMoveSoundToggle = "settings.illegalMoveSoundToggle"
-    internal static let settingsPreventSleepToggle     = "settings.preventSleepToggle"
     internal static let settingsBoardCoordinatesToggle = "settings.boardCoordinatesToggle"
     internal static let settingsEngineDepthStepper     = "settings.engineDepthStepper"
     internal static let settingsEngineHashPicker       = "settings.engineHashPicker"
     internal static let settingsEngineThreadsStepper   = "settings.engineThreadsStepper"
+
+    /// The Energy section's two gates (D66′). `settingsPreventSleepToggle`
+    /// — `"settings.preventSleepToggle"` — is **removed** and renamed to the
+    /// first of these, recorded here rather than done quietly because a
+    /// rename is as breaking as a removal even with no consumer left to break
+    /// (D51′'s stated bet).
+    ///
+    /// The rename is the registry paying the same tax the property did: one
+    /// gate could be called "prevent sleep", two cannot, and leaving the
+    /// original name beside a `…DuringAnalysisToggle` sibling would make the
+    /// unqualified one read as the general case rather than as the play case.
+    internal static let settingsPreventSleepDuringPlayToggle
+        = "settings.preventSleepDuringPlayToggle"
+    internal static let settingsPreventSleepDuringAnalysisToggle
+        = "settings.preventSleepDuringAnalysisToggle"
 
     /// Syzygy tablebases (7 Aug 2026). The three probe controls render only
     /// once a folder is configured — **conditionally present**, the

@@ -207,6 +207,35 @@ internal final class PGN: Identifiable {
         Self.nameIsStaleDefault(storedName: name, white: white, black: black)
     }
     
+    /// Whether any ply carries an engine evaluation — the app's one spelling
+    /// of "is there analysis to show?".
+    ///
+    /// **`!evaluations.isEmpty` is a different question and was being asked
+    /// in its place** (7 Aug 2026). `GameAnalysisDriver` resets the array to
+    /// `Array(repeating: nil, count: moves.count)` *before* it walks, so a
+    /// pass that starts and scores nothing leaves a full-length, all-nil
+    /// array. That array is not empty, and it contains no analysis. Every
+    /// surface that consumed it drew the `?? 0.5` fallback at every ply —
+    /// a curve lying exactly on the 50/50 midline `EvaluationGraphView`
+    /// strokes unconditionally, which reads as a flat line and no data, and
+    /// which is a fabricated reading rather than a missing one.
+    ///
+    /// The distinction is invisible until it fires, and then it is
+    /// **actively misleading**: the failure presents as a drawing bug on a
+    /// game the app is simultaneously calling analyzed, which sends a reader
+    /// to the chart code instead of to the engine log.
+    ///
+    /// Lives on `PGN` rather than on `AnalysisGlyph`, where the correct
+    /// spelling already existed, because the question belongs to the game
+    /// rather than to the Library's icon — D25′'s rule that a value with an
+    /// owning type should live on it, and D64′'s that a thing consumed by
+    /// Board *and* Library *and* Get Info is not the Library's. The glyph
+    /// forwards here now, the way `LiveGame.Roster.seatsNameOnePlayer`
+    /// forwards to `Player`'s.
+    internal var hasScoredPly: Bool {
+        evaluations.contains { $0 != nil }
+    }
+
     // MARK: Instance Methods
     /// Returns the evaluation recorded for the position reached after the
     /// move at `ply` is played, or `nil` if no analysis is present for
