@@ -73,9 +73,14 @@ unchecked-`Sendable` or the unsafe-`nonisolated` opt-out anywhere in the app
 target. No TODO/FIXME/HACK markers, no commented-out code, no `#if DEBUG`
 regions.
 
-**⌘U:** green as last reported by Bera, before the View Options and performance
-work. Owed on the current tree. Never claimed — ⌘U runs locally and Bera
-reports.
+**⌘U:** green as reported by Bera on 8 August 2026 — **1108 tests, 101 suites**,
+against `275f037`, which is the whole View Options and performance work plus the
+review pass that followed it. Never claimed — ⌘U runs locally and Bera reports.
+
+*The count is a dated snapshot and will decay; it is here because the
+denominator is the useful half — a run that reports far fewer suites than this
+is a run that skipped something, which is the failure a bare "green" cannot
+show.*
 
 **Untracked files a tracked file references will not build.** **Five** of the
 eight are in that state right now — `CollectionFold.swift`,
