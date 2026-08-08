@@ -617,13 +617,37 @@ are in `git log`.
   reads as live. A click-to-move or setup surface consumes all three by passing
   one value. The transferable part: a name scan reports a symbol as *referenced*
   and says nothing about whether its consumer's branch can execute.
-- **`FocusedValue update tried to update multiple times per frame` at launch**,
-  narrowed to two candidates rather than found. Either `\.boardGetInfoRequest`
-  minting a fresh non-`Equatable` `Binding` per body pass while `.onAppear`
-  forces a second pass, or two restored board windows both writing `\.activeGame`
-  in one frame. **One step discriminates them:** quit with a single board window
-  open and relaunch. Unscheduled — a redundant-work warning, not a correctness
-  bug, and the arrangement it implicates is D53′'s trigger-binding pattern.
+- **Two launch warnings, and they are almost certainly one cause.** `Geometry
+  action is cycling between duplicate values` and `FocusedValue update tried to
+  update multiple times per frame` both fire at launch, and **both vanish when
+  the collection destinations are switched to List** — measured 8 Aug 2026.
+
+  That one step refuted the two candidates this entry carried for three days.
+  It read: *"Either `\.boardGetInfoRequest` minting a fresh non-`Equatable`
+  `Binding` per body pass while `.onAppear` forces a second pass, or two
+  restored board windows both writing `\.activeGame` in one frame"* — and the
+  discriminator it proposed was to relaunch with a single board window. Both
+  candidates are **Board-destination** mechanisms with no dependence on which
+  view mode a *collection* is in, so neither can produce a warning that stops
+  when the Library switches to List. The proposed step would have returned
+  "still warns" and taught nothing.
+
+  What survives: the app has exactly **two** geometry actions and both are in
+  the icons grids — the per-card `CGRect` through `IconGridSelection.stableFrame`
+  (old, and the subject of that warning's four previous corrections) and the
+  container `CGFloat` through `IconGridWidthBox.quantized` (new on 7 Aug, when
+  the column count stopped being a constant). The next step is to disable one,
+  relaunch, and disable the other — two builds, decisive.
+
+  **The focus warning is most likely the geometry cycle's shadow rather than a
+  second bug**: a cycling geometry action means layout runs repeatedly inside one
+  frame, and `.focusedSceneValue` is re-applied on every pass. Recorded as the
+  reading rather than the finding — it is an inference from one correlation, and
+  the two-build step above is what would confirm it. Of the four focused-scene
+  values now published, the two the View Options pass added are the only ones
+  carrying an `Equatable` payload, so they are the least able to cause this.
+
+  Still unscheduled: redundant work, not a correctness bug — both settle.
 - **The chevron's gap rests on `EmptyView` not being laid out.** The one thing in
   D45′ written from reasoning rather than read off a compiler. It compiles either
   way, so ⌘U cannot answer it; the *Collapsible, No Actions* row in the **Actions
