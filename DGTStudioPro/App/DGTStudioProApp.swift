@@ -316,6 +316,22 @@ internal struct DGTStudioProApp: App {
         // chose a window to protect.
         .windowLevel(.floating)
 
+        // D73′ (8 Aug 2026) — the analysis as data: every ply's evaluation in
+        // a table, opened from the button beside the magnifier in the Library
+        // inspector's Evaluation header. Keyed on `AnalysisDataRequest`, the
+        // fourth wrapper in the `openWindow(value:)` family — this scene has a
+        // subject, so it pays the wrapper the singleton scenes sidestep.
+        //
+        // Deliberately *not* `.windowLevel(.floating)`, unlike the graph one
+        // block up: a table is scrolled and text-selected, so it takes focus,
+        // and the Get Info argument applies.
+        WindowGroup("Analysis Data", for: AnalysisDataRequest.self) { $request in
+            AnalysisDataWindow(request: request)
+                .fullScreenAuxiliary()
+        }
+        .modelContainer(sharedContainer)
+        .defaultSize(width: 460, height: 520)
+
         // M10 — Get Info. One group for all three subjects (a game, the
         // recording, a player), which is what makes two info windows tab with
         // *each other* rather than with the boards: macOS tabs within a group,

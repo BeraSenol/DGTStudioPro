@@ -103,11 +103,11 @@ internal struct AnalysisQueueStatusWindowView: View {
         guard queue.isActive else {
             return queue.hasFailures ? "Analysis finished with errors" : "Analysis finished"
         }
-        // "Analyzing 3 of 18" — the running game is completed + 1. Clamped for
-        // the transient lap between one game finishing and the next being
-        // promoted.
-        let position = min(queue.completedCount + 1, queue.totalCount)
-        return "Analyzing \(position) of \(queue.totalCount)"
+        // "Analyzing 3 of 18" — `batchPosition` is the one spelling of that
+        // numerator, shared with the Library toolbar's "3/18" so the two
+        // surfaces cannot disagree by one the way they used to (8 Aug 2026;
+        // the arithmetic and its clamp moved to the queue with the reason).
+        return "Analyzing \(queue.batchPosition) of \(queue.totalCount)"
     }
 
     /// "4:12 elapsed · about 9 min left" — and only the half that is knowable.
@@ -153,7 +153,12 @@ internal struct AnalysisQueueStatusWindowView: View {
 
             HStack(alignment: .top, spacing: 24) {
                 searchFact("Move", moveLabel(search))
-                searchFact("Depth", search.progress.depth.map(String.init) ?? RosterSummary.displayUnknown)
+                // The *target*, not the live iteration (8 Aug 2026, by
+                // request): `progress.depth` climbs 1→18 inside every ply and
+                // resets at the next, so the readout spun constantly and read
+                // as the depth *setting* bouncing. The argument and the kept
+                // live figure are at `Search.targetDepth`.
+                searchFact("Depth", "\(search.targetDepth)")
                 // Through `EvaluationBarReading` rather than formatted here, so
                 // this window and the board's bar cannot disagree about what
                 // "+1.3" or "#4" looks like — D33′ pinned that grammar and

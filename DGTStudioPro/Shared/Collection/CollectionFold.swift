@@ -15,11 +15,14 @@ import SwiftData
 ///     the fold ran at pointer rate over a library that had not changed.
 ///   - **A search keystroke** invalidates the body, and both destinations
 ///     narrow *downstream* of the fold, so the fold ran per character.
-///   - **A batch analysis** calls `modelContext.save()` once per ply
-///     (`GameAnalysisDriver`), and a save invalidates every `@Query` in the
-///     app — so an 80-ply game re-folded the whole Library 80 times if Players
-///     happened to be open. That was the sharpest of the three, because it is
-///     the one where the app is already busy.
+///   - **A batch analysis** called `modelContext.save()` once per ply
+///     (`GameAnalysisDriver`, as it stood), and a save invalidates every
+///     `@Query` in the app — so an 80-ply game re-folded the whole Library 80
+///     times if Players happened to be open. That was the sharpest of the
+///     three, because it is the one where the app is already busy. D71′ has
+///     since moved the save to once per exit, which retires the multiplier at
+///     its source; this key remains what makes the fold indifferent to save
+///     cadence at all, whichever way that decision moves next.
 ///
 /// **What the key deliberately does not cover, which is the whole point.**
 /// `evaluations` is absent. It is not an input to either fold — `PlayerStats`

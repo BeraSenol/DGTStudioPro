@@ -229,6 +229,21 @@ struct AnalysisGlyphStateTests {
         #expect(AnalysisGlyph.name(.analyzing) == "gear")
     }
 
+    /// The badge vocabulary (D72′ postscript): plain marks, distinct, and the
+    /// running state is the **same bare gear** as the action vocabulary — one
+    /// silhouette for "the engine has this one" everywhere it appears, which
+    /// is the sentence that keeps two vocabularies from being two opinions.
+    @Test("Badge symbols are plain marks sharing only the running gear")
+    func badgeSymbolsArePlainMarksSharingTheGear() {
+        let names = [AnalysisGlyph.State.unanalyzed, .analyzing, .analyzed]
+            .map(AnalysisGlyph.badgeName)
+
+        #expect(Set(names).count == names.count)
+        #expect(AnalysisGlyph.badgeName(.analyzing) == AnalysisGlyph.name(.analyzing))
+        #expect(!AnalysisGlyph.badgeName(.analyzed).contains("gear"))
+        #expect(!AnalysisGlyph.badgeName(.unanalyzed).contains("gear"))
+    }
+
     /// The badgeless state takes no tint, and the two verdicts do. Asserted as
     /// nil-ness rather than against `.red` / `.green` so the colours stay a
     /// design choice; what is pinned is that a running pass reports no verdict,
@@ -246,5 +261,75 @@ struct AnalysisGlyphStateTests {
             .map(AnalysisGlyph.actionTitle)
 
         #expect(Set(titles).count == titles.count)
+    }
+
+    /// The badge's passive vocabulary, distinct per state like the action
+    /// titles — and "Not Analyzed" verbatim, because it is the chip
+    /// (`LibrarySearchToken.unanalyzed`) that finds the games wearing it, and
+    /// a badge and its filter drifting apart is two names for one state.
+    @Test("Every state has its own status label, and the negative matches the chip")
+    func statusLabelsAreDistinctAndChipAligned() {
+        let labels = [AnalysisGlyph.State.unanalyzed, .analyzing, .analyzed]
+            .map(AnalysisGlyph.statusLabel)
+
+        #expect(Set(labels).count == labels.count)
+        #expect(AnalysisGlyph.statusLabel(.unanalyzed) == LibrarySearchToken.unanalyzed.displayName)
+    }
+
+    // MARK: The Projection Overload (D72′)
+
+    /// The row badges read `state(of:isAnalyzed:runningID:)`, with
+    /// `isAnalyzed` off the memoized `GameRecord` projection instead of the
+    /// model — so the two overloads answering identically is the whole claim,
+    /// and it is checked across every combination that could split them:
+    /// scored and unscored arrays, running and not.
+    ///
+    /// Driven through `\.gameRecord` — the projection the destinations
+    /// actually feed the badges — rather than hand-passed booleans, so this
+    /// fails if `hasAnalysis` and `hasScoredPly` ever stop being one spelling.
+    @Test("The projection overload agrees with the model overload")
+    func theProjectionOverloadAgreesWithTheModelOverload() throws {
+        let context = try Self.makeContext()
+        let games = [
+            Self.game(in: context, named: "None", scored: 0),
+            Self.game(in: context, named: "Partial", scored: 1),
+            Self.game(in: context, named: "Full", scored: 3),
+        ]
+
+        for game in games {
+            for running in [nil, game.persistentModelID, games[0].persistentModelID] {
+                #expect(
+                    AnalysisGlyph.state(
+                        of: game,
+                        isAnalyzed: game.gameRecord.hasAnalysis,
+                        runningID: running
+                    )
+                    == AnalysisGlyph.state(of: [game], runningID: running)
+                )
+            }
+        }
+    }
+
+    /// Running wins in the projection overload too, whatever the projected
+    /// flag claims — the badge on a card mid-pass shows the gear, not the
+    /// verdict the half-written array would justify.
+    @Test("Running beats the projected flag in the per-row overload")
+    func runningBeatsTheProjectedFlag() throws {
+        let context = try Self.makeContext()
+        let pgn = Self.game(in: context, named: "In Flight", scored: 2)
+
+        #expect(
+            AnalysisGlyph.state(
+                of: pgn,
+                isAnalyzed: true,
+                runningID: pgn.persistentModelID
+            ) == .analyzing
+        )
+        #expect(
+            AnalysisGlyph.state(of: pgn, isAnalyzed: true, runningID: nil) == .analyzed
+        )
+        #expect(
+            AnalysisGlyph.state(of: pgn, isAnalyzed: false, runningID: nil) == .unanalyzed
+        )
     }
 }

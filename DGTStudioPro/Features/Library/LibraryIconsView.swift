@@ -56,6 +56,12 @@ internal struct LibraryIconsView: View {
 
     // MARK: Stored Properties
     let games: [PGN]
+    /// Which of `games` count as analyzed, read off the destination's memoized
+    /// projection (D72′) — never off the models, so a card render costs no
+    /// blob decode. The set is rebuilt per render from records already in the
+    /// fold cache; membership here plus the ambient running id is the whole
+    /// input to every card's badge.
+    let analyzedIDs: Set<PGN.ID>
     @Binding var selectedPGNs: Set<PGN.ID>
     /// Takes the set since D56′ — see `open(_:)` for the rule this grid
     /// applies before calling it.
@@ -67,6 +73,11 @@ internal struct LibraryIconsView: View {
     // MARK: Private Properties
 
     @Environment(CollectionViewOptions.self) private var options
+
+    /// Ambient, written once by `LibraryDestination` — the badge needs it to
+    /// tell "analyzed" from "on the engine right now". Argued at the
+    /// environment value's declaration; nil in the previews, which is honest.
+    @Environment(\.analysisRunningGameID) private var runningAnalysisID
 
     /// The container width, mirrored out of the `GeometryReader` so the arrow
     /// keys can ask the same question the layout asked.
@@ -107,6 +118,11 @@ internal struct LibraryIconsView: View {
                             LibraryGameCardView(
                                 game: game,
                                 glyphWidth: options.glyphWidth,
+                                analysisState: AnalysisGlyph.state(
+                                    of: game,
+                                    isAnalyzed: analyzedIDs.contains(game.id),
+                                    runningID: runningAnalysisID
+                                ),
                                 isSelected: selectedPGNs.contains(game.id),
                                 onSelect:  { select(game) },
                                 onOpen:    { open(game) },
@@ -309,12 +325,16 @@ private func iconsPreviewGames() -> [PGN] {
 
 /// Seven cards over six columns: a second, partial row, so the down-arrow
 /// overflow rule and the wrap at the row boundary are both exercisable in
-/// the canvas (click a card, then arrow around).
+/// the canvas (click a card, then arrow around). The first three carry the
+/// analyzed badge so both verdicts render in one canvas (D72′).
 #Preview("With Games") {
     @Previewable @State var selection: Set<PGN.ID> = []
 
+    let games = iconsPreviewGames()
+
     LibraryIconsView(
-        games: iconsPreviewGames(),
+        games: games,
+        analyzedIDs: Set(games.prefix(3).map(\.id)),
         selectedPGNs: $selection,
         onOpen: { _ in },
         onAnalyze: { _ in },
@@ -331,6 +351,7 @@ private func iconsPreviewGames() -> [PGN] {
 
     LibraryIconsView(
         games: [],
+        analyzedIDs: [],
         selectedPGNs: $selection,
         onOpen: { _ in },
         onAnalyze: { _ in },

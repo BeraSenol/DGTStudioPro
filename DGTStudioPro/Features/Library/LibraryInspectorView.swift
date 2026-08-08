@@ -191,6 +191,14 @@ private struct LoadedSection: View {
             .frame(height: 100)
             .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
         } actions: {
+            // Two controls in the slot — the Library PGN header's precedent
+            // (chevron + copy), and `InspectorSectionHeader.actionsInset`
+            // spaces the pair without either knowing about the other. Data
+            // before the magnifier so the *graph* control stays the one
+            // nearest the chevron in both Evaluation sections — the Board's
+            // header has only the magnifier, and a reader's hand learns one
+            // position for it.
+            AnalysisDataButton(gameID: pgn.persistentModelID)
             EvaluationMagnifierButton(gameID: pgn.persistentModelID)
         }
     }

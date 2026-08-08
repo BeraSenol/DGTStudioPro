@@ -181,6 +181,19 @@ internal actor StockfishEngine {
         
         let proc = Process()
         proc.executableURL = binaryURL
+        // `.utility`, so the search never competes with the UI at the UI's
+        // own priority (8 Aug 2026). A `Process` inherits the parent's QoS,
+        // and this parent is a foreground app — so with Threads raised in
+        // Settings, Stockfish's worker threads sat level with the main thread
+        // and every render during a batch fought a saturated core for its
+        // slice. Utility is the documented tier for user-initiated work
+        // nobody is waiting on synchronously, which is exactly what a batch
+        // is; the throughput cost on Apple silicon is small (utility still
+        // reaches performance cores when they are idle) and the UI stops
+        // paying for it. Deliberately not `.background` — that tier is
+        // eligible for aggressive throttling, and an overnight batch on a
+        // throttled engine is a batch that quietly took three times as long.
+        proc.qualityOfService = .utility
         let stdin = Pipe()
         let stdout = Pipe()
         let stderr = Pipe()  // discarded

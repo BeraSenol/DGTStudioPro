@@ -22,6 +22,20 @@ internal struct LibraryGameCardView: View {
     /// passes nothing renders exactly as before.
     var glyphWidth: CGFloat = 60
 
+    /// The analysis badge's subject (D72′): green check analyzed, red x not,
+    /// spinning gear while the engine has it — bottom-trailing on the sheet,
+    /// every host, so the icons grid and the gallery filmstrip cannot answer
+    /// "analyzed?" differently.
+    ///
+    /// A `var` with a default for `glyphWidth`'s stated reason — a `let` with
+    /// an initial value leaves the memberwise init entirely — and the default
+    /// is fixture ergonomics, not a hiding place: both production hosts pass
+    /// the destination's memoized projection through
+    /// `AnalysisGlyph.state(of:isAnalyzed:runningID:)`, never the model, so a
+    /// card render costs no blob decode (the D70′ discipline, held at the
+    /// leaf).
+    var analysisState: AnalysisGlyph.State = .unanalyzed
+
     let isSelected: Bool
     let onSelect: () -> Void
     let onOpen: () -> Void
@@ -135,12 +149,20 @@ internal struct LibraryGameCardView: View {
             // a *wrong* number and a small one is only a small one.
                 .minimumScaleFactor(0.6)
                 .frame(maxWidth: glyphWidth * (42.0 / 60.0))
-                .offset(x: glyphWidth * (2.0 / 60.0), y: glyphWidth * (4.0 / 60.0))
+                .offset(x: glyphWidth * (3.0 / 60.0), y: glyphWidth * (4.0 / 60.0))
         }
         .padding()
         .background {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(.secondary.opacity(isSelected ? 0.15 : 0))
+        }
+        // Bottom-trailing of the sheet, Finder's badge corner (D72′). On the
+        // icon block rather than the whole card so the name and date stay
+        // clear of it, and inset by the block's own padding so the chip
+        // overlaps the paper's corner rather than floating in the gutter.
+        .overlay(alignment: .bottomTrailing) {
+            AnalysisStatusBadge(state: analysisState)
+                .padding(10)
         }
     }
     
@@ -273,10 +295,14 @@ private func sampleGame(
     .modelContainer(for: PGN.self, inMemory: true)
 }
 
+/// Also the badge's card-level witness (D72′): all three states beside the
+/// selection pair, because the badge has to read over the sheet in both
+/// selection tints and the spinning state is only answerable on a canvas.
 #Preview("Selection States") {
     HStack(spacing: 12) {
         LibraryGameCardView(
             game: sampleGame(),
+            analysisState: .unanalyzed,
             isSelected: false,
             onSelect: {},
             onOpen: {},
@@ -286,7 +312,18 @@ private func sampleGame(
         )
         LibraryGameCardView(
             game: sampleGame(),
+            analysisState: .analyzed,
             isSelected: true,
+            onSelect: {},
+            onOpen: {},
+            onAnalyze: {},
+            onExport: {},
+            onDelete: {}
+        )
+        LibraryGameCardView(
+            game: sampleGame(),
+            analysisState: .analyzing,
+            isSelected: false,
             onSelect: {},
             onOpen: {},
             onAnalyze: {},
@@ -295,7 +332,7 @@ private func sampleGame(
         )
     }
     .padding()
-    .frame(width: 360)
+    .frame(width: 540)
     .modelContainer(for: PGN.self, inMemory: true)
 }
 

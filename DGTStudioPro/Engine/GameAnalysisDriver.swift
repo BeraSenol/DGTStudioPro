@@ -4,14 +4,21 @@ import SwiftData
 
 /// Drives a full-game engine pass: walks each ply of a ``PGN``, asks Stockfish
 /// for an evaluation at the requested depth, records **one** evaluation per ply
-/// into ``PGN/evaluations``, and saves once per ply so partial progress survives
-/// a crash.
+/// into ``PGN/evaluations``, and saves **once per exit** — game done, pass
+/// cancelled, or any failure — never per ply (D71′).
 ///
-/// That sentence said "streams progressive-deepening results … so the graph
-/// animates as the search deepens" until 6 Aug 2026, and it was an accurate
-/// description of the thing making the app unusable during a batch. The walk
-/// now buffers the stream and writes its last value; the argument, and what it
-/// costs, is at the write site in ``runAnalysis(engine:pgn:depth:modelContext:)``.
+/// This header has now been corrected twice in the same direction, and the
+/// trajectory is the finding. It said "streams progressive-deepening results …
+/// so the graph animates" until 6 Aug 2026, when the per-*emission* model
+/// write was making the app unusable during a batch; the write moved to once
+/// per ply. It then said "saves once per ply so partial progress survives a
+/// crash" until 8 Aug 2026, when the per-*ply* `save()` turned out to be the
+/// remaining stutter: a save invalidates every `@Query` in every open window,
+/// so an 80-ply game re-rendered the whole app eighty times — the exact
+/// multiplier D70′ memoized the folds against, still paid by the query fetch,
+/// the sort and the table diff the memo sits under. The argument, and what the
+/// coarser cadence costs, is at the save site in
+/// ``runAnalysis(engine:pgn:depth:modelContext:)``.
 ///
 /// `@MainActor` so all SwiftData mutation happens on the context's actor — the
 /// engine's `AsyncStream` bridges back at each emission, while the subprocess
@@ -65,6 +72,19 @@ internal final class GameAnalysisDriver {
         /// The move whose resulting position is being searched, in SAN.
         internal let san: String
         internal let progress: EngineProgress
+
+        /// The depth this pass was asked for — the `18` in `go depth 18`.
+        ///
+        /// **What the window's Depth fact shows since 8 Aug 2026, by
+        /// request.** It used to show `progress.depth`, the iteration the
+        /// last info line came from — which climbs 1→18 inside every ply and
+        /// resets at the next, so the readout spun continuously and read as
+        /// the *setting* bouncing rather than as a search deepening. The
+        /// target is the fact that holds still, and it is the one a reader
+        /// can act on (it is the Settings slider). The per-line reached depth
+        /// stays parsed and carried on `progress` for anything that ever
+        /// wants the live figure back.
+        internal let targetDepth: Int
     }
 
     internal private(set) var search: Search?
@@ -212,8 +232,9 @@ internal final class GameAnalysisDriver {
         // walk that stops at an unparseable ply still leaves the game with
         // its opening — the half of "analysis" that never needed an engine
         // shouldn't be hostage to the half that does. Save-free by the
-        // store's contract; the per-ply save below carries it, and the
-        // Library backfill is the net for a pass that dies before ply one.
+        // store's contract; every D71′ exit save carries it (each failure
+        // path persists before it returns), and the Library backfill is the
+        // net for a pass that dies before any exit runs.
         //
         // `warmed()`, not the synchronous default: this method is already
         // async, and a batch started from a tab that never showed the
@@ -226,17 +247,6 @@ internal final class GameAnalysisDriver {
 
         var state = GameState.starting
         let total = pgn.moves.count
-
-        // How many per-ply saves in a row may fail before the pass stops
-        // pretending. One failed save is recoverable — the next save
-        // persists the whole context, so a transient miss costs nothing,
-        // which is why a single failure must *not* end the pass. Three in a
-        // row is systemic (full disk, wedged store), and riding that out
-        // used to land the pass on `.done` with a graph the in-memory model
-        // renders and nothing persisted — a green result that vanished at
-        // relaunch, with Console the only witness (1 Aug review, E1).
-        let saveFailureTolerance = 3
-        var consecutiveSaveFailures = 0
 
         for (index, san) in pgn.moves.enumerated() {
             if Task.isCancelled { break }
@@ -257,9 +267,17 @@ internal final class GameAnalysisDriver {
                 // unparseable ply (M1 item 9b). The controller's outcome
                 // mapping always claimed failures are recorded — now the
                 // driver actually hands it one.
+                //
+                // The save first, because the message claims the earlier
+                // evaluations were kept and D71′ means nothing has been
+                // persisted yet — a claim about the store is checked against
+                // the store before it is made.
+                let saved = persist(modelContext, of: pgn)
                 status = .failed(
                     message: "\(Self.moveLabel(plyIndex: index, san: san)) won't parse, "
-                    + "analysis stopped there; earlier evaluations were kept."
+                    + "analysis stopped there"
+                    + (saved ? "; earlier evaluations were kept."
+                             : ", and the library refused the save — earlier evaluations were lost.")
                 )
                 return
             }
@@ -309,21 +327,23 @@ internal final class GameAnalysisDriver {
                     plyIndex: index,
                     totalPlies: total,
                     san: san,
-                    progress: progress
+                    progress: progress,
+                    targetDepth: depth
                 )
             }
 
             // If we exited the inner loop via cancellation, skip the write and
-            // the progress/save updates — the outer loop will pick up the
-            // cancellation on its next iteration and we don't want a
-            // brief "still analyzing" flicker on the way out.
+            // the progress update — the cancellation exit below persists what
+            // stands, and we don't want a brief "still analyzing" flicker on
+            // the way out.
             if Task.isCancelled { break }
 
             // Nil only when the stream yielded nothing at all, which means the
             // engine died mid-ply; the `isRunning` guard below is what reports
             // that. Leaving the slot nil rather than writing a placeholder
             // keeps `evaluations` saying "this ply was never scored", which is
-            // what Get Info's "48 of 58" row reads.
+            // what the Analysis Data window's em-dash rows read (D73′ — Get
+            // Info's "48 of 58" row read it until 8 Aug 2026).
             if let deepest { pgn.evaluations[index] = deepest }
 
             // A dead engine finishes every remaining stream instantly, so
@@ -334,9 +354,13 @@ internal final class GameAnalysisDriver {
                 Self.logger?.error(
                     "Engine died mid-pass at ply \(index + 1)/\(total) for pgn='\(pgn.name, privacy: .public)'"
                 )
+                // Save before the claim, the SAN-failure exit's rule (D71′).
+                let saved = persist(modelContext, of: pgn)
                 status = .failed(
                     message: "The engine quit at \(Self.moveLabel(plyIndex: index, san: san)) "
-                    + "(ply \(index + 1) of \(total)); evaluations up to there were kept."
+                    + "(ply \(index + 1) of \(total))"
+                    + (saved ? "; evaluations up to there were kept."
+                             : ", and the library refused the save — evaluations were lost.")
                 )
                 return
             }
@@ -344,38 +368,78 @@ internal final class GameAnalysisDriver {
             status = .analyzing(
                 progress: Double(index + 1) / Double(max(total, 1))
             )
-            do {
-                try modelContext.save()
-                consecutiveSaveFailures = 0
-            } catch {
-                consecutiveSaveFailures += 1
-                Self.logger?.error(
-                    "Evaluation save failed at ply \(index + 1) (\(consecutiveSaveFailures) in a row): \(error.localizedDescription, privacy: .public)"
-                )
-                if consecutiveSaveFailures >= saveFailureTolerance {
-                    // The message follows the walk's other exits: name where
-                    // it stopped, say what was kept. "Up to the last
-                    // successful save", not "up to here" — evaluations since
-                    // that save exist only in memory, which is the whole
-                    // reason this exit exists.
-                    status = .failed(
-                        message: "The library stopped accepting saves at "
-                        + "\(Self.moveLabel(plyIndex: index, san: san)) "
-                        + "(\(error.localizedDescription)); evaluations up to "
-                        + "the last successful save were kept."
-                    )
-                    return
-                }
-            }
+
+            // **No save here, and the absence is the decision (D71′).** The
+            // per-ply `modelContext.save()` this loop carried was the last
+            // per-ply fan-out in the app: a save invalidates every `@Query`
+            // in every open window, so each of an 80-ply game's plies re-ran
+            // the Library's fetch, its sort and its table diff — and Players',
+            // and any Get Info's — with the fold memo (D70′) only softening
+            // the blow. What the cadence bought was crash-durability of a
+            // *partial* pass, and a partial pass is worth nothing durable:
+            // the walk resets `evaluations` before it starts, so a crash's
+            // partials would be destroyed by the re-run anyway — while making
+            // the game read *analyzed* to every surface in between (D67′'s
+            // exact false state, persisted on purpose). One save per exit
+            // keeps every promise the per-ply save actually delivered.
+            //
+            // What is genuinely given up: the in-flight game's evaluations
+            // now reach disk at its end, so a *hard crash* mid-game loses
+            // that one game's partials — which the next pass would have
+            // discarded regardless. Open windows lose nothing: an observed
+            // model's in-memory mutations still re-render its own surfaces
+            // (the inspector's filling graph is untouched); what stops is
+            // every *other* window re-fetching per ply.
         }
-        
+
+        // The three ordinary exits, each persisting what the walk wrote:
+        // cancellation keeps its recorded promise ("evaluations recorded
+        // before the stop were kept" — the queue window's cancelled row), and
+        // a completed pass lands `.done` only if the store took the result. A
+        // failed save on the done path is `.failed`, not `.done`-with-Console:
+        // a green result that vanishes at relaunch is the exact E1 shape the
+        // old tolerance exit existed for (1 Aug review), kept under the new
+        // cadence.
         if Task.isCancelled {
+            if !persist(modelContext, of: pgn) {
+                Self.logger?.error(
+                    "Cancelled pass could not persist its partial evaluations for pgn='\(pgn.name, privacy: .public)' — the cancelled row's 'were kept' does not hold this once"
+                )
+            }
             Self.logger?.info("Analysis cancelled: pgn='\(pgn.name, privacy: .public)'")
-        } else {
-            Self.logger?.info("Analysis complete: pgn='\(pgn.name, privacy: .public)' plies=\(total)")
+            status = .idle
+            return
         }
-        
-        status = Task.isCancelled ? .idle : .done
+
+        Self.logger?.info("Analysis complete: pgn='\(pgn.name, privacy: .public)' plies=\(total)")
+        if persist(modelContext, of: pgn) {
+            status = .done
+        } else {
+            status = .failed(
+                message: "Analysis finished, but the library refused the save; "
+                + "the evaluations were not stored and will be gone after a relaunch."
+            )
+        }
+    }
+
+    /// The one save (D71′): everything the pass wrote — the evaluations, and
+    /// the classification stamped before ply one — in a single transaction at
+    /// an exit. Returns whether it landed; the caller owns what that means,
+    /// because the honest message differs per exit.
+    ///
+    /// Failure is logged here so no exit can forget to, per the grammar's
+    /// rule 7 — and the log names the game, because by the time a reader sees
+    /// it the queue has moved on.
+    private func persist(_ modelContext: ModelContext, of pgn: PGN) -> Bool {
+        do {
+            try modelContext.save()
+            return true
+        } catch {
+            Self.logger?.error(
+                "Evaluation save failed for pgn='\(pgn.name, privacy: .public)': \(error.localizedDescription, privacy: .public) — in-memory results still render until relaunch"
+            )
+            return false
+        }
     }
 
     /// The user-facing name of a ply, in chess notation: ply index 2 is

@@ -92,9 +92,12 @@ internal struct LibraryDestination: View {
     /// **The signal is the queue's own counters, never the array.** Asking
     /// `evaluations` whether anything changed is the work being avoided, so the
     /// key reads what the queue already knows: which game is running, and how
-    /// many have drained. Both move once per *game*; the driver's
-    /// `modelContext.save()` moves once per *ply*. That ratio is the entire
-    /// win — an 80-ply pass reprojects once instead of eighty times.
+    /// many have drained. Both move once per *game* — and since D71′ so does
+    /// the driver's `modelContext.save()`, which used to move once per *ply*
+    /// and was the ratio this key was built against. The key still earns its
+    /// analysis half: it is what lets the *fold* skip on the per-game saves
+    /// and every other invalidation (drags, keystrokes) too, and it is the
+    /// belt to D71′'s braces if a per-ply write ever comes back.
     ///
     /// **The behaviour change this ships with, named rather than discovered.**
     /// The backlog count used to drop the moment a game's first ply was scored,
@@ -550,6 +553,13 @@ internal struct LibraryDestination: View {
         let narrowed = narrowedPairs
         let games = narrowed.map { $0.game }.sorted(using: sortOrder.wrappedValue)
         let unanalyzedCount = narrowed.count { !$0.record.hasAnalysis }
+        // The row badges' input (D72′): membership built once per render off
+        // the same records the subtitle just counted, so every mode's badge
+        // reads the memoized projection rather than decoding `evaluations`
+        // per row — one spelling of "analyzed?" from one walk, four surfaces.
+        let analyzedIDs = Set(
+            narrowed.lazy.filter { $0.record.hasAnalysis }.map { $0.game.id }
+        )
         // Typed explicitly rather than left to a ternary's inference, and
         // hoisted out of the modifier so the nil arm reads as the decision it
         // is: no games means no Edit ▸ Select All, disabled by the system.
@@ -579,7 +589,7 @@ internal struct LibraryDestination: View {
                             .accessibilityIdentifier(AccessibilityID.libraryEmptyState)
                     }
                 } else {
-                    modeView(games: games)
+                    modeView(games: games, analyzedIDs: analyzedIDs)
                 }
             }
             .accessibilityIdentifier(AccessibilityID.libraryContent)
@@ -731,11 +741,12 @@ internal struct LibraryDestination: View {
     
     // MARK: Instance Methods
     @ViewBuilder
-    private func modeView(games: [PGN]) -> some View {
+    private func modeView(games: [PGN], analyzedIDs: Set<PGN.ID>) -> some View {
         switch viewMode {
         case .icons:
             LibraryIconsView(
                 games: games,
+                analyzedIDs: analyzedIDs,
                 selectedPGNs: $selectedPGNs,
                 onOpen:    openGames,
                 onAnalyze: requestAnalysis,
@@ -746,6 +757,7 @@ internal struct LibraryDestination: View {
         case .list:
             LibraryListView(
                 games: games,
+                analyzedIDs: analyzedIDs,
                 selectedPGNs: $selectedPGNs,
                 onOpen:       openGames,
                 onAnalyzeIDs: { requestAnalysis(ids: $0) },
@@ -757,6 +769,7 @@ internal struct LibraryDestination: View {
         case .columns:
             LibraryColumnsView(
                 games: games,
+                analyzedIDs: analyzedIDs,
                 selectedPGNs: $selectedPGNs,
                 boardStyle: boardStyle,
                 onOpen:    openGames,
@@ -769,6 +782,7 @@ internal struct LibraryDestination: View {
         case .gallery:
             LibraryGalleryView(
                 games: games,
+                analyzedIDs: analyzedIDs,
                 selectedPGNs: $selectedPGNs,
                 boardStyle: boardStyle,
                 onOpen:    openGames,
@@ -1159,7 +1173,11 @@ internal struct LibraryDestination: View {
             } else {
                 Image(systemName: "exclamationmark.triangle")
             }
-            Text("\(analysisQueue.queue.completedCount)/\(analysisQueue.queue.totalCount)")
+            // `batchPosition`, not `completedCount` (8 Aug 2026): this read
+            // "0/110" while the queue window said "Analyzing 1 of 110" — two
+            // spellings of one numerator, on screen at once. The queue owns
+            // the arithmetic now; both surfaces read it.
+            Text("\(analysisQueue.queue.batchPosition)/\(analysisQueue.queue.totalCount)")
                 .monospacedDigit()
         }
     }

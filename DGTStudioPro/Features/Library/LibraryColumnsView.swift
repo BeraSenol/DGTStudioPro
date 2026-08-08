@@ -24,6 +24,9 @@ internal struct LibraryColumnsView: View {
 
     // MARK: Stored Properties
     internal let games: [PGN]
+    /// The row badges' input, off the destination's memoized projection —
+    /// see `LibraryIconsView.analyzedIDs` (D72′).
+    internal let analyzedIDs: Set<PGN.ID>
     @Binding internal var selectedPGNs: Set<PGN.ID>
     internal let boardStyle: BoardStyle
     /// Takes the set since D56′. Deliberately **not** adapted with a
@@ -177,7 +180,8 @@ internal struct LibraryColumnsView: View {
         }
     }
 
-    /// **Finder's row: one icon, one name, one line** (3 Aug 2026).
+    /// **Finder's row: one icon, one name, one line** (3 Aug 2026) — plus the
+    /// analysis glyph at the trailing edge since D72′.
     ///
     /// Was two lines carrying the date and the result as well. The argument
     /// for stripping them is the one the columns metaphor makes for itself:
@@ -192,18 +196,38 @@ internal struct LibraryColumnsView: View {
     /// has to fit "21/07/2026" and "1/2-1/2" side by side is a row that can
     /// live in a narrower column.
     ///
-    /// The icon is uniform, deliberately. Making it carry state — result, or
-    /// analysis — would be a third encoding of facts the detail pane already
-    /// states, and Finder's own list gets its plainness precisely from every
-    /// row of a kind looking identical.
+    /// The paragraph that stood here argued the icon stays uniform because
+    /// state on a row would be "a third encoding of facts the detail pane
+    /// already states". **Reversed by D72′, by request**, and the reversal is
+    /// narrower than it reads: the *leading* doc icon is still uniform, and
+    /// what the trailing glyph carries is the one fact the detail pane only
+    /// states for the selected game — a browser's whole job is the rows you
+    /// have not clicked yet, and "which of these still needs the engine" was
+    /// unanswerable from this mode without clicking every row in turn.
+    ///
+    /// The bare `AnalysisBadgeIcon`, not `AnalysisStatusBadge`: the chip earns
+    /// its material over the card's white sheet, while a table row's
+    /// background already contrasts in both appearances, and a chip per row
+    /// reads as buttons down the column. Same marks either way — plain check
+    /// and x, gear only while running (D72′ postscript) — which is the shared
+    /// part.
     private func row(for game: PGN) -> some View {
-        HStack(spacing: 6) {
+        let state = AnalysisGlyph.state(
+            of: game,
+            isAnalyzed: analyzedIDs.contains(game.id),
+            runningID: runningAnalysisID
+        )
+        return HStack(spacing: 6) {
             Image(systemName: "doc.text")
                 .foregroundStyle(.tint)
                 .imageScale(.medium)
             Text(game.name)
                 .lineLimit(1)
                 .truncationMode(.middle)
+            Spacer(minLength: 8)
+            AnalysisBadgeIcon(state: state)
+                .font(.caption)
+                .accessibilityLabel(AnalysisGlyph.statusLabel(state))
         }
         .padding(.vertical, 1)
         // The menu moved to the `Table` as a selection-typed one — see
@@ -312,13 +336,15 @@ internal struct LibraryColumnsView: View {
                 Button {
                     onAnalyze(game)
                 } label: {
-                    // The one-element array is the shared rule's singular
-                    // spelling (see `AnalysisGlyph.state(of:runningID:)`), not
-                    // an adaptation — asking the array directly is what let
-                    // this button claim "Analyzed" at ply one.
+                    // The projection overload since D72′ — the same input the
+                    // row badges read, so the button and the badge beside it
+                    // cannot disagree. (The one-element array form it replaced
+                    // was correct too; this one answers without decoding
+                    // `evaluations` on a pane that re-renders per selection.)
                     AnalysisLabel(
                         state: AnalysisGlyph.state(
-                            of: [game],
+                            of: game,
+                            isAnalyzed: analyzedIDs.contains(game.id),
                             runningID: runningAnalysisID
                         )
                     )
@@ -386,6 +412,7 @@ private func columnsPreviewGames() -> [PGN] {
 
     LibraryColumnsView(
         games: games,
+        analyzedIDs: Set(games.prefix(1).map(\.id)),
         selectedPGNs: $selection,
         boardStyle: .walnut,
         onOpen: { _ in },
@@ -409,6 +436,7 @@ private func columnsPreviewGames() -> [PGN] {
 
     LibraryColumnsView(
         games: games,
+        analyzedIDs: Set(games.prefix(1).map(\.id)),
         selectedPGNs: $selection,
         boardStyle: .walnut,
         onOpen: { _ in },
@@ -430,6 +458,7 @@ private func columnsPreviewGames() -> [PGN] {
 
     LibraryColumnsView(
         games: columnsPreviewGames(),
+        analyzedIDs: [],
         selectedPGNs: $selection,
         boardStyle: .rosewood,
         onOpen: { _ in },
@@ -448,6 +477,7 @@ private func columnsPreviewGames() -> [PGN] {
 
     LibraryColumnsView(
         games: [],
+        analyzedIDs: [],
         selectedPGNs: $selection,
         boardStyle: .walnut,
         onOpen: { _ in },

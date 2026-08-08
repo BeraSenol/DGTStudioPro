@@ -242,9 +242,61 @@ struct AnalysisQueueTests {
         queue.enqueue(["a", "b"])
         _ = queue.startNext()
         queue.finishCurrent(.cancelled)
-        
+
         #expect(queue.status(of: "a") == .finished(.cancelled))
         #expect(queue.completedCount == 1)
         #expect(!queue.hasFailures)
+    }
+
+    // MARK: Batch Position (8 Aug 2026)
+
+    /// The numerator both progress surfaces share. The defect this pins: the
+    /// window said "Analyzing 1 of 110" while the toolbar said "0/110" —
+    /// `completedCount + 1` against `completedCount`, two spellings of one
+    /// number on screen at once. A batch on its first game is on game **1**.
+    @Test func batchPositionIsOneBasedWhileActive() {
+        var queue = AnalysisQueue<String>()
+        queue.enqueue(["a", "b", "c"])
+        _ = queue.startNext()
+
+        #expect(queue.batchPosition == 1)
+
+        queue.finishCurrent(.done)
+        _ = queue.startNext()
+
+        #expect(queue.batchPosition == 2)
+    }
+
+    /// The transient lap between one game finishing and the next being
+    /// promoted: everything is completed, nothing is running yet, and the
+    /// clamp keeps the numerator from claiming a game past the total.
+    @Test func batchPositionClampsBetweenGames() {
+        var queue = AnalysisQueue<String>()
+        queue.enqueue(["a", "b"])
+        _ = queue.startNext()
+        queue.finishCurrent(.done)
+        _ = queue.startNext()
+        queue.finishCurrent(.done)
+        // Line empty, nothing running — but re-enqueue mid-drain is the lap
+        // the clamp exists for; simulate it by extending a live batch.
+        queue.enqueue(["c"])
+
+        #expect(queue.isActive)
+        #expect(queue.batchPosition <= queue.totalCount)
+    }
+
+    /// Drained, the position settles on the completed count — "5/5" beside
+    /// "Analysis finished", never a claim about a game that does not exist.
+    @Test func batchPositionSettlesOnCompletionWhenDrained() {
+        var queue = AnalysisQueue<String>()
+        queue.enqueue(["a", "b"])
+        _ = queue.startNext()
+        queue.finishCurrent(.done)
+        _ = queue.startNext()
+        queue.finishCurrent(.cancelled)
+
+        #expect(!queue.isActive)
+        #expect(queue.batchPosition == 2)
+        #expect(queue.batchPosition == queue.totalCount)
     }
 }

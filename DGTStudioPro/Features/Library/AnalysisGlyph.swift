@@ -44,8 +44,10 @@ internal enum AnalysisGlyph {
         /// On the engine now. Beats the array, which is mid-write underneath.
         case analyzing
         /// A pass left evaluations and nothing is running. Says nothing about
-        /// *coverage* — a skipped batch still reads analyzed; Get Info's
-        /// "48 of 58" is the row for that.
+        /// *coverage* — a skipped batch still reads analyzed; the Analysis
+        /// Data window's per-ply rows are where that shows (D73′ — this
+        /// pointed at Get Info's "48 of 58" row until that section was
+        /// removed 8 Aug 2026).
         case analyzed
     }
 
@@ -86,6 +88,32 @@ internal enum AnalysisGlyph {
         return !games.isEmpty && games.allSatisfy(isAnalyzed) ? .analyzed : .unanalyzed
     }
 
+    /// The per-row spelling, fed from the destination's memoized projection
+    /// (D72′) — `isAnalyzed` arrives as `GameRecord.hasAnalysis` rather than
+    /// being asked of the model here.
+    ///
+    /// **Exists so a row badge cannot cost a blob decode.** The array overload
+    /// above reads `hasScoredPly`, which decodes `evaluations`; right for a
+    /// context menu that opens once, wrong for a badge on every visible row of
+    /// every mode on every render — the exact per-row cost D70′ took out of
+    /// the folds, which the badges must not smuggle back in. The two overloads
+    /// answer identically because `GameRecord.hasAnalysis` is built *from*
+    /// `hasScoredPly` (`PGN+GameRecord`), so this is one spelling read off a
+    /// cache, not a second opinion — pinned by
+    /// `theProjectionOverloadAgreesWithTheModelOverload`.
+    ///
+    /// Running still wins, and the running comparison is still by identifier
+    /// against the caller's own subject — the membership trap on the array
+    /// overload does not arise, because a single game *is* its own subject.
+    internal static func state(
+        of game: PGN,
+        isAnalyzed: Bool,
+        runningID: PersistentIdentifier?
+    ) -> State {
+        if game.persistentModelID == runningID { return .analyzing }
+        return isAnalyzed ? .analyzed : .unanalyzed
+    }
+
     /// The symbol. Bare `gear` while analyzing: a badge is a *verdict* and an
     /// unfinished pass has not reached one. It also keeps the three states as
     /// three silhouettes, legible where motion and colour are dropped — menus
@@ -95,6 +123,29 @@ internal enum AnalysisGlyph {
         case .unanalyzed: "gear.badge.xmark"
         case .analyzing:  "gear"
         case .analyzed:   "gear.badge.checkmark"
+        }
+    }
+
+    /// The *corner-badge* symbol — plain verdict marks, no gear (D72′
+    /// postscript, 8 Aug 2026, by request: "only a green check mark or red x
+    /// in the icon view … only a gear icon during analysis").
+    ///
+    /// A second vocabulary beside `name(_:)`, which D72′ originally rejected —
+    /// overruled with a reason worth keeping: on a *card corner* the glyph is
+    /// pure status and the gear silhouette read as chrome around the mark that
+    /// mattered, while on the action surfaces (the Analyze column's button,
+    /// the chips, the menus) the gear **is** the meaning — "engine work" — and
+    /// stays. The gear is shared for `.analyzing` deliberately, so "the engine
+    /// has this one" is one silhouette everywhere it appears.
+    ///
+    /// The `.fill` circles are the queue window's own finished-row vocabulary
+    /// (`checkmark.circle.fill` green), so the badge agrees with the surface
+    /// that reports the same verdict in prose.
+    internal static func badgeName(_ state: State) -> String {
+        switch state {
+        case .unanalyzed: "xmark.circle.fill"
+        case .analyzing:  "gear"
+        case .analyzed:   "checkmark.circle.fill"
         }
     }
 
@@ -132,6 +183,22 @@ internal enum AnalysisGlyph {
         switch state {
         case .unanalyzed: "Analyze"
         case .analyzing:  "Analyzing…"
+        case .analyzed:   "Analyzed"
+        }
+    }
+
+    /// "Not Analyzed", "Analyzing", "Analyzed" — the *status* vocabulary, for
+    /// surfaces that state rather than act (the badge's accessibility label).
+    ///
+    /// Separate from `actionTitle` because the first word differs in kind:
+    /// "Analyze" is a verb on a control and reads wrong on a passive badge,
+    /// while "Not Analyzed" matches `LibrarySearchToken.unanalyzed`'s chip —
+    /// deliberately, so the badge and the filter that finds badged games speak
+    /// one phrase.
+    internal static func statusLabel(_ state: State) -> String {
+        switch state {
+        case .unanalyzed: "Not Analyzed"
+        case .analyzing:  "Analyzing"
         case .analyzed:   "Analyzed"
         }
     }
@@ -213,19 +280,37 @@ internal struct AnalysisLabel: View {
         }
     }
 
-    /// Branches on `tint`'s optional rather than a second switch on the state,
-    /// so one source decides both the colour and whether there is one.
-    ///
-    /// **The running gear takes no foreground style at all** — not `.primary`,
-    /// which would override a host supplying its own (a `.borderedProminent`
-    /// button, a selected row), and not a third palette hue on a state with no
-    /// verdict. Motion lives in `AnalyzingGear`, shared with the queue toolbar.
-    ///
-    /// **macOS ignores symbol effects in menu items**, so a menu's copy is a
-    /// still gear by construction — legible anyway, since the badgeless
-    /// silhouette already differs from both badged forms.
-    @ViewBuilder
     private var icon: some View {
+        AnalysisGlyphIcon(state: state)
+    }
+}
+
+// MARK: Icon
+
+/// The glyph alone — badge tinted where there is a badge, spinning where there
+/// is not. Extracted from `AnalysisLabel` when the D72′ row badges briefly
+/// drew it too; the postscript moved those to `AnalysisBadgeIcon`'s plain
+/// marks the same day, so this is back to one drawer. Kept extracted rather
+/// than re-inlined: the palette arrangement's layer order (badge first, gear
+/// second — see Rendering Notes) is the part that was got wrong once already,
+/// and a named home is what keeps a second drawer from re-learning it.
+///
+/// Branches on `tint`'s optional rather than a second switch on the state,
+/// so one source decides both the colour and whether there is one.
+///
+/// **The running gear takes no foreground style at all** — not `.primary`,
+/// which would override a host supplying its own (a `.borderedProminent`
+/// button, a selected row), and not a third palette hue on a state with no
+/// verdict. Motion lives in `AnalyzingGear`, shared with the queue toolbar.
+///
+/// **macOS ignores symbol effects in menu items**, so a menu's copy is a
+/// still gear by construction — legible anyway, since the badgeless
+/// silhouette already differs from both badged forms.
+internal struct AnalysisGlyphIcon: View {
+
+    internal let state: AnalysisGlyph.State
+
+    internal var body: some View {
         if let tint = AnalysisGlyph.tint(state) {
             Image(systemName: AnalysisGlyph.name(state))
                 .symbolRenderingMode(.palette)
@@ -233,6 +318,61 @@ internal struct AnalysisLabel: View {
         } else {
             AnalyzingGear()
         }
+    }
+}
+
+// MARK: Badge Icon
+
+/// The plain-mark icon behind both D72′ badge surfaces — the card corner
+/// (wrapped in `AnalysisStatusBadge`'s chip) and the columns row (bare).
+///
+/// One view so the two surfaces cannot pick different marks; the branch shape
+/// is `AnalysisGlyphIcon`'s. The `.fill` circles carry their own colour whole
+/// — no palette split, the mark is knocked out of the disc — and the running
+/// arm is the shared `AnalyzingGear`, taking no foreground style for that
+/// type's stated reason.
+internal struct AnalysisBadgeIcon: View {
+
+    internal let state: AnalysisGlyph.State
+
+    internal var body: some View {
+        if let tint = AnalysisGlyph.tint(state) {
+            Image(systemName: AnalysisGlyph.badgeName(state))
+                .foregroundStyle(tint)
+        } else {
+            AnalyzingGear()
+        }
+    }
+}
+
+// MARK: Status Badge
+
+/// The analysis state as a corner badge — bottom-trailing on the Library's
+/// cards (D72′, by request; plain marks per the postscript).
+///
+/// **A backing chip, and it is load-bearing rather than chrome.** The card's
+/// document sheet is explicitly `.white` in both appearances, and the running
+/// gear inherits `.foreground` — white in dark mode, which over that sheet is
+/// a glyph that vanishes in exactly the state worth watching. The material
+/// circle supplies its own adaptive contrast, so the icon needs no special
+/// casing per host — and it earns its keep for the verdicts too, holding the
+/// green and red discs off the white paper.
+///
+/// Status, not a control: it takes no action and swallows no clicks
+/// (`allowsHitTesting(false)`), so the card's own tap and menu targets are
+/// exactly what they were before it existed. The accessibility label speaks
+/// `statusLabel`'s vocabulary — the chip a search for the same state wears.
+internal struct AnalysisStatusBadge: View {
+
+    internal let state: AnalysisGlyph.State
+
+    internal var body: some View {
+        AnalysisBadgeIcon(state: state)
+            .font(.title3)
+//            .padding(4)
+            .background(.thinMaterial, in: Circle())
+            .allowsHitTesting(false)
+            .accessibilityLabel(AnalysisGlyph.statusLabel(state))
     }
 }
 
@@ -317,4 +457,28 @@ internal struct AnalysisLabel: View {
         }
     }
     .padding()
+}
+
+/// The badge over the card's worst case — a white document sheet — because
+/// that host is why the chip exists: the running gear inherits `.foreground`,
+/// which in dark mode is white on that white. All three states over the sheet
+/// and over plain window background; the check is that every glyph reads in
+/// both appearances, which only a canvas can answer.
+#Preview("Status Badge, Both Grounds") {
+    HStack(spacing: 24) {
+        ForEach([AnalysisGlyph.State.unanalyzed, .analyzing, .analyzed], id: \.self) { state in
+            VStack(spacing: 12) {
+                Image(systemName: "doc.fill")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .foregroundStyle(.white)
+                    .frame(width: 60)
+                    .overlay(alignment: .bottomTrailing) {
+                        AnalysisStatusBadge(state: state)
+                    }
+                AnalysisStatusBadge(state: state)
+            }
+        }
+    }
+    .padding(24)
 }

@@ -87,6 +87,26 @@ internal struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
     /// The batch size as the user sees it: everything finished, running,
     /// or in line since the batch began.
     internal var totalCount: Int { completedCount + remainingCount }
+
+    /// The 1-based position the batch is on — the "3" in "Analyzing 3 of 18",
+    /// and the numerator of the toolbar's "3/18".
+    ///
+    /// **One spelling, because there were two** (8 Aug 2026): the queue window
+    /// showed `completedCount + 1` while the Library toolbar showed
+    /// `completedCount`, so the same moment read "Analyzing 1 of 110" in one
+    /// place and "0/110" in the other — both defensible alone (games *begun*
+    /// versus games *done*) and wrong together, since the two render
+    /// simultaneously. Position-of-current wins: a batch that has started its
+    /// first game is on game 1, which is how every pager and installer counts.
+    ///
+    /// While active, clamped to `totalCount` for the transient lap between one
+    /// game finishing and the next being promoted (the window's old guard,
+    /// moved here with the arithmetic). Drained, it is simply `completedCount`
+    /// — "5/5", agreeing with "Analysis finished" beside it rather than
+    /// claiming a sixth game.
+    internal var batchPosition: Int {
+        isActive ? min(completedCount + 1, totalCount) : completedCount
+    }
     
     /// Failed items, in completion order, for the popover's error list.
     internal var failures: [Finished] {

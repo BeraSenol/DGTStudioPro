@@ -352,7 +352,7 @@ internal struct PlayersDestination: View {
                     (record.wins, record.draws, record.losses))
         }()
 
-        return coreContent(players: searched)
+        return coreContent(players: searched, history: history)
             .navigationTitle("Players")
             .navigationSubtitle(
                 DestinationSubtitle.players(
@@ -499,8 +499,12 @@ internal struct PlayersDestination: View {
         selectedKeys = Set(players.map(\.id))
     }
 
+    /// `history` is the sole selection's rating history — the same value the
+    /// inspector receives — threaded through for the gallery's trend chart
+    /// (8 Aug 2026). Only the gallery arm reads it; the other three modes have
+    /// the inspector for this.
     @ViewBuilder
-    private func coreContent(players: [RankedPlayer]) -> some View {
+    private func coreContent(players: [RankedPlayer], history: [Glicko1.Sample]) -> some View {
         // The Library's arrangement, down to the explicit type: nil when there
         // is nobody to select, so the system menu item disables itself.
         let selectAllAction: (() -> Void)? = players.isEmpty
@@ -546,6 +550,7 @@ internal struct PlayersDestination: View {
                                        sortOrder: sortOrder)
                 case .gallery:
                     PlayersGalleryView(players: players, selectedKeys: $selectedKeys,
+                                       history: history,
                                        onShowInLibrary: showInLibrary)
                 }
             }

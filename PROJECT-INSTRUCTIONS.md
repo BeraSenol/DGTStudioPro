@@ -51,20 +51,21 @@ six months" is the test.
 
 ## Where things stand
 
-Tree: **`a89d056`** plus uncommitted work — the View Options panel, the
-full-screen auxiliary, and the 7 August performance pass.
+Tree: **`e61ceb9`** plus the 8 August release-audit sitting's uncommitted work
+(D71′–D73′, the shared batch counter, the gallery growth, the renamed and
+README-embedded screenshots, and `RELEASE-AUDIT-2026-08-08.md` — the sitting's
+ROADMAP entry carries the list).
 
 | | |
 |---|---|
-| Sources on disk | **247** — 148 app, 99 unit-test, 0 UITest |
-| Tracked (`git ls-files '*.swift'`) | **239** |
-| Accessibility registry | **153** |
+| Sources on disk | **249** — 149 app, 100 unit-test, 0 UITest |
+| Tracked (`git ls-files '*.swift'`) | **247** |
+| Accessibility registry | **156** |
 
-The two source counts disagree because eight files are untracked, which is a
-statement about staging rather than about the tree. Both are dated snapshots;
-the registry count lives in its grep (D42′) and the source counts in
-`find`/`git ls-files`, because a number in prose decays and a number in a
-command cannot.
+The two source counts disagree by the sitting's two new files — see the
+untracked note below. All three are dated snapshots; the registry count
+lives in its grep (D42′) and the source counts in `find`/`git ls-files`,
+because a number in prose decays and a number in a command cannot.
 
 **Language mode 6 on all three targets (D43′).** Two warnings in the whole
 project, both `Binding(present:)`, both waived below with a sunset condition.
@@ -82,20 +83,15 @@ denominator is the useful half — a run that reports far fewer suites than this
 is a run that skipped something, which is the failure a bare "green" cannot
 show.*
 
-**Untracked files a tracked file references will not build.** **Five** of the
-eight are in that state right now — `CollectionFold.swift`,
-`CollectionSortField.swift`, `CollectionViewOptions.swift`,
-`Features/ViewOptions/CollectionViewOptionsWindow.swift` and
-`FullScreenAuxiliary.swift`, referenced between them by `DGTStudioProApp`,
-`StorageKeys`, `PreviewFixtures`, both destinations and all four grid views.
-This has been the single most-repeated finding in this document's life;
-`git status` has caught it every time and the prose has never once prevented it.
-
-*This paragraph said "Two of the eight … (`CollectionFold.swift` and its
-suite)" until 8 August 2026, which is the fourth species — a count over a set,
-inside the sentence warning about the very class of error. The count was
-arrived at by naming the two files the writer had open rather than by running
-anything, and the check takes one command:*
+**Untracked files a tracked file references will not build.** **Two are in
+that state at this recording** — `AnalysisDataWindow.swift`, referenced by
+`DGTStudioProApp` and `LibraryInspectorView`, and its suite
+`AnalysisDataRowTests.swift` — the D73′ files, awaiting staging alongside the
+sitting's document changes. The hazard has been the single most-repeated
+finding in this document's life: `git status` has caught it every time and the
+prose has never once prevented it. (An earlier version of this paragraph named
+five such files, and before that miscounted them as two — the fourth species,
+inside the sentence warning about it. The check, not the count:)
 
 ```bash
 for f in $(git status --short | awk '$1=="??" && $2 ~ /\.swift$/ {print $2}'); do
@@ -130,8 +126,15 @@ arrow-key grid selection, ⌘A across all four modes, keyboard shortcuts on ever
 row menu, Open-takes-a-set with a count threshold (D56′), Get Info as three tabs
 over three subjects and the app's one rename door (D53′, D57′, D59′), the file
 ordinal as a second weaker identity (D58′), automatic orphan collection (D60′),
-one logging door and policy (D63′), and the View Options panel (⌘J) driving icon
-size, grid spacing and sort for both collection destinations.
+one logging door and policy (D63′), the View Options panel (⌘J) driving icon
+size, grid spacing and sort for both collection destinations, the analysis
+badge in all four Library view modes off one projection (D72′), exit-cadence
+analysis saves with the engine at utility QoS (D71′), one batch counter on
+both progress surfaces, the Players gallery preview at eight facts plus the
+rating trend, and the Analysis Data window — per-ply move / evaluation /
+win % behind the button beside the magnifier, superseding Get Info's removed
+Analysis section, with the queue window's Depth fact pinned to the configured
+target (D73′).
 
 ## Decisions
 
@@ -271,8 +274,19 @@ review), which is why the refinement milestones start at M12.
   (7 Aug 2026).** `CollectionFoldKey` is built from stored scalars only. The
   Library composes an analysis signal from the *queue's counters*, because it
   genuinely tracks analysis state; Players does not, because nothing it folds
-  reads `evaluations`. That asymmetry is what keeps a per-ply save from
-  re-folding the Library.
+  reads `evaluations`. That asymmetry kept the per-ply save from re-folding
+  the Library while per-ply saves existed; since D71′ the driver saves per
+  exit, and the key remains what makes the folds indifferent to save cadence
+  at all.
+- **An analysis pass touches the store once per exit (D71′)** — done,
+  cancelled, or failed — never per ply, and every exit persists *before* its
+  message claims anything was kept. Per-ply state for the queue window lives
+  on the driver (`search`, `status`), never on the model.
+- **"Analyzed?" reaches rendering leaves as a projection, never a model read
+  (D72′).** `LibraryDestination` builds `analyzedIDs` off the memoized records
+  once per render; every badge and the list's Analysis column read membership
+  plus the ambient `analysisRunningGameID`. A leaf asking a `PGN` directly is
+  the per-row blob decode D70′ exists to prevent.
 
 ## Working agreements
 
@@ -371,7 +385,12 @@ find DGTStudioPro -name '*.swift' -exec sh -c 'sed "s|//.*||" "$1"' _ {} \; \
   | grep -oE '(func|var|let|struct|enum|final class|class|actor)[[:space:]]+[a-zA-Z_][a-zA-Z0-9_]*' \
   | awk '{print $NF}' | sort -u > decls
 awk 'NR==FNR { f[$2]=$1; next } { if (f[$1]==1) print $1 }' freq decls
-# Expected: DGTStudioProApp (@main) and isOpen (kept by decision, M12.3)
+# Expected: DGTStudioProApp (@main), isOpen (kept by decision, M12.3), and
+# makeNSView / updateNSView (NSViewRepresentable witnesses in
+# FullScreenAuxiliary — the framework is their caller, which a token scan
+# cannot see; joined the expected set when that file landed 7 Aug and was
+# first noticed by the 8 Aug audit's run, which is this grep's own
+# false-positive rule arriving on schedule)
 
 grep -rn '\.disabled(' --include='*.swift' DGTStudioPro   # every guard producible both ways
 grep -c  'static let\|static func' DGTStudioPro/App/AccessibilityID.swift
@@ -715,6 +734,7 @@ are in `git log`.
   accented names (Anastasia's, Guéridon, Épaulette) in a 140 pt frame, and the
   Checkmate Type column after the backfill reclassifies an existing archive.
 - **The 7 Aug performance pass** — see its own list below.
+- **The 8 Aug sitting** — see its own list below.
 
 ### The performance pass (7 Aug 2026, boardless except the last)
 
@@ -740,6 +760,58 @@ changed except the speed".
 - **With the engine: analyze an 80+ ply game with Players open in another tab.**
   This is the case the pass was written for — the per-ply save used to re-fold
   the whole Library eighty times. Scrub, switch modes and type while it runs.
+
+### The 8 August sitting (boardless, engine for most)
+
+- **The badges, all four modes (D72′, plain marks per the postscript).**
+  Icons: every card wears a chip at the sheet's bottom-trailing — a plain
+  green `checkmark.circle.fill` analyzed, a plain red `xmark.circle.fill`
+  not, **no gear on the verdicts**; the bare gear appears only while the
+  engine has that game. Gallery: same chip on the filmstrip cards. Columns:
+  the same bare marks at each row's trailing edge. List: the Analysis column
+  keeps the gear family — it is an action surface. Check one *dark-mode* pass
+  over the cards specifically — the chip exists because the running gear
+  inherits `.foreground` over an explicitly white sheet, and dark mode is
+  where that fails without it.
+- **The gear, live.** Start a batch and watch the running game's card or row:
+  gear while the engine has it, verdict the moment it drains — and the badge
+  must flip *at game end*, not at first ply. Whether the gear *loops* is the
+  standing `AnalyzingGear` question; the badges add surfaces, not a second
+  motion.
+- **One counter (8 Aug).** With a batch running, the Library toolbar and the
+  queue window on screen together: "3/110" and "Analyzing 3 of 110" must agree
+  at every moment, including the first game (1, not 0) and after the drain
+  ("110/110" beside "Analysis finished").
+- **Per-game saves (D71′).** During a batch, a second window (Players, or a
+  Get Info) updates when a game *finishes*, not while it runs — that is the
+  cadence change, and it should read as the app being calm rather than stale.
+  Skip a game mid-pass and confirm the queue window's cancelled row's promise
+  holds: the partial evaluations survive a relaunch.
+- **The stutter itself.** The 7 Aug check re-run under D71′: an 80+ ply game
+  analyzing with Players open, scrub and type throughout. This sitting's bet
+  is that the remaining hitching goes with the per-ply saves; if it does not,
+  the next suspect is written down in the audit (the queue window's per-line
+  search panel, throttling it the remedy).
+- **Engine QoS.** With Threads raised in Settings, the UI stays fluid during a
+  batch and Activity Monitor shows stockfish at a lower scheduling tier;
+  throughput on a long game should be within normal variance of the last run
+  (utility still reaches P-cores when idle — a batch that visibly slowed is
+  the `.background` failure this deliberately avoided).
+- **The gallery (8 Aug).** Select a rated player in gallery mode: eight facts
+  in the grid (Uncertainty, First/Last Played new), the trend line beneath,
+  filmstrip still pinned to the bottom edge. An unrated player: em dashes in
+  Rating and Uncertainty, no chart, no gap where it would have been. The
+  columns detail shows the same eight-fact grid — one grid, both hosts.
+- **The Analysis Data window (D73′).** The table button beside the magnifier
+  in the Library inspector's Evaluation header opens the per-ply table; on a
+  *skipped* game the unscored tail reads em dashes, never "0.0" — that is the
+  window's whole honesty claim. Two games' data windows tab together and
+  neither floats. The button on an unanalysed game opens the No Analysis
+  state. Get Info's File tab shows **no Analysis section** any more.
+- **Depth holds still (D73′).** Watch the queue window through a full game:
+  the Depth fact reads the configured target (18) from first ply to last, and
+  changes only when Settings does. Motion belongs to the progress bar,
+  evaluation and speed beside it.
 
 ### Needs the board
 
@@ -773,6 +845,8 @@ Quit and relaunch: sort, hidden columns, icon size and grid spacing all persist.
 **Get Info (three tabs).** Details commits per field on Return *and* on focus
 loss; an unchanged value writes nothing (watch `category == "library"` stay
 silent); an emptied Event reverts while an emptied Time Control clears to nil.
+The File tab has **no Analysis section** since 8 Aug 2026 — coverage lives in
+the Analysis Data window (D73′).
 Editing White on Details moves *this game*; editing the field on the player tab
 rewrites **every** game that player appears in — same-looking field, blast radius
 of one versus forty, worth seeing once. Result refuses a value the final position
@@ -785,7 +859,9 @@ refused as a duplicate of itself.
 running, Stop All exits the process, a forced failure persists a warning until
 Dismiss. The queue **window** opens once and comes forward rather than
 duplicating, is *not* restored at launch, shows the live search panel (move in
-chess notation, depth climbing and resetting per ply, evaluation, speed), reads
+chess notation, the configured depth holding still — it climbed and reset per
+ply until 8 Aug 2026, which read as the setting bouncing — evaluation, speed),
+reads
 "Waiting for the engine…" between plies rather than a row of em dashes, lists
 finished games newest-first with cancelled as **grey** rather than a warning, and
 keeps Stop All pinned below the scroll. Start a batch from a Library tab and

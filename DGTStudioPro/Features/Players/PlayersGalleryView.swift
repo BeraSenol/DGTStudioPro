@@ -1,13 +1,25 @@
 import SwiftUI
 
 internal struct PlayersGalleryView: View {
-    
+
     let players: [RankedPlayer]
     /// A set since 2 Aug 2026 (the shared selection model). The gallery
     /// remains a one-at-a-time surface by gesture — thumbnails select
     /// singly — and previews the *first* of a plural selection, as the
     /// Library gallery does.
     @Binding var selectedKeys: Set<PlayerStats.ID>
+
+    /// The selected player's rating history, for the preview's trend chart
+    /// (8 Aug 2026, by request — "more details in gallery view").
+    ///
+    /// The *selection's* history rather than the whole histories map, because
+    /// the destination already resolves exactly this for the inspector and the
+    /// preview shows one player at a time — threading the dictionary here
+    /// would hand the gallery a fold it has no second use for. Empty when
+    /// nothing is selected, when the selection is plural, or when the player
+    /// has no rated games; the chart simply doesn't render then, and the
+    /// grid's Rating em dash already says why.
+    let history: [Glicko1.Sample]
     let onShowInLibrary: (PlayerStats.ID) -> Void
 
     private var selectedPlayer: RankedPlayer? {
@@ -88,9 +100,25 @@ internal struct PlayersGalleryView: View {
 
                 // One grid, each fact once (D48′), shared since the columns
                 // redesign made a second host — see `PlayerStatsGrid` for
-                // the history this extraction closes.
+                // the history this extraction closes. Eight facts since
+                // 8 Aug 2026, grown at the grid so both hosts widened.
                 PlayerStatsGrid(stats: player.stats, rating: player.rating)
                     .padding(.top, 4)
+
+                // The trend, same line the inspector draws
+                // (`RatingTrendChart` — one chart, two hosts, extracted so
+                // they cannot diverge). Gated on having something to draw:
+                // an unrated player's absence needs no explanation here,
+                // because the grid's Rating and Uncertainty dashes one row
+                // up already carry it — the inspector's fuller empty text
+                // belongs to a section with room for sentences.
+                if !history.isEmpty {
+                    // Width capped; height is the chart's own 160, stated
+                    // once inside it so the two hosts stay one size.
+                    RatingTrendChart(history: history)
+                        .frame(maxWidth: 460)
+                        .padding(.top, 8)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -150,6 +178,7 @@ internal struct PlayersGalleryView: View {
     PlayersGalleryView(
         players: PreviewFixtures.rankedPlayers(),
         selectedKeys: $selection,
+        history: [],
         onShowInLibrary: { _ in }
     )
     .frame(width: 720, height: 420)
@@ -158,17 +187,31 @@ internal struct PlayersGalleryView: View {
 #Preview("Empty") {
     @Previewable @State var selection: Set<PlayerStats.ID> = []
 
-    PlayersGalleryView(players: [], selectedKeys: $selection, onShowInLibrary: { _ in })
+    PlayersGalleryView(players: [], selectedKeys: $selection, history: [], onShowInLibrary: { _ in })
         .frame(width: 720, height: 420)
 }
 
+/// The full preview pane: grid at eight facts plus the trend beneath it —
+/// the arrangement the 8 Aug growth exists for, and the height check that a
+/// chart under the grid still leaves the filmstrip pinned to the bottom.
 #Preview("Gallery, Preselected") {
     @Previewable @State var selection: Set<PlayerStats.ID> = [PreviewFixtures.topStats().id]
+
+    let history = (0..<9).map { step in
+        Glicko1.Sample(
+            date: Date(timeIntervalSinceReferenceDate: Double(step) * 86_400),
+            rating: Glicko1.Rating(
+                mean: 1500 + Double(step) * 14 - (step.isMultiple(of: 3) ? 40 : 0),
+                deviation: max(60, 350 - Double(step) * 30)
+            )
+        )
+    }
 
     PlayersGalleryView(
         players: PreviewFixtures.rankedPlayers(),
         selectedKeys: $selection,
+        history: history,
         onShowInLibrary: { _ in }
     )
-    .frame(width: 720, height: 420)
+    .frame(width: 720, height: 560)
 }

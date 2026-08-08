@@ -105,6 +105,16 @@ internal enum AccessibilityID {
     internal static let evaluationWindowGraph   = "evaluation.window.graph"
     internal static let evaluationWindowReadout = "evaluation.window.readout"
     internal static let evaluationWindowEmpty   = "evaluation.window.empty"
+
+    // MARK: Analysis Data (D73′, 8 Aug 2026)
+
+    /// The table-list glyph beside the magnifier in the Library inspector's
+    /// Evaluation header, and the window it opens. One identifier for the
+    /// button on `evaluationMagnifier`'s reasoning, held in reserve — it has
+    /// one host today, and a second host would open the same window.
+    internal static let analysisDataButton      = "analysisData.button"
+    internal static let analysisDataWindowTable = "analysisData.window.table"
+    internal static let analysisDataWindowEmpty = "analysisData.window.empty"
     /// The toolbar's connect control (`DGTConnectionToolbar`). Migrated
     /// late (M-ux.3): the value lived as a *parameter default*, which the
     /// enforcement grep described in this file's header cannot see —

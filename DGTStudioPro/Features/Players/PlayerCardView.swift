@@ -51,13 +51,27 @@ internal struct PlayerStatCell: View {
     }
 }
 
-/// The five-fact stat grid of a player preview — Games / Record / Win Rate,
-/// then Rating / Mates. Extracted from `PlayersGalleryView` when the columns
-/// detail pane became its second host (the 2 Aug 2026 Finder-column
-/// redesign): the D48′ note this grid carried records the two retired
-/// galleries disagreeing on spacing and saying Wins twice, which is exactly
-/// the drift two private copies would reopen. Record's first component
-/// absorbs Wins here as it does in the inspector.
+/// The stat grid of a player preview — Games / Record / Win Rate, then
+/// Rating / Uncertainty / Mates, then First / Last Played. Extracted from
+/// `PlayersGalleryView` when the columns detail pane became its second host
+/// (the 2 Aug 2026 Finder-column redesign): the D48′ note this grid carried
+/// records the two retired galleries disagreeing on spacing and saying Wins
+/// twice, which is exactly the drift two private copies would reopen.
+/// Record's first component absorbs Wins here as it does in the inspector.
+///
+/// **Grown from five facts to eight on 8 Aug 2026, by request** ("more details
+/// in gallery view"), and grown here rather than in the gallery so its two
+/// hosts stay one grid — the columns detail widens with it, which is the
+/// parity invariant working in the direction it is meant to. The three new
+/// facts are the inspector profile's remaining zero-cost rows: Uncertainty
+/// reads off the `rating` already passed, First/Last Played off `stats`. What
+/// is deliberately *not* here is Rated Games — it needs the histories fold,
+/// which neither host receives, and a ninth fact is not worth threading a
+/// dictionary through two signatures for.
+///
+/// Uncertainty shows the house em dash for an unrated player where the
+/// inspector hides the row — a `Grid` cell that vanishes re-flows its
+/// neighbours mid-read, which a `List` row does not.
 internal struct PlayerStatsGrid: View {
 
     internal let stats: PlayerStats
@@ -72,7 +86,15 @@ internal struct PlayerStatsGrid: View {
             }
             GridRow {
                 PlayerStatCell("Rating", rating?.displaySummary ?? RosterSummary.displayUnknown)
+                PlayerStatCell(
+                    "Uncertainty",
+                    rating.map { "±\(Int($0.deviation.rounded()))" } ?? RosterSummary.displayUnknown
+                )
                 PlayerStatCell("Mates", "\(stats.matesDelivered)")
+            }
+            GridRow {
+                PlayerStatCell("First Played", RosterSummary.displayDate(stats.firstPlayed))
+                PlayerStatCell("Last Played", RosterSummary.displayDate(stats.lastPlayed))
             }
         }
     }

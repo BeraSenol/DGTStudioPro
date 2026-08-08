@@ -678,28 +678,17 @@ extension GetInfoWindow {
                 )
             }
 
-            Section("Analysis") {
-                // One spelling of "analyzed?", `AnalysisGlyph`'s — the same
-                // predicate the glyphs, the toolbar aggregate and the search
-                // chips read (`LibraryDestination` hands it to
-                // `LibrarySearchToken.admit`). A bare `evaluations.isEmpty`
-                // here would be a second opinion about the one question this
-                // app asks most.
-                //
-                // Since D67′ that predicate is `PGN.hasScoredPly`, and since
-                // D68′ so is `GameRecord.hasAnalysis` — so the smart-tag rule
-                // joins this list and the sentence above is now true of every
-                // surface without exception. It was true when written; the
-                // one door that had drifted was the tag rule, which is not
-                // named here and was never claimed.
-                LabeledContent(
-                    "Analyzed",
-                    value: AnalysisGlyph.isAnalyzed(pgn) ? "Yes" : "No"
-                )
-                LabeledContent("Evaluated Plies", value: Self.evaluatedPlies(pgn))
-                LabeledContent("Best For White", value: Self.extreme(pgn, white: true))
-                LabeledContent("Best For Black", value: Self.extreme(pgn, white: false))
-            }
+            // The `Analysis` section stood here until 8 Aug 2026 — Analyzed,
+            // Evaluated Plies ("48 of 58"), and the two extremes — removed by
+            // request in the sitting that built the Analysis Data window
+            // (D73′). The removal is coherent rather than merely asked for:
+            // this tab's rule is derived facts about the *file*, and analysis
+            // is derived facts about the *play*, which now has a surface of
+            // its own that shows the whole array instead of four summaries of
+            // it. Coverage did not lose its only teller — the data window's
+            // em-dash rows say which plies were never scored, per ply rather
+            // than as a fraction. The `evaluatedPlies` and `extreme(_:white:)`
+            // formatters went with their only consumer.
 
             // An `Equipment` section stood here for one evening, holding `board`
             // and `timeControl`. Both moved to Details in the D57′ amendment:
@@ -1051,32 +1040,11 @@ extension GetInfoWindow {
         date.formatted(date: .abbreviated, time: .shortened)
     }
 
-    /// "48 of 58" — how much of the game the engine actually scored.
-    ///
-    /// The two numbers differ more often than the glyph suggests: a skipped or
-    /// cancelled batch leaves a partial array, and `AnalysisGlyph.isAnalyzed`
-    /// answers yes for *any* non-nil entry. This is the row that says how much.
-    private static func evaluatedPlies(_ pgn: PGN) -> String {
-        let scored = pgn.evaluations.count { $0 != nil }
-        guard scored > 0 else { return RosterSummary.displayUnknown }
-        return "\(scored) of \(pgn.moves.count)"
-    }
-
-    /// The best evaluation either side reached, in the bar's own grammar.
-    ///
-    /// Rendered through `EvaluationBarReading.label` rather than formatted here,
-    /// so this panel and the bar cannot disagree about what "+1.3" or "M4"
-    /// looks like — D33′ pinned that grammar and D46′'s window already reuses
-    /// it rather than restating it.
-    private static func extreme(_ pgn: PGN, white: Bool) -> String {
-        let scored = pgn.evaluations.compactMap { $0 }
-        guard !scored.isEmpty else { return RosterSummary.displayUnknown }
-        let best = white
-            ? scored.max(by: { $0.whiteWinProbability < $1.whiteWinProbability })
-            : scored.min(by: { $0.whiteWinProbability < $1.whiteWinProbability })
-        guard let best else { return RosterSummary.displayUnknown }
-        return EvaluationBarReading(best).label
-    }
+    // `evaluatedPlies(_:)` and `extreme(_:white:)` were here until 8 Aug 2026,
+    // deleted with the File tab's Analysis section — their only consumer. The
+    // per-ply truth they summarized is the Analysis Data window's whole
+    // content now (D73′), through the same pinned grammar
+    // (`EvaluationBarReading.label`) they rendered.
 
     /// D37′. Every consequence — the rewrite across linked games, the
     /// re-resolve, the rehash, D39′'s refusal — belongs to the store door. This
@@ -1168,11 +1136,13 @@ extension GetInfoWindow {
 /// canvas is the only place it can be looked at. The container round trip is
 /// the price rather than the subject.
 ///
-/// The fixture is deliberately *rich*: evaluations that stop short of the last
-/// ply (so "Evaluated Plies" reads `12 of 20` rather than agreeing with the
-/// total and hiding the distinction that row exists for), a classification, a
-/// board, and a time control. A fixture where every optional is nil would
-/// render five sections of em dashes and witness nothing.
+/// The fixture is deliberately *rich*: a classification, a board, a time
+/// control, and evaluations that stop short of the last ply — that last one
+/// fed the Analysis section's "12 of 20" row until 8 Aug 2026 removed it
+/// (D73′), and stays because the partial array is the Analysis Data window's
+/// canonical fixture shape and costs this canvas nothing. A fixture where
+/// every optional is nil would render the File tab as em dashes and witness
+/// nothing.
 ///
 /// Classification is assigned directly here, which `PGNStore.classify` is
 /// otherwise the single door for (D34′). A preview fixture is not a second

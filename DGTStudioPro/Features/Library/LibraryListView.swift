@@ -3,6 +3,13 @@ import SwiftUI
 
 internal struct LibraryListView: View {
     let games: [PGN]
+    /// The Analysis column's input since D72′, off the destination's memoized
+    /// projection — see `LibraryIconsView.analyzedIDs`. This column used to
+    /// ask `AnalysisGlyph.state(of: [game], …)`, which decodes `evaluations`
+    /// per row per render: the one per-row blob decode D70′'s memo pass left
+    /// standing, and the table is the mode most often on screen during a
+    /// batch.
+    let analyzedIDs: Set<PGN.ID>
     @Binding var selectedPGNs: Set<PGN.ID>
     /// Takes the set since D56′, like every other action here.
     let onOpen: ([PGN]) -> Void
@@ -121,7 +128,8 @@ internal struct LibraryListView: View {
                 } label: {
                     AnalysisLabel(
                         state: AnalysisGlyph.state(
-                            of: [game],
+                            of: game,
+                            isAnalyzed: analyzedIDs.contains(game.id),
                             runningID: runningAnalysisID
                         )
                     )
@@ -260,8 +268,11 @@ private func listPreviewGames() -> [PGN] {
     @Previewable @State var selection: Set<PGN.ID> = []
     @Previewable @State var sort = LibraryDestination.defaultSortOrder
 
+    let games = listPreviewGames()
+
     LibraryListView(
-        games: listPreviewGames(),
+        games: games,
+        analyzedIDs: Set(games.prefix(2).map(\.id)),
         selectedPGNs: $selection,
         onOpen: { _ in },
         onAnalyzeIDs: { _ in },
@@ -289,6 +300,7 @@ private func listPreviewGames() -> [PGN] {
 
     LibraryListView(
         games: listPreviewGames().sorted(using: sort),
+        analyzedIDs: [],
         selectedPGNs: $selection,
         onOpen: { _ in },
         onAnalyzeIDs: { _ in },
@@ -307,6 +319,7 @@ private func listPreviewGames() -> [PGN] {
 
     LibraryListView(
         games: [],
+        analyzedIDs: [],
         selectedPGNs: $selection,
         onOpen: { _ in },
         onAnalyzeIDs: { _ in },

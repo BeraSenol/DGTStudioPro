@@ -3,6 +3,9 @@ import SwiftUI
 
 internal struct LibraryGalleryView: View {
     let games: [PGN]
+    /// The badge's input, off the destination's memoized projection — see
+    /// `LibraryIconsView.analyzedIDs`; the filmstrip draws the same card.
+    let analyzedIDs: Set<PGN.ID>
     @Binding var selectedPGNs: Set<PGN.ID>
     let boardStyle: BoardStyle
     /// Takes the set since D56′, and this is the one host where that changes
@@ -25,6 +28,9 @@ internal struct LibraryGalleryView: View {
     /// The grids' focus arrangement (4 Aug 2026): the gallery itself is the
     /// focusable, a thumbnail click hands it focus, and ← / → step the strip.
     @FocusState private var isFocused: Bool
+
+    /// Ambient — `LibraryIconsView`'s twin, argued at the environment value.
+    @Environment(\.analysisRunningGameID) private var runningAnalysisID
 
     var body: some View {
         VStack(spacing: 0) {
@@ -96,12 +102,15 @@ internal struct LibraryGalleryView: View {
                 }
                 .padding()
             }
-            // 260 fits the card at its ideal height — the now-rigid glyph
-            // block (~138 pt with its padding), a three-line name, the date,
-            // and the paddings (4 Aug 2026). 180 was the height that *caused*
-            // the icon-vs-gallery size difference: the strip sized the card,
-            // and the card's one flexible element was the symbol it exists
-            // to show.
+            // 180 fits the card at the filmstrip's size (8 Aug 2026 — this
+            // comment said 260, the pre-slider number: the card's glyph block
+            // was ~138 pt when every card drew an 80 pt sheet, and the View
+            // Options pass reduced the strip's card to the 60 pt default it
+            // passes nothing to override). The rule the 4 Aug story taught is
+            // unchanged and is the thing to preserve if the card grows again:
+            // the strip sizes itself to the card, never the reverse — the
+            // card's glyph is rigid, so a strip shorter than the card clips
+            // rather than squeezing.
             .frame(height: 180)
             .background(.thinMaterial)
             .onChange(of: selectedPGNs) { _, newSelection in
@@ -116,6 +125,11 @@ internal struct LibraryGalleryView: View {
     private func thumbnail(for game: PGN) -> some View {
         LibraryGameCardView(
             game: game,
+            analysisState: AnalysisGlyph.state(
+                of: game,
+                isAnalyzed: analyzedIDs.contains(game.id),
+                runningID: runningAnalysisID
+            ),
             isSelected: selectedPGNs.contains(game.id),
             onSelect:  { selectedPGNs = [game.id]; isFocused = true },
             onOpen:    { onOpen([game]) },
@@ -145,6 +159,7 @@ private func galleryPreviewGames() -> [PGN] {
     
     LibraryGalleryView(
         games: games,
+        analyzedIDs: Set(games.prefix(1).map(\.id)),
         selectedPGNs: $selection,
         boardStyle: .walnut,
         onOpen: { _ in },
@@ -167,6 +182,7 @@ private func galleryPreviewGames() -> [PGN] {
     
     LibraryGalleryView(
         games: galleryPreviewGames(),
+        analyzedIDs: [],
         selectedPGNs: $selection,
         boardStyle: .rosewood,
         onOpen: { _ in },

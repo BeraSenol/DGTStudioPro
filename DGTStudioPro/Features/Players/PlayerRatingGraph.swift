@@ -33,14 +33,52 @@ internal struct PlayerRatingGraph: View {
     // MARK: Stored Properties
     internal let history: [Glicko1.Sample]
 
+    // MARK: Body
+    internal var body: some View {
+        CollapsibleSection(.ratingTrend, title: "Rating Trend") {
+            if history.isEmpty {
+                // Names the number rather than only its absence: "the rating
+                // starts" invites "at what?", and the graph beside it cannot
+                // answer while there is nothing to draw.
+                Text("No rated games yet. Everyone starts at \(Int(Glicko1.initialMean)), and the rating moves once this player finishes a game against another named player.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+            } else {
+                RatingTrendChart(history: history)
+
+                if history.last?.rating.isProvisional == true {
+                    Text("Provisional. The rating settles as more games are played.")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(3)
+                }
+            }
+        }
+    }
+}
+
+// MARK: Chart
+
+/// The trend line itself, presentation-agnostic — extracted from
+/// `PlayerRatingGraph` on 8 Aug 2026 when the gallery preview became its
+/// second drawer. The section above owns the `CollapsibleSection` chrome, the
+/// empty text and the provisional caption; this owns the axes and the line, so
+/// the inspector and the gallery cannot draw the same history two ways. The
+/// `EvaluationGraphContent` split, applied to the rating: D46′'s round trip is
+/// the recorded evidence that content extracted from its presenter survives
+/// the presenters changing their minds.
+///
+/// Renders nothing meaningful for an empty history (a lone origin point); the
+/// hosts gate, because what an absence *says* differs per host — the section
+/// explains the 1500 start, the gallery simply omits the chart.
+internal struct RatingTrendChart: View {
+
+    // MARK: Stored Properties
+    internal let history: [Glicko1.Sample]
+
     // MARK: Computed Properties
 
-    /// Y-domain padded past the means and rounded outward to tens, so the
-    /// line never touches the plot edge and the axis labels stay round.
-    /// Means only, since the band left: padding past mean ± RD would squash
-    /// a provisional player's line into the middle third of an empty plot.
-    /// The fallback range is unreachable (the chart only renders with
-    /// history) and exists for the type, not the user.
     /// The plotted series: **step 0 is where everyone starts** (5 Aug 2026, by
     /// request), then one step per rated game.
     ///
@@ -60,6 +98,12 @@ internal struct PlayerRatingGraph: View {
         + history.enumerated().map { ($0.offset + 1, $0.element.rating.mean) }
     }
 
+    /// Y-domain padded past the means and rounded outward to tens, so the
+    /// line never touches the plot edge and the axis labels stay round.
+    /// Means only, since the band left: padding past mean ± RD would squash
+    /// a provisional player's line into the middle third of an empty plot.
+    /// The fallback range is unreachable (the hosts only render this with
+    /// history) and exists for the type, not the user.
     private var yDomain: ClosedRange<Double> {
         // Over `plotted`, not `history`: the starting 1500 is a point on the
         // line, so a domain that excluded it would clip the first segment for
@@ -73,31 +117,6 @@ internal struct PlayerRatingGraph: View {
 
     // MARK: Body
     internal var body: some View {
-        CollapsibleSection(.ratingTrend, title: "Rating Trend") {
-            if history.isEmpty {
-                // Names the number rather than only its absence: "the rating
-                // starts" invites "at what?", and the graph beside it cannot
-                // answer while there is nothing to draw.
-                Text("No rated games yet. Everyone starts at \(Int(Glicko1.initialMean)), and the rating moves once this player finishes a game against another named player.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(3)
-            } else {
-                chart
-
-                if history.last?.rating.isProvisional == true {
-                    Text("Provisional. The rating settles as more games are played.")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(3)
-                }
-            }
-        }
-    }
-
-    // MARK: Instance Methods
-
-    private var chart: some View {
         // Indexed identity, kept from the original: two rated games can
         // share an effective date (undated same-day imports), so `\.date`
         // could never be the id — and now that the axis is ordinal, the

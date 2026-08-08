@@ -1036,6 +1036,70 @@ decided.
 
 ## Landed
 
+### The 8 August sitting — release audit, per-game saves, badges everywhere, one counter, a wider gallery *(recorded 8 August 2026)*
+
+The pre-release pass, by request: a full file-per-file audit of the tree
+(**`RELEASE-AUDIT-2026-08-08.md`**, repo root — first-export checklist at its
+head), plus four asked-for changes. Two took numbers, two did not, and the
+split is the D-threshold working: the numbered pair each reverse a recorded
+position.
+
+- **D71′ — analysis saves at exits, never per ply.** The answer to "still
+  stuttery during a batch" after D70′: the memo made the folds indifferent to
+  the per-ply save while every `@Query` fan-out, sort and table diff underneath
+  it still ran once per ply. Reverses the driver's recorded crash-durability
+  contract, whose benefit was found empty (the next pass resets partials
+  anyway); every exit persists before its message claims anything was kept. A
+  rider at the engine: the Stockfish subprocess launches at `.utility` QoS, so
+  a raised Threads setting stops fighting the render loop.
+- **D72′ — analysis state legible in every view mode.** Green-check / red-x /
+  spinning-gear at each card's bottom-trailing (icons, gallery strip) and each
+  columns row's trailing edge; the list column joins the same input. One
+  projection (`analyzedIDs` off the memoized records) feeds every badge, which
+  also retired the list column's per-row blob decode — the one D70′ left
+  standing. Reverses the columns row's recorded uniform-icon argument.
+- **One batch counter, numberless.** The toolbar said "0/110" while the window
+  said "Analyzing 1 of 110" — `completedCount` against `completedCount + 1`,
+  two spellings on screen at once. `AnalysisQueue.batchPosition` is the one
+  spelling; both surfaces read it; three pins.
+- **The gallery preview grew, numberless.** `PlayerStatsGrid` five facts →
+  eight (Uncertainty, First/Last Played — the zero-cost inspector rows), which
+  widened the columns detail too, one grid being the point; and the selected
+  player's rating trend renders under the grid through `RatingTrendChart`,
+  extracted from `PlayerRatingGraph` so the inspector and the gallery draw one
+  line (`EvaluationGraphContent`'s split, applied to the rating).
+
+**The sitting's second half**, from the follow-up requests:
+
+- **D73′ — the analysis as data.** A table window (ply, move, evaluation,
+  white win %) behind a new button beside the magnifier in the Library
+  inspector's Evaluation header; the queue window's Depth fact now shows the
+  configured target and holds still; and Get Info's File tab lost its
+  Analysis section, whose four summaries the table supersedes — coverage now
+  reads per ply, as em-dash rows. One entry because they are one movement:
+  the window is where the removed section's answers went.
+- **D72′ postscript — plain marks on the badges.** The card corners and
+  columns rows dropped the gear-badged glyphs for a bare green
+  `checkmark.circle.fill` / red `xmark.circle.fill`, the gear appearing only
+  while the engine has that game — reversing the entry's own first rejection,
+  by request, with the two vocabularies pinned to share exactly the running
+  gear. The action surfaces (Analyze column, chips, menus, queue toolbar)
+  keep the gear family.
+- **Screenshots named, README illustrated, numberless.** The fourteen
+  `Screenshots/` captures renamed from timestamps to what they show
+  (`library-gallery-game-preview.png`, `analysis-queue-window.png`, …) and
+  embedded in README.md under a Screenshots section — Board, Library's four
+  modes and filter, the two analysis windows, Get Info's tabs, Players' four
+  modes.
+
+**Manual checks owed** are on PROJECT-INSTRUCTIONS' list: the badge sweep
+across all four modes during a live batch, the counter agreeing at both
+surfaces, per-game save timing (other windows update at game end now), `pmset`
+untouched by the QoS change, the gallery's chart height leaving the strip
+pinned, the data window's em-dash rows on a skipped game, and the Depth fact
+sitting still through a full batch. ⌘U owed on the tree; expected green, never
+claimed.
+
 ### The 7 August evening — collection folds memoized, documents trimmed *(recorded 7 August 2026)*
 
 Two requests, one of them a performance pass and one a documentation pass. **No
