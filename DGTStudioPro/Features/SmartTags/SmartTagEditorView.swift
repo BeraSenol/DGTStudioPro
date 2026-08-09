@@ -32,11 +32,8 @@ internal struct TagDraft: Identifiable {
     }
 }
 
-/// The Apple Music smart-playlist editor shape (D12′): name, color,
-/// "Match ⟨any|all⟩ of the following rules", rule rows with − / +,
-/// Cancel/OK. Deliberately absent from the reference: *Limit to* (a
-/// filter isn't a playlist), *match only checked* (no checked state),
-/// *Live updating* (computed at render — live by construction).
+/// The Apple Music smart-playlist shape (D12′). Deliberately absent: Limit-to, checked-only,
+/// live-updating (computed at render — live by construction).
 internal struct SmartTagEditorView: View {
     
     // MARK: Stored Properties
@@ -245,12 +242,8 @@ private struct TagRuleRow: View {
             // The comparison IS the value ("is true"/"is false").
             Spacer()
         case .checkmateType:
-            // `allCases` here, unlike `.result` above: every motif the
-            // classifier can produce is a motif a game can carry, so none of
-            // them is a dead rule. That was an unchecked claim until D65′ —
-            // `everyCaseIsProducible` is what stands behind it now, and it is
-            // what stops a case being added to the enum, appearing in this
-            // menu, and never classifying anything.
+            // `allCases`, unlike `.result`: every motif the classifier can produce is one a game can carry
+            // — an unchecked claim until D65′ pinned completeness.
             Picker("Checkmate Type", selection: $rule.specialCheckmate) {
                 ForEach(SpecialCheckmate.allCases, id: \.self) { pattern in
                     Text(pattern.displayName).tag(pattern)
@@ -282,11 +275,8 @@ private struct TagRuleRow: View {
         .frame(width: 520, height: 420)
 }
 
-/// Every rule *kind* at once (string / result / number / date / boolean /
-/// checkmate-pattern) — the row-editor switch renders a different control per
-/// kind, so this is the layout's real stress case. It grows a row whenever
-/// `Field.Kind` grows a case; a kind missing here is a control nobody ever
-/// looked at.
+/// Every rule kind at once — the row-editor switch renders a different control per kind, so
+/// this is the layout's real stress case.
 #Preview("All Rule Kinds") {
     var draft = TagDraft()
     draft.name = "Kitchen Sink"

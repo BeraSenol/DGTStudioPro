@@ -2,22 +2,8 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// Coverage for the **pure replay analysis** on `DGTSessionRecording` —
-/// `settledBoards(quiescence:)` and `reconstructions(from:quiescence:)`. These
-/// recompute the live session's 300 ms debounce and move reconstruction from a
-/// recorded timestamp stream, deterministically and with no waiting, so a real
-/// captured game can be regression-tested (and the quiescence window re-tuned)
-/// offline.
-///
-/// The recorder (`DGTSessionRecorder`, `@MainActor`) is exercised separately in
-/// `DGTSessionRecorderTests`; everything here is a value-type computation, so —
-/// like the chess and reconstruction suites — it is not `@MainActor`.
-///
-/// Two behaviours get the most scrutiny because the live session depends on
-/// them exactly: the debounce boundary is `>=` (a gap *equal* to the quiescence
-/// keeps the earlier board), and state advances **only** on a committed
-/// `.move` — `.castlingInProgress` and `.correctable` do not advance, because
-/// the completing `.move` lands on a later settled snapshot.
+/// The pure replay analysis: recomputes the 300 ms debounce and reconstruction from recorded
+/// timestamps, deterministically. State advances **only** on a committed `.move`.
 @Suite("DGT Session Recording")
 struct DGTSessionRecordingTests {
     
@@ -112,11 +98,8 @@ struct DGTSessionRecordingTests {
     
     // MARK: reconstructions — Full Replay
     
-    /// A three-move opening (1.e4 e5 2.Nf3) recorded with mid-move lift
-    /// transients at sub-quiescence gaps and settled boards at long gaps.
-    /// Reconstruction must drop the transients and resolve exactly the three
-    /// moves, advancing the game state across each so the next move resolves
-    /// against the correct position.
+    /// A three-move opening with sub-quiescence transients — reconstruction must drop the
+    /// transients and resolve exactly three moves.
     @Test func replaysAThreeMoveOpening() throws {
         let start = GameState.starting
         

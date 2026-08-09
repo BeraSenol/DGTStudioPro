@@ -15,25 +15,9 @@ extension PGN {
         )
     }
     
-    /// The suggested filename for this game, numbered by its **library index**
-    /// where it has one and by its position in this export otherwise (D58′).
-    ///
-    /// The asymmetry is the decision: a game that came from a numbered file goes
-    /// back out under the number it came in with, so export → re-import is a
-    /// round trip through the filesystem rather than a renumbering of it. A game
-    /// with no ordinal still has to be *called* something, and its position in
-    /// the batch is the only number available.
-    ///
-    /// **This changes bytes D24′ pinned**, deliberately: that pin reads the
-    /// reference files as the authority on shape, and the shape has an ordinal
-    /// whose *source* the pin never specified. Reading it off the folder is the
-    /// strictest reading of "where the standard and the files disagree, the
-    /// files win".
-    ///
-    /// Named consequence: a multi-game export can write non-contiguous filenames
-    /// (47, 48, 91) or repeat one, because library indices are neither gapless
-    /// nor unique. That is the folder's own state reflected rather than a defect
-    /// — D32′ already decided a same-named file is overwritten silently.
+    /// The suggested filename — numbered by **library index** where present, batch position
+    /// otherwise (D58′). This changes bytes D24′ pinned, deliberately: the pin never specified the
+    /// ordinal's source, and the folder is the stricter reading.
     internal func exportFileName(index: Int) -> String {
         PGNSerializer.fileName(
             white: white,

@@ -1,33 +1,16 @@
 import Foundation
 import os
 
-/// The rule set a game is played under. Stored and shown on the game; FIDE is
-/// the only option in v1, and switching rule sets is a late-stage concern.
-/// Illegal-move handling follows FIDE Art. 7.5.1 (reinstate the position before
-/// the irregularity), which the recovery system (D6) implements as "return to
-/// the last legal position."
+/// The rule set; FIDE only in v1. Illegal-move handling follows FIDE 7.5.1 — recovery's
+/// "return to the last legal position".
 internal enum DGTRuleSet: String, CaseIterable, Codable, Sendable {
     case fide = "FIDE"
     
     internal var displayName: String { rawValue }
 }
 
-/// The working model for a game being recorded live from the DGT board.
-///
-/// `LiveGame` is the append-only sibling of `Game`: where `Game` builds once
-/// from a finished `PGN` and only scrubs, `LiveGame` starts from a position and
-/// grows one move at a time as the board reports them. It owns the running
-/// state walk, the SAN transcript (for the eventual PGN), the seven-tag roster,
-/// the rule set, and the result — which it auto-detects on checkmate and
-/// stalemate.
-///
-/// One board ⇒ one live game, so the app holds a single optional `LiveGame` on
-/// `DGTLiveSession`. The displayed board always mirrors the *physical* board
-/// (see `DGTConnection.physicalBoard`); this model tracks the *legal* game in
-/// parallel and is what gets archived to the Library (D7) when finished.
-///
-/// Legality is sourced only from the chess core's own `legalMoves()` — a
-/// committed move must be legal in the current state or it is rejected.
+/// The working model for a live-recorded game — `Game`'s append-only sibling: no takebacks, no
+/// rollback, ever (Decision #1). Legality comes only from the core's `legalMoves()`.
 @Observable
 @MainActor
 internal final class LiveGame {
@@ -38,8 +21,7 @@ internal final class LiveGame {
     
     // MARK: Roster
     
-    /// The mutable seven-tag metadata (minus result, which the game tracks as
-    /// it plays). Maps directly onto `PGN`'s tags for the D7 archive step.
+    /// The mutable seven-tag metadata minus result (the game tracks it). Maps onto `PGN` for archive.
     internal struct Roster: Equatable, Sendable {
         internal var event: String
         internal var site: String
@@ -48,31 +30,13 @@ internal final class LiveGame {
         internal var white: String
         internal var black: String
 
-        /// The `[Board "…"]` identity of the board this game is played on
-        /// (D28′) — "DGT 3000448278", composed by
-        /// `DGTConnection.BoardInfo.identityTag` and stamped once by
-        /// `DGTLiveSession.startNewGame` from its `boardIdentity` hook.
-        /// On the roster rather than read at archive time so it names the
-        /// board that *played* the game: it survives a mid-game cable pull
-        /// (reconnect clears `boardInfo` until the handshake answers) and a
-        /// crash-resume (the draft carries it). Not exposed by the roster
-        /// forms — equipment, not a seat; edits ride the value copy
-        /// untouched.
+        /// The board identity (D28′), stamped once at game start; survives crash-resume via the draft.
+        /// Not exposed by the roster forms — equipment, not a seat.
         internal var board: String?
 
-        /// Whether this roster puts one player on both sides (D61′).
-        ///
-        /// A forwarding accessor, not a second rule: `Player.seatsNameOnePlayer`
-        /// owns the comparison and this spells it for the shape the forms hold.
-        /// The `contentHash` precedent — one recipe, two spellings (D39′) —
-        /// except the pair here is a value and its accessor rather than two
-        /// functions, so there is nothing to keep in step.
-        ///
-        /// Worth stating once: this is reachable at all because a nested type
-        /// does **not** inherit its enclosing type's global-actor isolation
-        /// (D44′). `LiveGame` is `@MainActor`, `Roster` is not, and
-        /// `Player.seatsNameOnePlayer` is nonisolated — so a form, a sheet and a
-        /// nonisolated suite can all ask.
+        /// One player on both sides? (D61′) A forwarding accessor — `Player.seatsNameOnePlayer` owns
+        /// the rule (one recipe, two spellings). Note `Roster` is nonisolated: a global actor does not
+        /// isolate nested types (D44′).
         internal var seatsNameOnePlayer: Bool {
             Player.seatsNameOnePlayer(white, black)
         }
@@ -101,12 +65,10 @@ internal final class LiveGame {
     internal let ruleSet: DGTRuleSet
     internal var roster: Roster
     
-    /// When this game began — carried into the draft (M4) and across resume,
-    /// so a resumed game keeps its original start time.
+    /// Carried into the draft and across resume — a resumed game keeps its original start time.
     internal let startedAt: Date
     
-    /// State at each ply boundary. `states[0]` is the start; `states[i]` is the
-    /// state after `moves[i - 1]`. Always `moves.count + 1` long.
+    /// State at each ply boundary; always `moves.count + 1` long.
     private(set) internal var states: [GameState]
     
     /// Piece-identity mirror of `states`, for animation parity with `Game`.
@@ -115,36 +77,30 @@ internal final class LiveGame {
     /// The committed moves, oldest first.
     private(set) internal var moves: [Move]
     
-    /// SAN strings parallel to `moves`, computed against the state *before*
-    /// each move — the transcript archived to PGN.
+    /// SAN parallel to `moves`, computed against the state *before* each move — the archived transcript.
     private(set) internal var sanMoves: [String]
     
-    /// The current result. `.ongoing` until checkmate / stalemate is detected
-    /// or a result is set manually (resignation / agreed draw).
+    /// `.ongoing` until detected or set manually.
     private(set) internal var result: GameResult
     
     // MARK: Computed Properties
     
-    // Force-unwrapped deliberately: `states` and `trackers` are seeded in
-    // `init` and only ever appended to, so both are non-empty by construction.
-    // `last!` states that; `[count - 1]` hides it behind arithmetic.
+    // Force-unwrapped deliberately: seeded in `init`, append-only, non-empty by construction —
+    // `last!` states that; `[count - 1]` hides it.
     internal var currentState: GameState { states.last! }
     internal var currentTracker: PieceTracker { trackers.last! }
     internal var position: Position { currentState.position }
-    // `currentFEN` was deleted here (3 Aug 2026 audit) together with
-    // `Game`'s identical twin: neither had an app consumer. Spell it
-    // `FEN(currentState)` if a surface ever wants it.
 
     internal var isFinished: Bool { result != .ongoing }
     internal var plyCount: Int { moves.count }
     
-    /// The last move played, for the board's last-move highlight.
+    /// The last move, for the board's highlight.
     internal var lastMove: LastMove? {
         guard let move = moves.last else { return nil }
         return LastMove(from: move.from, to: move.to)
     }
     
-    /// Square of the side-to-move's king when in check; nil otherwise.
+    /// The side-to-move king's square when in check; nil otherwise.
     internal var checkSquare: Square? {
         let state = currentState
         guard state.isInCheck else { return nil }
@@ -153,9 +109,8 @@ internal final class LiveGame {
     
     // MARK: Initializer
     
-    /// Starts a live game from `start` (the standard starting position by
-    /// default — the only case v1 triggers on). A custom start gets an empty
-    /// piece tracker, since identities can't be inferred from a bare position.
+    /// Starts from `start` (standard by default). A custom start gets an empty tracker — identities
+    /// can't be inferred from a bare position.
     internal init(
         start: GameState = .starting,
         roster: Roster,
@@ -178,10 +133,8 @@ internal final class LiveGame {
     
     // MARK: Recording
     
-    /// Records a reconstructed move. Returns `false` (and changes nothing) if
-    /// the game is already finished or the move isn't legal in the current
-    /// state — the resolver should never hand over an illegal move, so a
-    /// rejection here means a logic error upstream, logged accordingly.
+    /// Records a reconstructed move; `false` (nothing changed) if finished or illegal — the
+    /// resolver never hands over an illegal move, so a rejection is an upstream logic error.
     @discardableResult
     internal func commit(_ move: Move) -> Bool {
         guard !isFinished else {
@@ -206,9 +159,7 @@ internal final class LiveGame {
         states.append(state.applying(move))
         trackers.append(tracker)
         
-        // The move line precedes result detection so the log reads in event
-        // order (Recorded Qd2# → Checkmate — 0-1); updateResult()'s own line
-        // would otherwise print before the move that caused it.
+        // Move line before result detection, so the log reads in event order.
         Self.logger?.info("Recorded \(san, privacy: .public) [ply \(self.moves.count)]")
         updateResult()
         return true
@@ -216,8 +167,7 @@ internal final class LiveGame {
     
     // MARK: Manual Result
     
-    /// Records a resignation by `color` (the other side wins). No-op if the
-    /// game is already decided.
+    /// Resignation by `color`; no-op if already decided.
     internal func resign(_ color: PieceColor) {
         guard !isFinished else { return }
         result = (color == .white) ? .blackWins : .whiteWins
@@ -233,16 +183,14 @@ internal final class LiveGame {
     
     // MARK: Result Detection
     
-    /// Auto-sets the result on a terminal position. Checkmate → the side that
-    /// just moved wins; stalemate → draw. The other FIDE draw conditions
-    /// (50-move, threefold, insufficient material) are deferred for v1 and left
-    /// to manual entry.
+    /// Auto-result on a terminal position: checkmate → mover wins, stalemate → draw. The other FIDE
+    /// draw conditions are deferred to manual entry.
     private func updateResult() {
         let state = currentState
         guard state.legalMoves().isEmpty else { return }
         
         if state.isInCheck {
-            // The side to move is checkmated, so the other side won.
+            // Side to move is checkmated — the other side won.
             result = (state.activeColor == .white) ? .blackWins : .whiteWins
             Self.logger?.info("Checkmate, \(self.result.rawValue, privacy: .public)")
         } else {

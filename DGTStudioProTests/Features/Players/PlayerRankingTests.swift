@@ -2,16 +2,7 @@ import Foundation
 import Testing
 @testable import DGTStudioPro
 
-/// The three ranking methods (D62′).
-///
-/// **Nonisolated**, matching its subject: `PlayerRanking` is a pure value type
-/// over two other pure value types, and a suite that needed the main actor
-/// would mean one of the three had stopped being pure.
-///
-/// What each test is really pinning is a *product* claim rather than an
-/// arithmetic one — which player a reader sees at rank 1, and why — so the
-/// fixtures are built to make the three methods disagree. A fixture where they
-/// all agree would pass under any comparator and prove nothing.
+/// The three ranking methods (D62′). Nonisolated, matching a pure value type.
 @Suite("Player ranking methods")
 struct PlayerRankingTests {
 
@@ -38,10 +29,6 @@ struct PlayerRankingTests {
     }
 
     /// Three players chosen so no two methods agree on the leader.
-    ///
-    /// - `grinder` has the most **wins** (8) at a middling rate.
-    /// - `sharp` has the best **win rate** (100%) on three games.
-    /// - `strong` has the best **rating** while leading neither other column.
     private func disagreeingField() -> [PlayerRanking.Entry] {
         [
             entry("grinder", wins: 8, losses: 8, rating: 1500),
@@ -121,12 +108,7 @@ struct PlayerRankingTests {
 
     // MARK: Totality — D10′'s rule
 
-    /// Every method bottoms out in a tiebreak that cannot tie, so the ladder is
-    /// reproducible across launches.
-    ///
-    /// Sorted from a **shuffled** input and compared against a second shuffle,
-    /// because an order that happened to be stable for one arrangement proves
-    /// nothing about the comparator.
+    /// Every method bottoms out in a tiebreak that cannot tie — reproducible across launches.
     @Test(arguments: PlayerRanking.allCases)
     func everyMethodIsTotal(_ method: PlayerRanking) {
         // Identical in every ranked column but the key — the only thing left to

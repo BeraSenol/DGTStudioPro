@@ -2,21 +2,8 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// The D24′ witness (M1 item 14): export is byte-pinned to the three DGT
-/// reference files the app actually interchanges — their *real bytes*,
-/// bundled beside this file as test resources, never a transcription.
-/// (The 28 July suite this re-lands was a transcription; its own header
-/// asked for the true files to replace it. They have.)
-///
-/// Each game round-trips import → `pgn.pgnText` — the exporter's exact
-/// production path (`PGN+Export`) — and must come back identical, byte
-/// for byte: LF endings, nine tags in fixed order, one full move per
-/// line with a white-only final line when the game ends on White's move,
-/// the result alone at the end, one trailing newline, no wrapping, no
-/// `[%eval]` comments. This restores the `PGNExporter` waiver's witness:
-/// every byte the exporter writes comes from `PGNSerializer` (register),
-/// so pinning the serializer against the reference bytes IS the export
-/// contract, minus the save panel.
+/// The D24′ witness: export byte-pinned to the three DGT reference files — real bytes, bundled,
+/// never a transcription — import → serialize → identical.
 @Suite("PGN Serializer — Reference Bytes")
 struct PGNSerializerTests {
 
@@ -136,15 +123,8 @@ struct PGNSerializerTests {
         )
     }
 
-    /// The writer and the reader are one convention, so this asserts the reader
-    /// against **the writer's own output** rather than against a literal.
-    ///
-    /// A literal would keep passing while the two drifted — the exact failure
-    /// the assert-against-the-shared-source rule exists for, and the one that
-    /// matters most here because these two functions sit twenty lines apart and
-    /// look independent. Walks a range rather than sampling: the parse reads a
-    /// digit *prefix*, so a one-digit case cannot catch a boundary a four-digit
-    /// case would.
+    /// The reader against **the writer's own output** across magnitudes — the two sit twenty lines
+    /// apart and look independent.
     @Test func writerAndReaderRoundTripAcrossMagnitudes() {
         for index in [1, 9, 10, 99, 100, 1_284, 10_000] {
             let name = PGNSerializer.fileName(
@@ -157,13 +137,7 @@ struct PGNSerializerTests {
         }
     }
 
-    /// No ordinal is a fact about the file, not an error — and the period is
-    /// what separates the two "no ordinal" cases from a real one.
-    ///
-    /// `1961 Candidates.pgn` is the case the guard exists for: digits with no
-    /// period after them are a *year in a title*, and reading it as game 1961
-    /// would silently file a whole tournament's games under invented numbers
-    /// near the top of the run.
+    /// No ordinal is a fact, not an error — the period separates the "no ordinal" cases from a real one.
     @Test func unnumberedFilesReadAsNil() {
         #expect(PGNSerializer.libraryIndex(fromFileName: "Carlsen-Nepo.pgn") == nil)
         #expect(PGNSerializer.libraryIndex(fromFileName: "1961 Candidates.pgn") == nil)
@@ -171,11 +145,8 @@ struct PGNSerializerTests {
         #expect(PGNSerializer.libraryIndex(fromFileName: "") == nil)
     }
 
-    /// A game carrying an index exports under **it**, not under its position in
-    /// the batch; a game without one falls back to the position (D58′).
-    ///
-    /// The pair is the point: asserting only the first would pass on an
-    /// implementation that ignored the parameter entirely.
+    /// Index when there is one, batch position otherwise (D58′) — asserting only the first would
+    /// pass on an implementation ignoring the index.
     @Test func exportNameUsesTheLibraryIndexWhenThereIsOne() {
         let numbered = PGN(
             white: "Senol, Bera", black: "Heylen, Christophe", result: .whiteWins
@@ -189,20 +160,12 @@ struct PGNSerializerTests {
         #expect(unnumbered.exportFileName(index: 2) == "2. Bera vs Christophe.pgn")
     }
 
-    // (The hash-exclusion pin is deliberately *not* here. `contentHash(for:)`
-    // is private to `PGNStore`, and reaching it would mean widening a door to
-    // suit a test. It lives in `PGNStoreRetagTests` as the behaviour instead —
-    // two differently-numbered copies of one game dedupe — which is the
-    // stronger claim anyway: it asserts the consequence rather than the digest.)
+    // The hash-exclusion pin is deliberately NOT here — `contentHash` is private, and widening a
+    // door to suit a test is the wrong trade; it lives in `PGNStoreRetagTests` as behaviour.
 
     // MARK: The Constant Nine-Tag Shape
 
-    /// A game that knows nothing still exports all nine tag lines — PGN's
-    /// own unknown vocabulary (`?`, `????.??.??`), `-` for no time
-    /// control, `*` for no result — so the tag block is a constant shape
-    /// (D24′). `PGN()` bare *is* the all-unknown game (every init
-    /// parameter defaults to its unknown), and zero moves emit no
-    /// movetext lines while the blank line and result still stand.
+    /// A game that knows nothing still exports all nine tags — the tag block is a constant shape.
     @Test func unknownEverythingStillExportsNineTags() {
         let expected = [
             "[Event \"?\"]",
@@ -223,12 +186,8 @@ struct PGNSerializerTests {
 
     // MARK: Archive-Shaped Export (M2 gate)
 
-    /// The M2 gate sentence, as bytes: a game shaped like the archive door
-    /// now produces it — tag-form seats from the D29′ picker, a real board
-    /// identity from the D28′ stamp — exports `[White "Senol, Bera"]` and
-    /// `[Board "DGT …"]`, not display names and not `?`. The reference
-    /// round-trips prove the same for imported files; this pins it for the
-    /// app's own archives, which never pass through the parser.
+    /// The M2 gate sentence as bytes: an archive-shaped game exports tag-form seats and the board
+    /// identity — the app's own archives never pass through the parser.
     @Test func archiveShapedGameExportsTagFormAndBoard() {
         let pgn = PGN(
             event: "Casual Game",

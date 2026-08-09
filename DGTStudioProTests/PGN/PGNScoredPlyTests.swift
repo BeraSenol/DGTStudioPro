@@ -1,23 +1,8 @@
 import Testing
 @testable import DGTStudioPro
 
-/// `PGN.hasScoredPly` — the app's one spelling of "is there analysis to show?",
-/// extracted 7 August 2026 after the `!evaluations.isEmpty` spelling drew a
-/// fabricated flat curve for two games whose analysis pass scored nothing.
-///
-/// **The middle case is the whole suite.** Empty-versus-scored is a
-/// distinction both spellings get right, and a test that only covered those
-/// two would have passed against the defect — the shape this project keeps
-/// cataloguing as "a claim is only checked by a test that could have failed".
-/// The array that broke it is full-length and all-nil, which is what
-/// `GameAnalysisDriver` writes before it walks, and it is the only input the
-/// two spellings disagree on.
-///
-/// Nonisolated, matching `PGNDisplayTests` one file over: `hasScoredPly` reads
-/// a stored array and needs neither a container nor the main actor. Following
-/// the sibling rather than reaching for `@MainActor` because `PGN` is a
-/// `@Model` — a `@Model` is not main-actor-isolated, and annotating this would
-/// invent a constraint to look safe.
+/// `PGN.hasScoredPly` — the one spelling of "is there analysis to show?", extracted after
+/// `!evaluations.isEmpty` drew a fabricated flat curve over an all-nil array.
 @Suite("PGN — has a scored ply")
 struct PGNScoredPlyTests {
 
@@ -33,33 +18,23 @@ struct PGNScoredPlyTests {
         #expect(Self.game(evaluations: []).hasScoredPly == false)
     }
 
-    /// **The regression.** `GameAnalysisDriver` resets `evaluations` to
-    /// `Array(repeating: nil, count: moves.count)` *before* the walk, so a
-    /// pass that dies or is stopped before scoring anything leaves exactly
-    /// this. It is not empty; it contains no analysis. Under the old spelling
-    /// the bar rendered at dead even and the graph drew a flat line on its own
-    /// midline — a reading invented entirely by the `?? 0.5` fallback.
+    /// **The regression**: the driver resets to all-nil *before* the walk, so a pass stopped before
+    /// scoring leaves exactly this — not empty, containing no analysis.
     @Test func aFullLengthAllNilArrayHasNoScoredPly() {
         let stalled = Self.game(evaluations: [Evaluation?](repeating: nil, count: 4))
         #expect(stalled.evaluations.isEmpty == false)   // the old gate said yes
         #expect(stalled.hasScoredPly == false)          // the question actually being asked
     }
 
-    /// One scored ply is enough, which is deliberate and is why
-    /// `AnalysisGlyph.State` needs three cases rather than a `Bool`: the
-    /// driver writes as it walks, so this goes true at ply one. "Some plies
-    /// are scored" and "the pass finished" are different questions and this
-    /// answers only the first — Get Info's "n of m" row answers the second.
+    /// One scored ply is enough (the driver writes as it walks) — "some plies" vs "all plies" are
+    /// different questions; this answers the first.
     @Test func oneScoredPlyIsEnough() {
         let partial = Self.game(evaluations: [nil, .drawn, nil, nil])
         #expect(partial.hasScoredPly)
     }
 
-    /// A *drawn* evaluation is a real score, not an absence. Worth its own
-    /// case because `Evaluation.drawn` is also what a nil per-ply reading
-    /// folds to for display — the two are the same number and different
-    /// facts, and a predicate that confused them would put this game back
-    /// under the bug it was written for.
+    /// A *drawn* evaluation is a real score, not an absence — same number as the display fold,
+    /// different meaning.
     @Test func aDrawnEvaluationIsAScore() {
         #expect(Self.game(evaluations: [.drawn, nil, nil, nil]).hasScoredPly)
     }

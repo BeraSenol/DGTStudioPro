@@ -1,11 +1,5 @@
-/// One fully-received DGT message, sliced out of the byte stream by
-/// `DGTFramer`. The framer is deliberately semantics-free: it carries the raw
-/// message byte (even one we don't recognize) and the payload bytes that
-/// followed it. Interpreting them into a `DGTEvent` is `DGTDecoder`'s job.
-///
-/// Keeping the message byte raw rather than a `DGTMessage` is what makes the
-/// framer robust to unknown/future message IDs — it still frames them
-/// correctly, and the decoder (or D2's `dgt` logging) decides what to do.
+/// One received DGT message. The framer is semantics-free — it carries the raw message byte
+/// (even unrecognized ones), which is what makes it resumable and testable.
 internal struct DGTFrame: Equatable, Sendable {
     /// The response byte that opened the frame (MSB set, e.g. `0x86`).
     internal let message: UInt8
@@ -13,37 +7,15 @@ internal struct DGTFrame: Equatable, Sendable {
     internal let data: [UInt8]
 }
 
-/// Incremental receiver state machine for the DGT serial protocol.
-///
-/// This is a faithful, hardware-free implementation of the receiver pseudocode
-/// in the DGT Chessboard Communication Protocol. Bytes arrive from the serial
-/// reader in arbitrary chunks — split mid-frame, several frames at once, with
-/// junk between frames — so framing must be a resumable state machine that
-/// holds partial progress across calls, exactly like a UCI line buffer but
-/// length-delimited instead of newline-delimited.
-///
-/// Frame layout on the wire:
-/// - byte 0: message/response byte, **MSB set**
-/// - byte 1: length high (7 bits)
-/// - byte 2: length low (7 bits) — total `length = (hi << 7) | lo`
-/// - bytes 3…: `length − 3` payload bytes
-///
-/// Robustness guarantees (pinned by `DGTFramerTests`):
-/// - **Garbage before a frame** (bytes without the MSB set) is skipped while
-///   awaiting a message byte.
-/// - **Split frames** resume correctly across `ingest` calls.
-/// - **Back-to-back frames** in one chunk all emit.
-/// - **Zero-payload messages** (`length ≤ 3`) complete immediately.
-/// - **Oversized length** (a corrupt length field claiming more payload than
-///   any real DGT message) is rejected and the framer resynchronizes rather
-///   than buffering unboundedly.
+/// Incremental receiver state machine per the DGT protocol pseudocode: byte 0 is the message
+/// byte (MSB set), then two 7-bit length bytes; MSB-based resync skips junk between frames.
+/// Holds partial progress across calls — chunk boundaries land anywhere.
 internal struct DGTFramer {
     
     // MARK: Configuration
     
-    /// Upper bound on payload size. The largest real DGT message is the board
-    /// dump at 64 payload bytes; anything claiming materially more than that is
-    /// a corrupt length field, not a frame we should buffer for.
+    /// The largest real message is the 64-byte board dump; anything claiming much more is a corrupt
+    /// length field, not a frame to buffer for.
     private static let maxPayloadLength = 256
     
     // MARK: State
@@ -67,9 +39,8 @@ internal struct DGTFramer {
     
     // MARK: Ingestion
     
-    /// Feeds a chunk of received bytes through the state machine, returning any
-    /// frames that completed within this chunk (possibly several, possibly
-    /// none — a partial frame is retained for the next call).
+    /// Feeds a chunk through the machine, returning frames completed within it; a partial frame is
+    /// retained for the next call.
     internal mutating func ingest(_ bytes: some Sequence<UInt8>) -> [DGTFrame] {
         var frames: [DGTFrame] = []
         for byte in bytes {

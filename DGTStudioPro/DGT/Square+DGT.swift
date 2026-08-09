@@ -1,17 +1,5 @@
-// The DGT board numbers its fields a8 = 0 … h1 = 63 — "row by row, in normal
-// reading sequence, counting from the top-left square when the connector is on
-// the left hand" (DGT Chessboard Communication Protocol). The app's `Square`
-// uses a1 = 0 … h8 = 63.
-//
-// This conversion lives at the protocol decode boundary, on `Square` itself,
-// so that **nothing downstream of the decoder ever sees a DGT field index**.
-// The chess core (perft/FEN/SAN) stays a1-indexed; adopting the board's
-// a8-indexing into the core — as the predecessor did — would silently break
-// all of it.
-//
-// The map is `(7 − rank)*8 + file` in both directions: it only mirrors the
-// rank, so it is its own inverse. The tests pin the bijection and the
-// round-trip explicitly rather than trusting that symmetry by eye.
+// DGT numbers fields a8 = 0 … h1 = 63 (protocol doc); the map is `(7 − rank)*8 + file` in both
+// directions — its own inverse.
 extension Square {
     
     /// Converts a DGT field index (a8 = 0 … h1 = 63) to an app `Square`
@@ -22,11 +10,8 @@ extension Square {
         self = (7 - field / 8) * 8 + (field % 8)
     }
     
-    /// The DGT field index (a8 = 0 … h1 = 63) for this app `Square`. The
-    /// inverse of `init(dgtField:)`. No production caller — every DGT command
-    /// the app sends is a fixed byte — but `SquareDGTFieldTests` needs a
-    /// forward direction to prove the bijection round-trips rather than
-    /// trusting the mirror symmetry by eye.
+    /// The DGT field index — `init(dgtField:)`'s inverse. No production caller (commands are fixed
+    /// bytes); test-only by decision.
     internal var dgtField: Int {
         assert(isOnBoard, "dgtField called on off-board square \(self)")
         return (7 - rank) * 8 + file

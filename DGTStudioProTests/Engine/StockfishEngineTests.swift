@@ -2,13 +2,7 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// Tests for `StockfishEngine`. The integration tests require a real
-/// Stockfish binary in the app's Resources folder — see
-/// `Engine_README.md` for setup — and are conditionally enabled via
-/// `.enabled(if: stockfishAvailable)`; when the binary isn't present
-/// they're skipped automatically, so CI environments and fresh checkouts
-/// won't see false failures. The startup-hardening tests (F4) use system
-/// binaries as stand-ins and run on every checkout.
+/// Integration tests need a real bundled Stockfish (Engine_README.md), conditionally enabled.
 @Suite("Stockfish Engine Integration")
 struct StockfishEngineTests {
 
@@ -16,15 +10,8 @@ struct StockfishEngineTests {
         StockfishEngine.defaultBinaryURL != nil
     }
 
-    /// A ⌘U host is not a user's Mac. `readyok` lands *after* the
-    /// `setoption name Hash` write, so the handshake's slowest step —
-    /// allocating and zeroing the table — is precisely the one a saturated
-    /// host starves, and the depth-5 perft suites saturate every core in
-    /// parallel. The 5 s production default exists to protect a *user* from
-    /// a dead binary; inherited here it manufactures a startup failure out
-    /// of load. The dead-binary contract stays pinned by
-    /// `startThrowsOnHandshakeTimeout`, which passes 250 ms for the same
-    /// reason in the opposite direction.
+    /// 60 s: `readyok` lands after the Hash allocation — the one step a saturated ⌘U host slows
+    /// arbitrarily. The dead-binary contract stays pinned separately.
     private static let handshakeTimeout: Duration = .seconds(60)
 
     // MARK: Lifecycle
@@ -113,16 +100,8 @@ struct StockfishEngineTests {
 
     @Test(.enabled(if: stockfishAvailable))
     func analyzesObviouslyLostPositionAsBlackAdvantage() async throws {
-        // Queen odds: the starting position minus White's queen, White
-        // to move. Chosen over a "just blundered the queen" middlegame
-        // because a hand-built tactic can quietly refute the premise —
-        // the original FEN here parked the black queen on c3, where the
-        // b2 AND d2 pawns both attack it, so White recaptures at once
-        // and the real deficit is one pawn (Stockfish said −170cp, and
-        // it was right; the test was wrong). It surfaced only when the
-        // binary-gated integration tests first ran on a checkout with
-        // Stockfish present. Queen odds has no move to argue with: the
-        // material verdict is the only thing the engine can report.
+        // Queen odds over a hand-built tactic: a composed middlegame can quietly refute its own
+        // premise; a missing queen leaves material as the only verdict.
         let url = try #require(StockfishEngine.defaultBinaryURL)
         let engine = StockfishEngine(binaryURL: url)
         try await engine.start()
@@ -169,16 +148,8 @@ struct StockfishEngineTests {
         }
     }
 
-    /// The stale-`bestmove` guard (M1 item 8). Replacing a live search
-    /// makes the engine answer the abandoned `go` with one hurried
-    /// `bestmove`; serial UCI delivers it *after* the replacement's `go`
-    /// was sent — while the current stream already belongs to the new
-    /// analysis. Pre-guard, that stale reply finished the new stream,
-    /// which then completed empty (or worse: carrying only the abandoned
-    /// search's stragglers). Deterministic, not a race: depth 24 keeps
-    /// the first search alive past the replacement call, and the
-    /// abandoned search's `bestmove` always precedes the new search's
-    /// first `info` in the pipe.
+    /// The stale-`bestmove` guard (M1 item 8): a replaced search's hurried reply lands after the
+    /// replacement's `go` and must not finish the stream it never belonged to. Deterministic — not a race.
     @Test(.enabled(if: stockfishAvailable))
     func replacementAnalysisSurvivesStaleBestMove() async throws {
         let url = try #require(StockfishEngine.defaultBinaryURL)
@@ -220,11 +191,8 @@ struct StockfishEngineTests {
 
     // MARK: Startup Hardening (F4 — no Stockfish binary required)
 
-    /// A binary that launches and exits before speaking UCI must fail the
-    /// handshake promptly. The old `start()` awaited `uciok` on a
-    /// non-throwing continuation with no termination handler: a dead binary
-    /// left the caller suspended forever and leaked the continuation.
-    /// `/usr/bin/true` is the canonical instant-exit stand-in.
+    /// A binary that exits before speaking UCI fails the handshake promptly (the old code suspended
+    /// until an unrelated timeout).
     @Test func startThrowsWhenTheEngineExitsBeforeTheHandshake() async {
         let engine = StockfishEngine(binaryURL: URL(filePath: "/usr/bin/true"))
 
@@ -234,11 +202,7 @@ struct StockfishEngineTests {
         #expect(await engine.isRunning == false)
     }
 
-    /// A binary that launches and stays silent must trip the handshake
-    /// timeout rather than suspend forever. `/bin/cat` blocks on stdin and
-    /// never writes — the pure timeout path (the process outlives the
-    /// deadline, so only the timeout task can fire). The failure path also
-    /// terminates the stray process: `isRunning` false afterwards.
+    /// A silent binary trips the timeout — `/bin/cat` blocks on stdin, the pure timeout path.
     @Test func startThrowsOnHandshakeTimeout() async {
         let engine = StockfishEngine(binaryURL: URL(filePath: "/bin/cat"))
 
@@ -248,23 +212,8 @@ struct StockfishEngineTests {
         #expect(await engine.isRunning == false)
     }
 
-    /// The teardown-ordering hole (30 July audit): `shutdown()` during a
-    /// still-pending handshake clears `process` in `teardown()`, after
-    /// which `processDidTerminate` and `engineOutputEnded` both guard
-    /// themselves into no-ops — pre-fix, only the handshake's own timeout
-    /// task rescued the waiter, so a Stop All inside the window reported
-    /// failure up to 30 s late. The assertion is on the *message*: the
-    /// prompt teardown failure and the late timeout backstop throw
-    /// differently-worded `startupFailed`s, so equality distinguishes the
-    /// fix from the backstop with no wall-clock bound (the 60 s deadlines
-    /// here exist to be *not* hit — a regression fails this test after a
-    /// minute rather than flaking under load).
-    ///
-    /// `/bin/cat` again: launches, blocks on stdin, never speaks UCI. By
-    /// the time `isRunning` reads true the handshake continuation is
-    /// already registered — no suspension point sits between the process
-    /// assignment and the registration on the actor — so the `shutdown()`
-    /// below always races nothing.
+    /// The teardown-ordering hole: `shutdown()` during a pending handshake must fail `start()`
+    /// promptly — pre-fix, only the timeout rescued it, up to 30 s late. The waits exist to be NOT hit.
     @Test func shutdownDuringThePendingHandshakeFailsStartPromptly() async throws {
         let engine = StockfishEngine(binaryURL: URL(filePath: "/bin/cat"))
 

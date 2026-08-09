@@ -26,11 +26,8 @@ internal struct EvaluationGraphView: View {
             
             context.stroke(
                 midline,
-                // Neutral, not `style.light` (4 Aug 2026): the 50/50 line
-                // is structure. The wash already places the grid-border
-                // colour at this exact height, so the stroke is a whisper
-                // of definition on top of a seam that is itself the mark —
-                // belt and braces, either alone would do.
+                // Neutral, not `style.light`: the 50/50 line is structure, and the wash already places the
+                // grid-border colour at this height.
                 with: .color(.black.opacity(0.15)),
                 lineWidth: 0.5
             )
@@ -84,20 +81,9 @@ internal struct EvaluationGraphView: View {
             }
         }
         .background {
-            // The triple wash, final form (4 Aug 2026, Bera's design after
-            // four spec iterations): native window ground at both poles,
-            // the board's grid-border colour at the seam. The poles melt
-            // the panel into the app — `windowBackgroundColor` follows
-            // appearance *and* wallpaper tinting, so the chart's edges sit
-            // on whatever the window actually is rather than on a guess —
-            // and the geometry places each treatment where it works:
-            // near-equality slivers, the thin fills that every earlier
-            // take struggled with, sit against the seam's grid colour (the
-            // hue the app already uses for structural lines), while the
-            // poles back only extreme advantages, where the fill is thick
-            // enough to carry itself on any ground. Wrapped in
-            // `Color(nsColor:)` because a gradient's stops are `Color`;
-            // `.gridBorder` is the asset symbol and needs no bridge.
+            // The triple wash, final form (Bera's design after four iterations): native window ground at
+            // both poles — melts into whatever the window is — and the board's grid-border colour at the
+            // seam, backing the near-equality slivers; extreme advantages carry themselves on fill mass.
             LinearGradient(
                 colors: [
                     .gray.opacity(0.1),
@@ -113,10 +99,8 @@ internal struct EvaluationGraphView: View {
     }
     
     // MARK: Instance Methods
-    /// Horizontal placement comes from `EvaluationGraphGeometry` since D46′,
-    /// which gave the same arithmetic a second consumer: the magnifier window
-    /// inverts it to answer what sits under the pointer. Vertical placement
-    /// stays here — nothing else asks about it.
+    /// Horizontal placement comes from `EvaluationGraphGeometry` (D46′) — the same arithmetic
+    /// gained a second consumer pointing the other way.
     private func evaluationPoints(in rect: CGRect) -> [CGPoint] {
         let geometry = EvaluationGraphGeometry(
             width: rect.width,
@@ -148,12 +132,8 @@ internal struct EvaluationGraphView: View {
         }
     }
     
-    /// `curve` already opens with `move(to: start)`, so it *is* the leading
-    /// edge. An explicit move+line before `addPath` opened a *second* subpath
-    /// instead (the first a degenerate zero-area line), and `closeSubpath`
-    /// then cut diagonally from (end.x, baseY) back to `start` rather than
-    /// running along the baseline — invisible while ply 1 evaluates to
-    /// exactly 0.50, a left-tapering wedge otherwise.
+    /// `curve` already opens with `move(to:)`, so it *is* the leading edge — an explicit move+line
+    /// opened a second degenerate subpath and the fill leaked.
     private func closedAreaPath(curve: Path, start: CGPoint, end: CGPoint, baseY: CGFloat) -> Path {
         var area = curve
         area.addLine(to: CGPoint(x: end.x, y: baseY))

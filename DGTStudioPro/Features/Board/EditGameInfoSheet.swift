@@ -1,52 +1,24 @@
 import SwiftUI
 
-/// The archive-confirmation sheet (M5): presented automatically when a
-/// finished live game lands in the Library, confirming the save and offering
-/// one last pass over the seven-tag details before the player moves on.
-///
-/// Reuses `LiveGameRosterForm` — the same field set as the new-game and
-/// edit-details sheets, so the three can never drift (the form was built for
-/// exactly this reuse) — under the `archive.form.*` identifier prefix.
-/// Result is shown, not edited (Decision #4: the game tracks it).
-///
-/// Edits are staged locally; **Done** dismisses without applying them, and
-/// **Save Changes** hands the normalized roster to the caller, which owns
-/// the PGN write *and* the `PGNStore.refreshHash(of:)` call — the one-hash,
-/// two-doors invariant lives at that call site, not here. The sheet itself
-/// never touches SwiftData.
+/// The archive-confirmation sheet (M5): confirms the save, offers one last pass over the
+/// details. Shares `LiveGameRosterForm` (so the three sheets cannot drift) under the
+/// `archive.form.*` prefix. Result shown, not edited (Decision #4). The caller owns the PGN
+/// write and the `refreshHash` — one hash, two doors.
 internal struct EditGameInfoSheet: View {
     
     // MARK: Stored Properties
     
-    /// The archived game, read for seeding the form and the header line.
+    /// Read for seeding the form and the header line.
     internal let pgn: PGN
     
-    /// True when the archive deduplicated against an existing Library row —
-    /// the header says so instead of claiming a fresh save.
+    /// True when the archive deduplicated — the header says so instead of claiming a fresh save.
     internal let deduplicated: Bool
     
-    /// Called with the normalized roster when the player saves changes.
-    /// The caller applies it to the PGN, refreshes the content hash, and
-    /// keeps the on-screen live roster in sync.
+    /// Called with the normalized roster; the caller applies, rehashes, and syncs the live roster.
     internal let onSave: (LiveGame.Roster) -> Void
 
-    /// Known-player **tag forms** for the seat pickers (5 Aug 2026), forwarded
-    /// verbatim to `LiveGameRosterForm` — same name, same default, same
-    /// meaning, so this is a pass-through rather than a second concept.
-    ///
-    /// **A parameter and not a `@Query`, and the previews are what settle it.**
-    /// The obvious move was to query `Player` here the way `NewLiveGameSheet`
-    /// does one file over. This sheet's own doc says it "never touches
-    /// SwiftData", which reads like discipline and is actually a *capability*:
-    /// both previews below construct it with no `modelContainer`, so a `@Query`
-    /// would trap the canvas the moment it was added. The presenter has a
-    /// context and this does not; passing the strings keeps that true.
-    ///
-    /// Empty renders plain text fields, so any caller that has no registry to
-    /// offer — and the previews — behave exactly as before. The default lives
-    /// on the **initializer's** parameter rather than here, because this type
-    /// writes its own `init` and therefore has no memberwise one for a property
-    /// default to reach.
+    /// Known-player tag forms, forwarded verbatim. **A parameter, not a `@Query`** — this sheet is
+    /// deliberately container-free so its previews build; the presenter has the context.
     internal let knownPlayers: [String]
     
     // MARK: Environment
@@ -59,13 +31,9 @@ internal struct EditGameInfoSheet: View {
     
     // MARK: Initializer
     
-    /// Hand-written because `_roster` has to be seeded from `pgn` — which is
-    /// also why `knownPlayers` needs a parameter here rather than riding a
-    /// memberwise init the way `LiveGameRosterForm`'s twin does. A type with an
-    /// explicit initializer gets **no** synthesized memberwise one, so a
-    /// defaulted stored property is invisible to callers until it is threaded
-    /// through by hand; adding the property alone compiled the declaration and
-    /// failed every call site.
+    /// Hand-written because `_roster` seeds from `pgn` — which is also why `knownPlayers` is a
+    /// parameter: a type with its own init gets no memberwise one, and a defaulted property is
+    /// invisible to callers.
     internal init(
         pgn: PGN,
         deduplicated: Bool,
@@ -76,8 +44,7 @@ internal struct EditGameInfoSheet: View {
         self.deduplicated = deduplicated
         self.onSave = onSave
         self.knownPlayers = knownPlayers
-        // Seed with form-friendly values ("?" placeholders → empty fields),
-        // the same boundary conversion the live sheets use.
+        // Seed with form-friendly values ("?" → empty), the live sheets' boundary conversion.
         _roster = State(initialValue: LiveGame.Roster(
             event: formValue(pgn.event),
             site: formValue(pgn.site),
@@ -117,15 +84,8 @@ internal struct EditGameInfoSheet: View {
                 
                 Spacer()
                 
-                // D61′ (M12.2). Safe to gate here, and the reason is worth
-                // stating because the opposite would be a trap: this sheet
-                // appears *after* the game is archived, so a disabled Save
-                // strands nothing — the game is already in the Library and
-                // **Done** dismisses without applying edits, unconditionally.
-                // What is blocked is introducing a collision by editing, which
-                // is exactly D61′'s scope: one door minting them, not the
-                // concept. A game that somehow already holds one still
-                // archives, still exports, and still opens here.
+                // D61′: safe to gate here — the sheet appears *after* archive, so a disabled Save blocks only
+                // the *edit*, never the save. Import stays exempt (D61′'s scope: one door minting them).
                 Button("Save Changes") {
                     onSave(normalized(roster))
                     dismiss()

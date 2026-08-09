@@ -3,16 +3,8 @@ import Foundation
 import SwiftData
 @testable import DGTStudioPro
 
-/// Locks in the second door of the one-hash/two-doors invariant (M5):
-/// `archive(_:)` shares `contentHash` with import, so a finished live game
-/// that already exists in the Library — imported earlier, or archived twice
-/// by the resume self-heal — *deduplicates as success* instead of throwing
-/// (the opposite of import, where a hash match is an error). `refreshHash`
-/// is the third leg: an in-place edit that skipped it would leave a stale
-/// hash and let future deduplication silently rot.
-///
-/// `@MainActor`: `LiveGame` is a `@MainActor` class and `archive(_:)` is
-/// `@MainActor` for the same reason.
+/// The second door of one-hash/two-doors (M5): a hash match on archive is *success* — the
+/// opposite of import.
 @MainActor
 @Suite("PGN Store — Archive Door")
 struct PGNStoreArchiveTests {
@@ -53,18 +45,8 @@ struct PGNStoreArchiveTests {
         try context.fetchCount(FetchDescriptor<PGN>())
     }
 
-    /// An importable game that is *not* the archive fixture.
-    ///
-    /// All seven roster tags, because `importPGN` throws
-    /// `.missingRequiredTags` on anything less — a two-tag literal reads fine
-    /// and never reaches the door it was written to set up. Deliberately a
-    /// different pairing and event from `roster()`, so a row seeded through
-    /// this helper can never dedupe against the game the test then archives:
-    /// the ordinal assertions would still pass on the *existing* row's number
-    /// and would be asserting nothing.
-    ///
-    /// `[Result "*"]` is admitted here on purpose — the import door takes it,
-    /// only the archive door refuses it (Decision #3).
+    /// An importable game that is not the archive fixture — all seven tags (`importPGN` throws on
+    /// missing ones), distinct moves so it can never dedupe against the archived game.
     private static func importableText() -> String {
         """
         [Event "Elsewhere"]
@@ -223,15 +205,8 @@ struct PGNStoreArchiveTests {
 
     // MARK: The Ordinal (D58′)
 
-    /// **The pin the 7 Aug fix exists for.** `highestLibraryIndex()` returns
-    /// nil when nothing carries an ordinal, and the old `flatMap` spelling
-    /// turned that into "no ordinal" rather than "the run starts here" — so
-    /// the first game archived into a fresh install was unnumbered, and so was
-    /// every game archived into a pre-D58′ archive until `Match Folder` ran.
-    ///
-    /// This is the arm the shipped code could not reach: every other ordinal
-    /// test seeds a numbered row first, which is exactly the condition that
-    /// hid the bug.
+    /// The pin the 7 Aug fix exists for: nil from `highestLibraryIndex()` means "the run starts
+    /// here", and the old `flatMap` spelling read it as "no ordinal".
     @Test func theFirstGameArchivedIntoAnEmptyLibraryIsNumberOne() throws {
         let context = try Self.makeContext()
         let store = PGNStore(modelContext: context)
@@ -241,11 +216,8 @@ struct PGNStoreArchiveTests {
         #expect(result.pgn.libraryIndex == 1)
     }
 
-    /// The same arm one step further out, and the one that actually bit: a
-    /// Library with *games* in it but none numbered is still an empty run.
-    /// Asserting only the empty-container case above would pass while this
-    /// failed, because "no rows" and "no ordinals" are different states that
-    /// the same nil represents.
+    /// One step further out, and the arm that actually bit: games present, none numbered — still an
+    /// empty run.
     @Test func aLibraryOfUnnumberedGamesStillStartsItsRunAtOne() throws {
         let context = try Self.makeContext()
         let store = PGNStore(modelContext: context)
@@ -271,11 +243,8 @@ struct PGNStoreArchiveTests {
         #expect(result.pgn.libraryIndex == 48)
     }
 
-    /// A deduplicated archive returns the row that was already there, so it
-    /// keeps *that* row's ordinal and mints nothing. Worth pinning because the
-    /// assignment happens before the hash probe: the new ordinal is computed
-    /// for a `PGN` that is then discarded, and a future reader tidying that
-    /// ordering would have no other witness that the discard is intended.
+    /// A deduplicated archive keeps the existing row's ordinal — the new one is computed before the
+    /// hash probe and must be discarded with the fresh row.
     @Test func aDeduplicatedArchiveKeepsTheExistingOrdinal() throws {
         let context = try Self.makeContext()
         let store = PGNStore(modelContext: context)

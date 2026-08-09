@@ -1,21 +1,8 @@
 import Testing
 @testable import DGTStudioPro
 
-/// Pins the wire-level DGT protocol contract: the outbound command bytes,
-/// the inbound message IDs, and — most importantly — the `DGTPiece → Piece`
-/// mapping at the protocol boundary.
-///
-/// These are not "logic" so much as a hardware contract. The byte values
-/// must match the DGT Chessboard Communication Protocol exactly (see the
-/// protocol PDF in the project); a regression here breaks communication
-/// silently, with no compiler help. The piece mapping is the subtle one:
-/// DGT orders pieces **P, R, N, B, K, Q**, whereas the app's `PieceType`
-/// is pawn, knight, bishop, rook, queen, king. `DGTPiece.piece` bridges
-/// that reordering with an exhaustive switch — it replaced the retired
-/// raw-indexed `pieceLookup` table, whose single transposed entry would
-/// have turned every rook coming off the board into a knight without
-/// ever failing to compile. The switch makes a wrong *shape* a build
-/// error; this suite still pins the wrong *values* the compiler can't.
+/// The wire-level contract: command bytes, message IDs, `DGTPiece → Piece` mapping. A hardware
+/// contract — the values must match the DGT protocol doc exactly; the compiler can't pin *values*.
 @Suite("DGT Protocol Constants & Piece Mapping")
 struct DGTCommandTests {
     

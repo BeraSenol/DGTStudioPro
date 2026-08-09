@@ -2,13 +2,8 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// Pins the rating math and the fold's contracts (nonisolated — pure).
-///
-/// Reference values were computed by evaluating the Glicko-1 formulas at
-/// full double precision, not copied from the paper's prose: Glickman's
-/// published 1464.06 / 151.4 comes from *rounded intermediate* g and E
-/// values in his walkthrough; the exact formulas give 1464.1065 /
-/// 151.3989, which is what this implementation must produce.
+/// The rating math and the fold's contracts. Reference values computed at full double precision
+/// — the paper's 1464.06/151.4 is rounded-intermediate arithmetic; the formulas give 1464.1065/151.3989.
 @Suite("Glicko-1")
 struct Glicko1Tests {
     
@@ -100,15 +95,8 @@ struct Glicko1Tests {
         #expect(!Glicko1.Rating(mean: 1500, deviation: 110).isProvisional, "boundary is established")
     }
     
-    /// The marker is `*` since 5 Aug 2026, not the word "(provisional)" — the
-    /// Rating column's 120 pt cell truncated the word. Argued at the
-    /// declaration; the expected string moved and the two claims did not:
-    /// provisional ratings are marked, settled ones are bare, and both round.
-    ///
-    /// This test is why the rename was caught at all. The change was made for
-    /// a table cell, the doc comment above `displaySummary` still said
-    /// "(provisional)" afterwards, and nothing else in the app would have
-    /// disagreed out loud — three view sites print whatever this returns.
+    /// The marker is `*`, not "(provisional)" — the 120 pt cell truncated the word. The two-homes
+    /// failure: the string moved and neither the doc nor this test did, until ⌘U.
     @Test func displaySummaryRoundsAndMarksProvisional() {
         #expect(Glicko1.Rating(mean: 1662.212, deviation: 290.23).displaySummary == "1662*")
         #expect(Glicko1.Rating(mean: 1499.6, deviation: 30).displaySummary == "1500")
@@ -116,11 +104,8 @@ struct Glicko1Tests {
     
     // MARK: The Fold
     
-    /// A beats B, then B beats A. Pins three things at once: chronology
-    /// (the fold must sort), simultaneity (game two uses both post-game-
-    /// one states), and the genuine Glicko recency effect — the later win
-    /// outweighs the earlier one because both deviations have tightened,
-    /// so the pool does *not* return to 1500/1500.
+    /// A beats B, then B beats A — pins chronology, simultaneity, and the genuine recency effect
+    /// (the pool does not return to 1500/1500).
     @Test func foldIsChronologicalAndSimultaneous() throws {
         let records = [
             record(white: alice, black: bob, result: .whiteWins,

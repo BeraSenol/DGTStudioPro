@@ -3,17 +3,7 @@ import SwiftData
 @testable import DGTStudioPro
 import Foundation
 
-/// D58′'s folder backfill (M12.5) — the door that fills in the ordinals the
-/// import door could not.
-///
-/// **Why this needs real files.** The whole point of the door is that it reads
-/// a *directory* and matches by content hash, so a suite that handed it parsed
-/// games would witness the matching and skip the two things most likely to
-/// break: filename ordinal extraction, and the decision about which files to
-/// even open. Each test writes a temporary folder and deletes it after.
-///
-/// `@MainActor` because `PGNStore` touches a `ModelContext`, matching the other
-/// store suites.
+/// D58′'s folder backfill — driven through a real *directory*, matched by content hash.
 @Suite("PGN Store — Library Index Backfill")
 @MainActor
 struct PGNStoreLibraryIndexTests {
@@ -76,15 +66,8 @@ struct PGNStoreLibraryIndexTests {
         }
     }
 
-    /// **Matching is by hash, not by filename**, which is the design and the
-    /// thing most likely to be "simplified" later. The file is named with a
-    /// player who does not appear in the game at all; it still matches,
-    /// because the bytes hash the same.
-    ///
-    /// This is not a contrived case: D58′ records that the working folder
-    /// spells filenames with full display names while `PGNSerializer.fileName`
-    /// writes given names only, so a name-based match would miss exactly the
-    /// files this door was built to read.
+    /// **Matching is by hash, not filename** — the file is named with a player not in the game and
+    /// still matches. Not contrived: the folder writes full names, the serializer given names.
     @Test func matchingIgnoresTheNameInTheFilename() throws {
         let context = try Self.makeContext()
         let store = PGNStore(modelContext: context)

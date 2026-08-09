@@ -3,16 +3,11 @@ import SwiftUI
 
 internal struct LibraryGalleryView: View {
     let games: [PGN]
-    /// The badge's input, off the destination's memoized projection — see
-    /// `LibraryIconsView.analyzedIDs`; the filmstrip draws the same card.
+    /// The badge's input, off the memoized projection (see `LibraryIconsView.analyzedIDs`).
     let analyzedIDs: Set<PGN.ID>
     @Binding var selectedPGNs: Set<PGN.ID>
     let boardStyle: BoardStyle
-    /// Takes the set since D56′, and this is the one host where that changes
-    /// nothing: a gallery selection is single by construction — every arm that
-    /// writes it (`move`, the thumbnail's `onSelect`) assigns exactly one id —
-    /// so Finder's open-the-selection rule degenerates to the card in hand and
-    /// `LibraryIconsView.open(_:)` has no counterpart here.
+    /// Takes the set (D56′) — degenerate here: a gallery selection is single by construction.
     let onOpen: ([PGN]) -> Void
     let onAnalyze: (PGN) -> Void
     let onExport: (PGN) -> Void
@@ -25,8 +20,7 @@ internal struct LibraryGalleryView: View {
     
     // MARK: Private Properties
 
-    /// The grids' focus arrangement (4 Aug 2026): the gallery itself is the
-    /// focusable, a thumbnail click hands it focus, and ← / → step the strip.
+    /// The gallery itself is the focusable; a thumbnail click hands it focus, ← / → step the strip.
     @FocusState private var isFocused: Bool
 
     /// Ambient — `LibraryIconsView`'s twin, argued at the environment value.
@@ -44,26 +38,13 @@ internal struct LibraryGalleryView: View {
         .onMoveCommand { direction in
             move(direction)
         }
-        // The whole gallery is the background target (7 Aug 2026), unlike the
-        // icons grids where the menu rides the grid's own `contentShape`.
-        // A gallery has almost no empty space to aim at — a preview pane and a
-        // strip of thumbnails, both of which are content — so scoping this to
-        // "background" would have made it unreachable in the one mode that
-        // needs the panel most, since a filmstrip cannot be resized and sort is
-        // the only thing left to set. Card menus still win over their own
-        // bounds, so this is what a right-click anywhere *else* finds.
+        // The whole gallery is the background target — almost no empty space to aim at; card menus win
+        // over their own bounds.
         .contextMenu { ShowViewOptionsButton() }
     }
 
-    /// ← / → step the filmstrip; ↑ / ↓ hold (4 Aug 2026). The stepping is
-    /// `IconGridSelection.destination` in its **one-row degenerate case** —
-    /// `columnCount == count` — so the strip speaks the exact grammar the
-    /// icons grids speak rather than a fourth hand-rolled ±1: left/right
-    /// clamp at the ends (a strip has no next row to wrap onto), and the
-    /// vertical keys hold via the top-row and last-row guards. No anchor
-    /// state, unlike the grids: the previewed card *is* the anchor, and with
-    /// nothing selected the first arrow lands on the first card. The strip's
-    /// own `.onChange(of:)` scroll-to does the rest.
+    /// ← / → step, ↑ / ↓ hold — `IconGridSelection.destination`'s one-row degenerate case
+    /// (`columnCount == count`); the previewed card is the anchor.
     private func move(_ direction: MoveCommandDirection) {
         guard !games.isEmpty else { return }
         let target: Int
@@ -81,13 +62,8 @@ internal struct LibraryGalleryView: View {
         selectedPGNs = [games[target].id]
     }
     
-    /// Selection-driven with no fallback to `games.first`: an unselected
-    /// gallery shows an empty board rather than silently previewing a game
-    /// the user didn't pick. (Retires the old `ContentUnavailableView` arm,
-    /// which was unreachable — `LibraryDestination` gates on
-    /// `filteredGames.isEmpty` before the mode views are ever built.)
-    /// `PlayersGalleryView` adopted this rule on 4 Aug 2026, closing the
-    /// last gallery parity residue.
+    /// Selection-driven, no `games.first` fallback: an unselected gallery shows an empty board —
+    /// never preview what the user didn't pick.
     private var preview: some View {
         LibraryGamePreviewView(game: selectedPGN, boardStyle: boardStyle)
     }
@@ -102,15 +78,7 @@ internal struct LibraryGalleryView: View {
                 }
                 .padding()
             }
-            // 180 fits the card at the filmstrip's size (8 Aug 2026 — this
-            // comment said 260, the pre-slider number: the card's glyph block
-            // was ~138 pt when every card drew an 80 pt sheet, and the View
-            // Options pass reduced the strip's card to the 60 pt default it
-            // passes nothing to override). The rule the 4 Aug story taught is
-            // unchanged and is the thing to preserve if the card grows again:
-            // the strip sizes itself to the card, never the reverse — the
-            // card's glyph is rigid, so a strip shorter than the card clips
-            // rather than squeezing.
+            // 180 fits the card at the filmstrip size — the strip sizes itself to the card, never the reverse.
             .frame(height: 180)
             .background(.thinMaterial)
             .onChange(of: selectedPGNs) { _, newSelection in

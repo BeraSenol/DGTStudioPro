@@ -2,15 +2,8 @@ import AppKit
 import UniformTypeIdentifiers
 import os
 
-/// The export door's transport half (D24′): panels and file writes. Waived
-/// from unit coverage under the existing save-panel family — a modal panel
-/// can't be driven from a test host — while every byte it writes comes from
-/// the pure, fully suited `PGNSerializer`.
-///
-/// One game takes a save panel; several take an **open panel in directory
-/// mode**, because the reference export is one numbered file per game, not
-/// one concatenated file. Rejected: the multi-game single file D17′
-/// originally recorded — the files the user interchanges are separate.
+/// The export door's transport half (D24′): panels and writes — waived under the save-panel
+/// family; every byte comes from the pure serializer. Batch = one numbered file per game.
 @MainActor
 internal enum PGNExporter {
     
@@ -52,14 +45,8 @@ internal enum PGNExporter {
         panel.canCreateDirectories = true
         guard panel.runModal() == .OK, let folder = panel.url else { return }
 
-        // D32′ — same-named files are overwritten silently, by decision.
-        // Re-exporting into last time's folder should refresh the files
-        // (the export is a pure function of the Library rows), and the
-        // alternatives are worse: a skip silently exports less than was
-        // selected, a rename breaks the D24′ filename convention, and a
-        // per-file modal is the fifty-dialog batch the `write` doc already
-        // rejects. The single-game path keeps `NSSavePanel`'s own replace
-        // prompt — the system asks there, so we don't.
+        // D32′ — same-named files overwrite silently: re-exporting into last time's folder should
+        // refresh (the export is a pure function of the rows).
         for (offset, game) in games.enumerated() {
             write(game, to: folder.appending(path: game.exportFileName(index: offset + 1)))
         }

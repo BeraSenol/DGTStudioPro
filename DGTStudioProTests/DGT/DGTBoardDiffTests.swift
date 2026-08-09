@@ -1,24 +1,9 @@
 import Testing
 @testable import DGTStudioPro
 
-/// Coverage for `DGTBoardDiff` — the literal before/after delta the
-/// reconstruction engine (and, later, the D6 recovery system) reads to decide
-/// what happened on the physical board. The type says nothing about legality;
-/// these tests pin its *shape* contract, especially the two subtleties the
-/// reconstructor leans on:
-///
-///   1. A capture **destination** belongs to `placed`, never `vacated` — the
-///      captured piece leaves no `vacated` trace, because that square ends up
-///      occupied (by the mover).
-///   2. An en-passant capture whose victim wasn't lifted produces a diff that
-///      is *byte-for-byte identical* to a plain pawn push. This is exactly why
-///      `DGTReconstructor` needs its `.correctable` near-miss branch — the diff
-///      alone cannot tell the two apart.
-///
-/// `DGTBoardDiff` had no dedicated suite; it was only exercised indirectly
-/// through the reconstructor. Not `@MainActor`: the type is a plain value
-/// (`Equatable`) whose synthesized `==` is nonisolated, matching every other
-/// pure-value suite in the module.
+/// `DGTBoardDiff` — the literal before/after delta. A capture destination belongs to `placed`,
+/// never `vacated`; an uncorrected EP is byte-identical to a plain push (why the diff alone
+/// cannot tell them apart).
 @Suite("DGT Board Diff")
 struct DGTBoardDiffTests {
 
@@ -115,12 +100,8 @@ struct DGTBoardDiffTests {
 
     // MARK: En Passant Indistinguishability
 
-    /// An en-passant capture whose victim was **not** lifted produces the exact
-    /// same diff as a plain pawn push to the EP target: the victim's square is
-    /// unchanged (occupied before, occupied after), so it never enters the diff.
-    /// This is the precise reason `DGTReconstructor` cannot rely on the diff
-    /// alone and adds the `.correctable` branch — pinned here so the assumption
-    /// can't silently rot.
+    /// The uncorrected EP produces the exact diff of a plain push (the victim's square never enters
+    /// it) — the precise reason `.correctable` exists; pinned here so the assumption is visible.
     @Test func uncorrectedEnPassantIsIndistinguishableFromAPlainPush() {
         // A plain (illegal-but-irrelevant) push e5→d6, no neighbour pawn.
         let pushDiff = DGTBoardDiff(

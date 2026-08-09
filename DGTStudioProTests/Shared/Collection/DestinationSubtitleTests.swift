@@ -1,27 +1,14 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The toolbar subtitle grammar (3 Aug 2026), pinned the way `GameHeadline`
-/// is: the views are dumb, the grammar is the part worth holding still.
-///
-/// Nonisolated, and that is load-bearing rather than stylistic — the D44′
-/// shape. `DestinationSubtitle` takes a `LiveGameHUDView.Phase`, which is
-/// nested inside a `@MainActor` view, and a global actor isolates a type's
-/// *members*, not the types nested inside it. This suite constructing those
-/// cases off the main actor is the compile-time witness that the formatter is
-/// genuinely pure and hasn't quietly acquired isolation from its input.
+/// The subtitle grammar, pinned the way `GameHeadline` is: views dumb, grammar held still.
+/// Nonisolated, load-bearing (D44′ — nested types don't inherit isolation).
 @Suite("Destination Subtitle")
 struct DestinationSubtitleTests {
 
     // MARK: Board — the exceptional vocabulary
 
-    /// The words themselves. A change here is a change to what the window
-    /// chrome says, which is exactly the kind of edit that should have to
-    /// touch a test on the way through.
-    ///
-    /// Spelled out rather than parameterised: `arguments:` would need
-    /// `Phase` to satisfy `Sendable`, which it does only implicitly, and a
-    /// vocabulary pin is not worth resting on an inference.
+    /// The words themselves — a change to window chrome should have to touch a test.
     @Test func exceptionalPhasesRenderAsOneShortWord() {
         func subtitle(_ phase: LiveGameHUDView.Phase) -> String? {
             DestinationSubtitle.board(phase: phase, reviewing: nil)
@@ -35,11 +22,7 @@ struct DestinationSubtitleTests {
         #expect(subtitle(.finished(result: .draw)) == "Finished")
     }
 
-    /// The payload never reaches the subtitle. `.correction` and
-    /// `.recovering` both carry a message the sidebar card renders in full,
-    /// and the whole point of this line is that it stays a word — a formatter
-    /// that interpolated the hint would put the recovery guidance in the
-    /// toolbar, which is the sidebar's job by D15′.
+    /// The payload never reaches the subtitle — the whole point of the line is that it stays a word.
     @Test func theSubtitleNeverLeaksAPhasePayload() {
         let subtitle = DestinationSubtitle.board(
             phase: .correction(message: "lift the pawn on e5"),

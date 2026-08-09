@@ -3,33 +3,9 @@ import Foundation
 import os
 import UniformTypeIdentifiers
 
-/// A unified, exportable diagnostic timeline for the DGT live-play subsystem.
-///
-/// The existing per-type `os.Logger`s stream to Console (great for `log
-/// stream`, useless after the fact). This recorder is their in-memory,
-/// *exportable* sibling: every semantic milestone on the live path — connect,
-/// board info, each settled move, ghost-rook, recovery, and above all a
-/// **full-context desync capture** — lands in one ordered buffer that can be
-/// written to a file for "send me the log" debugging.
-///
-/// Design discipline (matches the rest of the DGT arc):
-/// - **Pure types stay pure.** `DGTReconstructor`, `DGTBoardDiff`, `DGTFramer`,
-///   `DGTDecoder`, and the whole `Chess/` core get *no* logger. They're read
-///   by the side-effect-free `DGTDebugFormat` helpers below to render text;
-///   they never write.
-/// - **Orchestrators write.** `DGTConnection` and `DGTLiveSession` hold an
-///   optional `sessionLog` (the same settable-hook pattern as
-///   `DGTConnection.onBoardChanged`) and record into it. When unwired, the
-///   live path's existing Console logging is unaffected — this is purely
-///   additive.
-/// - **Two entry verbs.** `record` mirrors to Console *and* buffers (for the
-///   important stuff you also want in `log stream`); `capture` buffers only
-///   (for milestones whose callers already log to Console, avoiding double
-///   output).
-///
-/// App-global and `@Observable`, created on `DGTStudioProApp` and injected
-/// like `DGTConnection` / `DGTLiveSession`, so a future in-app log viewer can
-/// observe `entries` live.
+/// Exportable diagnostic timeline for live play — the in-memory sibling of the per-type
+/// Console loggers. `record` buffers + mirrors; `capture` buffers only (callers that already
+/// Console-log); `recordDesync` is the full-context capture. Ring-bounded.
 @Observable
 @MainActor
 internal final class DGTSessionLog {
@@ -58,17 +34,14 @@ internal final class DGTSessionLog {
     
     // MARK: Configuration
     
-    /// Hard cap on retained entries. A full game is well under this; the cap
-    /// only guards a marathon session from growing without bound. Oldest
-    /// entries are dropped first.
+    /// Hard cap; a full game is well under it. Oldest dropped first.
     @ObservationIgnored private let maxEntries = 2000
     
     internal init() {}
     
     // MARK: Recording
     
-    /// Buffers the entry *and* mirrors it to Console. Use for events the caller
-    /// doesn't otherwise log (and for the rich desync capture).
+    /// Buffers *and* mirrors to Console — for events the caller doesn't otherwise log.
     internal func record(_ level: Level, _ message: String) {
         append(level: level, message: message)
         switch level {
@@ -78,19 +51,13 @@ internal final class DGTSessionLog {
         }
     }
     
-    /// Buffers the entry only — no Console mirror. Use for milestones whose
-    /// caller already logs to Console via its own `os.Logger`, so the export
-    /// gets a complete timeline without duplicating Console output.
+    /// Buffers only — for milestones whose caller already Console-logs (no duplicate lines).
     internal func capture(_ level: Level, _ message: String) {
         append(level: level, message: message)
     }
     
-    /// The headline feature: capture *everything* about a board that couldn't
-    /// be reconciled to a legal move. Buffers + Console-mirrors a multi-line
-    /// block with the last legal FEN, the physical board, the exact
-    /// vacated/placed diff, and the recent move history — enough to replay the
-    /// failure by hand. Board identity (serial / version) is already earlier in
-    /// the same timeline, courtesy of `DGTConnection`.
+    /// The headline: everything about an unreconcilable board — last legal FEN, physical board,
+    /// exact diff, recent moves — enough to replay the failure by hand.
     internal func recordDesync(
         before: GameState,
         physical: Position,
@@ -112,8 +79,7 @@ internal final class DGTSessionLog {
     
     // MARK: Export
     
-    /// The whole timeline as plain text, newest entries last, each line
-    /// timestamped. Multi-line entries (like a desync block) are preserved.
+    /// The timeline as plain text, newest last, timestamped; multi-line entries preserved.
     internal func exportText() -> String {
         let stamp = Self.timestampFormatter
         var lines: [String] = [
@@ -125,10 +91,7 @@ internal final class DGTSessionLog {
         ]
         for entry in entries {
             let head = "\(stamp.string(from: entry.timestamp))  [\(entry.level.rawValue.uppercased())]  "
-            // Continuation lines of a multi-line message (a desync block) indent
-            // under the head so the block stays attached to its timestamp. The
-            // split/enumerate/map/join rebuilt the indent — and recounted
-            // `head` — once per line to say exactly this.
+            // Continuation lines indent under the head so a block stays attached to its timestamp.
             let indent = String(repeating: " ", count: head.count)
             lines.append(head + entry.message.replacingOccurrences(of: "\n", with: "\n" + indent))
         }
@@ -140,15 +103,8 @@ internal final class DGTSessionLog {
         try exportText().write(to: url, atomically: true, encoding: .utf8)
     }
     
-    /// Presents a macOS save panel and writes the timeline to the chosen file.
-    /// The "Export Live Session Log" affordance, reachable from both real
-    /// callers: the M6.3 recovery panel ("Export Diagnostics…") and the M8.3
-    /// Diagnostics menu. Deliberately non-throwing, failure Console-logged:
-    /// buffering an export failure into the very timeline that just failed
-    /// to save would only surface on a later, luckier export — Console is
-    /// the reliable witness. The recording's export throws instead, because
-    /// its caller *does* have a working timeline to note the failure in
-    /// (flag C); see `DGTSessionRecording.exportViaSavePanel()`.
+    /// Save panel + write. Non-throwing, failure Console-logged — a throw across the panel's
+    /// completion would surface on a later, luckier export.
     internal func exportViaSavePanel() {
         let panel = NSSavePanel()
         panel.title = "Export Live Session Log"
@@ -163,9 +119,8 @@ internal final class DGTSessionLog {
         }
     }
     
-    /// Clears the timeline. No production caller — the buffer is ring-bounded
-    /// at `maxEntries` and nothing resets it per game; this exists so the
-    /// suite can assert the bound and the append path independently.
+    /// No production caller — ring-bounded, nothing resets per game; exists so the suite can assert
+    /// the bound and the append path independently.
     internal func clear() {
         entries.removeAll()
     }
@@ -196,16 +151,11 @@ internal final class DGTSessionLog {
 
 // MARK: Debug Formatters
 
-/// Side-effect-free renderers that turn the pure DGT/chess value types into
-/// human-readable debug text. They *read* `Position` / `DGTBoardDiff` but never
-/// mutate or log — this is what lets the pure types stay logger-free while the
-/// recorder still produces rich output.
+/// Side-effect-free renderers of the pure DGT/chess values — reads only, which is what lets the
+/// pure types stay logger-free.
 internal enum DGTDebugFormat {
     
-    /// A board's piece placement in FEN rank notation (e.g.
-    /// `rnbqkbnr/pppppppp/8/...`). Reuses the existing `FEN` placement logic by
-    /// wrapping the position in a neutral FEN — no new chess-core code, and the
-    /// pure `Position` stays untouched.
+    /// FEN rank notation via a neutral FEN wrap — no new chess-core code.
     internal static func placement(_ position: Position) -> String {
         FEN(
             position: position,
@@ -217,17 +167,12 @@ internal enum DGTDebugFormat {
         ).piecePlacement
     }
     
-    /// The board diff as `vacated[e2=P,...] placed[e4=P,...]`, squares in
-    /// algebraic notation and pieces as FEN characters, ordered by square index
-    /// for stable, diff-friendly output.
+    /// `vacated[e2=P,…] placed[e4=P,…]`, ordered by square index for stable output.
     internal static func diff(_ diff: DGTBoardDiff) -> String {
         "vacated[\(squares(diff.vacated))] placed[\(squares(diff.placed))]"
     }
     
-    /// `e2=P,e4=P` — sorted by square index, so two captures of the same board
-    /// render identically and a diff of two exports is about the boards.
-    /// Sorting the pairs rather than the keys drops a second lookup per entry
-    /// and the force-unwrap that came with it.
+    /// Sorted by square index so two captures of one board render identically.
     private static func squares(_ map: [Square: Piece]) -> String {
         map.sorted { $0.key < $1.key }
             .map { "\($0.key.algebraicNotation)=\($0.value.fenCharacter)" }

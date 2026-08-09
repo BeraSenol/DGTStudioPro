@@ -2,19 +2,9 @@ import Foundation
 import Testing
 @testable import DGTStudioPro
 
-/// Tests for the draft ↔ game conversion (M4): `draftSnapshot` captures the
-/// game faithfully, `init(resuming:)` replays a draft into an
-/// equivalent-by-construction game, manual results are re-applied, and every
-/// reachable `ResumeError` fires on the draft that deserves it.
-///
-/// `moveRejected` is deliberately untested: `parseSAN` only ever returns
-/// moves that are legal in the current state (mate/stalemate positions have
-/// none, so trailing moves fail at the parse step as `invalidMove`), which
-/// makes the `commit` refusal a defensive rung with no reachable trigger
-/// today. If the parser ever loosens, this is the note to revisit.
-///
-/// `LiveGame` is `@MainActor`, so the suite is too (matching
-/// `LiveGameTests`).
+/// Draft ↔ game conversion: faithful snapshot, equivalent-by-construction resume, manual
+/// results re-applied. `moveRejected` deliberately untested — `parseSAN` can't produce it from
+/// a transcript the game itself wrote.
 @MainActor
 @Suite("LiveGame Draft Resume")
 struct LiveGameResumeTests {

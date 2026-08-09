@@ -5,11 +5,8 @@ internal struct LibraryGamePreviewView: View {
     
     // MARK: Stored Properties
     
-    /// Optional so the gallery's no-selection state is *this* view with no
-    /// game rather than a parallel placeholder struct: the frame, padding,
-    /// and header metrics that let the two states swap without the board
-    /// jumping are then written once and can't drift. Existing call sites
-    /// compile unchanged — a non-optional `PGN` promotes implicitly.
+    /// Optional so the no-selection state is *this* view with no game — the two states swap without
+    /// the board moving.
     internal let game: PGN?
     internal let boardStyle: BoardStyle
     
@@ -77,16 +74,8 @@ internal struct LibraryGamePreviewView: View {
             lastMove: preview?.lastMove,
             checkSquare: preview?.checkSquare
         )
-        // The walk hops off the main actor. `.task` inherits the view's
-        // `@MainActor` isolation, so a 40-ply replay — `parseSAN` generates
-        // every legal move per ply, and each `applying` heap-allocates a fresh
-        // `[Piece]` — was blocking the frame the click should have produced.
-        // Reading `moves` stays on the main actor because `PGN` is a `@Model`;
-        // only the pure fold over the resulting `[String]` leaves.
-        //
-        // The cancellation check is load-bearing: `Task.detached` is *not*
-        // cancelled with its parent, so arrowing through the strip would
-        // otherwise let a slow earlier walk land on top of a newer selection.
+        // The walk hops off the main actor (`parseSAN` generates every legal move per ply). The
+        // cancellation check is load-bearing — `Task.detached` is not auto-cancelled by `.task`'s exit.
         .task(id: game?.moves) {
             guard let moves = game?.moves else {
                 preview = nil

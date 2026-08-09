@@ -2,31 +2,9 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// Coverage for `DGTLiveSession` — the live-play coordinator. The architecture
-/// invariant under test is that the published UI flags (`liveGame`,
-/// `awaitingPhysicalSetup`, `needsRecovery`) are *derived* from a single
-/// private `Mode`, so they can never contradict one another. These assertions
-/// drive the synchronous lifecycle (`startNewGame` / `discardGame` / `resign` /
-/// `agreeDraw`) and read the derived flags directly.
-///
-/// `@MainActor`: the session is an `@Observable @MainActor` class.
-///
-/// ## Timing note
-///
-/// `boardChanged(_:)` arms a quiescence `Task` (`session.quiescence`, 300 ms in
-/// production) and `settle` runs only when it fires. In the **synchronous**
-/// tests that task is scheduled but never executes — the test holds the main
-/// actor straight through, so `settle` cannot interleave — making the
-/// assertions deterministic over state set by the lifecycle calls alone.
-///
-/// The tests that genuinely need `settle` are grouped under "Timer-Driven
-/// Settle": they shrink `quiescence` to 10 ms and `await settled(_:)`, awaiting
-/// the armed task itself, so every assertion observes a settle that definitely
-/// ran. F7's history, kept so it is not relived: fixed 450 ms sleeps raced the
-/// scheduler under parallel-suite load, the 2 s poll that replaced them flaked
-/// the same way, and so did its 5 s successor — **a poll that returns silently
-/// on timeout passes vacuously**, which this suite did for a while unnoticed.
-/// Awaiting the task needs no ceiling, so there is nothing left to re-guess.
+/// `DGTLiveSession` coverage. Invariant under test: the published flags are *derived* from one
+/// private `Mode` and can never contradict each other. Synchronous tests hold the main actor,
+/// so the armed settle never runs; async tests await it.
 @MainActor
 @Suite("DGT Live Session")
 struct DGTLiveSessionTests {
@@ -35,16 +13,7 @@ struct DGTLiveSessionTests {
         .init(white: "White", black: "Black")
     }
     
-    /// Awaits the armed settle, so everything after it observes a settle
-    /// that has *definitely* run — deterministic, with no clock and no
-    /// ceiling to re-guess (F7 superseded twice: a 2 s poll flaked, so
-    /// did its 5 s replacement, and the poll's silent-return-on-timeout
-    /// made every wait in this suite vacuous — the reason `poll` is gone
-    /// rather than repaired). The `#require` is the vacuity guard: a nil
-    /// task means no `boardChanged` preceded this call, and awaiting it
-    /// would pass for the wrong reason. The task inherits the session's
-    /// main-actor context, so when this returns, `settle`'s mutations
-    /// are fully visible to the caller.
+    /// Awaits the armed settle — deterministic, no clock, no ceiling to re-guess (F7, superseded twice).
     private func settled(_ session: DGTLiveSession) async throws {
         let armed = try #require(session.quiescenceTask)
         await armed.value
@@ -82,11 +51,7 @@ struct DGTLiveSessionTests {
         #expect(!(session.awaitingPhysicalSetup && session.needsRecovery))
     }
     
-    /// When the last observed board already matches the new game's start (the
-    /// common path — the dialog appears *because* the start was detected), the
-    /// session goes straight to `playing`: a game is present and neither
-    /// suppression flag is set. (`boardChanged` only records the board here;
-    /// its quiescence task can't run before the synchronous assertions.)
+    /// Board already at start (the common path) → straight to `playing`.
     @Test func startNewGameWithBoardAlreadyAtStartBeginsPlaying() {
         let session = DGTLiveSession()
         session.boardChanged(.starting)          // records lastObservedBoard synchronously
@@ -157,14 +122,8 @@ struct DGTLiveSessionTests {
         #expect(session.liveGame?.isFinished == true)
     }
     
-    /// The July 2026 sanity-audit fix: a manual result during
-    /// `awaitingSetup` normalizes to `playing` — the game is decided, so
-    /// there is nothing left to set up. Before the fix the session stayed
-    /// in `awaitingSetup` with a finished game: `hudPhase` (which ranks
-    /// `awaitingPhysicalSetup` above `isFinished`) kept prompting for
-    /// setup and never reached the finished banner or its New Game
-    /// button. Fully deterministic — no `boardChanged`, so no quiescence
-    /// task is armed.
+    /// A manual result during `awaitingSetup` normalizes to `playing` — decided games have nothing
+    /// left to set up (pre-fix, the session stayed stuck in setup).
     @Test func resignDuringSetupEndsTheSetupWait() {
         let session = DGTLiveSession()
         session.startNewGame(roster: roster())      // no board seen → awaitingSetup
@@ -256,12 +215,7 @@ struct DGTLiveSessionTests {
         #expect(session.needsRecovery == false)
     }
     
-    /// An unexplainable board settles into recovery — the session-level pin
-    /// on `.unresolved` routing through `enterRecovery` — and a manual
-    /// result *during* recovery ends it (product decision, July 2026
-    /// review): the game is decided, so the guidance no longer applies and
-    /// is discarded; the finished game keeps its result and archives
-    /// normally (headless here, so the draft carries it).
+    /// `.unresolved` settles into recovery, and a manual result *during* recovery ends it.
     @Test func resignDuringRecoveryEndsRecoveryAndKeepsTheDecidedGame() async throws {
         let session = DGTLiveSession()
         session.quiescence = .milliseconds(10)
@@ -306,11 +260,7 @@ struct DGTLiveSessionTests {
     
     // MARK: Illegal-Move Cue (M-ux.1)
     
-    /// D13′ pinned at the session level: `onDesync` fires from
-    /// `enterRecovery` — once per desync entry — and the manual-result
-    /// recovery *exit* does not re-fire it. The audio behind the hook is
-    /// waived transport; this spy is the whole witness the decision needs
-    /// (the `onGameFinished`-on-finish shape).
+    /// D13′ at the session level: `onDesync` fires once per desync entry; the exit does not re-fire.
     @Test func desyncFiresTheOnDesyncHookOnceAndTheExitDoesNot() async throws {
         let session = DGTLiveSession()
         session.quiescence = .milliseconds(10)
@@ -516,14 +466,8 @@ struct DGTLiveSessionTests {
         #expect(session.liveGame?.plyCount == 1)
     }
     
-    /// The stuck case the setup-time normalization exists for: a resumed
-    /// mid-game draft's setup gate waits on its *mid-game* position, so
-    /// resigning it instead of restoring the pieces must not leave the
-    /// session waiting on a position nobody will ever rebuild. The result
-    /// lands, the gate lifts, and the finished game lives in `playing`
-    /// (whose settle branch watches for the start position — the pieces
-    /// can be cleared freely). Headless, so the decided draft — not the
-    /// Library — carries the result, as everywhere else in this suite.
+    /// The stuck case: a resumed mid-game draft's setup gate waits on its mid-game position, so
+    /// resigning must not leave the board owing a position nobody will restore.
     @Test func resignDuringResumeSetupEndsTheSetupWait() throws {
         let store = temporaryStore()
         let original = LiveGame(roster: roster())
@@ -560,19 +504,9 @@ struct DGTLiveSessionTests {
         #expect(try store.load() == nil)
     }
     
-    /// While a resume offer pends, the start position must NOT trigger the
-    /// new-game offer (the two would collide, and starting fresh would
-    /// silently overwrite the offered draft). Declining the resume hands
-    /// over to the ordinary offer on the spot.
-    ///
-    /// The suppression is a *negative*: awaiting the armed settle is what
-    /// makes "the flag stayed down" meaningful — the settle has provably
-    /// run before the flag is read. The breadcrumb it leaves in the
-    /// session log is asserted too, pinning *which* branch suppressed the
-    /// offer (the pending-draft guard, not an accident of timing).
-    /// History, kept short: a fixed 450 ms sleep here was vacuously green
-    /// if settle never ran; the breadcrumb poll that replaced it still
-    /// returned silently on timeout.
+    /// A pending resume offer suppresses the new-game offer (starting fresh would overwrite the
+    /// offered draft); declining hands over on the spot. The suppressed settle's breadcrumb is the
+    /// positive signal awaited.
     @Test func pendingDraftSuppressesTheNewGameOffer() async throws {
         let store = temporaryStore()
         let game = LiveGame(roster: roster())

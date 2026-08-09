@@ -1,20 +1,8 @@
 import Testing
 @testable import DGTStudioPro
 
-/// Rejection coverage for `FEN(parsing:)` — the untrusted-input boundary.
-/// `FENParsingTests` covers the happy path (round-trips, reference positions);
-/// this suite is its complement, pinning that every malformed shape throws the
-/// **specific** typed `FENParseError` the parser documents, rather than parsing
-/// to something silently wrong. It is the *sole* home of rejection pins — the
-/// acceptance suite carried duplicates of most of these for a while, and that
-/// overlap has been removed in its favor.
-///
-/// `FENParseError` is `Equatable`, so each case is asserted by value via
-/// `#expect(throws:)`. The parser is intentionally legality-agnostic — it
-/// validates *shape*, not chess validity — which the one positive case at the
-/// end exercises (an all-empty four-field EPD string parses fine and defaults
-/// the clocks). Not `@MainActor`: `FEN` and `FENParseError` are plain value
-/// types.
+/// Rejection coverage — the untrusted-input boundary and the sole home of rejection pins.
+/// Shape, not chess validity. Not @MainActor: plain value types.
 @Suite("FEN Parsing — Rejection")
 struct FENParsingRejectionTests {
 
@@ -139,11 +127,8 @@ struct FENParsingRejectionTests {
         }
     }
 
-    /// The 29 July hardening pins (M1 item 15): `Int(_:)` accepts a
-    /// leading sign, so `+5` and `-0` parsed as 5 and 0 before the
-    /// digits-only guard — the pre-existing `-1` case rejected on
-    /// negativity alone and could not distinguish the guard from its
-    /// absence. `+1` pins the fullmove half of the same rule.
+    /// `Int(_:)` accepts a leading sign, so `+5`/`-0` parsed before the digits-only guard; the old
+    /// `-1` case could not distinguish the guard from its absence.
     @Test func rejectsSignedMoveCounters() {
         #expect(throws: FENParseError.malformedInteger("+5")) {
             try FEN(parsing: "8/8/8/8/8/8/8/8 w - - +5 1")
@@ -156,12 +141,8 @@ struct FENParsingRejectionTests {
         }
     }
 
-    /// Placement digits are ASCII-only (M1 item 15): `wholeNumberValue`
-    /// answers for any Unicode numeral, so an Arabic-Indic `٥` (five)
-    /// walked the rank arithmetic as 5 before the `isASCII` guard. The
-    /// rank deliberately sums to 8 (٥ + 3), so this trips exactly on the
-    /// charset rule rather than on a file-count side effect — the same
-    /// trick the `80/…` case documents.
+    /// Placement digits are ASCII-only: `wholeNumberValue` answers for `٥`, which walked the rank
+    /// arithmetic as 5. The rank deliberately sums to 8 so this trips exactly on the guard.
     @Test func rejectsNonASCIIPlacementDigits() {
         #expect(throws: FENParseError.malformedPlacement("٥3/8/8/8/8/8/8/8")) {
             try FEN(parsing: "٥3/8/8/8/8/8/8/8 w - -")

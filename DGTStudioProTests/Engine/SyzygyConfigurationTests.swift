@@ -2,24 +2,14 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// Pins the two pure halves of Syzygy support: what the app *tells* the engine,
-/// and what it *reads back* from it.
-///
-/// Nonisolated — both subjects are value-typed folds with no actor and no
-/// subprocess. `StockfishEngine.tablebaseReport(in:)` is `static nonisolated`
-/// precisely so it can be tested here rather than behind a live engine, which
-/// is the difference between a check that runs on every ⌘U and one that runs
-/// when somebody remembers to plug a folder in.
+/// The two pure halves of Syzygy support: what the app tells the engine, what it reads back.
 @Suite("Syzygy — Options and Report")
 struct SyzygyConfigurationTests {
 
     // MARK: Option Emission
 
-    /// **The default configuration says nothing about tablebases at all**, and
-    /// this is the assertion that keeps it that way. Four `setoption` lines for
-    /// a feature nobody switched on would be noise in every UCI log — and worse,
-    /// `SyzygyProbeLimit` sent to an engine with no tables reads, to anyone
-    /// grepping the log later, like tablebases are configured.
+    /// **The default says nothing about tablebases** — four options for a feature nobody enabled
+    /// would be noise in every UCI log.
     @Test("With no folder, no Syzygy options are sent")
     func silentWithoutAPath() {
         let lines = EngineConfiguration.default.uciOptionLines
@@ -27,11 +17,8 @@ struct SyzygyConfigurationTests {
         #expect(!lines.contains { $0.contains("Syzygy") })
     }
 
-    /// All four, and `SyzygyPath` **last**. Stockfish loads the tables when the
-    /// path arrives and answers with its `info string`; sending it after the
-    /// probe options keeps that answer as the final line of the block. Asserted
-    /// on position rather than membership, because membership would pass with
-    /// the order reversed and the ordering is the part with a reason.
+    /// All four, `SyzygyPath` **last** — the tables load when the path arrives, and the answer
+    /// should close the block.
     @Test("With a folder, all four go out and the path goes last")
     func emitsAllFourWithPathLast() {
         let config = EngineConfiguration(
@@ -50,12 +37,7 @@ struct SyzygyConfigurationTests {
         #expect(lines.last == "setoption name SyzygyPath value /Volumes/Chess/syzygy")
     }
 
-    /// An empty or whitespace path is the same state as no path.
-    ///
-    /// Not pedantry: `setoption name SyzygyPath value ` with nothing after it is
-    /// a command Stockfish accepts and reads as "forget the tables". Letting
-    /// `""` through would give "no tablebases" two spellings, one of which
-    /// emits four lines and one of which emits none.
+    /// Empty/whitespace path == no path: `setoption … value ` with nothing after is a real parse hazard.
     @Test(
         "An empty path is no path",
         arguments: ["", "   ", "\n"]
@@ -103,16 +85,8 @@ struct SyzygyConfigurationTests {
 
     // MARK: Report Parsing
 
-    /// **Both wordings, because Stockfish has already changed this once.**
-    /// Builds up to roughly Stockfish 15 said "Found 145 tablebases"; current
-    /// ones say "Found 145 WDL and 145 DTZ tablebase files (up to 5-man)". The
-    /// matcher keys on "Found" plus "tablebase", which both contain — and this
-    /// test is what stops someone tightening it to one exact sentence.
-    ///
-    /// The figures are the real ones (145 material configurations up to five
-    /// men, 510 up to six) so a reader can tell a plausible fixture from an
-    /// invented one. Nothing asserts on them — the matcher parses no count,
-    /// deliberately.
+    /// **Both wordings** — Stockfish has changed the sentence once already; matched on
+    /// "Found" + "tablebase", not the full sentence.
     @Test(
         "Both known report wordings are recognised",
         arguments: [

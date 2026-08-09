@@ -2,26 +2,15 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// Pins the batch projection and its two renderings.
-///
-/// Nonisolated, and that is load-bearing rather than stylistic: the estimator
-/// takes three numbers and returns a fourth, with no clock of its own and no
-/// actor. A suite that constructs it off the main actor is a compile-time
-/// witness that the controller could not have smuggled `Date.now` into it — the
-/// D44′ argument for isolation being checked at compile time or not at all.
+/// The batch projection and its two renderings. Nonisolated, load-bearing — the compile is the
+/// witness no `Date.now` was smuggled in.
 @Suite("Batch Progress Estimate")
 struct BatchProgressEstimateTests {
 
     // MARK: Projection
 
-    /// The rate carried forward, at the simplest ratio there is: half the plies
-    /// done in one minute means the other half takes another minute.
-    ///
-    /// The figures are chosen to be exactly representable (120 plies in 60
-    /// seconds is 2/sec on the nose) so this can assert equality rather than a
-    /// tolerance. `a / (a / b) == b` is not an identity in binary floating
-    /// point, and a test that quietly needed a tolerance would be the wrong
-    /// place to discover that.
+    /// Rate carried forward at the simplest ratio. Tolerance because `a / (a / b) == b` is not an
+    /// identity in binary floating point.
     @Test("A rate observed is a rate projected")
     func projectsTheObservedRate() {
         let remaining = BatchProgressEstimate.secondsRemaining(
@@ -32,14 +21,8 @@ struct BatchProgressEstimateTests {
         #expect(remaining == 60)
     }
 
-    /// The whole reason the unit is plies. A batch of two games where the
-    /// second is four times the length of the first must project four times the
-    /// elapsed — a games-based estimate would have said "one game left, one
-    /// game's worth of time" and been wrong by 300%.
-    ///
-    /// This is the assertion that would fail if someone "simplified" the
-    /// controller to count games, which is why it is spelled as a scenario
-    /// rather than as another ratio.
+    /// The whole reason the unit is plies: a second game four times the length must project four
+    /// times the elapsed.
     @Test("Long games left project longer than short games done")
     func pliesNotGames() {
         let shortGameDone = 25.0
@@ -54,12 +37,7 @@ struct BatchProgressEstimateTests {
         #expect(remaining == 200)
     }
 
-    /// Nil for the three states with nothing to say, asserted separately
-    /// because they are different questions wearing one answer: no rate yet, no
-    /// work left, and a clock that has not moved. Each is reachable — the first
-    /// on the opening ply of a batch, the second at the drain, the third on a
-    /// library of one-ply games where start and first report share a
-    /// millisecond.
+    /// Nil for the three empty states, asserted separately — different questions wearing one answer.
     @Test("No projection without a rate, work, and a clock")
     func nilCases() {
         #expect(
@@ -109,11 +87,8 @@ struct BatchProgressEstimateTests {
         #expect(BatchProgressEstimate.describe(secondsRemaining: seconds) == expected)
     }
 
-    /// **Elapsed is spelled unlike the projection, deliberately**, and this is
-    /// the pin on that decision rather than on the format: one is a measurement
-    /// and the other is a guess, and a reader should be able to tell which is
-    /// which without a label. If elapsed ever grows an "about", these two
-    /// suites stop disagreeing and the distinction is gone.
+    /// Elapsed is spelled unlike the projection, deliberately: one is a measurement, one a guess,
+    /// and a reader should be able to tell which.
     @Test(
         "Elapsed is clock time, to the second, hours only when there are any",
         arguments: [

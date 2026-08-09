@@ -1,30 +1,9 @@
 import Testing
 @testable import DGTStudioPro
 
-/// Deep perft — depth 5 for all six canonical positions. About 468M leaf
-/// nodes summed across the suite, expected to take ~10–25 minutes
-/// wall-clock with a legal-move-filter generator (33 minutes observed under
-/// coverage instrumentation).
-///
-/// **Tagged `.slow` and excluded from the default test plan**, so ⌘U no
-/// longer runs them; invoke the suite from the test navigator, or run a plan
-/// that includes the tag. Never delete these tests — depth 5 is what makes
-/// accidental coincidence statistically impossible. Until July 2026 the suite
-/// carried no exclusion trait at all while a comment claimed otherwise, which
-/// is why a half-hour of wall time went unattributed and why six parallel
-/// depth-5 recursions were starving the `@MainActor` poll-based suites and
-/// the Stockfish handshake into timeouts that read as product bugs.
-///
-/// The depth-5 reference values are the canonical perft results published
-/// on chessprogramming.org and used by Stockfish, Fairy-Stockfish, and
-/// every open-source engine that takes correctness seriously. Matching
-/// all six at depth 5 makes accidental coincidence statistically
-/// impossible — at this depth the suite exercises every chess rule
-/// thousands of times in every conceivable interaction.
-///
-/// The position FENs are duplicated from `PerftTests` rather than shared
-/// so this file is self-contained and the chosen FENs can't drift apart
-/// from the canonical sources by accident.
+/// Deep perft — depth 5, all six canonical positions, ~468M leaf nodes (~10–33 min; excluded
+/// from the default plan via the `.slow` tag). **Never delete**: depth 5 is what makes the
+/// counts a proof rather than a spot check.
 @Suite("Perft Deep (Depth 5)", .tags(.slow))
 struct PerftDeepTests {
 
@@ -61,11 +40,7 @@ struct PerftDeepTests {
         #expect(perft(.starting, depth: 5) == 4_865_609)
     }
 
-    /// ~193.7M nodes. The heaviest test in the suite. Kiwipete at depth 5
-    /// exercises virtually every move-generator interaction at scale: the
-    /// canonical chessprogramming.org statistics for this depth report
-    /// 35M captures, 73K en-passants, 5M castles, 3.3M checks, and 30K
-    /// checkmates — all in a single test.
+    /// ~193.7M nodes — Kiwipete at depth 5 exercises virtually every generator interaction at scale.
     @Test func kiwipeteDepth5() throws {
         let state = GameState(try FEN(parsing: Self.kiwipete))
         #expect(perft(state, depth: 5) == 193_690_690)

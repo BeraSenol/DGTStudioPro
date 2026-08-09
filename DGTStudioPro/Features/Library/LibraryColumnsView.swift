@@ -2,66 +2,37 @@ import Foundation
 import SwiftData
 import SwiftUI
 
-/// The Finder-column shape (2 Aug 2026 redesign): a flat list of games in
-/// the first column, and the rest of the pane filled by the selected game's
-/// detail — preview board on top, a Finder-style facts block beneath it.
-///
-/// This replaces the grouped browser (Event / Player / Year buckets driving
-/// a card grid). The grouping was a second filtering surface in a
-/// destination that already has one — smart tags own "show me a slice of
-/// the Library" — so the columns mode's job is now inspection density, not
-/// bucketing. `LibraryGroupingDimension`, `LibraryGroup` and the three
-/// grouping folds were deleted with it; re-adding grouping means finding a
-/// question the tags can't answer, not reverting this file.
-///
-/// The facts block renders the Seven Tag Roster through `RosterSummary`'s
-/// subscript — the single place the display rules live (D22′) — and is
-/// driven from `SevenTagRoster.allCases`, so this pane can't quietly lose a
-/// tag any more than the inspectors' section can. `SevenTagRosterSection`
-/// stays the *inspectors'* renderer; what is shared here is the formatting,
-/// which is the half that must not fork.
+/// Finder-column shape: flat game list left, selected game's detail filling the rest —
+/// inspection density, not navigation (the smart tags own grouping).
 internal struct LibraryColumnsView: View {
 
     // MARK: Stored Properties
     internal let games: [PGN]
-    /// The row badges' input, off the destination's memoized projection —
-    /// see `LibraryIconsView.analyzedIDs` (D72′).
+    /// Row badges' input, off the destination's memoized projection (D72′).
     internal let analyzedIDs: Set<PGN.ID>
     @Binding internal var selectedPGNs: Set<PGN.ID>
     internal let boardStyle: BoardStyle
-    /// Takes the set since D56′. Deliberately **not** adapted with a
-    /// `forEach` the way `onAnalyze` and friends are below: those fan out to a
-    /// per-game door, while Open's door owns the count threshold, and a host
-    /// that called it N times would walk straight past the guard.
+    /// Takes the set (D56′). Deliberately not adapted with a `forEach` like the others: those fan
+    /// out to per-game doors, while Open's door owns the count threshold.
     internal let onOpen: ([PGN]) -> Void
     internal let onAnalyze: (PGN) -> Void
     internal let onExport: (PGN) -> Void
     internal let onDelete: (PGN) -> Void
 
-    /// Shared with list mode through `LibraryDestination` (5 Aug 2026), which
-    /// is what makes a sort made in one mode survive the switch to the other.
-    /// Same binding, same comparator array — deliberately not a second piece of
-    /// state that would have to be kept in step.
+    /// Shared with list mode through the destination — one binding, so a sort survives the mode switch.
     @Binding var sortOrder: [KeyPathComparator<PGN>]
 
-    /// "No value to show" for the derived rows — the meaning
-    /// `OpeningSection`'s em-dash carries, deliberately restated per surface
-    /// (its own comment makes the same call beside `SevenTagRosterSection`'s).
-    /// The roster rows never need it: `RosterSummary` speaks PGN's own `?`.
+    /// "No value" for derived rows (`OpeningSection`'s em-dash meaning, restated per surface);
+    /// roster rows never need it — `RosterSummary` speaks PGN's own `?`.
     private static let noValue = RosterSummary.displayUnknown
 
-    /// Ambient rather than a parameter — the argument is at the environment
-    /// value's own declaration. Nil in every preview below, which is the
-    /// honest reading there.
+    /// Ambient rather than a parameter — argument at the environment value's declaration.
     @Environment(\.analysisRunningGameID) private var runningAnalysisID
 
     // MARK: Computed Properties
 
-    /// The single selected game, or nil when the selection is empty *or*
-    /// multiple. The detail pane details one thing; multi-selection gets a
-    /// counting placeholder rather than arbitrarily previewing `first` —
-    /// the gallery's no-fallback rationale: never preview a game the user
-    /// didn't pick.
+    /// Single selection or nil — the detail pane details one thing; multi gets a counting
+    /// placeholder, never an arbitrary `first`.
     private var selectedGame: PGN? {
         guard selectedPGNs.count == 1, let id = selectedPGNs.first else { return nil }
         return games.first { $0.id == id }
@@ -70,26 +41,9 @@ internal struct LibraryColumnsView: View {
     // MARK: Body
     internal var body: some View {
         HSplitView {
-            // 160/200/300, down from 220/260/340. A one-line row that
-            // truncates in the middle needs far less width than the two-line
-            // row that had to fit a date and a result side by side, and the
-            // floor is the number that mattered: columns is the one mode
-            // whose minimum is real (`HSplitView` sizes to content), so 60pt
-            // off the floor is 60pt the sidebar and inspector stop competing
-            // for. Belt and braces with the inspector suppression — that
-            // change alone should clear the overflow; this makes the mode
-            // survivable at window widths where it previously could not fit
-            // at all.
-            // `.layoutPriority(1)` is the floor's enforcement, not decoration.
-            // `HSplitView` honours a child's `minWidth` only while the other
-            // child isn't demanding more than what's left — and selecting a
-            // game swaps a `ContentUnavailableView` for the facts block, whose
-            // intrinsic width demand is larger. Without a priority the split
-            // resolved that conflict by squeezing this pane past 160 (4 Aug,
-            // observed). Priority makes the list's width non-negotiable and
-            // pushes the compression onto the detail, which can take it: its
-            // content wraps, where a truncated name does not degrade, it just
-            // stops being readable.
+            // 160/200/300 floors: columns is the one mode that must survive narrow windows.
+            // `.layoutPriority(1)` enforces the floor — `HSplitView` honours `minWidth` only while the
+            // other side yields.
             gameList
                 .frame(minWidth: 160, idealWidth: 200, maxWidth: 300, maxHeight: .infinity)
                 .layoutPriority(1)
@@ -102,11 +56,8 @@ internal struct LibraryColumnsView: View {
 
     // MARK: Instance Methods
 
-    /// The empty arm is unreachable in production — `LibraryDestination`
-    /// gates on `filteredGames.isEmpty` before the mode views are built —
-    /// but previews construct this view directly, and an empty `List` with
-    /// a selection binding renders as a bare void (the
-    /// `PlayersColumnsView` precedent: both empty states have to hold).
+    /// The empty arm is unreachable in production (destination gates first), but previews construct
+    /// this view directly, and an empty `List` with a selection binding renders as a bare void.
     @ViewBuilder
     private var gameList: some View {
         if games.isEmpty {
@@ -119,55 +70,19 @@ internal struct LibraryColumnsView: View {
             }
             .frame(maxWidth: .infinity)
         } else {
-            // A one-column `Table`, not a `List` (4 Aug 2026, Bera's call).
-            //
-            // **The header is an accepted cost that turned into the feature.**
-            // Shipping SwiftUI on macOS has no modifier to suppress a `Table`
-            // header — the compact-size-class collapse is an iOS behaviour macOS
-            // never enters, and `tableStyle` governs insets, not header
-            // visibility. The trade was a header Finder's browser lacks in
-            // exchange for sharing `LibraryListView`'s row and selection
-            // machinery; since 5 Aug the header sorts, so it earns its place. If
-            // it ever becomes intolerable the answer is to revert to a `List`,
-            // not to hunt for a modifier that does not exist.
-            //
-            // **No `columnCustomization` binding, and that is load-bearing.**
-            // `LibraryListView` persists its layout under a `StorageKeys` key;
-            // binding the same one here would let hiding a column over there
-            // empty this view entirely. One column has nothing to customize.
-            //
-            // Sorting here writes the state list mode reads, so a sort survives
-            // the switch either way. What it cannot do is *show* a sort it did
-            // not set: order by Rating in list mode, come back, and this header
-            // carries no chevron while the rows stay in rating order. A
-            // one-column table has nowhere to display an ordering it does not
-            // own.
+            // A one-column `Table`, not a `List` (Bera's call): the un-suppressible header became the sort
+            // affordance. **No `columnCustomization`, load-bearing** — a hidden column here is a broken mode.
             Table(games, selection: $selectedPGNs, sortOrder: $sortOrder) {
                 TableColumn("Name", value: \.name) { game in
                     row(for: game)
                 }
-                // The 160 is the same number the enclosing frame carries, and
-                // it has to be stated twice for two different reasons — this
-                // is not the twin-read-site pattern D25′ warns about. The
-                // frame's floor governs the *pane* inside the `HSplitView`;
-                // this governs the *column* inside the table, which `Table`
-                // will otherwise let the user drag narrower than the pane,
-                // truncating names in a browser whose only job is names.
-                //
-                // All three, not `min:` alone — the min-only spelling did not
-                // hold the floor in practice (4 Aug, observed). `.infinity`
-                // for max is what keeps the column filling the pane rather
-                // than leaving dead space on the right at wide splits; the
-                // pane's own 300 max is what actually caps it.
+                // The 160 twice is NOT the twin pattern: the frame's floor governs the *pane*, this one the
+                // *column*. All three bounds — min-only did not stop mid-truncation at wide widths.
                 .width(min: 160, ideal: 200, max: .infinity)
             }
             .tableStyle(.inset)
-            // Selection-typed, the `LibraryListView` shape — which is the
-            // other half of the reuse. The per-row `.contextMenu` this
-            // replaced could only ever act on one game; this one inherits
-            // ⌘/⇧-click multi-select and hands the whole set to
-            // `GameActionsMenu`, whose counted plurals were unreachable from
-            // this view mode until now.
+            // Selection-typed (the `LibraryListView` shape): inherits ⌘/⇧-click multi-select and hands the
+            // whole set to `GameActionsMenu` — counted plurals were unreachable from this mode before.
             .contextMenu(forSelectionType: PGN.ID.self) { ids in
                 GameActionsMenu(
                     games: games.filter { ids.contains($0.id) },
@@ -180,37 +95,8 @@ internal struct LibraryColumnsView: View {
         }
     }
 
-    /// **Finder's row: one icon, one name, one line** (3 Aug 2026) — plus the
-    /// analysis glyph at the trailing edge since D72′.
-    ///
-    /// Was two lines carrying the date and the result as well. The argument
-    /// for stripping them is the one the columns metaphor makes for itself:
-    /// this is a *browser*, and every fact the row used to repeat is on the
-    /// detail pane one column to the right, larger and in context. Finder
-    /// does not put the modification date in the file list either — it puts
-    /// it in the pane you get when you click.
-    ///
-    /// It buys width, which is not a side effect here. Columns mode was
-    /// pushing the sidebar off screen because its floor exceeded the window
-    /// (see `CollectionViewMode.ownsDetailPane`), and a row that no longer
-    /// has to fit "21/07/2026" and "1/2-1/2" side by side is a row that can
-    /// live in a narrower column.
-    ///
-    /// The paragraph that stood here argued the icon stays uniform because
-    /// state on a row would be "a third encoding of facts the detail pane
-    /// already states". **Reversed by D72′, by request**, and the reversal is
-    /// narrower than it reads: the *leading* doc icon is still uniform, and
-    /// what the trailing glyph carries is the one fact the detail pane only
-    /// states for the selected game — a browser's whole job is the rows you
-    /// have not clicked yet, and "which of these still needs the engine" was
-    /// unanswerable from this mode without clicking every row in turn.
-    ///
-    /// The bare `AnalysisBadgeIcon`, not `AnalysisStatusBadge`: the chip earns
-    /// its material over the card's white sheet, while a table row's
-    /// background already contrasts in both appearances, and a chip per row
-    /// reads as buttons down the column. Same marks either way — plain check
-    /// and x, gear only while running (D72′ postscript) — which is the shared
-    /// part.
+    /// Finder's row: one icon, one name, one line — plus the analysis glyph at the trailing edge
+    /// (D72′): the one fact the detail pane only answers for games you have not clicked yet.
     private func row(for game: PGN) -> some View {
         let state = AnalysisGlyph.state(
             of: game,
@@ -230,9 +116,8 @@ internal struct LibraryColumnsView: View {
                 .accessibilityLabel(AnalysisGlyph.statusLabel(state))
         }
         .padding(.vertical, 1)
-        // The menu moved to the `Table` as a selection-typed one — see
-        // `gameList`. A per-row `.contextMenu` inside a `Table` cell would
-        // shadow it and act on one game regardless of what is selected.
+        // The menu moved to the `Table` as selection-typed — a per-row `.contextMenu` in a cell would
+        // shadow it and act on one game regardless of selection.
     }
 
     @ViewBuilder
@@ -240,12 +125,7 @@ internal struct LibraryColumnsView: View {
         if let game = selectedGame {
             gameDetail(game)
         } else if selectedPGNs.count > 1 {
-            // Said "The toolbar's Analyze, Export and Delete…" until 6 Aug 2026,
-            // when those three buttons were removed by request — a sentence on
-            // screen naming controls that no longer exist, and the *only* thing
-            // on either multi-selection surface that says where the bulk verbs
-            // live. Corrected in the same change as the removal, per the
-            // two-homes rule, and its twin in `LibraryInspectorView` with it.
+            // Bulk verbs live on the row menus (the toolbar buttons were removed 6 Aug 2026).
             ContentUnavailableView(
                 "\(selectedPGNs.count) Games Selected",
                 systemImage: "square.on.square",
@@ -260,36 +140,9 @@ internal struct LibraryColumnsView: View {
         }
     }
 
-    /// Raw PGN above, facts below (3 Aug 2026).
-    ///
-    /// **The board is gone, and it was the cause of the squeeze.** This used
-    /// to render `LibraryGamePreviewView` whole — header, board, async replay
-    /// — and `BoardView` is `aspectRatio(1, .fit)` over a `GeometryReader`,
-    /// so in a tall window it demands a width equal to its height. That is
-    /// not a view taking the space it is given; it is a view *asking* for
-    /// width, and in an `HSplitView` the ask wins. Selecting a game visibly
-    /// stole width from the list column beside it, which is the same
-    /// mechanism that pushed the sidebar off screen, arriving from a
-    /// different direction.
-    ///
-    /// Text has no such appetite: it wraps. So the detail pane now shows what
-    /// the file will actually say, at a size worth reading, and reflows into
-    /// whatever width is left instead of bidding for more.
-    ///
-    /// `PGN.pgnText` is the same accessor the inspector reads — byte-identical
-    /// to what Export writes (D24′). Not a second rendering of the model: a
-    /// detail pane that formatted its own tag block would be a third PGN
-    /// shape in the app, free to drift from the reference files that pin it.
-    ///
-    /// `boardStyle` is still taken as a parameter and no longer read here.
-    /// Left in place rather than threaded out: `LibraryDestination` passes it
-    /// to every mode view uniformly, and removing it from one of four is a
-    /// signature change that buys nothing while making the call sites differ.
-    ///
-    /// The serialization runs per body pass while a game is selected — the
-    /// inspector's PGN-section cost without its collapse gate. Accepted and
-    /// carried on the known-costs census (4 Aug 2026): one game, not a walk,
-    /// and columns mode re-renders on selection, not on keystrokes.
+    /// Raw PGN above, facts below. The preview board is gone — it was the squeeze: a view *asking*
+    /// for space rather than taking what is given. `PGN.pgnText` is the inspector's same accessor,
+    /// byte-identical to Export (D24′); one game per render, censused.
     private func gameDetail(_ game: PGN) -> some View {
         VStack(spacing: 0) {
             ScrollView {
@@ -323,9 +176,7 @@ internal struct LibraryColumnsView: View {
 
             HStack(spacing: 12) {
                 Button {
-                    // Singular by construction: the detail pane renders only
-                    // for a count-of-one selection, so this button never has a
-                    // set to open even though the door now takes one.
+                    // Singular by construction: the detail pane renders only for a count of one.
                     onOpen([game])
                 } label: {
                     Label("Open", systemImage: "arrow.up.forward.square")
@@ -336,11 +187,8 @@ internal struct LibraryColumnsView: View {
                 Button {
                     onAnalyze(game)
                 } label: {
-                    // The projection overload since D72′ — the same input the
-                    // row badges read, so the button and the badge beside it
-                    // cannot disagree. (The one-element array form it replaced
-                    // was correct too; this one answers without decoding
-                    // `evaluations` on a pane that re-renders per selection.)
+                    // The projection overload (D72′) — the same input the row badges read, so button and badge
+                    // cannot disagree.
                     AnalysisLabel(
                         state: AnalysisGlyph.state(
                             of: game,
@@ -355,9 +203,8 @@ internal struct LibraryColumnsView: View {
         .padding(20)
     }
 
-    /// Finder's info-row shape: the label column right-aligned against the
-    /// values. Values truncate in the middle — the long ones are serials
-    /// and site names, whose ends carry the information.
+    /// Finder's info-row shape; values truncate in the middle — serials and site names carry their
+    /// information at the ends.
     private func factRow(_ label: String, _ value: String) -> some View {
         GridRow {
             Text(label)
@@ -378,8 +225,7 @@ private func columnsPreviewGames() -> [PGN] {
     formatter.locale = Locale(identifier: "en_US_POSIX")
 
     return [
-        // Carries moves, a time control and a board so every derived facts
-        // row has a value — the fully-populated branch.
+        // Fully-populated branch: every derived facts row has a value.
         PGN(event: "World Championship", site: "Dubai",
             date: formatter.date(from: "2021.12.10"),
             round: 11,
@@ -395,8 +241,7 @@ private func columnsPreviewGames() -> [PGN] {
             date: formatter.date(from: "2023.06.03"),
             round: 3,
             white: "Firouzja, Alireza", black: "Ding, Liren", result: .blackWins),
-        // Undated and moveless: the date placeholder in the row, and the
-        // em-dash branch of every derived facts row at once.
+        // Undated and moveless: the placeholder branch of every derived row at once.
         PGN(event: "Norway Chess", site: "Stavanger",
             date: nil,
             round: 5,

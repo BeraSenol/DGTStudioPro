@@ -1,43 +1,15 @@
 import SwiftUI
 
-/// The board connection window — a confirmation/error surface since
-/// 2 Aug 2026, when the device picker was deleted whole (user decree: the
-/// app connects to `DGTConnection.onlyBoardPath`, never ever anything
-/// else). What was a five-panel dialog over a discovered-device list is now
-/// four resting states over one hardcoded identity:
-///
-/// - opening the sheet **attempts the connection immediately** — there is
-///   nothing to pick, so there is nothing to confirm beforehand; the old
-///   confirm-before-connect contract is discharged by the decree itself
-///   (the one path is the standing confirmation)
-/// - `.connecting`   → the handshake progress indicator
-/// - `.connected`    → the board's reported identity, plus Disconnect
-/// - `.reconnecting` → the M7.3 retry loop's face, and its stand-down door
-///   ("Stop Trying" — the per-incident choice the Settings footer points
-///   at, so it must survive the picker it used to share a window with)
-/// - `.failed` / board absent → the error, with Try Again
-///
-/// Still a thin view over the app-global `DGTConnection`: it never opens a
-/// port or talks to IOKit itself.
+/// The board connection window — a confirmation/error surface since the device picker was
+/// deleted (the app connects to `onlyBoardPath`, never anything else). A thin view over the
+/// app-global `DGTConnection`; never opens a port itself.
 internal struct DGTConnectionView: View {
 
     @Environment(DGTConnection.self) private var connection
     @Environment(\.dismiss) private var dismiss
 
-    /// D15′(b): the dialog's spacing, named and HIG-derived instead of ad
-    /// hoc — 20 pt content margins at sheet edges, 12 pt between sibling
-    /// controls, 4 pt between a text line and its caption. Survives the
-    /// picker's deletion untouched because the dialogs that borrow these three
-    /// numbers cite them by name and reason rather than importing them; the
-    /// 420 × 320 frame and 260 pt info table are *sizing*, not spacing
-    /// (320, down from 380 — the height the device list earned went with
-    /// it).
-    ///
-    /// The two that cited them by name — `RenamePlayerSheet` and
-    /// `MergePlayerSheet` — are both retired (M10 and D52′). `GetInfoWindow`
-    /// is the current borrower, of `margin` alone. Named as a class rather
-    /// than as a list, because an enumerated-caller list on a primitive is the
-    /// anti-pattern that put two dead type names in this comment.
+    /// HIG-derived spacing, named: 20 pt sheet margins, 12 pt siblings, 4 pt captions. The
+    /// 420 × 320 frame and 260 pt table are *sizing*, not spacing.
     private enum Metrics {
         /// Sheet edge margin (the standard 20 pt dialog content margin).
         static let margin: CGFloat = 20
@@ -62,9 +34,8 @@ internal struct DGTConnectionView: View {
         }
         .frame(width: 420, height: 320)
         .onAppear {
-            // Attempt on sight — unless we're already live, or the M7.3
-            // loop is mid-flight: a player opening this mid-reconnect
-            // wants to see (or stop) the retry, not restart it.
+            // Attempt on sight — unless live or mid-reconnect: a player opening this mid-loop wants to see
+            // (or stop) the retry, not restart it.
             if connection.isReconnecting || connection.isConnected { return }
             attemptConnect()
         }
@@ -74,10 +45,7 @@ internal struct DGTConnectionView: View {
     // MARK: The One Attempt
 
     private func attemptConnect() {
-        // `search()` refreshes the enumeration synchronously and resolves the
-        // board itself, so the view still never touches IOKit — and no longer
-        // restates the path test either. It used to scan `availableDevices`
-        // here, which put the "what counts as the board" rule in a view.
+        // `search()` resolves the board itself — the "what counts as the board" rule stays out of views.
         connection.search()
         guard let board = connection.attachedBoard else { return }  // not-found panel renders
         Task { await connection.connect(to: board) }
@@ -113,9 +81,7 @@ internal struct DGTConnectionView: View {
             if connection.attachedBoard == nil {
                 notFoundPanel
             } else {
-                // An attempt is in flight (or one click away after a
-                // stand-down); the status flips to `.connecting` the
-                // moment the port opens.
+                // An attempt is in flight; status flips to `.connecting` when the port opens.
                 ProgressView()
                     .controlSize(.large)
                     .padding(Metrics.margin)
@@ -131,8 +97,8 @@ internal struct DGTConnectionView: View {
         }
     }
 
-    /// The one absence the window can name precisely: the path is a
-    /// constant, so "not found" always means the same cable.
+    /// The one absence the window can name precisely: the path is a constant, so "not found" always
+    /// means the same cable.
     private var notFoundPanel: some View {
         ContentUnavailableView {
             Label("Board Not Found", systemImage: "cable.connector.slash")
@@ -157,9 +123,7 @@ internal struct DGTConnectionView: View {
         .accessibilityIdentifier(AccessibilityID.dgtConnectingPanel)
     }
 
-    /// M7.3 — the retry loop's face: what happened, that the app is
-    /// handling it, and how to stand it down. The loop itself lives in
-    /// `DGTConnection`; this panel is pure status.
+    /// The retry loop's face; the loop lives in `DGTConnection` — this panel is pure status.
     private func reconnectingPanel(_ device: DGTSerialDevice) -> some View {
         VStack(spacing: Metrics.groupSpacing) {
             ProgressView()
@@ -234,9 +198,7 @@ internal struct DGTConnectionView: View {
 
             case .connecting:
                 Spacer()
-                // Dismisses too: a cancelled attempt leaves `.disconnected`
-                // with the board still enumerated, and the resting panel
-                // would read as an attempt that isn't happening.
+                // Dismisses too: a cancelled attempt would otherwise read as an attempt that isn't happening.
                 Button("Cancel") {
                     Task {
                         await connection.disconnect()
@@ -246,11 +208,8 @@ internal struct DGTConnectionView: View {
                 .accessibilityIdentifier(AccessibilityID.dgtCancelButton)
 
             case .reconnecting:
-                // Standing the loop down is deliberate but not destructive —
-                // nothing is lost; the game stays right there on screen.
-                // The `search()` refreshes the enumeration so the panel
-                // this resolves to tells the truth about the (almost
-                // certainly absent) board.
+                // Standing down is deliberate but not destructive; `search()` refreshes so the resolved panel
+                // tells the truth.
                 Button("Stop Trying") {
                     Task {
                         await connection.stopReconnecting()
@@ -263,9 +222,7 @@ internal struct DGTConnectionView: View {
                     .keyboardShortcut(.defaultAction)
 
             case .connected:
-                // Dismisses for the Cancel reason: a deliberate disconnect
-                // shouldn't resolve to a panel that looks like a stalled
-                // connect.
+                // Dismisses — a deliberate disconnect shouldn't resolve to a panel that looks like a stalled connect.
                 Button("Disconnect", role: .destructive) {
                     Task {
                         await connection.disconnect()
@@ -291,11 +248,8 @@ internal struct DGTConnectionView: View {
 
 // MARK: Previews
 
-/// `DGTConnection.status` is `private(set)`, so the window can't be driven
-/// past its resting state from a preview — the standing waiver. What a
-/// boardless canvas honestly shows is the not-found panel, which is also
-/// the one state a boardless *manual* run can verify; the other panels are
-/// connect-flow manual-check territory, as they always were.
+/// `status` is `private(set)`, so a canvas can't pass the resting state — the standing waiver.
+/// The not-found panel is what a boardless canvas honestly shows.
 #Preview("Board Not Found") {
     DGTConnectionView()
         .environment(DGTConnection())

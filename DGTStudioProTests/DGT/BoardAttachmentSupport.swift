@@ -2,32 +2,12 @@ import AppKit
 import Testing
 @testable import DGTStudioPro
 
-/// Renders a `Position` to PNG data for Swift Testing attachments — the
-/// M1 item-19 tooling: a failing board assertion should hand you two
-/// rendered boards, not 64 sorted squares to diff by eye. PNG `Data` is
-/// attached rather than an image type deliberately: byte-buffer
-/// attachables are the attachments feature's floor (shipping 6.3), so
-/// this takes no dependency on the AppKit attachable overlay, and Xcode
-/// previews a `.png`-named attachment either way.
-///
-/// `@MainActor`: the PNG conversion below renders synchronously on the
-/// calling thread, and AppKit drawing prefers main. Consuming tests
-/// annotate themselves `@MainActor` individually — isolation is per
-/// function, so their suites stay nonisolated for everything else.
-/// (`glyph(for:)` is `nonisolated`: the drawing handler runs as a plain
-/// nonisolated closure, and a pure switch has no business being
-/// actor-bound anyway.)
+/// Renders a `Position` to PNG for attachments: a failing board assertion hands you two
+/// rendered boards, not 64 sorted squares.
 @MainActor
 internal enum BoardAttachmentSupport {
 
     /// White on the bottom, a1 lower-left — the mirror's orientation.
-    ///
-    /// Drawn through `NSImage(size:flipped:drawingHandler:)`, the modern
-    /// replacement for the `lockFocus()`/`unlockFocus()` pair this used at
-    /// first (deprecated since macOS 14; the 30 July audit's one warning
-    /// burn). `flipped: false` keeps the y-up geometry the rank arithmetic
-    /// below assumes; the handler runs when `tiffRepresentation` renders
-    /// the image — synchronously, right here.
     internal static func pngData(for position: Position) -> Data? {
         let side: CGFloat = 44
         let size = NSSize(width: side * 8, height: side * 8)

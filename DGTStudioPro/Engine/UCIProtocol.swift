@@ -1,31 +1,15 @@
 import Foundation
 
-/// Parses the line-based UCI (Universal Chess Interface) protocol that
-/// Stockfish and most chess engines speak over stdin/stdout.
-///
-/// This module handles **parsing** only; sending UCI commands and managing
-/// the engine subprocess is the `StockfishEngine` actor's concern (7.5b).
-/// The split keeps the parser pure and deterministically testable without
-/// needing a real engine binary.
+/// Parses line-based UCI output. Parsing only — sending and subprocess management are the engine's.
 internal enum UCIProtocol {
     
     // MARK: Entry Point
     
-    /// Parses a single line of UCI output. Returns `nil` if the line is
-    /// empty, whitespace-only, or doesn't match a recognized response form
-    /// (including `option` discovery lines, which are deliberately ignored:
-    /// the app *sends* its options from `EngineConfiguration.uciOptionLines`
-    /// rather than negotiating against the engine's advertised catalogue, so
-    /// there is nothing to do with an inbound `option` line. Parsing them
-    /// would only matter if option support ever became engine-dependent.)
+    /// One line → response, or nil for empty / unrecognized / deliberately-ignored `option` lines
+    /// (the app sends its options; it never negotiates against advertisements).
     internal static func parse(_ line: String) -> UCIResponse? {
-        // `.whitespacesAndNewlines`, not `.whitespaces` (which is space +
-        // tab only): the framer upstream strips \n before calling, so this
-        // is correctness of the pure function, not a production bug — a
-        // bare "\n" takes the empty exit instead of falling through as an
-        // unknown keyword, and a keyword carrying a stray \r or \n still
-        // parses rather than silently reading as garbage. Pinned by
-        // `keywordSurvivesTrailingNewlineOrCR`.
+        // `.whitespacesAndNewlines`, not `.whitespaces` (space+tab only): a bare "\n" must take the
+        // empty exit. Pinned.
         let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         
@@ -47,35 +31,13 @@ internal enum UCIProtocol {
 
     // MARK: Two Kinds of nil
 
-    /// Keywords this app understands and deliberately does not act on.
-    ///
-    /// `option` is the recorded invariant — the app *sends* its options from
-    /// `EngineConfiguration.uciOptionLines` rather than negotiating against
-    /// the engine's advertised catalogue. `copyprotection` and `registration`
-    /// are the spec's other two engine-to-GUI keywords with nothing for us to
-    /// do; naming them costs two strings and stops the first engine that
-    /// emits one from reading as a defect.
+    /// Keywords understood and deliberately not acted on — `option` is the recorded invariant.
     internal static let deliberatelyIgnoredKeywords: Set<String> = [
         "option", "copyprotection", "registration"
     ]
 
-    /// Whether `parse` returned nil because the line is *known and ignored*
-    /// rather than *unrecognized*.
-    ///
-    /// **This distinction existed only in prose until 5 Aug 2026, and the
-    /// code beneath the prose contradicted it.** `parse`'s doc above has
-    /// always said `option` lines are deliberately ignored; `StockfishEngine`
-    /// logged every nil at **error** level under a comment reading "only log
-    /// non-empty unparseables so we can spot real engine drift". Stockfish
-    /// advertises about twenty-five options at every start, so the channel
-    /// meant for spotting drift was roughly 96% expected traffic — and a
-    /// channel that always contains noise is one nobody reads, which is the
-    /// `.DS_Store` finding wearing a protocol hat. The comment did not fail;
-    /// it just never came true.
-    ///
-    /// Asked of a *line* rather than a keyword so the split lives here beside
-    /// `parse` — the caller has a line in hand, and a caller that had to
-    /// tokenize first would be a second tokenizer.
+    /// Whether nil meant *known and ignored* rather than *unrecognized* (D63′). This distinction
+    /// existed only in prose; ~25 option lines per start made the error channel unreadable.
     internal static func isDeliberatelyIgnored(_ line: String) -> Bool {
         let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let first = trimmed.split(separator: " ").first else { return false }
@@ -84,9 +46,7 @@ internal enum UCIProtocol {
 
     // MARK: info Line Parsing
     
-    /// Parses an `info` line's fields. UCI info lines have variable-length
-    /// PV terminating the line, so the parser walks tokens by keyword and
-    /// consumes the appropriate number of values per keyword type.
+    /// `info` fields, walked by keyword; PV terminates the line.
     private static func parseInfo(_ tokens: [String]) -> UCIResponse? {
         var info = UCIInfo()
         var i = 0
@@ -113,17 +73,16 @@ internal enum UCIProtocol {
                 info.pv = Array(tokens[i...])
                 i = tokens.count
             case "multipv", "hashfull", "tbhits", "currmove", "currmovenumber":
-                // Single-value fields we recognize but don't store.
+                // Recognized, not stored.
                 _ = consumeToken(tokens, at: &i)
             case "lowerbound", "upperbound":
                 // Aspiration-window qualifiers on `score`; no payload.
                 break
             case "string":
-                // `string` runs to end of line and carries engine debug text.
+                // `string` runs to end of line — engine debug text.
                 i = tokens.count
             default:
-                // Unknown keyword: best-effort skip one token in case it
-                // had a payload. Robust for almost all real UCI variants.
+                // Unknown keyword: best-effort skip one token in case it had a payload.
                 _ = consumeToken(tokens, at: &i)
             }
         }
@@ -150,9 +109,7 @@ internal enum UCIProtocol {
     
     // MARK: bestmove Line Parsing
     
-    /// Parses `bestmove <move> [ponder <move>]`. Move syntax is UCI's long
-    /// algebraic notation (4 chars for normal moves, 5 chars with trailing
-    /// piece letter for promotions, e.g. `"e7e8q"`).
+    /// `bestmove <move> [ponder <move>]` — UCI long algebraic (`e7e8q` for promotions).
     private static func parseBestMove(_ tokens: [String]) -> UCIResponse? {
         guard let move = tokens.first else { return nil }
         var ponder: String? = nil
@@ -166,8 +123,7 @@ internal enum UCIProtocol {
     
     // MARK: id Line Parsing
     
-    /// Parses `id name <value>` or `id author <value>`. The value runs to
-    /// end of line and may contain spaces.
+    /// `id name/author <value>`; the value runs to end of line.
     private static func parseID(_ tokens: [String]) -> UCIResponse? {
         guard tokens.count >= 2 else { return nil }
         let key = tokens[0]
@@ -212,14 +168,12 @@ internal struct UCIInfo: Equatable, Sendable {
 }
 
 internal enum UCIScore: Equatable, Sendable {
-    /// Centipawns from side-to-move perspective (UCI native form).
+    /// Centipawns, side-to-move perspective (UCI native).
     case centipawns(Int)
-    /// Mate distance from side-to-move perspective (UCI native form).
+    /// Mate distance, side-to-move perspective.
     case mate(Int)
     
-    /// Converts to a white-relative `Evaluation`, given the side to move
-    /// at the time this score was emitted. UCI scores are always side-to-
-    /// move relative; app storage is always white-relative.
+    /// → white-relative `Evaluation`; UCI scores are always side-to-move relative.
     internal func toEvaluation(sideToMove: PieceColor) -> Evaluation {
         let raw: Evaluation
         switch self {
@@ -233,7 +187,6 @@ internal enum UCIScore: Equatable, Sendable {
 internal struct UCIBestMove: Equatable, Sendable {
     /// Move in UCI long algebraic notation, e.g. `"e2e4"` or `"e7e8q"`.
     internal let move: String
-    /// Engine's pondered reply, if announced. UCI ponder hints are
-    /// optional and most engines emit them only when explicitly enabled.
+    /// Pondered reply, optional — most engines emit it only when enabled.
     internal let ponder: String?
 }

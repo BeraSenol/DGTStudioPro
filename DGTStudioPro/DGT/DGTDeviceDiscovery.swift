@@ -3,54 +3,30 @@ import IOKit
 import IOKit.serial
 import os
 
-/// Enumerates the board's serial device via IOKit — and *only* the board's.
-///
-/// This is the "device discovery" half of D2. Since the one-board decree
-/// (2 Aug 2026) every consumer asks one membership question — is
-/// `DGTConnection.onlyBoardPath` attached? — and since 4 Aug the **matching
-/// dictionary itself carries the decree**: `kIOTTYDeviceKey` is pinned to
-/// the board's TTY name, derived from the one path constant so the decree
-/// keeps a single spelling. IOKit hands back that node or nothing; the
-/// Bluetooth and debug consoles the app used to enumerate-and-ignore are no
-/// longer even seen. "Never account for other devices" is a fact about the
-/// query now, not a filter after it. Consumers unchanged: launch
-/// auto-connect, the reconnect loop, and the connect window's not-found
-/// panel.
-///
-/// Pure enumeration — no device is opened here. Under the App Sandbox this
-/// still requires the serial entitlement to return results (see the D2
-/// entitlements note).
+/// Enumerates the board's serial device — and *only* it: `kIOTTYDeviceKey` is pinned to the
+/// board's TTY name (derived from `onlyBoardPath`), so the app cannot see a device it would
+/// never connect to. The decree is a fact about the query, not a filter after it.
 internal enum DGTDeviceDiscovery {
     
     private static let logger = AppLog.logger(.dgt)
     
-    /// Returns every serial callout device attached right now, unsorted.
-    ///
-    /// Unsorted deliberately, as of 3 Aug 2026. This used to order
-    /// likely-board candidates first, for a connect dialog that no longer
-    /// exists; every caller since the one-board decree asks whether
-    /// `DGTConnection.onlyBoardPath` is present, and a membership test has no
-    /// opinion about order. The IORegistry order is whatever IOKit hands back
-    /// — nothing renders it, so nothing can depend on it.
+    /// Every matching callout device, unsorted — enumeration order is not an opinion about order.
     internal static func availableDevices() -> [DGTSerialDevice] {
         guard let matching = IOServiceMatching(kIOSerialBSDServiceValue) else {
             logger?.error("IOServiceMatching returned nil for serial services")
             return []
         }
         
-        // All serial BSD types — but exactly one TTY (4 Aug 2026): the
-        // matching carries the one-board decree. `kIOTTYDeviceKey` is the
-        // node name after `cu.`/`tty.`, derived from the path constant
-        // rather than spelled a second time.
+        // All serial BSD types, exactly one TTY: the matching carries the decree; the node name is
+        // derived from the path constant, never spelled twice.
         (matching as NSMutableDictionary)[kIOSerialBSDTypeKey] = kIOSerialBSDAllTypes
         let calloutPrefix = "/dev/cu."
         if DGTConnection.onlyBoardPath.hasPrefix(calloutPrefix) {
             (matching as NSMutableDictionary)[kIOTTYDeviceKey] =
                 String(DGTConnection.onlyBoardPath.dropFirst(calloutPrefix.count))
         } else {
-            // A non-callout constant would be a programmer error at one
-            // symbol; matching wide keeps the membership checks correct
-            // while this line names the surprise.
+            // A non-callout constant would be a programmer error at one symbol; matching wide keeps the
+            // membership checks correct while this line names the surprise.
             logger?.error("Configured board path is not a /dev/cu. path; matching all serial devices")
         }
         
@@ -73,13 +49,8 @@ internal enum DGTDeviceDiscovery {
             service = IOIteratorNext(iterator)
         }
         
-        // Debug, not info: this fires on every launch, every Rescan and
-        // every reconnect lap. Since the matching narrowed to the board's
-        // node it finally states the one fact callers ask about — but they
-        // log their own answers with context, so this stays the quiet
-        // transport echo. (It read "Enumerated 4 serial device(s)" for two
-        // days, which is what prompted the narrowing: a count of ignored
-        // devices is a line you learn to read past.)
+        // Debug, not info: fires on every launch, Rescan and reconnect lap — present/absent is the one
+        // fact callers ask about.
         logger?.debug("Board node \(devices.isEmpty ? "absent" : "present", privacy: .public)")
         return devices
     }

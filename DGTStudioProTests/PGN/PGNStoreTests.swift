@@ -3,16 +3,8 @@ import SwiftData
 @testable import DGTStudioPro
 import Foundation
 
-/// Locks in the import → deduplicate → persist contract for `PGNStore`.
-///
-/// The dedup path is hash-driven: on import, the store computes a content
-/// hash and looks up any existing PGN with the same hash. For lookups to
-/// hit, the hash has to actually be *stored* on the inserted PGN — a
-/// regression where the field was computed but never assigned (so all
-/// rows landed with `contentHash == ""`) silently broke deduplication
-/// across the whole library. These tests pin both halves of the contract:
-/// the hash is non-empty on the stored model, and re-importing the same
-/// movetext throws `.duplicate`.
+/// Import → dedupe → persist. The hash must actually be *stored* on the inserted row — a
+/// computed-but-never-assigned hash makes every future lookup miss and dedupe silently no-op.
 @Suite("PGN Store — Import and Deduplication")
 @MainActor
 struct PGNStoreTests {
@@ -105,14 +97,8 @@ struct PGNStoreTests {
         }
     }
     
-    /// Pins the hash's date rendering — a **persistence contract** (see
-    /// `PGNStore.hashDateString`): every stored `contentHash` was computed
-    /// against "yyyy.MM.dd" in UTC, so any drift here silently rots
-    /// deduplication against the existing Library. The dates are built
-    /// through an explicit UTC Gregorian calendar so the expectations are
-    /// exact regardless of the test host's locale/zone; the late-evening
-    /// UTC case guards the classic off-by-a-zone bug (a host in the
-    /// Americas would render the *previous* local day).
+    /// The hash's date rendering — a **persistence contract**: every stored hash was computed
+    /// against "yyyy.MM.dd" in UTC; drift silently rots dedupe.
     @Test func hashDateRenderingIsPinnedToUTCDots() throws {
         var utc = Calendar(identifier: .gregorian)
         utc.timeZone = TimeZone(identifier: "UTC")!

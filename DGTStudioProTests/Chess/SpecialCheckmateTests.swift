@@ -1,16 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The D19′ checkmate-type classifier, widened to ten motifs by D65′. Pure
-/// over `GameState` — nonisolated, one FEN fixture per pattern.
-///
-/// **Every fixture below was checked against an independent move generator
-/// before it landed here**, for legality and for actually being mate. A
-/// hand-made mate position is the easiest thing in this domain to get subtly
-/// wrong — a king that can still run, a "mate" the defender can block — and an
-/// illegal or non-mate fixture makes a test meaningless rather than failing
-/// loudly, since `classify` guards on `isCheckmate` and would return `nil` for
-/// an honest reason.
+/// The checkmate-type classifier (D19′; ten motifs, D65′). Pure, nonisolated, one FEN per pattern.
 @Suite("Special Checkmate — Classification")
 struct SpecialCheckmateTests {
 
@@ -51,11 +42,8 @@ struct SpecialCheckmateTests {
         #expect(SpecialCheckmate.hook.displayName      == "Hook")
     }
 
-    /// Raw values ride `PGN.specialCheckmate` and every saved smart tag's rule
-    /// blob, so a rename is a silent data migration (the D36′ trap). Asserted
-    /// on literals, which is rare and correct here: nothing else in the app
-    /// would notice if one moved, and the symptom would be a stored motif
-    /// quietly failing to decode.
+    /// Raw values ride stored state and rule blobs — a rename is a silent migration (D36′ trap).
+    /// Asserted on literals, rare and correct.
     @Test func rawValuesAreStoredState() {
         #expect(SpecialCheckmate.smothered.rawValue == "smothered")
         #expect(SpecialCheckmate.backRank.rawValue  == "backRank")
@@ -71,15 +59,8 @@ struct SpecialCheckmateTests {
 
     // MARK: Producibility
 
-    /// **Every case can actually be classified.** The compiler already refuses
-    /// a case with no recogniser (`matches` switches exhaustively) but has
-    /// nothing to say about one missing from `precedence`, which would simply
-    /// never fire.
-    ///
-    /// This is the D40′ rule pointed at an enum rather than at a `disabled(_:)`
-    /// guard: a case nothing can produce is a stored value that can never
-    /// appear, and it costs nothing at runtime, fails no build, and reads as
-    /// considered. Adding a case without adding its fixture turns this red.
+    /// **Every case can actually be classified**: the compiler refuses a recogniser-less case but
+    /// says nothing about one missing from `precedence`, which would simply never fire.
     @Test func everyCaseIsProducible() throws {
         var produced: Set<SpecialCheckmate> = []
         for fixture in Self.fixtures {
@@ -113,13 +94,8 @@ struct SpecialCheckmateTests {
 
     // MARK: Precedence — the overlapping pairs
 
-    /// A corner rook mate whose knight is *also* pawn-defended satisfies both
-    /// `arabian` and `hook`, and neither is a subset of the other. The corner
-    /// wins, on the tie-break recorded at `precedence`.
-    ///
-    /// **This is the test to change if that call ever changes** — it is the
-    /// only place the choice is observable, and it will fail loudly rather
-    /// than the label quietly moving on games already in the Library.
+    /// A corner hook satisfies both `arabian` and `hook`; the corner wins on `precedence`'s
+    /// tie-break — the only place the choice is observable.
     @Test func aCornerHookIsCalledArabian() throws {
         // Kh8, Rh7 defended by Nf6, which the g5 pawn defends in turn.
         let state = try Self.state("7k/6pR/5N2/6P1/8/8/8/K7 b - - 0 1")
@@ -146,13 +122,8 @@ struct SpecialCheckmateTests {
 
     // MARK: Ordinary mates and non-mates
 
-    /// The plain king-and-queen ending, which is the commonest mate there is
-    /// and deliberately carries no motif. Qg7 is adjacent and defended — one
-    /// condition short of a Dovetail — but the king has no men of its own
-    /// behind it, and the tail is the pattern.
-    ///
-    /// Worth pinning because it is what stops the Players "Special Mates"
-    /// count from becoming a count of decided games.
+    /// The commonest mate carries no motif: Qg7 defended is one condition short of Dovetail, and
+    /// the king has no men to make a tail.
     @Test func theBasicQueenMateIsNotSpecial() throws {
         let state = try Self.state("7k/6Q1/6K1/8/8/8/8/8 b - - 0 1")
         #expect(SpecialCheckmate.classify(state) == nil)

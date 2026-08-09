@@ -4,49 +4,29 @@ internal struct BoardView: View {
     
     // MARK: Stored Properties
     internal let position: Position
-    /// What the piece layer renders and animates under — resolved by the
-    /// caller through `PieceIdentity`, because only the caller knows which
-    /// arm applies: the review board's position *is* its game's position
-    /// (total parity), while the mirror renders the physical board against a
-    /// live game that may lag it. `BoardView` stays dumb either way; it
-    /// draws what it is handed at the squares `position` says are occupied,
-    /// and `PieceIdentity` guarantees those two agree.
+    /// What the piece layer animates under — resolved by the caller through `PieceIdentity`,
+    /// because only the caller knows which arm applies.
     internal let pieces: [ResolvedPiece]
     internal let style: BoardStyle
     internal let perspective: PieceColor
     internal let lastMove: LastMove?
     internal let checkSquare: Square?
-    /// Reserved: nothing in the app selects a square today — the physical
-    /// board is the input — so every call site takes this default. Defaulted
-    /// rather than removed because `SquareHighlight.selected` and
-    /// `SquareView`'s tint are already built; a click-to-move or
-    /// position-setup surface would need only to pass a value.
+    /// Reserved: nothing selects a square today (the physical board is the input). Defaulted, not
+    /// removed — the highlight machinery is built; a click-to-move surface only passes a value.
     internal var selectedSquare: Square? = nil
-    /// Square at which to render a 50%-opacity ghost piece (the mid-castle
-    /// "rook hasn't moved yet" cue from `DGTLiveSession`). Both `ghostSquare`
-    /// and `ghostPiece` must be non-nil for the ghost to render. Defaulted so
-    /// existing call sites compile unchanged.
+    /// The mid-castle ghost square; both ghost fields must be non-nil to render.
     internal var ghostSquare: Square? = nil
-    /// Piece to render at `ghostSquare`. `SquareView` only draws it when that
-    /// square is actually empty — so a stray real piece on the ghost square
-    /// (e.g. mid-fumble) hides the ghost rather than overlapping it.
+    /// The ghost piece — drawn only when the square is actually empty, so a mid-fumble real piece
+    /// hides the ghost rather than overlapping it.
     internal var ghostPiece: Piece? = nil
-    /// Recovery highlights (M6.1): squares rendered with the `.attention`
-    /// style ("something here shouldn't be") and the `.target` style ("a
-    /// piece belongs here"). Generic sets, defaulted empty so existing call
-    /// sites compile unchanged — same pattern as the ghost; the board
-    /// knows styles, not recovery.
+    /// Recovery highlights: `.attention` ("shouldn't be here") and `.target` ("belongs here").
+    /// The board knows styles, not recovery.
     internal var attentionSquares: Set<Square> = []
     internal var targetSquares: Set<Square> = []
     
     // MARK: Preferences
     
-    /// D21′ — the frame's coordinate labels. Read here rather than threaded
-    /// from the call sites (as `style` is) because it has exactly one
-    /// consumer: one `@AppStorage` site instead of one per board keeps the
-    /// "absent reads as true" default from being repeated three times. Style
-    /// stays injected because the previews and the Settings swatches need to
-    /// override it; nothing needs to override this.
+    /// D21′ coordinates — read here (one consumer) rather than threaded like `style`.
     @AppStorage(StorageKeys.showBoardCoordinates) private var showsCoordinates = true
     
     // MARK: Body
@@ -154,12 +134,8 @@ internal struct BoardView: View {
         }
     }
     
-    /// One frame glyph — or nothing drawn, when coordinates are off (D21′).
-    /// The caller applies the frame, and the off branch is `Color.clear`
-    /// rather than an absent view so the strip's contribution to layout is
-    /// unambiguous: the board keeps its 10×10 grid, its wooden border, and
-    /// its size at every setting. Also the one place the two strips' shared
-    /// type treatment now lives.
+    /// One frame glyph — `Color.clear` when off, so the strip's layout contribution is unambiguous:
+    /// the board keeps its 10×10 grid and size at every setting.
     @ViewBuilder
     private func coordinateLabel(_ character: Character, squareSize: CGFloat) -> some View {
         if showsCoordinates {
@@ -185,10 +161,7 @@ internal struct BoardView: View {
                             style: style,
                             ghostPiece: (square == ghostSquare) ? ghostPiece : nil
                         )
-                        // e.g. "square.e4" — stable algebraic handle,
-                        // minted for the UI suite's keyboard-nav checks and
-                        // kept per the registry's stated bet (D51′; see
-                        // AccessibilityID's header).
+                        // "square.e4" — stable algebraic handle, kept per the registry's bet (D51′).
                         .accessibilityIdentifier(
                             AccessibilityID.boardSquare(square.algebraicNotation)
                         )
@@ -196,9 +169,8 @@ internal struct BoardView: View {
                 }
             }
         }
-        // The piece layer sits between the squares and the wood grain, so
-        // pieces keep the grain texture they always rendered under — and
-        // inside the `.clipped()`, so a glide never escapes the grid.
+        // The piece layer sits between squares and wood grain (pieces keep their texture), inside the
+        // `.clipped()` so a glide never escapes the grid.
         .overlay {
             BoardPieceLayer(
                 pieces: pieces,
@@ -274,11 +246,8 @@ internal struct BoardView: View {
         if square == checkSquare {
             result.insert(.check)
         }
-        // Unreachable today: `selectedSquare` takes its default at every call
-        // site, so this insert never fires and `SquareView`'s tint arm never
-        // renders outside its own preview (M12.3, 6 Aug 2026). Kept as
-        // pre-wiring — a click-to-move or position-setup surface turns all
-        // three on by passing one value.
+        // Unreachable today: every call site takes the default. Kept as pre-wiring — one value turns
+        // all three on.
         if square == selectedSquare {
             result.insert(.selected)
         }
@@ -348,9 +317,7 @@ private struct Layout {
     .frame(width: 800, height: 800)
 }
 
-// White kingside castle in progress: king has moved e1 → g1, the real
-// rook is still on h1, and a ghost rook is rendered on f1 awaiting the
-// physical move.
+// White kingside castle mid-flight: king e1 → g1, real rook on h1, ghost on f1.
 #Preview("Kingside Castle Ghost") {
     var position = Position.starting
     // Clear f1 and g1 (bishop, knight), move king e1 → g1.
@@ -371,8 +338,7 @@ private struct Layout {
     .frame(width: 800, height: 800)
 }
 
-// Black queenside castle in progress: king e8 → c8, rook still on a8,
-// ghost rook on d8.
+// Black queenside: king e8 → c8, rook on a8, ghost on d8.
 #Preview("Queenside Castle Ghost (Black)") {
     var position = Position.starting
     position[Squares.b8] = .empty

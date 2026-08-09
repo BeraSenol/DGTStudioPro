@@ -124,15 +124,8 @@ struct PlayerStatsTests {
     
     // MARK: Head to Head (3 Aug 2026)
 
-    /// The claim that is cheap to get wrong and plausible when wrong:
-    /// orientation. Alice is White in one win and Black in another, so a fold
-    /// that ignored which seat she held would report the same totals for both
-    /// players — and 2–1–1 read from the wrong side is a sentence nobody
-    /// looking at the toolbar could falsify.
-    ///
-    /// The asymmetry is asserted directly rather than through a spot check:
-    /// swapping the arguments must mirror the record, which is a property no
-    /// single-direction assertion can express.
+    /// Orientation — cheap to get wrong, plausible when wrong: swapping the arguments must mirror
+    /// the record, a property no symmetric fold passes.
     @Test func headToHeadIsOrientedToTheFirstPlayer() throws {
         let records = [
             record(white: alice, black: bob, result: .whiteWins),   // Alice
@@ -276,29 +269,9 @@ struct PlayerStatsTests {
         #expect(try stats(for: "alice", in: PlayerStats.index(of: records)).specialMatesDelivered == 2)
     }
 
-    /// The two counters read **different fields**, and this pins that rather
-    /// than the tidy arithmetic a reader would assume: hand this fold a record
-    /// with `endedInMate: false` and a motif, and it will report one special
-    /// mate and zero mates.
-    ///
-    /// **Rewritten 6 August 2026, and the correction is the point.** This test
-    /// used to be named `aSpecialMateCanOutnumberMatesWhileTheSpellingsDisagree`
-    /// and claimed to reproduce a standing open item: `matesDelivered` asks
-    /// `hasSuffix("#")` while the motif classifier asks `contains("#")`, so a
-    /// game ending `Qd2#!` was said to be a special mate that is not a mate.
-    /// **No such game can exist.** `PGNParser.flushToken` strips trailing
-    /// `!`/`?` from every token it emits, and the other two writers store
-    /// canonical `san(for:)` output — so `#` is always last and the two
-    /// spellings always agree. `annotationsDoNotSurviveImport` is the pin for
-    /// that, and it lives in the parser suite because that is where the claim
-    /// would break.
-    ///
-    /// So the record below is **synthetic**, and saying so is the whole value
-    /// of the rewrite: the old version was a test that could only pass, over a
-    /// state no door produces, wearing the name of a bug. What it legitimately
-    /// witnesses is that the fold does not nest one counter inside the other —
-    /// which is worth keeping, because nesting would bury the two spellings
-    /// behind an invariant that holds by luck rather than by enforcement.
+    /// The two counters read **different fields**: a record with `endedInMate: false` and a motif
+    /// reports one special mate and zero mates — the fold does not nest one counter in the other
+    /// (the `Qd2#!` divergence, pinned until the spellings are unified).
     @Test func matesAndSpecialMatesAreCountedFromDifferentFields() throws {
         let records = [
             record(white: alice, black: bob, result: .whiteWins,

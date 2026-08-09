@@ -1,70 +1,39 @@
 import SwiftUI
 
-/// A destination's sortable columns, named so something other than a table
-/// header can choose one.
-///
-/// **This exists because a `Picker` cannot hold a `KeyPathComparator`.** Until
-/// the View Options panel, sorting had exactly one door — clicking a `Table`
-/// header — and `[KeyPathComparator<Row>]` was a perfectly good currency for
-/// it, because the only thing that ever produced one was the table itself. A
-/// panel has to *offer* the choices, which means they need identity, a display
-/// name, and a stable spelling. None of those is derivable from a key path.
-///
-/// **And the round trip is the hard half, not the enum.** The table still
-/// writes comparators back through its binding, so the panel and the header
-/// have to agree about what "sorted by Date" means when the *other* one set
-/// it. `matching(_:)` is that agreement, and it works because key paths are
-/// `Equatable` — the panel reads the header's choice by comparing the
-/// comparator's `keyPath` against each case's, rather than by keeping a
-/// parallel copy of the current sort that could drift. One source, two
-/// doors, which is the `CollapsibleSection` rule applied to sorting.
+/// A destination's sortable columns, named so something other than a table header can choose
+/// one — a `Picker` cannot hold a `KeyPathComparator`. The round trip (panel sets, header shows,
+/// header sets, panel shows) is the hard half.
 internal protocol CollectionSortField: RawRepresentable, CaseIterable, Hashable, Sendable
 where RawValue == String {
 
-    /// The row type the sort orders. Unconstrained on purpose — `PGN` is a
-    /// `@Model` class and `RankedPlayer` is a value, and this grammar has no
-    /// opinion about either.
+    /// The row type. Unconstrained on purpose — `PGN` is a `@Model` class, `RankedPlayer` a value.
     associatedtype Row
 
-    /// The column header's own label, so a panel and a table cannot call the
-    /// same sort two different things.
+    /// The column header's own label — a panel must not call the same sort something else.
     var displayName: String { get }
 
-    /// The identity `matching(_:)` compares on. Stated separately from
-    /// `comparator` because a comparator carries an *order* as well, and the
-    /// question "which field is this" must not depend on the direction.
+    /// The identity `matching(_:)` compares on. Separate from `comparator`, which also carries an
+    /// *order* — "which field" must not depend on direction.
     var keyPath: PartialKeyPath<Row> { get }
 
     var comparator: KeyPathComparator<Row> { get }
 
-    /// The destination's shipped sort, stated here rather than in the store so
-    /// an absent or unreadable preference and a fresh install land on the same
-    /// order.
+    /// The shipped sort, stated here so an unreadable preference and a fresh install agree.
     static var defaultField: Self { get }
     static var defaultIsReverse: Bool { get }
 }
 
 extension CollectionSortField {
 
-    /// Which field a table header just chose, or nil if it chose a column this
-    /// enum does not name.
-    ///
-    /// **Nil is a real answer and must stay one.** The Library's Analysis
-    /// column is unsortable, and a future column could be added with a
-    /// `sortUsing:` and no case here — in which case the panel should show
-    /// *no* selection rather than silently claiming the sort is something
-    /// else. Pinned by `anUnknownKeyPathMatchesNoField`.
+    /// Which field a header chose, or nil for a column this enum does not name — **nil is a real
+    /// answer** (the Analysis column is deliberately unmapped). Pinned.
     internal static func matching(_ keyPath: PartialKeyPath<Row>) -> Self? {
         allCases.first { $0.keyPath == keyPath }
     }
 }
 
-/// A field plus a direction — one sort, in the form both doors can hold.
-///
-/// A `[KeyPathComparator]` is what `Table` speaks and it is a poor thing to
-/// persist: it is not `Codable`, and an array says the destination supports
-/// multi-level sorting, which neither of them does. This is the single sort
-/// they actually have, and `comparators` is the adapter at the table's edge.
+/// A field plus a direction. `[KeyPathComparator]` is what `Table` speaks and a poor thing to
+/// persist: not `Codable`, and an array claims multi-level sorting neither destination has.
 internal struct CollectionSort<Field: CollectionSortField>: Equatable, Sendable {
 
     internal var field: Field
@@ -86,11 +55,8 @@ internal struct CollectionSort<Field: CollectionSortField>: Equatable, Sendable 
         return [comparator]
     }
 
-    /// What a header click means, read back through `matching(_:)`.
-    ///
-    /// Failable rather than defaulting: a comparator this grammar cannot name
-    /// should leave the panel showing nothing, not quietly rewrite the user's
-    /// sort to the default the moment they click an unmapped column.
+    /// Failable rather than defaulting: an unmapped comparator should leave the panel showing
+    /// nothing, not quietly rewrite the user's sort.
     internal init?(comparators: [KeyPathComparator<Field.Row>]) {
         guard let first = comparators.first,
               let field = Field.matching(first.keyPath) else { return nil }
@@ -99,22 +65,14 @@ internal struct CollectionSort<Field: CollectionSortField>: Equatable, Sendable 
 
     // MARK: Persistence
 
-    /// One string per destination rather than a field key and a direction key.
-    ///
-    /// `StorageKeys` is already carrying two dead keys and says in as many
-    /// words that a third would stop being a footnote — four new ones for two
-    /// sorts would be that point twice over. The pair is one fact and travels
-    /// as one value; the separator is a colon because no raw value here
-    /// contains one, which `everyFieldRawValueIsSeparatorSafe` pins rather
-    /// than trusts.
+    /// One string per destination (field + direction, colon-separated — no raw value contains one,
+    /// pinned). Four keys for two values would double the dead-key risk `StorageKeys` records.
     internal var storedValue: String {
         "\(field.rawValue):\(isReverse ? "reverse" : "forward")"
     }
 
-    /// **An unreadable stored value is dropped, not repaired** — D45′'s rule
-    /// for a retired `InspectorSection` raw value, and for the same reason.
-    /// Retiring a column should cost no migration; the next write evicts the
-    /// stale spelling, and until then the destination opens on its default.
+    /// An unreadable stored value is dropped, not repaired (D45′'s rule): retiring a column costs
+    /// no migration; the next write evicts.
     internal init?(storedValue: String) {
         let parts = storedValue.split(separator: ":", maxSplits: 1)
         guard parts.count == 2,
@@ -129,16 +87,8 @@ internal struct CollectionSort<Field: CollectionSortField>: Equatable, Sendable 
 
 // MARK: - Library
 
-/// The Library table's sortable columns.
-///
-/// Raw values are **hand-written and are a persistence contract** — they land
-/// in `UserDefaults` under `StorageKeys.librarySort`. The D36′ trap in a new
-/// place: letting them follow the Swift case names would mean a rename that
-/// reads as a refactor silently resetting the user's sort. Pinned on the
-/// literals by `libraryFieldRawValuesAreStable`.
-///
-/// `Analysis` is absent because its column is unsortable — there is no
-/// `sortUsing:` on it, so no header can ever produce it.
+/// The Library table's sortable columns. Raw values are **hand-written persistence contracts**
+/// (`StorageKeys.librarySort`) — the D36′ trap; pinned on literals.
 internal enum LibrarySortField: String, CollectionSortField {
     case index         = "index"
     case white         = "white"
@@ -152,9 +102,7 @@ internal enum LibrarySortField: String, CollectionSortField {
 
     internal typealias Row = PGN
 
-    /// The column headers verbatim. `#` rather than "Index" because that is
-    /// what the table says, and a panel naming it differently would be two
-    /// names for one column.
+    /// The column headers verbatim — `#`, not "Index": two names for one column otherwise.
     internal var displayName: String {
         switch self {
         case .index:         "#"
@@ -197,24 +145,16 @@ internal enum LibrarySortField: String, CollectionSortField {
         }
     }
 
-    /// `#` descending — the shipped launch order, and the one property that
-    /// must not move: `LibraryDestination.defaultSortOrder` is the same
-    /// statement one file over, and `theLibraryDefaultMatchesTheDestination`
-    /// goes red if they diverge.
+    /// `#` descending — the shipped launch order; `theLibraryDefaultMatchesTheDestination` goes red
+    /// if this and `LibraryDestination.defaultSortOrder` diverge.
     internal static var defaultField: Self { .index }
     internal static var defaultIsReverse: Bool { true }
 }
 
 // MARK: - Players
 
-/// The Players table's sortable columns.
-///
-/// Same persistence contract as `LibrarySortField` above.
-///
-/// **`rank` is a sort, not the ranking method.** D62′ decides what rank 1
-/// *means* and persists separately; this decides whether the list is shown in
-/// rank order. Both can be set and they answer different questions — the badge
-/// travels with the player into every ordering.
+/// The Players table's columns — same persistence contract. **`rank` is a sort, not the ranking
+/// method** (D62′ decides what rank 1 means; this decides row order).
 internal enum PlayersSortField: String, CollectionSortField {
     case rank         = "rank"
     case name         = "name"
@@ -274,9 +214,7 @@ internal enum PlayersSortField: String, CollectionSortField {
         }
     }
 
-    /// Rank ascending — the D11′ ladder, which `PlayersDestination`'s own
-    /// default states independently and `defaultSortReproducesTheLadder`
-    /// already pins against `PlayerRanking.wins`.
+    /// Rank ascending — the D11′ ladder; `defaultSortReproducesTheLadder` pins it.
     internal static var defaultField: Self { .rank }
     internal static var defaultIsReverse: Bool { false }
 }

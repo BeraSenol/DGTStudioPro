@@ -2,21 +2,9 @@ import Testing
 import SwiftData
 @testable import DGTStudioPro
 
-/// Coverage for `OpenGamesRegistry` — the app-global set tracking which open
-/// games have unsaved changes (consulted by the Library delete path to decide
-/// between immediate-close and discard-confirmation). The registry is a thin,
-/// correct wrapper over a `Set<PersistentIdentifier>`; these tests pin its
-/// observable contract (toggle, per-game isolation, idempotence).
-///
-/// `@MainActor`: the registry is an `@Observable @MainActor` class.
-///
-/// The only honest way to obtain real `PersistentIdentifier` keys is from
-/// inserted models, so each test mints them from a fresh in-memory
-/// `ModelContainer` (the same idiom as `PGNStoreTests`) and captures the
-/// identifiers *after* `save()`, when they are stable. This is the one suite
-/// here that leans on SwiftData runtime behaviour rather than being purely
-/// by-construction — a fixture failure would surface in `makeIDs`, not in the
-/// registry logic under test.
+/// `OpenGamesRegistry` — the unsaved-changes set the delete path consults. Real
+/// `PersistentIdentifier`s come from a throwaway in-memory container; the registry itself never
+/// touches SwiftData.
 @MainActor
 @Suite("Open Games Registry")
 struct OpenGamesRegistryTests {

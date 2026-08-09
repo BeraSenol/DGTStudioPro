@@ -1,22 +1,8 @@
 import Testing
 @testable import DGTStudioPro
 
-/// Coverage for `PieceTracker` — the per-square piece-identity map the live
-/// model uses to follow a *physical* piece through the game (so the same rook
-/// keeps its identity across a castle, a promoted pawn keeps its identity as a
-/// queen, and an en-passant victim is cleared from the square it actually left,
-/// not the mover's destination).
-///
-/// `PieceTracker` had no dedicated suite; its `applyMove` bookkeeping is exactly
-/// the kind of off-by-one square logic that regresses silently, so each move
-/// class gets an explicit before/after assertion.
-///
-/// Not `@MainActor`: `PieceTracker`, `PieceID`, and `Move` are all `Sendable`
-/// value types whose members are nonisolated, so `applyMove`, `Move.make`, and
-/// the `==` comparisons need no main-actor isolation — matching the module's
-/// other pure-value suites (`SANSerializerTests` calls `Move.make` throughout
-/// with no isolation; `GameStateApplyingTests` and `DGTReconstructorTests`
-/// compare these types directly).
+/// `PieceTracker` — the per-square identity map (same rook through a castle, promoted pawn's
+/// identity on the queen). Legality-agnostic; not @MainActor — pure `Sendable` values.
 @Suite("Piece Tracker")
 struct PieceTrackerTests {
     
@@ -93,11 +79,8 @@ struct PieceTrackerTests {
     
     // MARK: applyMove — Capture
     
-    /// A capture clears the victim's identity from the destination, then lands
-    /// the mover there. (Geometrically artificial — a rook does not reach a7
-    /// from a1 in one legal move — but `PieceTracker` is legality-agnostic; the
-    /// point is the bookkeeping.) From the starting tracker, a1's rook is ID 0
-    /// and a7's pawn is ID 16; afterwards a7 holds 0 and 16 is gone entirely.
+    /// A capture clears the victim's identity, then lands the mover. Geometrically artificial on
+    /// purpose — the tracker is legality-agnostic.
     @Test func captureReplacesVictimIdentity() {
         var tracker = PieceTracker.starting
         let capture = Move.make(

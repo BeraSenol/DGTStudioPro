@@ -1,24 +1,8 @@
 import Testing
 @testable import DGTStudioPro
 
-/// Coverage for `AnalysisQueue` — the pure half of batch analysis,
-/// extracted from `AnalysisQueueController` precisely so these decisions
-/// can be pinned without SwiftData or a Stockfish subprocess (the M9
-/// resolution of the `GameAnalysisDriver` audit line). The contracts
-/// worth guarding:
-///
-///   1. FIFO with dedupe — an id already waiting or running never
-///      double-enters; a finished id re-queues and drops its stale
-///      outcome.
-///   2. A fresh batch resets the finished log, so progress counts the
-///      batch the user just started; enqueueing mid-run extends the same
-///      batch instead.
-///   3. The queue owns the line, the controller owns the engine —
-///      `removeWaiting`/`clearWaiting` never touch `current`.
-///
-/// Runs on `String` ids: the type is generic exactly so this suite stays
-/// hermetic. Not `@MainActor` — a pure `Sendable` value, matching every
-/// other pure-value suite in the module.
+/// The pure half of batch analysis: FIFO with dedupe, fresh-batch log reset,
+/// `removeWaiting`/`clearWaiting` never touch `current`. Not @MainActor — a pure `Sendable` value.
 @Suite("Analysis Queue")
 struct AnalysisQueueTests {
     

@@ -3,12 +3,9 @@ import SwiftData
 
 // MARK: Placeholder Normalization
 
-/// PGN uses `"?"` as the unknown-tag placeholder. The forms show *empty*
-/// fields (with prompts) instead — friendlier to type into — and convert
-/// at the boundary: `"?"` → `""` when seeding a form, trimmed `""` → `"?"`
-/// when committing one. Keeping both directions next to each other makes
-/// the round-trip obviously symmetric. `internal` (not `private`): M5's
-/// `EditGameInfoSheet` stages the same round-trip for an archived PGN.
+/// PGN's `"?"` ↔ empty-field boundary: `"?"` → `""` seeding a form, trimmed `""` → `"?"`
+/// committing one. Kept adjacent so the round trip is obviously symmetric. `internal`:
+/// `EditGameInfoSheet` stages the same round trip.
 internal func formValue(_ tag: String) -> String {
     tag == "?" ? "" : tag
 }
@@ -18,8 +15,7 @@ internal func tagValue(_ field: String) -> String {
     return trimmed.isEmpty ? "?" : trimmed
 }
 
-/// Applies `tagValue` normalization across a whole roster before it leaves
-/// a form (game start, details save, or the archive sheet's Save Changes).
+/// Normalizes a whole roster before it leaves any form.
 internal func normalized(_ roster: LiveGame.Roster) -> LiveGame.Roster {
     var result = roster
     result.event = tagValue(roster.event)
@@ -31,40 +27,23 @@ internal func normalized(_ roster: LiveGame.Roster) -> LiveGame.Roster {
 
 // MARK: Roster Form
 
-/// The seven-tag roster form, minus Result (the game tracks it — Decision
-/// #4). Shared verbatim by the new-game sheet (M3.4) and the edit-details
-/// sheet (M3.3), and reused again by M5's archive-confirmation sheet, so
-/// the field set can never drift between the three.
+/// The roster form minus Result (the game tracks it — Decision #4). Shared by the new-game,
+/// edit-details and archive-confirmation sheets, so the field set cannot drift.
 internal struct LiveGameRosterForm: View {
     
     // MARK: Bound State
     
     @Binding internal var roster: LiveGame.Roster
     
-    /// Accessibility-identifier prefix for the six fields. The live sheets
-    /// use the default; M5's archive-confirmation sheet passes
-    /// `AccessibilityID.archiveFormPrefix` so its fields test under the
-    /// documented `archive.form.*` names without duplicating the form.
-    /// Declared after `roster` (and defaulted) so existing call sites
-    /// compile unchanged.
+    /// Identifier prefix for the six fields — the archive sheet passes `archive.form.*`.
     internal var identifierPrefix = AccessibilityID.liveFormPrefix
     
-    /// Known-player **tag forms** for the seat pickers (M-lib.1, D16′;
-    /// form fixed by D29′ — the picker inserts `Player.tagName`, never
-    /// `Player.name`: a seat field is an editor over a tag, and "Senol,
-    /// Bera" is what the archive stores and D24′ exports). The menu labels
-    /// show the same string it inserts — showing display form while
-    /// inserting tag form would make the menu lie about its own effect.
-    /// Empty — the default — renders plain text fields, so the edit and
-    /// archive sheets compile and behave unchanged; the New Game sheet
-    /// passes the `Player` registry. Free text always works: the menu
-    /// only fills the field, and picking creates nothing —
-    /// `resolvePlayer` stays the single creation door, at archive time.
+    /// Known-player **tag forms** for the seat pickers (D16′/D29′ — the picker inserts
+    /// `Player.tagName`, never `name`). The menu only fills; picking creates nothing.
     internal var knownPlayers: [String] = []
     
-    /// `Roster.date` is optional (a PGN date can be unknown), but the v1
-    /// dialog always supplies one (default today — the locked decision), so
-    /// the picker binds through a non-optional facade.
+    /// `Roster.date` is optional but the dialog always supplies one (default today), so the picker
+    /// binds through a non-optional facade.
     private var dateBinding: Binding<Date> {
         Binding(
             get: { roster.date ?? .now },
@@ -72,10 +51,8 @@ internal struct LiveGameRosterForm: View {
         )
     }
     
-    /// The seat picker: a borderless menu of known players trailing the
-    /// text field — the combo-box shape, in SwiftUI terms (no AppKit
-    /// needed: a `Menu` filling a `TextField`'s binding is the whole
-    /// behavior). Hidden when the host supplies no players.
+    /// The seat picker: a borderless menu trailing the field — the combo-box shape, no AppKit
+    /// needed. Hidden when the host supplies no players.
     @ViewBuilder
     private func playerMenu(for field: Binding<String>, identifier: String) -> some View {
         if !knownPlayers.isEmpty {
@@ -127,22 +104,8 @@ internal struct LiveGameRosterForm: View {
                     )
                 }
 
-                // D61′'s guard, arriving here 6 Aug 2026 (M12.2) — the anchor
-                // named this form as where it belonged, because the two seats
-                // are one `Roster` and the check needs no drafts to compare.
-                //
-                // A warning plus a disabled button rather than Get Info's
-                // revert-and-alert, and the difference is the commit model
-                // rather than taste. Get Info commits per field on Return or
-                // focus loss, so by the time it can object the value is
-                // already going to the store and the only honest response is
-                // to put it back. These sheets stage everything behind one
-                // button, so nothing has been committed yet and there is
-                // nothing to revert — the reader is mid-edit, and reverting a
-                // field they are still typing into would be the rudest
-                // possible reading of the same rule. Same predicate, two
-                // shapes, the D57′ pattern of one window holding two commit
-                // models for one reason.
+                // D61′'s guard: the two seats are one `Roster`, so the check needs no drafts to compare.
+                // A warning line plus a disabled Start — the alert belongs to Get Info's commit model.
                 if roster.seatsNameOnePlayer {
                     Label(
                         "\(PlayerName.displayForm(of: roster.white)) can’t play both sides. "
@@ -194,30 +157,19 @@ internal struct LiveGameRosterForm: View {
 
 // MARK: New Game Sheet
 
-/// The full-roster new-game dialog (M3.4). Presented when the session
-/// detects the start position (`shouldOfferNewGame`) or via the HUD's
-/// manual "New Game…" button.
-///
-/// The recurring tags pre-fill from persisted defaults and write back on
-/// Start (Event, Site, White — the `StorageKeys` trio from the roadmap).
-/// Starting while an *unfinished* game exists replaces it behind a
-/// destructive confirmation; unreachable from M3's entry points (the offer
-/// only fires while idle, the manual button only shows while
-/// idle/finished) but honored so a future entry point can't skip it.
+/// The new-game dialog: presented on start-position detection (`shouldOfferNewGame`) or the
+/// HUD's manual button.
 internal struct NewLiveGameSheet: View {
     
     // MARK: Stored Properties
     
-    /// Called with the normalized roster when the user starts the game.
-    /// The caller owns `startNewGame` and sheet dismissal.
+    /// Called with the normalized roster on start; the caller owns `startNewGame` and dismissal.
     internal let onStart: (LiveGame.Roster) -> Void
     
-    /// Called by "Not Now" — dismiss without starting (the session won't
-    /// re-prompt until the board leaves and returns to the start).
+    /// "Not Now" — dismiss without starting (no re-prompt until the board leaves and returns).
     internal let onNotNow: () -> Void
     
-    /// True when starting would replace an unfinished game — gates the
-    /// destructive confirmation.
+    /// True when starting would replace an unfinished game — gates the destructive confirmation.
     internal let replacesUnfinishedGame: Bool
     
     // MARK: Persisted Defaults
@@ -226,22 +178,16 @@ internal struct NewLiveGameSheet: View {
     @AppStorage(StorageKeys.defaultSite) private var defaultSite = ""
     @AppStorage(StorageKeys.defaultWhitePlayer) private var defaultWhite = ""
     
-    // MARK: Round Prefill (M-lib.1, D16′)
-    
-    /// The picker's source and the resolution set. Matching only — the
-    /// dialog never creates a `Player` (D9′'s one door stands).
+    // MARK: Round Prefill (D16′)
+    /// The picker's source and resolution set. Matching only — the dialog never creates a `Player` (D9′).
     @Query(sort: \Player.name) private var players: [Player]
     
-    /// Every Library game, projected per evaluation to `GameRecord` for
-    /// the pairing fold. Relies on the player-link backfill having run
-    /// (any Library/Players visit); an unhealed row projects nil
-    /// seats and simply doesn't inform the prefill — degrades to no
-    /// suggestion, never to a wrong one.
+    /// Library games projected for the pairing fold. An unhealed row projects nil seats and simply
+    /// doesn't inform — degrades to no suggestion, never a wrong one.
     @Query private var games: [PGN]
     
-    /// The last value the prefill wrote, so it only ever overwrites its
-    /// own suggestion — a user-typed round is never touched or cleared
-    /// (sub-decision recorded with D16′).
+    /// The last value the prefill wrote, so it only overwrites its own suggestion — a typed round is
+    /// never touched.
     @State private var prefilledRound: Int?
     
     // MARK: View State
@@ -265,10 +211,8 @@ internal struct NewLiveGameSheet: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding([.horizontal, .top])
             
-            // D29′: tag form into the field ("Senol, Bera"), with `name` as
-            // the fallback for a pre-backfill row — display form is still a
-            // *valid* tag (D23′: no-comma names pass through), just not the
-            // remembered one.
+            // D29′: tag form into the field, `name` fallback — display form is still a valid tag, just not
+            // the remembered one.
             LiveGameRosterForm(
                 roster: $roster,
                 knownPlayers: players.map { $0.tagName ?? $0.name }
@@ -283,15 +227,8 @@ internal struct NewLiveGameSheet: View {
                 
                 Spacer()
                 
-                // D61′ (M12.2): a game cannot start with one player on both
-                // sides. The form above says why in words; this stops the
-                // gesture. Both read `roster.seatsNameOnePlayer` — one
-                // predicate, called twice, which is D40′'s remedy rather than
-                // two guards that happen to agree.
-                //
-                // The enabling value is producible in both directions, checked
-                // at minting per D40′: a fresh roster is `?` against `?`, two
-                // absences and not a collision, so this ships enabled.
+                // D61′: cannot start with one player on both sides. The form says why; this stops the gesture.
+                // Both read `roster.seatsNameOnePlayer` — one predicate, called twice (D40′'s remedy).
                 Button("Start Game", action: startTapped)
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
@@ -304,9 +241,7 @@ internal struct NewLiveGameSheet: View {
         .accessibilityIdentifier(AccessibilityID.liveNewGameSheet)
         .onAppear {
             prefillFromDefaults()
-            // The persisted White default may itself resolve — a
-            // returning pair should see its round the moment the sheet
-            // opens with Black filled in.
+            // The persisted White default may itself resolve — a returning pair sees its round on open.
             updateRoundPrefill()
         }
         .onChange(of: roster.white) { _, _ in updateRoundPrefill() }
@@ -330,12 +265,8 @@ internal struct NewLiveGameSheet: View {
         roster.white = defaultWhite
     }
     
-    /// D16′: once both seats resolve to known players, suggest the
-    /// pairing's next round. Runs on every seat edit; the guard confines
-    /// it to a Round field that is empty or still carrying our own
-    /// suggestion. When the pair stops resolving (or has no numbered
-    /// history), the suggestion is withdrawn — a typed value survives
-    /// both directions.
+    /// D16′: both seats resolved → suggest the pairing's next round. The guard confines it to an
+    /// empty Round or our own suggestion; a typed value survives both directions.
     private func updateRoundPrefill() {
         guard roster.round == nil || roster.round == prefilledRound else { return }
         
@@ -356,14 +287,8 @@ internal struct NewLiveGameSheet: View {
         prefilledRound = next
     }
     
-    /// A seat resolves iff its text matches a known player under the D9′
-    /// identity fold (case and whitespace folded, diacritics preserved).
-    /// Routed through `PlayerName.displayForm(of:)` first, exactly like
-    /// `resolvePlayer`: the field carries **tag form** since D29′ ("Senol,
-    /// Bera"), and keying the raw text — as this did before — folds the
-    /// comma form to a key no `Player` row stores, silently killing the
-    /// Round prefill for every picker-inserted (or typed) tag-form name.
-    /// Placeholders and empties resolve to no player, as everywhere.
+    /// A seat resolves iff its text matches a known player under the D9′ fold, routed through
+    /// `displayForm` first exactly like `resolvePlayer` — the field carries tag form (D29′).
     private func resolvedKey(for field: String) -> String? {
         let display = PlayerName.displayForm(of: field)
         guard !display.isEmpty, display != "?" else { return nil }
@@ -380,8 +305,7 @@ internal struct NewLiveGameSheet: View {
     }
     
     private func start() {
-        // Write back the recurring defaults exactly as typed (trimmed), so
-        // clearing a field clears the stored default too.
+        // Written back exactly as typed (trimmed), so clearing a field clears the stored default.
         defaultEvent = roster.event.trimmingCharacters(in: .whitespacesAndNewlines)
         defaultSite  = roster.site.trimmingCharacters(in: .whitespacesAndNewlines)
         defaultWhite = roster.white.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -392,10 +316,8 @@ internal struct NewLiveGameSheet: View {
 
 // MARK: Edit Details Sheet
 
-/// Edits a running (or, from M5, an archived-pending) game's roster —
-/// Decision #4's "editable afterwards". Edits are staged on a local copy
-/// so Cancel genuinely discards them; Save hands the normalized roster
-/// back to the caller (`DGTLiveSession.updateRoster` in M3).
+/// Edits a running (or archived-pending) game's roster. Staged on a local copy so Cancel
+/// genuinely discards; Save hands the normalized roster back.
 internal struct EditLiveGameDetailsSheet: View {
     
     // MARK: Stored Properties
@@ -417,7 +339,7 @@ internal struct EditLiveGameDetailsSheet: View {
         onSave: @escaping (LiveGame.Roster) -> Void
     ) {
         self.onSave = onSave
-        // Seed with form-friendly values ("?" placeholders → empty fields).
+        // Seed with form-friendly values ("?" → empty).
         var seed = initialRoster
         seed.event = formValue(initialRoster.event)
         seed.site  = formValue(initialRoster.site)
@@ -485,18 +407,8 @@ internal struct EditLiveGameDetailsSheet: View {
     )
 }
 
-/// D61′'s seat guard, which nothing else renders (M12.2).
-///
-/// The two seats are spelled **differently on purpose** — tag form against
-/// display form, one player under D23′. A preview using the same string twice
-/// would render the same warning while proving only that `==` works, which is
-/// the weaker half of what this guard does.
-///
-/// Worth having as a preview rather than trusting the code: the warning is a
-/// branch that appears mid-`Form`, pushing the sections below it, and the
-/// 4 August lesson is that a branch nobody has rendered has layout nobody has
-/// checked — the galleries' placeholder shipped without its greedy frame for
-/// exactly this reason. Look at the wrap on a narrow sheet.
+/// D61′'s seat guard, which nothing else renders. The two seats are spelled differently on
+/// purpose — tag form against display form, one player under D23′ — proving the fold, not `==`.
 #Preview("Roster Form, Seats Collide") {
     @Previewable @State var roster = LiveGame.Roster(
         event: "Club Night",

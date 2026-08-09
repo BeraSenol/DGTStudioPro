@@ -1,33 +1,9 @@
 import SwiftUI
 
-/// The pencil that edits what a section header names.
-///
-/// D22′'s action slot moved out of a row beneath the seven tags and into the
-/// header. A row was the wrong home twice over: the rows are a fixed set of
-/// seven, so an eighth that is a *verb* reads as part of the roster, and it
-/// sits at the far end of the section from the heading it acts on. In the
-/// header the affordance is adjacent to its subject, which is the arrangement
-/// every host now shares.
-///
-/// Shared rather than open-coded per host, for `InspectorEmptyState`'s reason
-/// (D26′): the chrome is small enough that each host would happily carry its
-/// own copy, and nothing would then hold the pencils to one glyph, size and hit
-/// target. The host owns what genuinely differs — the action, the registry
-/// identifier, and the words.
-///
-/// `label` feeds both `.help` and `.accessibilityLabel`: a glyph-only button
-/// gives neither anything to fall back on, and VoiceOver would otherwise
-/// announce "pencil". One string, so tooltip and spoken label cannot disagree.
-/// A `LocalizedStringKey` for `InspectorEmptyState`'s reason — a `String`
-/// silently resolves to the non-localizing overloads.
-///
-/// The identifier takes no default (the `dgtConnectionToolbar` lesson): a
-/// shared fallback would hand two pencils the same identifier, while a required
-/// parameter makes forgetting one a compile error.
-///
-/// **One production consumer since D59′** — the live inspector's Edit Details.
-/// Not dead and not to be swept, but a shared component with a single caller is
-/// where "shared" starts describing history rather than structure.
+/// The pencil that edits what a section header names (D26′). Hardcodes the pencil so edit
+/// affordances cannot drift; one `label` feeds both `.help` and `.accessibilityLabel` so
+/// tooltip and spoken label cannot disagree. One production consumer since D57′ (the live
+/// inspector's Edit Details) — not dead, but "shared" is starting to describe history.
 internal struct InspectorEditButtonView: View {
     
     // MARK: Stored Properties
@@ -39,28 +15,13 @@ internal struct InspectorEditButtonView: View {
     internal var body: some View {
         Button(action: action) {
             Image(systemName: "pencil")
-                // The label's own frame is the hit area under
-                // `.buttonStyle(.borderless)`, and an SF Symbol's frame is
-                // mostly transparent; `.contentShape` makes the whole box
-                // clickable rather than the drawn strokes.
-                //
-                // Spelled `Rectangle()` rather than the shorter `.rect` to
-                // match the app's three existing sites. Both compile; two
-                // spellings of one shape is how a grep for a pattern starts
-                // missing half of it.
+                // The label's frame is the hit area under `.borderless`, and an SF Symbol's frame is mostly
+                // transparent — `.contentShape` makes the whole box clickable.
                 .contentShape(Rectangle())
         }
         .buttonStyle(.borderless)
-        // Stated, not inherited: a sidebar section header sets a small
-        // secondary font, and a glyph rendered at that size is an ~11 pt
-        // mouse target. The heading stays header-sized; the control renders
-        // at control size, which is what AppKit's own header accessories do.
-        //
-        // Load-bearing alone since the trailing padding left for
-        // `InspectorSectionHeader.actionsInset`: that padding widened the
-        // target as a side effect of insetting the edge, and this line is now
-        // the only thing sizing it. Shrinking the font here shrinks the hit
-        // box, with nothing else to make up the difference.
+        // Stated, not inherited: a header's small secondary font makes an ~11 pt mouse target.
+        // `.font(.body)` is the only thing sizing it.
         .font(.body)
         .help(label)
         .accessibilityLabel(label)
@@ -70,10 +31,8 @@ internal struct InspectorEditButtonView: View {
 
 // MARK: Previews
 
-/// In the surface it exists for, at the inspector's own width, with a
-/// headline long enough to be doing the truncating. The claim under witness
-/// is that the pencil stays pinned trailing and the header stays one line
-/// tall — what `SevenTagRosterSection`'s `lineLimit(1)` buys.
+/// In the surface it exists for, headline long enough to truncate — the pencil stays pinned
+/// trailing, the header one line tall.
 #Preview("In a Section Header") {
     List {
         SevenTagRosterSection(
@@ -89,14 +48,7 @@ internal struct InspectorEditButtonView: View {
             headline: "Reviewing 7. Magnus Carlsen vs Ian Nepomniachtchi"
         ) {
             InspectorEditButtonView(
-                // See the twin note in `InspectorSectionHeader`'s previews:
-                // Repointed twice in two days as the pencils went:
-                // `board.editInfo` with D57′, then the Library's Edit Moves
-                // on 5 Aug. **Edit Details is now the app's only pencil**, so
-                // this canvas has nowhere left to drift to — which also means
-                // a fifth removal would leave this preview witnessing nothing,
-                // and the honest move then is to delete it rather than invent
-                // a caller.
+                // **Edit Details is the app's only pencil** — repointed as the others went (D57′, D59′).
                 label: "Edit Details",
                 identifier: AccessibilityID.liveInspectorEditDetails,
                 action: {}
@@ -108,9 +60,7 @@ internal struct InspectorEditButtonView: View {
     .environment(InspectorSectionCollapse.preview)
 }
 
-/// The narrowest the column drags to, beside a header with no action at all —
-/// the two states of the same section, which is where a shift in header
-/// height or baseline shows up.
+/// The narrowest drag, with and without an action — where a shift in header height shows.
 #Preview("Narrow, With and Without") {
     List {
         SevenTagRosterSection(

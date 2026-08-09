@@ -1,21 +1,9 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The Move Text tab's score-sheet rendering (5 Aug 2026).
-///
-/// **Nonisolated deliberately** — the `BoardPieceLayer.clampedDuration` shape.
-/// `MovetextEditorView` is a `View`, so `View` conformance would infer
-/// `@MainActor` onto its statics; `scoreSheet` is marked `nonisolated` because
-/// it is string arithmetic with no view in it, and this suite is the
-/// compile-time witness that it stayed that way (the D44′ rule: a claim is only
-/// checked from the side where it would break).
-///
-/// **The round trip is the claim that matters**, and it is the last assertion
-/// here: whatever this renders has to survive `MovetextEdit.tokenize`
-/// unchanged, because the numbers and padding this adds are decoration the
-/// validator must not see. Asserted against the real tokenizer rather than a
-/// literal — a hand-written "expected tokens" array would keep passing if the
-/// two ever diverged, which is the exact divergence being prevented.
+/// The score-sheet rendering. Nonisolated (compile-time witness it stays pure). The round trip
+/// is asserted against the **real tokenizer**, not a literal — numbers and padding must be
+/// decoration the validator never sees.
 @Suite("Movetext score sheet")
 struct MovetextScoreSheetTests {
 
@@ -85,11 +73,8 @@ struct MovetextScoreSheetTests {
 
     // MARK: The round trip — the claim the feature rests on
 
-    /// Everything this adds is invisible to the validator.
-    ///
-    /// If this fails, the editor is seeding text its own Save button would
-    /// reject — the worst possible failure for this surface, because it looks
-    /// like the *game* is broken.
+    /// Everything the sheet adds is invisible to the validator — if this fails, the editor seeds
+    /// text its own Save would refuse.
     @Test func theRenderedSheetTokenizesBackToExactlyTheInputPlies() throws {
         let moves = ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "O-O", "Qa1xd4#"]
 

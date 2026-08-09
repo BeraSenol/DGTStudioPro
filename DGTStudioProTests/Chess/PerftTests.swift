@@ -1,26 +1,14 @@
 import Testing
 @testable import DGTStudioPro
 
-/// Perft counts leaf nodes reachable through legal moves at a fixed depth and
-/// compares against the canonical reference values. A mismatch points at a
-/// specific class of bug: Kiwipete exercises castling and pins; Position 3, EP
-/// and discovered attacks; Position 4, promotion under both castling rights;
-/// Position 5, promotion-with-capture; Position 6, high branching factor.
-///
-/// The `perft` counter and the six reference FENs live in
-/// `Support/ChessTestSupport.swift`. `PerftDeepTests` keeps its own
-/// self-contained copy on purpose; this shallow suite reads the shared ones.
+/// Perft against canonical reference counts — a mismatch points at a specific bug class
+/// (Kiwipete: castling and pins; Position 3: EP; Position 5: promotions).
 @Suite("Perft Move Generation Integrity")
 struct PerftTests {
     
     // MARK: Depth-1 Smoke Test
     
-    /// Quick sanity check across all six positions: depth-1 counts must
-    /// match. Runs in milliseconds and catches direct generation bugs
-    /// (missing castling moves, EP fan-out wrong, pawn promotion fan-out
-    /// wrong, etc.) before the slower depth-4 tests are reached. A
-    /// depth-1 failure here is much faster to diagnose than a depth-4
-    /// failure deep in a sub-tree.
+    /// Depth-1 across all six — milliseconds, and catches direct generation bugs.
     @Test func allPositionsAtDepth1() throws {
         let cases: [(name: String, fen: String, expected: Int)] = [
             ("Starting",   FEN.startingString, 20),
@@ -78,11 +66,8 @@ struct PerftTests {
         #expect(Chess.perft(state, depth: 4) == 422_333)
     }
     
-    /// Position 4's colour-mirror, same reference count by construction.
-    /// A depth-4 mismatch between this and `position4Depth4` — while the
-    /// canonical number still passes for one of them — localizes a
-    /// colour-asymmetry bug (pawn direction, EP rank, castling-right
-    /// indices) with no divide work at all.
+    /// Position 4's mirror, same count by construction — a mismatch between the pair localizes a
+    /// colour asymmetry.
     @Test func position4MirrorDepth4() throws {
         let state = try GameState.parsing(Chess.position4Mirror)
         #expect(Chess.perft(state, depth: 4) == 422_333)
@@ -97,11 +82,7 @@ struct PerftTests {
         #expect(Chess.perft(state, depth: 4) == 2_103_487)
     }
     
-    /// Position 6 — dense middlegame with both sides castled kingside,
-    /// no remaining castling rights, and both bishop pairs active. High
-    /// branching factor (~46 moves per node) makes this the slowest
-    /// position to run but also the broadest exerciser of central-piece
-    /// interactions.
+    /// Position 6 — dense middlegame, ~46 moves per node, the slowest depth-4 case.
     @Test func position6Depth4() throws {
         let state = try GameState.parsing(Chess.position6)
         #expect(Chess.perft(state, depth: 4) == 3_894_594)

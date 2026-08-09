@@ -19,15 +19,9 @@ extension Square {
     internal static let ranks = 0..<8
     internal static let all = (0..<Square.count)
     
-    /// Board-geometry offsets, shared by move generation, attack scanning and
-    /// mate-pattern classification — previously a private copy in each. Every
-    /// use must pair one with a file-distance guard: an offset alone wraps
-    /// across the board edge onto the next rank.
-    ///
-    /// `queenDirections` is spelled out rather than aliased to `kingOffsets`
-    /// despite holding the same values: the coincidence is arithmetic, not
-    /// semantic, and the generated move *order* is what the perft counts were
-    /// taken against.
+    /// Board-geometry offsets, shared by movegen, attack scanning and mate classification. Every
+    /// use pairs one with a file-distance guard — an offset alone wraps the a/h seam.
+    /// `queenDirections` is spelled out despite equalling `kingOffsets`: the coincidence is arithmetic.
     internal static let knightOffsets:    [Int] = [17, 15, 10, 6, -6, -10, -15, -17]
     internal static let kingOffsets:      [Int] = [1, 7, 8, 9, -1, -7, -8, -9]
     internal static let rookDirections:   [Int] = [1, 8, -1, -8]
@@ -42,11 +36,8 @@ extension Square {
         rankIndicatorTable[rank]
     }
     
-    /// The inverses of `fileCharacter` / `rankCharacter`, nil outside 0–7.
-    /// `GameState+SAN` carried private copies (`fileIndex` / `rankIndex`) of
-    /// arithmetic whose forward direction already lived here — a third home
-    /// for the a–h / 1–8 convention after these tables and
-    /// `fromAlgebraicNotation`.
+    /// Inverses of `fileCharacter`/`rankCharacter`, nil outside 0–7 — third home for arithmetic
+    /// whose forward direction already lived here.
     internal static func file(from character: Character) -> Int? {
         index(of: character, base: "a", in: Square.files)
     }

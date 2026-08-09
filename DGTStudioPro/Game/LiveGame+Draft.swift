@@ -1,12 +1,7 @@
 import Foundation
 
-/// Draft conversion for the live model (M4): `draftSnapshot` projects the
-/// game into its on-disk form, and `init(resuming:)` rebuilds a game from
-/// one by replaying the SAN transcript through the chess core — the same
-/// pattern `Game(pgn:)` uses, with the same "throw on the first
-/// inconsistency" stance. Both directions live here, with the model, so
-/// `LiveGameDraft` itself stays a passive schema with no `@MainActor`
-/// references.
+/// Draft conversion: `draftSnapshot` projects to disk form; `init(resuming:)` replays the SAN
+/// transcript through the chess core.
 extension LiveGame {
     
     // MARK: Errors
@@ -59,21 +54,9 @@ extension LiveGame {
     
     // MARK: Resume
     
-    /// Rebuilds a live game from a draft by replaying its SAN transcript
-    /// through the normal `commit` path — legality checks, SAN
-    /// re-serialization, tracker walk, and auto result detection are all the
-    /// real ones, so a successful resume is equivalent-by-construction to
-    /// the original game, and any divergence throws a `ResumeError` (the
-    /// corrupt-draft path: the UI offers Delete).
-    ///
-    /// Result reconciliation after the replay:
-    /// - replay derived a terminal result (mate/stalemate) → it must equal
-    ///   the draft's, or the draft is inconsistent;
-    /// - replay ended `.ongoing` but the draft is decided → that's a manual
-    ///   result (resignation / agreed draw); re-apply it;
-    /// - replay derived a terminal result but the draft says `.ongoing` →
-    ///   inconsistent: the draft is written *after* every commit, so a
-    ///   final-move mate is always already in the stored result.
+    /// Rebuilds by replaying through the normal `commit` path — legality, SAN re-serialization,
+    /// tracker walk and auto-result all come free; a replay-derived terminal result must equal the
+    /// draft's or the file is corrupt.
     internal convenience init(resuming draft: LiveGameDraft) throws(ResumeError) {
         let start: GameState
         do {

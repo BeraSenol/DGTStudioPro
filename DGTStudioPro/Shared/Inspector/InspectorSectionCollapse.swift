@@ -2,33 +2,10 @@ import Foundation
 import Observation
 import os
 
-/// Which inspector section a header names — needed for the one purpose that
-/// requires a section to have a name at all: remembering that it is collapsed.
-///
-/// **Identity is what the section shows, not which inspector shows it.**
-/// Collapsing Opening on the Board also collapses it in the Library, because
-/// "I don't want to look at openings right now" is a statement about openings.
-/// A per-inspector split would let the same section answer differently
-/// depending on how the reader arrived at the same game, which is a
-/// distinction the reader never drew.
-///
-/// **Titles cannot supply the identity**, which is the reason this is an enum
-/// and not a string derived from the header. The live inspector's "Game"
-/// section holds Resign / Agree Draw / Discard; the Board and Library
-/// inspectors' roster section is titled with the game's *name*. Two sections
-/// called Game, and the one that is actually the game is not either of them.
-///
-/// Where two inspectors show genuinely different content under one idea, they
-/// get separate cases — the rule that split `playerProfile` from
-/// `rankingProfile` when the two grids shared nothing but the name at the
-/// top. D48′ merged the grids and retired the second case (see the enum
-/// body); the rule outlives its founding example, and the retirement path it
-/// exercised is the one this type designed for.
-///
-/// Raw values are spelled out rather than left to synthesis because they are
-/// the **stored** form. Synthesised raw values follow the case names, so a
-/// rename that reads as a refactor would silently un-collapse that section for
-/// the user; spelled out, the store is something you have to mean to change.
+/// Which inspector section a header names — the one purpose needing a name: remembering the
+/// collapse. **Identity is what a section shows, not which inspector shows it** (fold Opening
+/// on the Board, it folds in the Library). Titles cannot supply it: two sections called "Game",
+/// neither the game — hence an enum with hand-written raw values.
 internal enum InspectorSection: String, CaseIterable, Sendable {
     case roster         = "roster"
     case opening        = "opening"
@@ -38,35 +15,15 @@ internal enum InspectorSection: String, CaseIterable, Sendable {
     case lifecycle      = "lifecycle"
     case playerProfile  = "playerProfile"
     case recentGames    = "recentGames"
-    // `rankingProfile` retired by D48′ — the merged Players profile is one
-    // grid under `.playerProfile`, so two cases would be two names for one
-    // section. A stored collapse under the old raw value drops on read and
-    // evicts on the next write, the retirement path this type designed for.
+    // `rankingProfile` retired by D48′ — one grid, one name. A stored collapse under the old raw
+    // value drops on read and evicts on next write, the designed retirement path.
     case ratingTrend    = "ratingTrend"
 }
 
-/// M8 (D45′) — which inspector sections the user has collapsed, persisted
-/// across launches under a single key.
-///
-/// **An owning type rather than an `@AppStorage` pair**, for D25′'s reason
-/// stated as a rule in `StorageKeys`: the header draws the chevron and the
-/// host decides whether to render its body, so an `@AppStorage` design would
-/// put the same question in two places and rely on them agreeing. They would
-/// have agreed, too — right up until one of them didn't. `SleepInhibitor` is
-/// the precedent this follows exactly, down to the injectable defaults.
-///
-/// **The stored set is the collapsed sections, not the expanded ones.** That
-/// is what makes "sections default open" free: an absent key and an empty set
-/// are the same state, so the default is a property of the representation
-/// rather than a `?? true` anybody has to remember. Compare the three
-/// preferences in `StorageKeys` that do state a default, each with a twin
-/// read site warning attached.
-///
-/// **An unknown raw value is not a section.** A retired case's entry is
-/// dropped on read and written out of existence by the next toggle, so a
-/// section can be removed from the app without leaving anything behind and
-/// without a migration. The cost, recorded rather than discovered: if a
-/// retired section ever comes back, it comes back expanded.
+/// Which sections are collapsed, persisted under one key (D45′). An owning type, not
+/// `@AppStorage` — one question in two places would be the twin-read-site pattern
+/// (`SleepInhibitor` is the precedent, down to injectable defaults). **The stored set is the
+/// collapsed sections**, so "default open" is the representation, not a `?? true`.
 @MainActor
 @Observable
 internal final class InspectorSectionCollapse {
@@ -77,9 +34,7 @@ internal final class InspectorSectionCollapse {
 
     // MARK: Stored Properties
 
-    /// The collapsed sections. Observed, so a toggle in the header re-renders
-    /// the host's body on the same turn; persisted on write, so `read(from:)`
-    /// is the only place the stored representation is interpreted.
+    /// Observed, so a header toggle re-renders on the same turn; persisted on write.
     private(set) var collapsed: Set<InspectorSection> {
         didSet { persist() }
     }
@@ -88,21 +43,8 @@ internal final class InspectorSectionCollapse {
 
     // MARK: Initializers
 
-    /// `defaults` is injectable so the contract can be pinned against a
-    /// scratch suite, and so `preview` can hold its own.
-    ///
-    /// It had a third reason until 3 Aug 2026, and that one was the
-    /// load-bearing one: the App pointed it at the UI seed's wiped suite,
-    /// because a seeded run reading the developer's own collapsed sections
-    /// would fail on a section that is present, correct, and folded shut —
-    /// the ambient-`UserDefaults` leak M1 closed for `@AppStorage`, which a
-    /// hand-constructed `UserDefaults` does not inherit from
-    /// `.defaultAppStorage(_:)`. The UI suite is gone, so the App now passes
-    /// `.standard` outright. The seam survives on the previews alone, which
-    /// is a weaker reason but a real one.
-    ///
-    /// Assignment in `init` doesn't fire `didSet`, so a first launch reads the
-    /// empty default without writing it back.
+    /// Injectable for the suite and for `preview`. (The third reason — the UI seed's wiped suite —
+    /// retired with the suite; `.defaultAppStorage` never reached a hand-constructed instance anyway.)
     internal init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         self.collapsed = Self.read(from: defaults)
@@ -130,9 +72,8 @@ internal final class InspectorSectionCollapse {
         ) ?? []
         let sections = stored.compactMap(InspectorSection.init(rawValue:))
         if sections.count != stored.count {
-            // Not a defect — this is the retired-section path doing its job.
-            // Logged because it is also what a *typo* in a raw value looks
-            // like, and the two are indistinguishable from the store.
+            // Not a defect — the retired-section path doing its job. Logged because a *typo* looks
+            // identical from the store.
             Self.logger?.info(
                 "Ignored \(stored.count - sections.count, privacy: .public) unknown collapsed-section key(s)"
             )
@@ -140,10 +81,8 @@ internal final class InspectorSectionCollapse {
         return Set(sections)
     }
 
-    /// Sorted, deliberately: a `Set`'s iteration order is not stable across
-    /// runs, so an unsorted write would rewrite the same state in a different
-    /// order every time — noise in a `defaults` dump, and a diff that means
-    /// nothing when reading one.
+    /// Sorted: a `Set`'s iteration order is unstable, and an unsorted write rewrites the same state
+    /// in a different order every time — noise in a defaults dump.
     private func persist() {
         defaults.set(
             collapsed.map(\.rawValue).sorted(),
@@ -156,38 +95,12 @@ internal final class InspectorSectionCollapse {
 
 extension InspectorSectionCollapse {
 
-    /// The instance every `#Preview` that renders an inspector section injects.
-    ///
-    /// `InspectorSectionHeader` reads this from the environment, and a
-    /// non-optional `@Environment` traps when read with nothing to find, so
-    /// every preview rendering an inspector section needs one — the recorded
-    /// build lesson ("a new environment object breaks every preview that
-    /// doesn't inject it") arriving on schedule. Deliberately uncounted: this
-    /// sentence once carried a preview census and was stale before the
-    /// milestone that wrote it finished.
-    ///
-    /// Named rather than spelled inline at each site: one site can afford a
-    /// literal, dozens would be that many chances to reach for `.standard` and
-    /// edit the developer's own settings from a canvas.
-    ///
-    /// Computed, not stored — a `static let` on a `@MainActor` type needs its
-    /// initializer isolated, and a fresh start per access is right anyway: a
-    /// preview that toggles a chevron should not leave that state for the next
-    /// canvas to inherit.
-    ///
-    /// **`removePersistentDomain` is what makes that true, not the freshness of
-    /// the instance** — this doc claimed otherwise until the 1 Aug review. A
-    /// named suite is a real plist and `persist()` writes every toggle into it,
-    /// so a fresh instance alone reads the last canvas's toggles straight back.
-    /// `SleepInhibitor.preview` carries the same wipe for the same reason.
+    /// The instance every inspector preview injects — a non-optional `@Environment` traps when
+    /// missing. Computed, not stored, so each canvas starts clean; the wipe is what makes that true.
     internal static var preview: InspectorSectionCollapse {
         let name = "preview"
-        // `!` over a `?? .standard` fallback, `SettingsView`'s sibling
-        // spelling: the init only fails for a nil or system-reserved suite
-        // name, and the fallback's failure mode was worse than the crash —
-        // a canvas silently editing the developer's own defaults, which is
-        // the ambient-`UserDefaults` leak M1 exists to prevent. A preview
-        // that crashes points at itself; one that leaks points at nothing.
+        // `!` over `?? .standard`: the fallback's failure mode is worse than the crash — a canvas
+        // silently editing the developer's defaults. A crash points at itself; a leak points at nothing.
         let defaults = UserDefaults(suiteName: name)!
         defaults.removePersistentDomain(forName: name)
         return InspectorSectionCollapse(defaults: defaults)

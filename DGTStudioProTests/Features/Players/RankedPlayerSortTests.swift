@@ -2,31 +2,15 @@ import Foundation
 import Testing
 @testable import DGTStudioPro
 
-/// The column sort that replaced D48′'s picker (5 Aug 2026).
-///
-/// **Nonisolated deliberately, and it is load-bearing rather than stylistic**
-/// — the D44′ shape. `RankedPlayer` is a pure value type and the comparators
-/// are stdlib values; nothing here may require the main actor. If a future
-/// edit makes this suite need `@MainActor`, something has acquired isolation
-/// it should not have, and the compile error is the report.
-///
-/// What is *not* tested here, on purpose: that `sorted(using:)` sorts. That is
-/// Apple's code, and a test asserting it would pass forever while telling us
-/// nothing. What these pin is the one claim the app makes on top of it — that
-/// the Rank column's ascending order and `PlayerStats.rankingOrder` are the
-/// same order. That equivalence is what let the picker be deleted, it is
-/// asserted nowhere in the view layer, and it is exactly the kind of thing a
-/// later "tidy" of `ranked(from:histories:)` could break silently.
+/// The column sort that replaced D48′'s picker. Nonisolated, load-bearing. Not tested: that
+/// `sorted(using:)` sorts — that is the framework's.
 @Suite("Ranked player column sort")
 struct RankedPlayerSortTests {
 
     // MARK: Fixtures
 
-    /// `PlayerStatsTests.rankingOrderRunsTheFullTiebreakChain`'s builder,
-    /// deliberately duplicated rather than shared. That test pins the
-    /// comparator; this one pins a *different* claim that happens to need the
-    /// same shapes, and a shared factory would make either suite's edit a
-    /// change-detector for the other — the standing agreement about factories.
+    /// Deliberately duplicated builder — that suite pins the comparator; this one a different claim
+    /// that happens to need the same fixtures.
     private func player(_ key: String, wins: Int, losses: Int) -> PlayerStats {
         PlayerStats(
             key: key, name: key, games: wins + losses,
@@ -49,34 +33,14 @@ struct RankedPlayerSortTests {
             player("ben", wins: 4, losses: 4),   // 4 wins, 50%, loses the key tiebreak
             player("ann", wins: 4, losses: 4)    // 4 wins, 50%, wins it
         ]
-        // Through `PlayerRanking.wins` since D62′ rather than
-        // `PlayerStats.rankingOrder` directly. Same order — that case delegates
-        // to that comparator — but it is now the *default method* that has to
-        // agree with the default sort, and asserting against the comparator
-        // would keep passing if the default method changed.
+        // Through `PlayerRanking.wins` (D62′): the *default method* is what must reproduce the ladder now.
         return PlayerRanking.wins.ranked(stats.map { (stats: $0, rating: nil) })
     }
 
     // MARK: The equivalence the picker's deletion rests on
 
-    /// The **shipped** default sort reproduces the **shipped** default *ranking
-    /// method* exactly — `.wins`, which is D11′: wins, then win rate, then key.
-    ///
-    /// Two defaults, and since D62′ they are separate values that must agree:
-    /// `PlayersDestination.defaultSortOrder` (rank ascending) and
-    /// `PlayerRanking.wins` (what rank means). Change either alone and this
-    /// goes red, which is the point — a ladder whose default sort disagrees
-    /// with its default ranking would open on a list that looks shuffled.
-    ///
-    /// Two things make this able to fail, both deliberate. It sorts from a
-    /// **shuffled** input rather than from `ladder()`'s output, so it cannot
-    /// pass by the array already being in order. And it asserts against
-    /// `PlayersDestination.defaultSortOrder` rather than a locally-written
-    /// comparator — the `EvaluationGraphReading` rule, since a literal keeps
-    /// passing while the thing it was copied from changes. Spelling
-    /// `KeyPathComparator(\.rank)` here would prove *ascending rank is the
-    /// ladder*: true, and not the claim. The claim is that the order **Players
-    /// opens in** is the ladder, and only the real default can be wrong.
+    /// The shipped default sort reproduces the shipped default *ranking method* — two separate
+    /// values that must agree. Sorted from a **shuffled** input, so it cannot pass by luck.
     @Test func defaultSortReproducesTheLadder() {
         let expected = ladder().map(\.stats.key)
 
@@ -88,16 +52,7 @@ struct RankedPlayerSortTests {
         #expect(expected == ["zoe", "amy", "ann", "ben"])
     }
 
-    /// The Library's default is the other half of the same claim, and it is
-    /// checkable without a container because the comparator is a value: highest
-    /// ordinal first, and un-indexed games **last**.
-    ///
-    /// That second half is the one worth a test. Descending an optional key
-    /// path puts `nil` at the far end, which is the behaviour wanted here — a
-    /// column of numbers should not open on the rows that have none — but it
-    /// falls out of `Optional`'s ordering rather than from anything this app
-    /// wrote, so it is exactly the kind of inherited behaviour that changes
-    /// under someone without their noticing.
+    /// The Library's half, checkable without a container: highest ordinal first, un-indexed **last**.
     @Test func libraryDefaultIsOrdinalDescendingWithUnindexedLast() {
         struct Row { let index: Int? }
         // The comparator is typed to `PGN`, so this asserts the *rule* rather
@@ -137,14 +92,8 @@ struct RankedPlayerSortTests {
 
     // MARK: The optional-valued columns
 
-    /// Unrated players sort **together at one end** rather than scattering.
-    ///
-    /// This is the arm that would break first if someone "simplified"
-    /// `KeyPathComparator(\.rating?.mean)` into a sort over the rendered
-    /// string, because the cell prints an em dash for nil and a text sort
-    /// would order that dash against digits. Ascending puts nil first, which
-    /// is `Optional`'s documented ordering under this comparator and is the
-    /// behaviour to notice if it ever changes.
+    /// Unrated players group at one end rather than scattering — the arm that breaks first if
+    /// someone "simplifies" the nil ordering.
     @Test func unratedPlayersGroupRatherThanScatter() {
         func rated(_ key: String, _ mean: Double?) -> RankedPlayer {
             RankedPlayer(

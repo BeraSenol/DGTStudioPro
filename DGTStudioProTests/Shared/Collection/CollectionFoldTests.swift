@@ -6,11 +6,7 @@ import Foundation
 import SwiftData
 @testable import DGTStudioPro
 
-/// `CollectionFoldKey`'s algebra, over values.
-///
-/// **Nonisolated, and that is load-bearing rather than stylistic** — the
-/// `RosterSummaryTests` lesson (D44′). The key is a pure value type and a suite
-/// standing in the main actor could not tell the difference; this one can.
+/// `CollectionFoldKey`'s algebra, over values. Nonisolated — load-bearing, not stylistic.
 @Suite("Collection Fold — Key")
 struct CollectionFoldKeyTests {
 
@@ -62,22 +58,9 @@ struct CollectionFoldKeyTests {
         )
     }
 
-    /// **The field that is easiest to drop, and the reason it is here.**
-    /// Classification lives *outside* the content hash by D24′ and D34′, so a
-    /// backfill stamping mate motifs changes what `PlayerStats` counts while
-    /// every hash stays byte-identical. A key built from `contentHash` alone
-    /// looks obviously sufficient and would freeze the Special Mates column
-    /// against a fold that had genuinely changed.
-    ///
-    /// **This test was titled "A classification backfill moves the key" and
-    /// covered only the motif**, which is the narrower half of one call:
-    /// `PGNStore.classify(_:using:)` writes `ecoCode`, `ecoFamily`,
-    /// `ecoVariation` *and* `specialCheckmate` together, and the motif is nil
-    /// for every game that is not a smothered or back-rank mate. So the title
-    /// quantified over a backfill while the body exercised the rarer of its two
-    /// outcomes, and the ECO half — which had no case at all — was broken. The
-    /// title now names what it checks; `anEcoStampMovesTheKey` below is the
-    /// other half.
+    /// The field easiest to drop: classification lives *outside* the content hash, so a backfill
+    /// changes what `PlayerStats` counts while every hash stays byte-identical — a key built from
+    /// `contentHash` alone misses it.
     @Test("A stamped mate motif moves the key with no hash change")
     func aChangedCheckmateMovesTheKey() {
         #expect(
@@ -90,13 +73,7 @@ struct CollectionFoldKeyTests {
         )
     }
 
-    /// The half the suite was missing, and the one a real backfill hits most.
-    ///
-    /// A game classified as an ordinary line gets three ECO columns and a nil
-    /// motif, so the test above stays green while `TagRule.opening` filters
-    /// against a record whose `opening` is still nil. Asserted across all three
-    /// columns rather than on the code alone: `TagRule.opening` matches
-    /// `ECOOpening.fullName`, which reads family and variation too.
+    /// The half a real backfill hits most: an ordinary line gets three ECO columns and a nil motif.
     @Test("An ECO stamp moves the key, motif or no motif")
     func anEcoStampMovesTheKey() {
         #expect(
@@ -155,31 +132,16 @@ struct CollectionFoldKeyTests {
     }
 }
 
-/// The memo box, and the one property of `CollectionFoldKey` that can only be
-/// asked of real models.
-///
-/// **`@MainActor` for the `PGN`s, not for the cache** — `AnalysisGlyphStateTests`'
-/// reason, and the distinction matters because of D44′. `CollectionFoldCache`
-/// is deliberately un-isolated (see its declaration), so nothing here asserts
-/// anything about its isolation and a reader should not infer that it does. The
-/// annotation is about the `@Model`s these tests construct.
+/// The memo box over real models. `@MainActor` for the `PGN`s, not the cache — nothing here
+/// asserts the cache's isolation.
 @MainActor
 @Suite("Collection Fold — Cache")
 struct CollectionFoldCacheTests {
 
     // MARK: Key over models
 
-    /// **The pin the analysis fix rests on.**
-    ///
-    /// `GameAnalysisDriver` writes one evaluation and calls
-    /// `modelContext.save()` per ply, and a save invalidates every `@Query` in
-    /// the app. If `evaluations` were in the key, an 80-ply pass would re-fold
-    /// the whole Library 80 times — which is the behaviour the key exists to
-    /// stop, and which nothing else in the suite would notice.
-    ///
-    /// Asserted from the side that would break it: the array is genuinely
-    /// mutated between the two reads, so an implementation that folded it in
-    /// goes red here rather than passing by never being exercised.
+    /// **The pin the analysis fix rests on**: writing evaluations does not move the key, so a batch
+    /// does not re-fold the Library per ply.
     @Test("Writing evaluations does not move the key")
     func evaluationsAreOutsideTheKey() {
         let game = PGN(moves: ["e4", "e5"], contentHash: "fixed")
@@ -202,14 +164,7 @@ struct CollectionFoldCacheTests {
         #expect(CollectionFoldKey(games: [game]) != before)
     }
 
-    /// The ECO half of the same call, over models — `classify(_:using:)` writes
-    /// three opening columns beside the motif and the motif is nil for any game
-    /// that is not a smothered or back-rank mate.
-    ///
-    /// Over models rather than values because that is where the miss lived: the
-    /// value-level suite could have carried an `opening` case from the start and
-    /// still passed with `init(games:)` dropping the field on the floor. This is
-    /// the one that would have gone red.
+    /// The ECO half over models — `classify` writes three columns beside the motif.
     @Test("An ECO stamp moves the key, over models")
     func ecoStampMovesTheKeyOverModels() {
         let game = PGN(moves: ["e4", "c5"], contentHash: "fixed")
@@ -222,18 +177,8 @@ struct CollectionFoldCacheTests {
         #expect(game.specialCheckmate == nil, "the motif must stay nil, or this proves nothing")
     }
 
-    /// `backfillPlayerLinks()` resolves a seat the content hash cannot see: the
-    /// hash folds the seat **tags**, and the link is a relationship filled in
-    /// afterwards. `PlayerStats.index(of:)` keys the whole ladder on the link,
-    /// and the backfill runs from `PlayersDestination.onAppear` — so a key blind
-    /// to this froze the ladder in the state it had *before* the pass that
-    /// exists to populate it.
-    ///
-    /// **Inserted into a container, unlike its siblings above**, because
-    /// `persistentModelID` on an uninserted model is a temporary identifier and
-    /// this test's whole subject is that the identifier changes for the right
-    /// reason. The tag strings never move here, so a green result cannot be the
-    /// hash doing the work.
+    /// A resolved link moves the key with no hash change: the hash folds seat *tags*; the ladder
+    /// keys on the *link*. The tags never move here, so green cannot be the hash doing the work.
     @Test("Resolving a seat link moves the key with no hash change")
     func aResolvedLinkMovesTheKeyOverModels() throws {
         let container = try ModelContainer(

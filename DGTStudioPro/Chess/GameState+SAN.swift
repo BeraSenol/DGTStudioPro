@@ -4,34 +4,20 @@ extension GameState {
     
     // MARK: SAN Parser (7e)
     
-    /// Parses a Standard Algebraic Notation move string in the context of this
-    /// game state and returns the matching legal `Move`.
-    ///
-    /// Strict SAN: the capture marker `x` must be present iff the move is a
-    /// capture, and pawn captures must include the source-file disambiguator
-    /// (e.g. `exd5`, never `xd5`). Promotion is accepted in three notations
-    /// on read — `e8=Q`, `e8Q`, and `e8(Q)` — and the serializer emits the
-    /// canonical `e8=Q`. Trailing `+`, `#`, `!`, `?` are stripped permissively
-    /// before parsing.
-    ///
-    /// Errors are surfaced via `SANParseError`; callers building a per-game
-    /// importer (Phase 7g) wrap these to add move-index context.
+    /// Parses SAN in this state's context, returning the matching legal move. Strict SAN: `x`
+    /// present iff capture; pawn captures carry the source file; promotion in `=Q`, `(Q)`, bare `Q`.
     internal func parseSAN(_ san: String) throws(SANParseError) -> Move {
         var s = san.trimmingCharacters(in: .whitespaces)
         guard !s.isEmpty else { throw SANParseError.empty }
         
-        // Strip trailing check / mate / annotation suffixes. This drops all
-        // four; `PGNParser.stripAnnotations` deliberately keeps `+`/`#` (the
-        // `endedInMate` signal). The app has exactly these two strippers and
-        // they are meant to differ — D18′'s correction turns on which is which.
+        // Drops all four suffixes; `PGNParser.stripAnnotations` keeps `+`/`#` — the app's two strippers
+        // differ on purpose (D18′ turns on which is which).
         while let last = s.last, "+#!?".contains(last) {
             s.removeLast()
         }
         guard !s.isEmpty else { throw SANParseError.malformed(san) }
         
-        // Castling literals. Both `O-O`/`O-O-O` (FIDE) and `0-0`/`0-0-0`
-        // (older PGN) are accepted on read; the serializer emits canonical
-        // `O-O` / `O-O-O`.
+        // Castling: `O-O`/`0-0` both read; the serializer emits canonical `O-O`.
         if s == "O-O" || s == "0-0" {
             return try matchCastling(kingside: true, original: san)
         }
@@ -45,15 +31,7 @@ extension GameState {
     
     // MARK: SAN Serializer (7f)
     
-    /// Produces the canonical Standard Algebraic Notation string for `move`,
-    /// assuming `move` is legal in this game state.
-    ///
-    /// Format: `[piece][disambiguator][x]target[=promotion][+|#]`. Castling
-    /// emits `O-O` / `O-O-O`. Pawn captures always include the file
-    /// disambiguator (`exd5`, even if no other pawn could capture there).
-    /// Promotion uses the canonical `=Q` form. Check / mate suffix is computed
-    /// by applying the move and asking whether the opponent is in check or
-    /// checkmate.
+    /// Canonical SAN for a legal `move` in this state.
     internal func san(for move: Move) -> String {
         if move.isCastling {
             let castle = move.castlingSide == .kingSide ? "O-O" : "O-O-O"
@@ -94,9 +72,8 @@ extension GameState {
         return try Self.unique(candidates, original: original)
     }
     
-    /// Zero matches is a parse failure, one is the answer, more is ambiguity
-    /// the writer owes a disambiguator for. Both matchers ended in this exact
-    /// switch — two copies free to drift on which error a tie produces.
+    /// Zero matches = parse failure, one = answer, more = ambiguity — both matchers ended in this
+    /// exact switch, free to drift.
     private static func unique(
         _ candidates: [Move], original: String
     ) throws(SANParseError) -> Move {
@@ -109,11 +86,9 @@ extension GameState {
     
     // MARK: Disambiguation (serializer)
     
-    /// Computes the SAN disambiguator for `move`, scanning other legal moves
-    /// of the same piece type that reach the same target. FIDE preference
-    /// order: file → rank → both.
+    /// FIDE preference order: file → rank → both.
     private func disambiguator(for move: Move) -> String {
-        // Pawn captures always carry the file letter (`exd5`); pawn pushes never.
+        // Pawn captures always carry the file letter; pushes never.
         if move.pieceType == .pawn {
             return move.isCapture ? String(move.from.fileIndicator) : ""
         }
@@ -145,29 +120,20 @@ extension GameState {
     
     private func checkOrMateSuffix(after move: Move) -> String {
         let next = applying(move)
-        // `isCheckmate` recomputes `isInCheck`, and each is a 64-square king
-        // scan plus a full attack scan. Ask once, then pay for `legalMoves()`
-        // only when there is a check to resolve. Every serialized ply pays
-        // this, and `MovetextEdit.validate` serializes every ply it parses.
+        // `isCheckmate` recomputes `isInCheck` (two full scans). Ask once; pay `legalMoves()` only when
+        // there is a check to resolve — every serialized ply pays this.
         guard next.isInCheck else { return "" }
         return next.legalMoves().isEmpty ? "#" : "+"
     }
     
     // MARK: Tokenization (parser)
     
-    /// Pure string-state tokenizer. Splits an already-cleaned SAN string
-    /// (no castling form, no trailing `+`/`#`/`!`/`?`) into syntactic
-    /// components. Works back-to-front because the target square is always
-    /// the trailing piece of information; everything before it is the
-    /// optional piece letter, optional disambiguator, and optional `x`.
+    /// Back-to-front tokenizer over cleaned SAN — the target square is always the trailing information.
     private static func tokenize(_ input: String, original: String) throws(SANParseError) -> SANTokens {
         var s = input
         
-        // -- Promotion (three accepted forms) ---------------------------------
-        // Try the most specific form first: parenthesized `(X)`. Then `=X`.
-        // Finally bare trailing `X` — unambiguous because every non-promotion
-        // SAN move ends in a rank digit, so a trailing `Q`/`R`/`B`/`N` can
-        // only mean promotion.
+        // Promotion, most specific first: `(X)`, `=X`, bare trailing letter (unambiguous — non-promotion
+        // SAN ends in a rank digit).
         var promotion: PieceType? = nil
         
         if s.hasSuffix(")") {
@@ -299,8 +265,7 @@ extension FEN {
 
 // MARK: SAN Tokens
 
-/// Parsed components of a SAN move, prior to legal-move matching.
-/// File-private: an implementation detail of `parseSAN`.
+/// Parsed SAN components, prior to legal-move matching.
 private struct SANTokens {
     let pieceType: PieceType
     let fromFile: Int?

@@ -1,14 +1,5 @@
 internal struct Move: Equatable, Hashable, Sendable {
-    // Bits  0-5:  from square
-    // Bits  6-11: to square
-    // Bits 12-14: piece type (1-6)
-    // Bit  15:    piece color (0=white, 1=black)
-    // Bits 16-18: captured piece type (0=none, 1-6)
-    // Bits 19-21: promotion type (0=none, 1-6)
-    // Bit  22:    castling flag
-    // Bit  23:    en passant flag
-    // Bit  24:    double pawn push flag
-    // Bits 25-31: unused
+    // Packed: bits 0-5 from, 6-11 to, 12-14 piece type, 15-17 captured, 18-20 promotion, 21+ flags.
     
     // MARK: Static Constants
     private static let toShift:            Int = 6
@@ -134,17 +125,8 @@ internal struct Move: Equatable, Hashable, Sendable {
 
 // MARK: - Last Move
 
-/// The two squares a board highlights after a move (`SquareHighlight.lastMove`).
-///
-/// **Deliberately not a `Move`**, which is the only thing about it worth
-/// stating: the highlight layer needs from-and-to and nothing else, while a
-/// `Move` carries piece, capture, promotion and three flags packed into a
-/// `UInt32`. Views that render a highlight have no business decoding that, and
-/// a board being *reviewed* often has a from/to with no `Move` behind it.
-///
-/// Filed here rather than in its own four-line file since M13 (6 Aug 2026):
-/// it is a `Move` narrowed to what a view needs, so the type it is a narrowing
-/// of is where a reader looks for it.
+/// The two squares a board highlights after a move. **Deliberately not a `Move`** — the mirror
+/// must highlight without claiming move-level knowledge it doesn't have.
 internal struct LastMove: Equatable, Sendable {
     internal let from: Square
     internal let to: Square

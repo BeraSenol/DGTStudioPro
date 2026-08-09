@@ -1,18 +1,7 @@
 extension Position {
     
-    /// Whether any of `offsets`, stepped once from `square` and guarded
-    /// against edge wrap, holds `piece`.
-    ///
-    /// The step-and-compare loop `isSquareAttacked` ran three times (pawn,
-    /// knight, king) and `SpecialCheckmate.knightGivesCheck` a fourth — the
-    /// same shape `GameState.appendPseudoLegalStepMoves` already parameterises
-    /// on the generation side, for the same reason.
-    ///
-    /// `maxFileDistance` is the wraparound guard and is *not* derivable from
-    /// the offsets: a knight legitimately changes file by 2, a king never by
-    /// more than 1. Pawns pass 1 — their ±7/±9 offsets shift the file by
-    /// exactly 1 or exactly 7, never 0, so the `<=` here and the `== 1` it
-    /// replaces accept the same squares.
+    /// Whether any offset, stepped once and wrap-guarded, holds `piece`. `maxFileDistance` is NOT
+    /// derivable from the offsets — a knight legitimately changes file by 2.
     internal func hasPiece(
         _ piece: Piece,
         steppingFrom square: Square,
@@ -73,12 +62,8 @@ extension Position {
         return false
     }
     
-    /// Walks a ray from `square` in `direction`. Returns true iff the first
-    /// occupied square holds an enemy piece whose type matches one of the
-    /// two slider types provided. Friendly pieces, enemy non-sliders, and
-    /// reaching the board edge all return false (and stop the ray).
-    /// Internal, not private: `SpecialCheckmate.rankSliderGivesCheck` used to
-    /// carry a second copy of this walk. One ray primitive, two callers.
+    /// Walks a ray; true iff the first occupied square holds a matching enemy slider. Internal —
+    /// `SpecialCheckmate` reads it.
     internal func rayHitsSlider(
         from square: Square,
         direction: Int,

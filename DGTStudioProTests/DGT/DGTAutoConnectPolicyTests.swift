@@ -1,24 +1,8 @@
 import Testing
 @testable import DGTStudioPro
 
-/// Coverage for `DGTAutoConnectPolicy` — the pure half of the connection
-/// quality of life, pinned without hardware. Rewritten 2 Aug 2026 with the
-/// one-board decree: the remembered-device cases died with the device
-/// picker. The two contracts worth guarding now:
-///
-///   1. Only the exact `boardPath` ever wins — every other attached device is
-///      never consulted, which is no longer a nuance but the entire feature.
-///      The name heuristic these tests were written against
-///      (`DGTSerialDevice.isLikelyBoard`) was deleted 3 Aug 2026, so the
-///      `stranger` fixture below now proves something slightly different and
-///      slightly better: not that a heuristic is ignored, but that a device
-///      whose name is *more* board-like than the board's own still loses to
-///      path equality.
-///   2. `stop` outranks `attempt` in the reconnect lap — a discarded game
-///      ends the loop even in the same lap the device came back.
-///
-/// Not `@MainActor`: the type is a stateless namespace over `Sendable`
-/// values, matching every other pure-value suite in the module.
+/// The pure half of connection QoL, pinned without hardware. One-board decree: only the exact
+/// `boardPath` ever wins; every other attached device is never consulted.
 @Suite("DGT Auto-Connect Policy")
 struct DGTAutoConnectPolicyTests {
 
@@ -44,16 +28,8 @@ struct DGTAutoConnectPolicyTests {
 
     // MARK: The Rule (3 Aug 2026)
 
-    /// `board(at:among:)` is the one spelling of "which of these is the
-    /// board", shared by `launchTarget`, `reconnectLap` and
-    /// `DGTConnection.search()`. Suiting it directly is what lets `search()`
-    /// stay untested without the *rule* being untested — the connection's
-    /// half is transport and a status assignment; this is the decision.
-    ///
-    /// The stranger is the case that matters and it is deliberately stacked
-    /// against the rule: `/dev/cu.usbserial-DGT01` is named far more like a
-    /// DGT board than `/dev/cu.usbmodem01` is, and it still loses. Under the
-    /// deleted name heuristic it would have sorted first.
+    /// `board(at:among:)` is the one spelling, shared by three callers; the stranger is the case
+    /// that matters, deliberately stacked to look tempting.
     @Test func theRuleMatchesOnPathAlone() {
         #expect(DGTAutoConnectPolicy.board(at: board.path, among: [stranger, board]) == board)
         #expect(DGTAutoConnectPolicy.board(at: board.path, among: [stranger]) == nil)

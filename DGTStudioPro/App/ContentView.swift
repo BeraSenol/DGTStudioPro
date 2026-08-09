@@ -2,31 +2,9 @@ import os
 import SwiftData
 import SwiftUI
 
-/// Root content of every tab in the unified `WindowGroup`. Each tab
-/// has its own sidebar selection (`@State`), its own per-tab state
-/// bundle (`TabState`), and is bound to a per-window
-/// `PersistentIdentifier?` from the `WindowGroup`.
-///
-/// Tabs opened from `openWindow(value: pgn.persistentModelID)` start
-/// with the sidebar on Board, showing the loaded game. The first tab
-/// at app launch (and any tab opened via ⌘N) has a nil bound value
-/// and starts on Library.
-///
-/// `TabState` is owned here (rather than on each destination) so the
-/// state survives the destination view being recreated when the user
-/// switches the sidebar. See `TabState` for the rationale.
-///
-/// M-prs.5: the Tags section is a `@Query` over the `SmartTag` model
-/// with create/edit/delete (the editor sheet works on a value draft —
-/// Cancel must never have mutated a live model). `SidebarSelection`
-/// carries the tag's `PersistentIdentifier`, not the model: selections
-/// must stay `Hashable` and survive the model's deletion gracefully.
-///
-/// M-prs.6: `.player` is a programmatic-only selection — no sidebar row
-/// renders it, so the sidebar shows no highlight while it's active; the
-/// Library's filter chip is deliberately both the visible state and the
-/// exit. Stale ids degrade to the full Library exactly like `.tag`; the
-/// `players` query exists solely for that id → model hop.
+/// Root of every tab: per-tab sidebar selection, per-tab `TabState`, bound to the window's
+/// `PersistentIdentifier?`. `SidebarSelection` carries identifiers, never models — selections
+/// must stay `Hashable` and survive deletion. `.player` is programmatic-only (no sidebar row).
 internal struct ContentView: View {
 
     // MARK: Static Constants
@@ -114,28 +92,15 @@ internal struct ContentView: View {
                         }
                         .buttonStyle(.borderless)
                         .help("New Smart Tag")
-                        // Pointer-only affordance: macOS exposes no
-                        // AXButton for a borderless button in a List
-                        // section header, and a header `.contextMenu`
-                        // never surfaces either — both proven by 29 July
-                        // UITest runs (the suite is gone, D51′; the
-                        // finding stands). Every other input path
-                        // (keyboard, VoiceOver) goes through
-                        // File ▸ New Smart Tag… (`SmartTagCommands`, fed
-                        // by the `.focusedSceneValue` below). Witness for
-                        // this button: the manual checklist.
+                        // Pointer-only affordance: macOS exposes no AXButton for a borderless button in a List section
+                        // header — proven 29 July; the menu-bar door is the AX-reachable one.
                         .accessibilityIdentifier(AccessibilityID.sidebarTagsAdd)
                     }
                 }
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                // M-ux.3 (D15′): the sidebar is the master of session
-                // info; the stage above the board stays clear. New Game
-                // navigates to Board first because the sheet's presenter
-                // stayed `BoardDestination` — a modal is destination
-                // furniture, and presenting from every tab's ContentView
-                // would raise one sheet per open window (session state is
-                // app-global).
+                // D15′: the sidebar owns session info. New Game navigates to Board first — the sheet's
+                // presenter stays `BoardDestination`.
                 SessionSidebarPanel(
                     tabState: tabState,
                     onNewGame: {
@@ -159,17 +124,15 @@ internal struct ContentView: View {
                     onShowInLibrary: { selection = .player($0) }
                 )
             case .tag(let id):
-                // A deleted tag's stale selection degrades to the full
-                // Library (nil filter) instead of trapping on a lookup.
+                // A deleted tag's stale selection degrades to the full Library rather than trapping.
                 LibraryDestination(
                     filter: tags.first(where: { $0.id == id }).map(LibraryFilter.smartTag),
                     tabState: tabState,
                     onClearFilter: { selection = .destination(.library) }
                 )
             case .player(let id):
-                // Programmatic only (M-prs.6): no sidebar row carries
-                // this selection — the chip is its one visible face and
-                // its exit. Same stale-degrade contract as `.tag`.
+                // Programmatic only: the chip is this selection's one visible face and exit. Same
+                // stale-degrade contract as `.tag`.
                 LibraryDestination(
                     filter: players.first(where: { $0.id == id }).map(LibraryFilter.player),
                     tabState: tabState,
@@ -177,9 +140,7 @@ internal struct ContentView: View {
                 )
             }
         }
-        // The menu-bar door: File ▸ New Smart Tag… drives this binding
-        // from `SmartTagCommands` — the `activeGame` pattern, second use.
-        // Scene-scoped, so the command reaches whichever tab is frontmost.
+        // The menu-bar door: File ▸ New Smart Tag… drives this binding (the `activeGame` pattern).
         .focusedSceneValue(\.tagEditorDraft, $editorDraft)
         .sheet(item: $editorDraft) { draft in
             SmartTagEditorView(draft: draft) { finished in
@@ -198,27 +159,12 @@ internal struct ContentView: View {
         } message: { tag in
             Text("The tag is removed from the sidebar. No games are affected.")
         }
-        // `.onDisappear` stood here until 6 Aug 2026 and tore the analysis
-        // queue down on tab close: `ContentView` is the window/tab root, so it
-        // disappears when a tab closes and never on a destination switch, which
-        // made it exactly the right boundary for a *per-tab* queue.
-        //
-        // The queue is app-global now (controller decision 2), and the same
-        // hook on an app-global object means closing any window stands down a
-        // batch that some other window started — including the queue window
-        // watching it. So it went with the ownership rather than being narrowed.
-        //
-        // What replaces it is nothing, and that is decision 4 working as
-        // written: the run releases the subprocess when the queue drains, and
-        // app quit closes stdin, which a UCI engine treats as quit. The
-        // accepted consequence is that a batch outlives the tab that started
-        // it — named at the controller rather than discovered here.
     }
     
     // MARK: Tag CRUD (M-prs.5)
     
-    /// Insert-or-update from the editor's value draft, one save either
-    /// way. Update mutates the live model only *here*, after OK.
+    /// Insert-or-update from the editor's draft, one save either way — the live model mutates only
+    /// here, after OK.
     private func commit(_ draft: TagDraft) {
         if let tag = draft.editing {
             tag.name = draft.name
@@ -239,8 +185,7 @@ internal struct ContentView: View {
     }
 
     private func delete(_ tag: SmartTag) {
-        // Deleting the selected tag falls back to Library *before* the
-        // model dies, so the detail switch never renders a stale id.
+        // Fall back to Library *before* the model dies, so the detail switch never renders a stale id.
         if selection == .tag(tag.id) {
             selection = .destination(.library)
         }
@@ -248,12 +193,8 @@ internal struct ContentView: View {
         saveTags(after: "delete")
     }
 
-    /// Tag edits are the one Library write outside `PGNStore`, so they owe
-    /// the same must-reach-somewhere trace its saves get — the bare `try?`
-    /// this replaces could lose a rename or delete with no Console witness
-    /// (30 July audit). Play is never interrupted for a tag: log loudly,
-    /// carry on — the `recordError` philosophy without the timeline, which
-    /// tags don't have.
+    /// Tag edits are the one Library write outside `PGNStore`, so they owe the same
+    /// must-reach-somewhere trace — the bare `try?` this replaces could lose a delete silently.
     private func saveTags(after operation: String) {
         do {
             try modelContext.save()
@@ -270,8 +211,7 @@ internal struct ContentView: View {
 internal enum SidebarSelection: Hashable {
     case destination(Destination)
     case tag(PersistentIdentifier)
-    /// Programmatic only (M-prs.6): set by "Show in Library", never by a
-    /// sidebar row — the Library filter chip renders and clears it.
+    /// Programmatic only: set by "Show in Library"; the filter chip renders and clears it.
     case player(PersistentIdentifier)
 }
 
@@ -279,10 +219,8 @@ internal enum Destination: String, CaseIterable, Identifiable, Hashable {
     case board
     case library
     case players
-    // `rankings` was retired by D48′ — the ladder lives inside Players as its
-    // default sort order. A stale `sidebarDestination("rankings")` cannot
-    // linger anywhere programmatic: `SidebarSelection` stores the enum, not
-    // the raw value, so the case's deletion is total at compile time.
+    // `rankings` retired by D48′ — the selection stores the enum, so the deletion is total at
+    // compile time.
 
     internal var id: String { rawValue }
 
@@ -303,11 +241,8 @@ internal enum Destination: String, CaseIterable, Identifiable, Hashable {
 
 #Preview {
     ContentView(loadedGameID: .constant(nil))
-        // All three models, explicitly — the App container's load-bearing
-        // invariant applies to canvases too: this body runs a `@Query`
-        // over `SmartTag`, which has no relationships, so inference from
-        // `PGN` alone never pulls it into the schema and the canvas
-        // traps on the query.
+        // All three models explicitly — `SmartTag` has no relationships, so inference from `PGN` never
+        // pulls it in and the canvas would trap on the query.
         .modelContainer(for: [PGN.self, Player.self, SmartTag.self], inMemory: true)
         .environment(OpenGamesRegistry())
         .environment(DGTConnection())

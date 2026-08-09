@@ -5,13 +5,7 @@ import Testing
 
 extension GameState {
 
-    /// A bare game state for chess-core tests: a position with no castling
-    /// rights and the clock at the start, parameterised only on the axes the
-    /// suites actually vary — active color, en passant target, castling
-    /// rights, and (for the applying suite's clock tests) the halfmove clock
-    /// and fullmove number. Replaces the private `makeState` helper that was
-    /// duplicated across the Pawn / Knight / King / Sliding / Castling /
-    /// LegalMoveFilter / Applying / SAN suites.
+    /// A bare game state parameterised only on the axes the suites vary.
     static func test(
         _ position: Position,
         activeColor: PieceColor = .white,
@@ -57,27 +51,14 @@ extension GameState {
 
 extension Position {
 
-    /// Builds a position from `.empty` via an in-out closure, tidying the
-    /// `var pos = Position.empty; pos[…] = …; …` dance the chess-core suites
-    /// repeat in nearly every test:
-    ///
-    /// ```swift
-    /// let pos = Position.make {
-    ///     $0[Squares.e4] = .whitePawn
-    ///     $0[Squares.d5] = .blackPawn
-    /// }
-    /// ```
+    /// Builds a position from `.empty` via an in-out closure — the dance every core suite repeated.
     static func make(_ build: (inout Position) -> Void) -> Position {
         var pos = Position.empty
         build(&pos)
         return pos
     }
 
-    /// `make` pre-seeded with both kings on their home squares (e1 / e8) —
-    /// the minimal scaffold the SAN and applying suites build on so a
-    /// position is never king-less by accident. Pieces under test go in via
-    /// the same closure; tests that need a king elsewhere (e.g. promotion
-    /// onto e8) build with `make` directly instead.
+    /// `make` pre-seeded with both kings home, so a position is never king-less by accident.
     static func minimal(_ extras: (inout Position) -> Void = { _ in }) -> Position {
         make {
             $0[Squares.e1] = .whiteKing
@@ -89,15 +70,8 @@ extension Position {
 
 // MARK: Perft & Canonical Reference Positions
 
-/// Shared chess-core fixtures: the canonical perft reference positions and the
-/// recursive perft counter, used by `PerftTests`, `MoveFootprintTests`, and any
-/// other suite that wants a known-good position.
-///
-/// Note: `PerftDeepTests` deliberately keeps its **own** private copy of these
-/// FENs (see the explanatory comment in that file) so the slow depth-5
-/// re-certification can't silently drift away from the canonical source by
-/// accident. That intentional duplication is preserved — only the shallow
-/// suites read their positions from here.
+/// Shared fixtures: canonical perft positions + the recursive counter. `PerftDeepTests` keeps
+/// its own private copy deliberately — reference counts must not drift by a shared edit.
 enum Chess {
 
     // The six canonical perft positions (chessprogramming.org).
@@ -107,11 +81,7 @@ enum Chess {
     "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -"
     static let position4 =
     "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq -"
-    /// Position 4's published colour-mirror, with **identical** reference
-    /// counts at every depth. Running both is the free colour-asymmetry
-    /// localizer: a mismatch *between them* points straight at a
-    /// colour-flip bug (pawn direction, EP rank, castling-right indices)
-    /// without any divide work.
+    /// Position 4's colour-mirror with identical counts — the free colour-asymmetry localizer.
     static let position4Mirror =
     "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1"
     static let position5 =

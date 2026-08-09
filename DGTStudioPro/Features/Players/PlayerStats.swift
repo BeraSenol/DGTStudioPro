@@ -1,31 +1,8 @@
 import Foundation
 
-/// Per-player aggregates over a set of `GameRecord`s, plus the two
-/// contracts the destinations lean on: `index(of:)` (the grouping fold)
-/// and `rankingOrder` (D11′'s recorded Rankings comparator).
-///
-/// Counting rules, recorded:
-/// - `games` counts every appearance, ongoing included — the honest
-///   "games in the Library" number, which is why a player seen only in
-///   an ongoing game still exists in the index.
-/// - The W/D/L splits count decided games only; `winRate` is wins over
-///   decided (0 with none decided), so an ongoing import can never move
-///   a percentage.
-/// - `matesDelivered` credits the *winner* of a game whose last move
-///   carries `#` — result and mate flag together identify the deliverer.
-/// - `specialMatesDelivered` credits the same winner when the game carries a
-///   **motif** (D19′). Counted from `specialCheckmate` directly rather than
-///   nested inside `endedInMate`, and that is deliberate: those two spell
-///   "did this end in mate" differently — `hasSuffix("#")` here against
-///   `contains("#")` in the classifier. **On a stored game they cannot
-///   disagree** (6 Aug 2026): no writer can put `#` anywhere but last, so
-///   `specialMatesDelivered <= matesDelivered` holds for every record this
-///   fold will ever see. It is not guaranteed by *construction*, which is why
-///   the counting stays separate — nesting would bury two spellings behind an
-///   invariant that happens to hold rather than one anything enforces.
-/// - `firstPlayed`/`lastPlayed` use `effectiveDate`, the same fallback
-///   rule the rating fold orders by. Non-optional: a player only exists
-///   through at least one record.
+/// Per-player aggregates over `GameRecord`s, plus the two contracts the destinations lean on:
+/// `index(of:)` and `rankingOrder` (D11′). W/D/L counts decided games only; `winRate` is wins
+/// over decided — an ongoing import can never move a percentage.
 internal struct PlayerStats: Sendable, Hashable, Identifiable {
     
     // MARK: Stored Properties
@@ -40,8 +17,8 @@ internal struct PlayerStats: Sendable, Hashable, Identifiable {
     internal let blackDraws: Int
     internal let blackLosses: Int
     internal let matesDelivered: Int
-    /// Mates this player delivered that carry a motif (D19′ — smothered or
-    /// back-rank). 5 Aug 2026.
+    /// Motif mates delivered (D19′) — counts from the motif, so it can exceed `matesDelivered`
+    /// while the two `#` spellings disagree (standing open item).
     internal let specialMatesDelivered: Int
     internal let firstPlayed: Date
     internal let lastPlayed: Date
@@ -57,10 +34,8 @@ internal struct PlayerStats: Sendable, Hashable, Identifiable {
     
     // MARK: Index
     
-    /// Groups records by resolved side. Output is key-ascending — the
-    /// deterministic baseline order; destinations re-sort for display.
-    /// Unresolved sides contribute nothing (a `"?"` vs. Nepo game is one
-    /// appearance for Nepo and none for the placeholder).
+    /// Groups by resolved side, key-ascending (the deterministic baseline; destinations re-sort).
+    /// Unresolved sides contribute nothing.
     internal static func index(of records: [GameRecord]) -> [PlayerStats] {
         var accumulators: [String: Accumulator] = [:]
         
@@ -82,27 +57,9 @@ internal struct PlayerStats: Sendable, Hashable, Identifiable {
     
     // MARK: Head to Head (3 Aug 2026)
 
-    /// Wins–draws–losses **from `first`'s side**, over the games these two
-    /// played against each other. Nil when they have never met.
-    ///
-    /// A separate fold rather than a slice of `index(of:)`, because the two
-    /// answer different questions: `index` asks "how has this player done",
-    /// which sums over every opponent, and no arrangement of those totals can
-    /// be narrowed back down to one pairing. The subtitle is the first
-    /// surface to ask the pairing question; `PairingRound` asks a different
-    /// one about the same pair and shares only the set-matching.
-    ///
-    /// Orientation is the content. A record read the wrong way round is
-    /// silently, plausibly wrong — 7–3–2 and 2–3–7 are both believable — so
-    /// the caller passes an ordered pair and gets numbers oriented to the
-    /// first of it. `DestinationSubtitle.players` brackets them with the
-    /// names in the same order for exactly that reason.
-    ///
-    /// Draws count for both; an undecided game (`*`) contributes to none of
-    /// the three, so the totals can sum to less than the games played — the
-    /// same "`*` is not a result" stance the archive door takes (Decision #3).
-    /// Self-play is excluded: a row with the same player on both seats is not
-    /// a meeting, and would otherwise count as a win *and* a loss.
+    /// W–D–L **from `first`'s side** over their mutual games; nil when they never met, and nil for
+    /// a player against themselves. Ordered pair in, oriented numbers out. `*` is not a result here
+    /// (Decision #3's stance).
     internal static func headToHead(
         _ first: String,
         _ second: String,
@@ -135,10 +92,8 @@ internal struct PlayerStats: Sendable, Hashable, Identifiable {
 
     // MARK: Ranking (D11′)
     
-    /// The recorded Rankings order: total wins descending, win rate
-    /// descending, then `key` ascending — the key rather than the display
-    /// name because the final tiebreak must be locale-free to stay
-    /// deterministic.
+    /// D11′: wins ↓, win rate ↓, `key` ↑ — the key, not the display name: the final tiebreak must
+    /// be locale-free to stay deterministic.
     internal static func rankingOrder(_ lhs: PlayerStats, _ rhs: PlayerStats) -> Bool {
         if lhs.wins != rhs.wins { return lhs.wins > rhs.wins }
         if lhs.winRate != rhs.winRate { return lhs.winRate > rhs.winRate }

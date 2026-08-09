@@ -1,19 +1,5 @@
-/// The per-square instructions for restoring a desynced physical board to
-/// the game's last legal position (M6.2; Decision #1 locks FIDE semantics —
-/// the only resolution is restoring that position, so there is nothing to
-/// decide here, only squares to fix).
-///
-/// A pure formatter over `DGTBoardDiff(from: physical, to: target)`:
-/// - occupied on the board, empty in the target → **remove**;
-/// - empty on the board, occupied in the target → **place**;
-/// - occupied by the wrong piece → **replace**.
-///
-/// Recomputed by the view layer on every physical change, so highlights and
-/// the instruction list shrink square by square as the player fixes the
-/// board (a 64-square diff is cheap; reach for `.task(id:)` memoization
-/// only if profiling ever demands it). The board views render
-/// `attentionSquares` / `targetSquares` as generic styles and know nothing
-/// about recovery — the same division of labor as the castling ghost.
+/// Per-square instructions for restoring a desynced board to the last legal position (Decision
+/// #1 locks the resolution; there is nothing to decide, only squares to fix).
 internal struct RecoveryGuidance: Equatable, Sendable {
     
     // MARK: Item
@@ -33,13 +19,10 @@ internal struct RecoveryGuidance: Equatable, Sendable {
         internal let square: Square
         internal let action: Action
         
-        /// One item per square, so the square doubles as a stable identity
-        /// for SwiftUI lists.
+        /// One item per square — the square doubles as stable identity.
         internal var id: Square { square }
         
-        /// e.g. "c3 — remove the White Knight",
-        /// "g1 — place the White Knight",
-        /// "e4 — replace the Black Pawn with the White Knight".
+        /// "c3 — remove the White Knight" / "g1 — place…" / "e4 — replace… with…".
         internal var message: String {
             switch action {
             case .remove(let piece):
@@ -52,9 +35,7 @@ internal struct RecoveryGuidance: Equatable, Sendable {
             }
         }
         
-        /// "White Knight" etc. Lives here rather than on `Piece` — this is
-        /// the only place v1 needs prose piece names, and the chess core
-        /// stays presentation-free.
+        /// Prose piece names live here — the chess core stays presentation-free.
         private static func name(of piece: Piece) -> String {
             guard let color = piece.color, let type = piece.type else {
                 return "piece"      // unreachable for occupied squares; kept total
@@ -77,14 +58,12 @@ internal struct RecoveryGuidance: Equatable, Sendable {
     
     // MARK: Stored Properties
     
-    /// Every square to fix, sorted by square index (a1 → h8) so the list is
-    /// deterministic for the UI and for table-driven tests.
+    /// Sorted by square index (a1 → h8) — deterministic for UI and tests.
     internal let items: [Item]
     
     // MARK: Computed Properties
     
-    /// Squares rendered with the `.attention` style: something is here that
-    /// shouldn't be (a removal or a wrong piece).
+    /// `.attention`: something here shouldn't be.
     internal var attentionSquares: Set<Square> {
         Set(items.compactMap {
             switch $0.action {
@@ -94,10 +73,8 @@ internal struct RecoveryGuidance: Equatable, Sendable {
         })
     }
     
-    /// Squares rendered with the `.target` style: a piece belongs on this
-    /// empty square. Wrong-piece squares stay attention-only — the
-    /// instruction text carries what belongs there, and stacking both
-    /// styles on one square reads as noise.
+    /// `.target`: a piece belongs on this empty square. Wrong-piece squares stay attention-only —
+    /// stacking both styles reads as noise.
     internal var targetSquares: Set<Square> {
         Set(items.compactMap {
             if case .place = $0.action { $0.square } else { nil }
@@ -112,12 +89,11 @@ internal struct RecoveryGuidance: Equatable, Sendable {
         let diff = DGTBoardDiff(from: physical, to: target)
         var items: [Item] = []
         
-        // `vacated`: occupied on the board, empty in the target → remove.
+        // vacated: occupied on the board, empty in the target → remove.
         for (square, piece) in diff.vacated {
             items.append(Item(square: square, action: .remove(piece)))
         }
-        // `placed`: the target square is occupied and differs — a plain
-        // placement when the physical square is empty, otherwise a swap.
+        // placed: plain placement when the physical square is empty, otherwise a swap.
         for (square, expected) in diff.placed {
             let current = physical[square]
             items.append(Item(
@@ -136,14 +112,8 @@ internal struct RecoveryGuidance: Equatable, Sendable {
 
 extension RecoveryGuidance {
     
-    /// The live restore checklist, or nil when nothing needs restoring.
-    ///
-    /// Two consumers compute this independently **by decision**: the board's
-    /// attention/target overlays (`BoardDestination`) and the sidebar's
-    /// checklist (`SessionSidebarPanel`) each recompute per render, which is
-    /// cheap at 64 squares and keeps them from sharing state. Two
-    /// *computations* was the decision; two *spellings* of it was not — the
-    /// guard and the construction were byte-identical in both views.
+    /// The live checklist, or nil. Two consumers compute this independently by decision — two
+    /// *computations* was the decision; two *spellings* was not, hence one static.
     @MainActor
     internal static func current(
         session: DGTLiveSession,

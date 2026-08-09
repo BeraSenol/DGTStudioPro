@@ -1,13 +1,8 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The D34′ composition. `ECOClassifierTests` pins the opening walk and
-/// `SpecialCheckmateTests` pins the pattern predicates against FEN fixtures;
-/// what is left — and what only lives here — is that the two halves are
-/// stamped together, fail independently, and that the mate gate replays a
-/// real game rather than a hand-placed position.
-///
-/// The table is injected, so this suite needs no bundle.
+/// The D34′ composition — what only lives here: the two halves are wired together and fail
+/// independently.
 @Suite("Game Classification")
 struct GameClassificationTests {
 
@@ -54,21 +49,9 @@ struct GameClassificationTests {
         #expect(Self.classify([]).specialCheckmate == nil)
     }
 
-    /// The gate is `contains("#")`, not `hasSuffix`, so an annotated final ply
-    /// still reaches the replay.
-    ///
-    /// **The reason recorded here until 6 August 2026 was false** — it read
-    /// "because annotations survive import". They do not:
-    /// `PGNParser.stripAnnotations` removes trailing `!`/`?` from every token
-    /// the parser emits, so no stored game reaches this function with `Qh4#!`
-    /// in it (`annotationsDoNotSurviveImport` is the pin). The fixtures below
-    /// are hand-built and bypass that door.
-    ///
-    /// The test keeps its place on the narrower argument the gate now carries:
-    /// `classify` is a pure function over a `[String]` it does not own, and
-    /// this pins that it tolerates an annotated ply rather than silently
-    /// classifying `nil` for one. That is a real contract for a future caller
-    /// that has not canonicalized — it is just not the one about import.
+    /// The gate is `contains("#")`, not `hasSuffix` — NOT "because annotations survive import"
+    /// (they don't): `classify` is pure over a `[String]` it does not own, and must tolerate an
+    /// annotated ply from any caller.
     @Test("An annotated mating move still claims mate")
     func annotatedMateStillClaimsMate() {
         let result = Self.classify(["f3", "e5", "g4", "Qh4#!"])

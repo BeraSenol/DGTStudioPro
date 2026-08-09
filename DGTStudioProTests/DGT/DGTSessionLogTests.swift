@@ -2,20 +2,8 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// Coverage for `DGTSessionLog` — the unified, exportable diagnostic timeline
-/// that sits alongside the per-type Console loggers. The tests pin the
-/// buffer's observable contract: append order, the bounded ring-buffer
-/// eviction, `clear`, the rich `recordDesync` capture, and the `exportText`
-/// rendering (including its singular/plural entry-count wording).
-///
-/// `@MainActor`: `DGTSessionLog` is an `@Observable @MainActor` class, so the
-/// suite must be main-actor isolated to touch it — a genuine isolation
-/// requirement, unlike the pure-value suites.
-///
-/// `record` vs `capture` differ only in whether they *also* mirror to Console;
-/// that side effect isn't observable from a unit test, so both are verified
-/// here purely by their (identical) effect on `entries`. Timestamps come from
-/// `.now`, so nothing asserts exact times.
+/// The diagnostic timeline's observable contract: append order, the ring bound, desync capture.
+/// `record` vs `capture` differ only in the Console mirror, which a unit test cannot see.
 @MainActor
 @Suite("DGT Session Log")
 struct DGTSessionLogTests {

@@ -51,20 +51,8 @@ extension GameState {
     
     // MARK: Legal Move Filter (7c)
     
-    /// Pseudo-legal moves filtered to remove any that leave the moving side's
-    /// king in check.
-    ///
-    /// Performance note: the per-move legality check needs to know where the
-    /// moving side's king is *after* the move, which would normally cost an
-    /// O(64) board scan per pseudo-legal move (kiwipete generates ~48 pseudo-
-    /// legal moves per node, so that's 3 KB of scans per call). We pay the
-    /// scan once for the current king square here, then derive the post-move
-    /// king square in `isLegal` without scanning: if the king itself moves
-    /// (including castling), its new square is `move.to`; otherwise it stays
-    /// put. Measurably cuts perft time, especially at depth 5.
-    ///
-    /// Defensive: a position without our king on the board has no legal moves
-    /// (it's not a valid game state to play from), so we return an empty array.
+    /// Pseudo-legal filtered so no move leaves the mover's king attacked. A kingless side (hand-
+    /// edited state) returns an empty array rather than trapping.
     internal func legalMoves() -> [Move] {
         guard let currentKingSquare = position.kingSquare(for: activeColor) else {
             return []
@@ -88,16 +76,8 @@ extension GameState {
         !isInCheck && legalMoves().isEmpty
     }
     
-    /// Apply the move to a hypothetical position and check whether the moving
-    /// side's king is left attacked. This single check naturally handles pins,
-    /// EP discovered checks, moving while in check, and king self-checks —
-    /// no piece-specific reasoning required.
-    ///
-    /// `currentKingSquare` is the moving side's king square *before* the move.
-    /// If the move is a king move (or castling — `pieceType == .king` is true
-    /// for both), the post-move king square is `move.to`; otherwise the king
-    /// hasn't moved and the cached square is still correct. Either way, no
-    /// board scan is needed on the resulting position.
+    /// Apply hypothetically and test the king — one check that naturally covers pins, EP discovered
+    /// checks, moving while in check, and king self-checks.
     private func isLegal(_ move: Move, currentKingSquare: Square) -> Bool {
         let nextKingSquare = move.pieceType == .king ? move.to : currentKingSquare
         let next = position.applying(move)
@@ -112,7 +92,7 @@ extension GameState {
         let promotionRank  = color == .white ? 7 : 0
         let captureOffsets = color == .white ? [7, 9] : [-9, -7]
         
-        // Single push (and double push, only from start rank, only if both squares empty)
+        // Single push; double only from the start rank with both squares empty.
         let oneStep = square + direction
         if oneStep.isOnBoard && !position[oneStep].isOccupied {
             if oneStep.rank == promotionRank {
@@ -145,8 +125,7 @@ extension GameState {
         for offset in captureOffsets {
             let target = square + offset
             guard target.isOnBoard else { continue }
-            // File-distance check rejects file wraparound
-            // (a-pawn capturing "left" or h-pawn capturing "right").
+            // File-distance check rejects wraparound (a-pawn capturing "left").
             guard abs(target.file - square.file) == 1 else { continue }
             
             let targetPiece = position[target]
@@ -168,8 +147,7 @@ extension GameState {
                     ))
                 }
             } else if target == enPassantTarget {
-                // En passant: target square is empty; captured pawn lives one rank back.
-                // Move's capturedSquare computed property handles the offset.
+                // En passant: the target square is empty; `capturedSquare` handles the offset.
                 moves.append(Move.make(
                     from: square, to: target,
                     pieceType: .pawn, pieceColor: color,
@@ -199,17 +177,9 @@ extension GameState {
     
     // MARK: Step Moves (Knight / King)
     
-    /// Non-sliding moves: one hop per offset, no ray. Knight and king differed
-    /// only in their offset table, their file-distance bound, and the piece
-    /// type stamped on the move — three parameters, not two functions.
-    ///
-    /// `maxFileDistance` is the wraparound guard and is *not* derivable from
-    /// the offsets: a knight legitimately changes file by 2, a king never by
-    /// more than 1, and both tables contain offsets that would wrap silently.
-    ///
-    /// Castling is not appended here. It stays at the `.king` case in
-    /// `pseudoLegalMoves` so this function has no piece-specific arm at all,
-    /// and so the emitted order is unchanged.
+    /// Knight and king differ only in offset table, file-distance bound, and stamped type.
+    /// `maxFileDistance` is the wraparound guard and is NOT derivable from the offsets.
+    /// Castling stays at the `.king` case so the emitted order is unchanged.
     private func appendPseudoLegalStepMoves(
         from square: Square,
         pieceType: PieceType,
@@ -254,8 +224,7 @@ extension GameState {
             var previous = square
             var target = square + direction
             
-            // Walk the ray. Each step's file may change by at most 1 — anything
-            // larger is a wraparound across the board edge.
+            // Each ray step's file may change by at most 1 — more is a wraparound.
             while target.isOnBoard && abs(target.file - previous.file) <= 1 {
                 let targetPiece = position[target]
                 
@@ -283,33 +252,22 @@ extension GameState {
     }
     
     // MARK: Castling (7d)
-    //
-    // Castling has its own conditions because the king's *transit* square must
-    // not be attacked — a constraint the legal filter alone cannot check, since
-    // the filter only sees the king's final square. Destination-square safety
-    // does fall out of the legal filter, so we don't repeat it here.
+    // Own conditions because the king's *transit* square must not be attacked — the legal filter
+    // only sees the final square. Destination safety falls out of the filter.
     private func appendCastlingMoves(from square: Square, into moves: inout [Move]) {
         let color = activeColor
         
-        // Castling rights imply king is on its home square; defensively double-check.
+        // Rights imply the king is home; defensively double-check.
         let homeSquare = color == .white ? Squares.e1 : Squares.e8
         guard square == homeSquare else { return }
         
-        // Rights before the scan. With neither side available, both branches
-        // below are dead and the out-of-check test can append nothing — and
-        // that test is this function's expensive half. Most nodes in a deep
-        // search have already spent both rights.
+        // Rights before the scan: the out-of-check test is the expensive half, and most deep-search
+        // nodes have spent both rights.
         guard castlingRights.has(color, .kingSide)
                 || castlingRights.has(color, .queenSide) else { return }
         
-        // Rights imply a rook on its home corner for any position reached
-        // through `applying` — the revocation rules maintain that. They do
-        // *not* imply it for a position parsed from a FEN, and the draft
-        // sidecar resumes through `FEN(parsing:)`, so a hand-edited file can
-        // hand us `KQ` with a bare back rank. Without this, `O-O` is generated
-        // and `Position.applying` copies an empty square onto f1.
-        // Free for perft: in a legal position the test is always true, so
-        // neither the generated set nor its order changes.
+        // Rights imply a home rook for positions reached through `applying` — NOT for a parsed FEN,
+        // and the draft sidecar resumes through `FEN(parsing:)`, so a hand-edited file reaches here.
         let homeRook = Piece(color, .rook)
         let kingSideRookHome:  Square = color == .white ? Squares.h1 : Squares.h8
         let queenSideRookHome: Square = color == .white ? Squares.a1 : Squares.a8
@@ -333,7 +291,7 @@ extension GameState {
             }
         }
         
-        // Queenside (b-file must be empty too — rook traverses it — but isn't part of the king's path)
+        // Queenside: b-file must be empty too (rook traverses it) but is not part of the king's path.
         if castlingRights.has(color, .queenSide) {
             let b: Square = color == .white ? Squares.b1 : Squares.b8
             let c: Square = color == .white ? Squares.c1 : Squares.c8

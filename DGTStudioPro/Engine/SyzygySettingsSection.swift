@@ -1,37 +1,15 @@
 import AppKit
 import SwiftUI
 
-/// The Settings pane's Tablebases section: pick a folder, tune the three probe
-/// options, and — the part this section exists for — **find out whether the
-/// engine can actually read it**.
-///
-/// **The verification is the feature, not a garnish.** Stockfish probes
-/// tablebases from its own process, and this app is sandboxed, so the files
-/// have to be reachable by a *child* rather than by the app. Apple's rule is
-/// that a child inherits only the static rights in the entitlements file, not
-/// rights granted after launch — and a folder chosen in an open panel is
-/// exactly the latter. If that applies here, `SyzygyPath` points somewhere real
-/// and Stockfish loads nothing, and the only symptom is that analysis quietly
-/// stops being tablebase-perfect in endgames. Nobody would notice for months.
-///
-/// So the check reports **two numbers from two processes** and lets them
-/// disagree out loud:
-///
-/// | App sees | Engine reports | Reading |
-/// |---|---|---|
-/// | 0 | — | Wrong folder, or the download never finished |
-/// | 290 WDL, 0 DTZ | anything | Half a download — WDL is what probing needs |
-/// | 290 | nothing | **The sandbox blocked the subprocess.** The real finding |
-/// | 290 | "Found 290 …" | Working |
-///
-/// A single "tablebases: on/off" indicator could not tell the third row from
-/// the first, which is the row worth building a section around.
+/// The Tablebases section: pick a folder, tune the probes, and — the reason it exists —
+/// **verify the engine can read it**. Sandbox inheritance covers only static entitlements, so
+/// `SyzygyPath` can point somewhere real while Stockfish loads nothing; the check starts an
+/// engine and quotes what it says.
 internal struct SyzygySettingsSection: View {
 
     // MARK: Verification State
 
-    /// What the last check found. `Equatable` so the view diffs cleanly and so
-    /// the reading below is derived rather than stored twice.
+    /// The last check's finding. `Equatable` so the reading below is derived, not stored twice.
     internal enum Verification: Equatable {
         case idle
         case running
@@ -48,10 +26,8 @@ internal struct SyzygySettingsSection: View {
     @AppStorage(StorageKeys.syzygyProbeLimit) private var probeLimit
     = EngineConfiguration.default.syzygyProbeLimit
 
-    /// The folder's path for display. `@State` seeded from defaults rather than
-    /// `@AppStorage`, because the picker writes *two* keys at once through
-    /// `SyzygyLocation.store` — the bookmark and this label — and an
-    /// `@AppStorage` binding here would be a second writer for one of them.
+    /// `@State`, not `@AppStorage`: the picker writes *two* keys at once through
+    /// `SyzygyLocation.store`, and an `@AppStorage` binding would be a second writer for one.
     @State private var displayPath: String? = SyzygyLocation.displayPath()
     @State private var verification: Verification = .idle
 
@@ -121,8 +97,7 @@ internal struct SyzygySettingsSection: View {
         }
     }
 
-    /// The two numbers turned into one sentence. Ordered by which failure is
-    /// most likely to be misread as a different one.
+    /// The two numbers as one sentence, ordered by which failure is most likely to be misread.
     private var reading: String {
         switch verification {
         case .idle:
@@ -154,17 +129,8 @@ internal struct SyzygySettingsSection: View {
         return false
     }
 
-    /// Starts a throwaway engine, asks it what it loaded, and stands it down.
-    ///
-    /// A second engine rather than asking the analysis queue's: the queue's
-    /// engine exists only while a batch runs (decision 4 releases it at drain),
-    /// so a check would answer "no engine" most of the time. This one lives for
-    /// about a handshake.
-    ///
-    /// **The report is read before `shutdown()`, and that ordering is load
-    /// bearing** — teardown clears it, deliberately, because a report describes
-    /// the tables a specific subprocess loaded and a stale one would answer for
-    /// a process that no longer exists.
+    /// A throwaway engine (the queue's exists only while a batch runs). **The report is read before
+    /// `shutdown()`** — teardown clears it, deliberately: a report describes a live engine.
     private func verify() async {
         verification = .running
 
@@ -193,13 +159,7 @@ internal struct SyzygySettingsSection: View {
 
     // MARK: Folder
 
-    /// Directory mode, the `presentBackfillPanel` shape — the same gesture D58′
-    /// uses to point at a folder of PGNs.
-    ///
-    /// Unlike that one, this selection is **kept**: a backfill is a one-shot
-    /// where the panel's own session grant suffices, while a tablebase folder
-    /// has to survive relaunches. That is the whole reason `SyzygyLocation`
-    /// stores a security-scoped bookmark and this app has one at all.
+    /// Directory mode, the backfill panel's shape.
     private func chooseFolder() {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
@@ -214,8 +174,7 @@ internal struct SyzygySettingsSection: View {
             return
         }
         displayPath = SyzygyLocation.displayPath()
-        // Stale by construction the moment the folder changes, and a stale
-        // "working" line under a new path is worse than no line at all.
+        // Stale by construction the moment the folder changes — a stale "working" line is worse than none.
         verification = .idle
     }
 
@@ -237,11 +196,9 @@ internal struct SyzygySettingsSection: View {
 
 // MARK: Previews
 
-/// Both arms, which is all a canvas can reach: the section with no folder set,
-/// and the section with one. The *verification* states need a Stockfish
-/// subprocess and a real folder, so they are the boardless checklist's — named
-/// there rather than faked here, since a fabricated "engine says…" line would
-/// preview the one thing this section exists to report honestly.
+/// Both arms a canvas can reach. The verification states need Stockfish and a real folder —
+/// the boardless checklist's; faking "engine says…" would preview the one thing this section
+/// exists to report honestly.
 #Preview("No Folder") {
     Form { SyzygySettingsSection() }
         .formStyle(.grouped)

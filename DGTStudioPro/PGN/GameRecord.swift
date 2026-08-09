@@ -1,21 +1,8 @@
 import Foundation
 
-/// A Library game projected to the pure value the M-prs cores consume
-/// (Decision D10′): `PlayerStats` and `Glicko1` never touch `@Model`s,
-/// so their suites run nonisolated with no store fixture — the
-/// `DGTAutoConnectPolicy` / `AnalysisQueue` precedent, applied to the
-/// Library domain. The model-touching conversion lives in
-/// `PGN+GameRecord.swift`, keeping this file import-Foundation-only.
-///
-/// Sides carry the *resolved* identity (`Player.normalizedName` as `key`,
-/// `Player.name` as display), not raw tags: identity was decided once by
-/// `PGNStore.resolvePlayer(named:)`, and re-deriving it here would be a
-/// second implementation waiting to drift. A nil side is a `"?"`
-/// placeholder or a not-yet-backfilled row — either way, no player.
-///
-/// Grown in M-prs.5: the Library-metadata fields exist because `TagRule`
-/// reads them, and they landed with the rules and tests that consume
-/// them.
+/// A Library game projected to the pure value the cores consume (D10′) — `PlayerStats` and
+/// `Glicko1` never touch `@Model`s. Sides are the *resolved* links, never raw tags: `"?"` and
+/// unbackfilled rows are both "no player".
 internal struct GameRecord: Sendable, Hashable {
     
     internal struct Side: Sendable, Hashable {
@@ -34,11 +21,8 @@ internal struct GameRecord: Sendable, Hashable {
     internal let importedAt: Date
     internal let contentHash: String
     
-    // The M-prs.5 growth, as promised in the type comment: the fields
-    // `TagRule` reads. Trailing with defaults so the slice-2 fixtures and
-    // call order stay source-stable; the projection passes every field
-    // explicitly, so the defaults are fixture ergonomics, not hiding
-    // places.
+    // The fields `TagRule` reads; trailing defaults are fixture ergonomics — the projection passes
+    // every field explicitly.
     internal let event: String
     internal let site: String
     internal let name: String
@@ -47,12 +31,8 @@ internal struct GameRecord: Sendable, Hashable {
     internal let hasAnalysis: Bool
     internal let isTimed: Bool
 
-    // The M4 growth, on the same terms as the M-prs.5 one: `TagRule` reads
-    // both, and they land with the rules and tests that consume them. These
-    // carry the *stored* classification, never the moves it was derived
-    // from — a record is a projection of what the Library knows, and
-    // re-deriving a game's opening inside a fold would be a second
-    // classification door with no table injected.
+    // The *stored* classification, never the moves it was derived from — movetext on records would
+    // make every fold carry it for nothing.
     internal let opening: ECOOpening?
     internal let specialCheckmate: SpecialCheckmate?
 
@@ -98,12 +78,9 @@ internal struct GameRecord: Sendable, Hashable {
     /// they entered the Library.
     internal var effectiveDate: Date { date ?? importedAt }
     
-    /// The recorded ordering contract for every fold over game records —
-    /// `Glicko1.histories` sorts with this, and `PlayerStats` uses
-    /// `effectiveDate` for first/last played. Ascending `effectiveDate`,
-    /// tie-broken by `importedAt`, then `contentHash`: a rating fold's
-    /// output is only as deterministic as its order, so the full chain
-    /// down to a total tiebreak is the contract, not a nicety.
+    /// The recorded ordering contract for every fold: `effectiveDate` ↑, then `importedAt`, then
+    /// `contentHash` — a fold's output is only as deterministic as its order, so the chain down to
+    /// a total tiebreak is the contract.
     internal static func chronologicalOrder(_ lhs: GameRecord, _ rhs: GameRecord) -> Bool {
         if lhs.effectiveDate != rhs.effectiveDate { return lhs.effectiveDate < rhs.effectiveDate }
         if lhs.importedAt != rhs.importedAt { return lhs.importedAt < rhs.importedAt }

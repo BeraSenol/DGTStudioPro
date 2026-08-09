@@ -3,22 +3,8 @@ import Foundation
 import SwiftData
 @testable import DGTStudioPro
 
-/// The M5 archive flow: the Library save fires on the `isFinished` transition
-/// itself — from settle's auto-detected result, from `resign`/`agreeDraw`, and
-/// from resuming an already-decided draft. Success retires the draft; failure
-/// keeps it and suppresses new-game entry until `retryArchive()` succeeds or the
-/// player discards. A nil `onGameFinished` means headless: no archive, the draft
-/// stays the safety net, which is why the pre-M5 suite still passes unchanged.
-///
-/// Most tests wire a *real* `PGNStore` over an in-memory container so the
-/// session→store seam runs end to end; the failure tests use `FlakyArchiveDoor`
-/// because a genuine SwiftData save failure cannot be forced deterministically.
-///
-/// Timing: `DGTLiveSessionTests`' convention. The settle-driven test shrinks
-/// `quiescence` to 10 ms and *polls* rather than sleeping — a fixed wait races
-/// the quiescence timer under parallel-suite load (the Perft suites saturate
-/// every core), and losing that race coalesces two moves into an illegal diff,
-/// a test-only flake that looks exactly like a session bug.
+/// The M5 archive flow: the save fires on the `isFinished` transition itself; success retires
+/// the draft, failure keeps it. A genuine SwiftData save failure cannot be forced deterministically.
 @MainActor
 @Suite("DGT Live Session — Archive (M5)")
 struct DGTLiveSessionArchiveTests {
@@ -76,17 +62,8 @@ struct DGTLiveSessionArchiveTests {
         try context.fetchCount(FetchDescriptor<PGN>())
     }
 
-    /// Waits for `condition` (up to `timeout`) instead of sleeping a fixed
-    /// interval. The settle path is timer-driven — `boardChanged` cancels
-    /// and restarts the quiescence task (shrunk to 10 ms here, F7) — so a
-    /// fixed sleep races the
-    /// scheduler: `Task.sleep` guarantees only a *minimum*, and a settle
-    /// continuation can queue past any fixed window on a loaded machine,
-    /// at which point the next board feed cancels it and two moves
-    /// coalesce into one illegal diff. Waiting on the observable outcome
-    /// makes scheduling delay extend the wait instead of failing the run.
-    /// On timeout it simply returns — the `#expect` that follows then
-    /// fails with the real value, which is the better diagnostic.
+    /// Polls instead of sleeping a fixed interval — `Task.sleep` guarantees only a minimum, and a
+    /// fixed ceiling is a guess a loaded machine eventually beats (F7).
     private static func poll(
         timeout: Duration = .seconds(5),
         until condition: @MainActor () -> Bool
@@ -99,13 +76,8 @@ struct DGTLiveSessionArchiveTests {
         }
     }
 
-    /// Awaits the armed quiescence task itself — the negative-assertion
-    /// tool: after this returns, the settle has *definitely* run on the
-    /// main actor, so "nothing changed" finally means something. The
-    /// positive waits in this suite keep `poll` (each call site asserts
-    /// the outcome right after, so a timeout fails there with the real
-    /// value); the two fixed sleeps this helper replaced were the last
-    /// waits that could pass without the settle ever running.
+    /// Awaits the armed quiescence task — the negative-assertion tool: after this, "nothing
+    /// changed" finally means something.
     private static func settled(_ session: DGTLiveSession) async throws {
         let armed = try #require(session.quiescenceTask)
         await armed.value
@@ -202,12 +174,8 @@ struct DGTLiveSessionArchiveTests {
         #expect(try Self.libraryCount(in: context) == 1)
         #expect(try drafts.load() == nil)
 
-        // Clearing pieces after the finish must not enter recovery…
-        // Awaiting the armed settle replaces the old 100 ms fixed sleep:
-        // the negative below is asserted after a settle that provably
-        // ran, instead of hoping the margin covered it (it also retires
-        // that comment's "coalesces under extreme load" caveat — there
-        // is no window left to coalesce across).
+        // Clearing pieces after the finish must not enter recovery; the negative is asserted after a
+        // settle that provably ran.
         session.boardChanged(states[0].position)   // any mid-clear board
         try await Self.settled(session)
         #expect(session.needsRecovery == false)

@@ -2,35 +2,17 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// Hermetic coverage for `DGTConnection`, which had none because every seam was
-/// hard-bound to hardware (F9). Three injected seams make it testable without a
-/// board:
-///
-/// - `port` (a `DGTPortProviding` fake) scripts the event stream, records sent
-///   commands, and can end the stream *without* `close()` — what a yanked USB
-///   cable looks like from the connection's side. The stream finishing is the
-///   contract, so the fake finishes the stream (F1).
-/// - `enumerateDevices` scripts discovery, so the reconnect lap's "is it back
-///   yet?" probe is deterministic rather than walking the real IORegistry.
-/// - `defaults` gets a throwaway suite, so `rememberDevice` never writes the
-///   developer's real preferences from the ⌘U host.
-///
-/// With a zeroed `initCommandStagger` and a milliseconds
-/// `reconnectRetryInterval`, the full unplug → reconnect loop runs in
-/// hundredths of a second. What these cannot prove — termios configuration, EOF
-/// on a real fd — stays on the hardware checklist, deliberately.
+/// Hermetic `DGTConnection` coverage via three injected seams (F9): scripted port, scripted
+/// discovery, throwaway defaults. What these cannot prove — termios, EOF on a real fd — stays
+/// on the hardware checklist.
 @MainActor
 @Suite("DGT Connection — Fake Port")
 struct DGTConnectionTests {
 
     // MARK: Fake Port
 
-    /// Scripted `DGTPortProviding`. `emit` yields events in call order;
-    /// `vanish` finishes the stream without `close()`, simulating the
-    /// device disappearing out from under an open port. With `setAutoDump`,
-    /// the fake answers `.sendBoard` with a full dump — the one real-board
-    /// behavior the reconnect loop's convergence leans on (each attempt
-    /// lap re-runs the init sequence, so each lap re-solicits the dump).
+    /// Scripted port: `emit` yields in order; `vanish` finishes the stream without `close()` —
+    /// the device disappearing under an open port.
     private actor FakePort: DGTPortProviding {
         private(set) var openedPaths: [String] = []
         private(set) var sentCommands: [DGTCommand] = []
@@ -60,11 +42,7 @@ struct DGTConnectionTests {
 
         func send(_ command: DGTCommand) throws {
             sentCommands.append(command)
-            // The real board answers `sendBoard` with a dump. Tests that
-            // exercise loops (where the *connection*, not the test, decides
-            // when a port reopens) need this fidelity: a manually emitted
-            // dump races the lap cadence — a retry can tear the port down
-            // between the test observing the open and the emit landing.
+            // The real board answers `sendBoard` with a dump — loop tests need that fidelity.
             if command == .sendBoard, let autoDumpPosition {
                 continuation?.yield(.boardDump(autoDumpPosition))
             }
@@ -109,11 +87,7 @@ struct DGTConnectionTests {
         return connection
     }
 
-    /// Polls `condition` until it holds or `timeout` elapses. The async
-    /// condition lets tests read the fake port actor inside the predicate.
-    /// 5 s / 25 ms matches the session suites' load calibration: under a
-    /// full ⌘U the main actor is contended enough that shorter ceilings
-    /// miss (see `DGTLiveSessionTests.poll`).
+    /// Polls until the condition holds; async predicate so tests can read the fake port actor.
     private func poll(
         timeout: Duration = .seconds(5),
         until condition: () async -> Bool
@@ -251,20 +225,8 @@ struct DGTConnectionTests {
         try await poll { connection.status == .disconnected }
     }
 
-    /// The full M7.3 round trip: unplug mid-game, the loop parks, the
-    /// device "returns" via scripted discovery, the next attempt lap
-    /// reopens the port, and the lap's own init sequence re-solicits the
-    /// dump that completes the reconnect.
-    ///
-    /// The fake answers `.sendBoard` with a dump (`setAutoDump`) because
-    /// that is the contract the loop's convergence leans on. An earlier
-    /// version emitted the dump manually after polling for the reopen —
-    /// which raced the lap cadence: a 20 ms retry lap could tear down the
-    /// just-observed port before the 25 ms poll's emit landed, so the dump
-    /// died with the old stream and `openedPaths` sailed past the exact
-    /// `== 2` check. With the fake speaking the device's half of the
-    /// protocol, every lap converges on its own, no matter how the
-    /// scheduler interleaves them.
+    /// The full M7.3 round trip: unplug mid-game, loop parks, device returns via scripted
+    /// discovery, the lap reopens and re-solicits the dump.
     @Test func reconnectSucceedsWhenTheDeviceReturns() async throws {
         let port = FakePort()
         let connection = makeConnection(port: port)

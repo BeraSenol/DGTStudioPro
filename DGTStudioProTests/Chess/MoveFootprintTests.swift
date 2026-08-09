@@ -1,25 +1,10 @@
 import Testing
 @testable import DGTStudioPro
 
-/// Pins the two chess-core facts an eBoard move tracker depends on, framed
-/// the way the tracker sees the world — physical squares, not SAN.
-///
-/// A DGT board reports lift/place events on individual squares. To turn
-/// those into a logical `Move`, the tracker relies on:
-///
-///  1. **Footprint** — the exact set of squares a legal move changes must
-///     match what the board observes. This is non-trivial for en passant
-///     (the captured pawn lifts from a square *other* than the destination)
-///     and castling (two pieces move), which are the patterns most likely
-///     to be mis-recognised from raw lift/place events.
-///
-///  2. **Coordinate identity** — physical `(from, to)` plus, when relevant,
-///     the promoted piece must resolve to a *unique* legal move. If two
-///     distinct legal moves ever shared those coordinates the tracker
-///     could not disambiguate from board observation alone. This suite
-///     proves that the only source of `(from, to)` collision is promotion,
-///     which the board resolves physically (the player places the actual
-///     promoted piece).
+/// The two chess-core facts the board tracker depends on, framed as physical squares:
+/// **footprint** (the exact set of squares a legal move changes) and **coordinate uniqueness**
+/// (`(from, to, promotion?)` resolves to one legal move — else board observation could not
+/// disambiguate).
 @Suite("Move Footprint & Coordinate Identity")
 struct MoveFootprintTests {
 
@@ -227,11 +212,8 @@ struct MoveFootprintTests {
     }
 
     @Test func promotionPositionActuallyExercisesTheCollisionPath() throws {
-        // Guards the test above against passing vacuously: Position 5 must
-        // contain at least one (from,to) pair with all four promotion
-        // choices, otherwise "only promotions collide" proves nothing.
-        // (Position 4's a7 pawn is blocked and has no root promotions for
-        // White to move — the dxc8=Q/R/B/N fan-out lives in Position 5.)
+        // Guards against vacuous passing: Position 5 must contain a pair with all four promotion
+        // choices, or "only promotions collide" proves nothing.
         let state = try GameState.parsing(Chess.position5)
         let moves = state.legalMoves()
 

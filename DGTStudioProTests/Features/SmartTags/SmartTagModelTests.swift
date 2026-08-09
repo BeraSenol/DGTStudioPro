@@ -3,14 +3,8 @@ import Foundation
 import SwiftData
 @testable import DGTStudioPro
 
-/// The model half (`@MainActor` — realized `@Model`s): rules survive the
-/// store round-trip (the Codable-array-on-a-model storage is the one
-/// thing the pure suite can't witness), and the reborn defaults match
-/// what their enum ancestors matched.
-///
-/// Split from the former `SmartTagTests.swift`; the pure rule engine lives
-/// nonisolated in `TagRuleTests.swift`. Isolation is the seam — matching
-/// a suite's isolation to its subject is why these two can't share a file.
+/// The model half: rules survive the store round-trip (the one thing the pure suite can't
+/// witness), and the reborn defaults match their enum ancestors.
 @MainActor
 @Suite("Smart Tag — Model")
 struct SmartTagModelTests {
@@ -45,18 +39,8 @@ struct SmartTagModelTests {
         #expect(fetched.matchAll)
     }
     
-    /// Each default, semantically. The first three must match what their
-    /// enum ancestors matched (the old suite's contract, carried forward);
-    /// "Smothered Mates" has no ancestor and is pinned on its own terms — a
-    /// seeded tag whose rule was never exercised is a rule nobody has checked.
-    ///
-    /// **The clause "and this one is the only surface `SpecialCheckmate` has"
-    /// is struck** (7 Aug 2026). True at M4; false since 5 Aug, when the
-    /// Library's Checkmate Type column and Get Info both began rendering the
-    /// motif — the fourth species of stale claim, a sentence that was correct
-    /// when written and decayed when something adjacent shipped. What survives
-    /// is the narrower true version: this is the only place the seeded tag's
-    /// *rule* is exercised.
+    /// Each default semantically; "Smothered Mates" pinned on its own terms — this is the only
+    /// place the seeded tag's *rule* is exercised.
     @Test func defaultTagsMatchTheirAncestors() {
         let tags = Dictionary(
             uniqueKeysWithValues: SmartTag.defaultTags().map { ($0.name, $0) }
@@ -99,11 +83,8 @@ struct SmartTagModelTests {
         #expect(tags["Checkmate"]?.matches(smothered) == true)
     }
     
-    /// A deliberate change-detector. The seed fires **once ever** per install,
-    /// so a casual edit here silently changes what a fresh install gets and
-    /// nothing else would notice. Growing this list is a decision; having to
-    /// come back and edit this test is the decision being noticed. (M4 appended
-    /// "Smothered Mates" — appended, so the existing positions are undisturbed.)
+    /// A deliberate change-detector: the seed fires once ever, so a casual edit silently changes
+    /// what a fresh install gets.
     @Test func defaultNamesAndColorsAreStable() {
         let tags = SmartTag.defaultTags()
         #expect(tags.map(\.name) == ["Checkmate", "Timed", "First Round", "Smothered Mates"])

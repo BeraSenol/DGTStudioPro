@@ -2,17 +2,8 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// The rule engine (M-prs.5), nonisolated — `TagRule` evaluates pure
-/// `GameRecord`s, so the fixture-context idiom the old enum suite needed
-/// died with the enum. Pins every kind's comparisons, the recorded edge
-/// rules (empty text matches nothing, unknowns never match, either-seat
-/// player, case folding), and the any/all/zero combinator.
-///
-/// Split from the former `SmartTagTests.swift` so each suite mirrors its
-/// source file: the model half (`@MainActor`, realized `@Model`s) lives in
-/// `SmartTagModelTests.swift`. The isolation split is the reason they can't
-/// share a file comfortably — the same shape as
-/// `DGTSessionRecorderTests` / `DGTSessionRecordingTests`.
+/// The rule engine, nonisolated. Pins every kind's comparisons and the recorded edge rules:
+/// empty text matches nothing, unknowns never match, either-seat semantics.
 @Suite("Tag Rules")
 struct TagRuleTests {
     
@@ -86,20 +77,8 @@ struct TagRuleTests {
         #expect(TagRule(field: .opening, comparison: .notEquals, text: "French").matches(game) == false)
     }
 
-    /// **The stored raw value survived the 5 Aug 2026 rename**, which is the
-    /// only thing about it that could have broken anything.
-    ///
-    /// `Field` is `String, Codable` and its raw values are encoded into every
-    /// saved `SmartTag`'s rule blob. The case is spelled `checkmateType` now
-    /// and the raw value is still `"matePattern"`; letting the implicit value
-    /// follow the Swift name would have made every previously-saved rule
-    /// decode to nothing — silently, because D36′'s defaulting decoder is
-    /// designed to tolerate a missing key rather than fail loudly.
-    ///
-    /// Asserted on the literal deliberately. This is one of the few places a
-    /// hard-coded string is *correct*: the value is a persistence contract, so
-    /// the test's job is to fail if anyone "tidies" it into matching the case
-    /// name.
+    /// **The stored raw value survived the rename** — `"matePattern"` is encoded in every saved
+    /// tag's blob, and following the Swift name would silently drop the rule. On the literal, correctly.
     @Test func theCheckmateTypeFieldKeepsItsStoredRawValue() {
         #expect(TagRule.Field.checkmateType.rawValue == "matePattern")
     }
@@ -290,14 +269,8 @@ struct TagRuleTests {
         #expect(notBera.matches(record(white: nil, black: nil)) == false)
     }
 
-    /// D30′ — the decision the M1 documentation test
-    /// (`singleSubjectNotEqualsCurrentlyMatchesUnknowns`) existed to trip
-    /// on: unknowns never match, **negation included**, for the single
-    /// subjects too. An unresolved seat and a `""`/`"?"` event/site fail
-    /// `.notEquals` — "White is not X" means the white player is known and
-    /// isn't X. The half-resolved `.player` reading is unchanged by
-    /// decision: the one resolved seat satisfies the negation, the missing
-    /// seat abstains.
+    /// D30′: unknowns never match, negation included, for single subjects — the guard is
+    /// `.notEquals`-only.
     @Test func singleSubjectNotEqualsNeverMatchesUnknowns() {
         let notCarlsen = TagRule(field: .white, comparison: .notEquals, text: "carlsen")
         #expect(notCarlsen.matches(record(white: nil)) == false)

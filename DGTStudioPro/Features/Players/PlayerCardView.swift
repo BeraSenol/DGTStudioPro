@@ -27,9 +27,8 @@ internal struct PlayerMonogram: View {
     }
 }
 
-/// One labelled metric in a gallery preview's grid. Both galleries carried a
-/// byte-identical private `statCell` — the `PlayerMonogram` precedent: shared
-/// presentation for the Players/Rankings pair lives here, once.
+/// One labelled metric in a gallery preview's grid — both galleries carried byte-identical
+/// private copies.
 internal struct PlayerStatCell: View {
     
     internal let label: String
@@ -51,27 +50,8 @@ internal struct PlayerStatCell: View {
     }
 }
 
-/// The stat grid of a player preview — Games / Record / Win Rate, then
-/// Rating / Uncertainty / Mates, then First / Last Played. Extracted from
-/// `PlayersGalleryView` when the columns detail pane became its second host
-/// (the 2 Aug 2026 Finder-column redesign): the D48′ note this grid carried
-/// records the two retired galleries disagreeing on spacing and saying Wins
-/// twice, which is exactly the drift two private copies would reopen.
-/// Record's first component absorbs Wins here as it does in the inspector.
-///
-/// **Grown from five facts to eight on 8 Aug 2026, by request** ("more details
-/// in gallery view"), and grown here rather than in the gallery so its two
-/// hosts stay one grid — the columns detail widens with it, which is the
-/// parity invariant working in the direction it is meant to. The three new
-/// facts are the inspector profile's remaining zero-cost rows: Uncertainty
-/// reads off the `rating` already passed, First/Last Played off `stats`. What
-/// is deliberately *not* here is Rated Games — it needs the histories fold,
-/// which neither host receives, and a ninth fact is not worth threading a
-/// dictionary through two signatures for.
-///
-/// Uncertainty shows the house em dash for an unrated player where the
-/// inspector hides the row — a `Grid` cell that vanishes re-flows its
-/// neighbours mid-read, which a `List` row does not.
+/// The stat grid of a player preview — shared by the gallery and the columns detail pane.
+/// Rated Games is deliberately absent: it needs the histories fold, which neither host receives.
 internal struct PlayerStatsGrid: View {
 
     internal let stats: PlayerStats
@@ -100,18 +80,8 @@ internal struct PlayerStatsGrid: View {
     }
 }
 
-/// The podium tint for a ladder position: gold, silver, bronze, and nothing
-/// below third. `init?(rank:)` is the single statement of the podium's depth,
-/// so no surface can decide the top four are special.
-///
-/// The literals are mid-luminance on purpose. Metallic gold (#D4AF37) and
-/// silver (#C0C0C0) are near-white and disappear against a light window,
-/// while darkening them enough to read there turns them muddy in dark mode;
-/// these sit in the middle so one literal serves both appearances and no
-/// asset is needed. If per-appearance tuning is ever wanted, that is a colour
-/// set in the catalog — and the mapping stays an exhaustive `switch self`
-/// either way, the `BoardStyle` argument: a new case should be a compile
-/// error, not a blank swatch.
+/// Podium tint: gold, silver, bronze, nothing below third. `init?(rank:)` is the single
+/// statement of the podium's depth.
 internal enum RankMedal: String, CaseIterable, Identifiable, Sendable {
     case gold, silver, bronze
     
@@ -134,17 +104,8 @@ internal enum RankMedal: String, CaseIterable, Identifiable, Sendable {
         }
     }
     
-    /// The style for *any* rank on a **headline** surface — the medal on the
-    /// podium, `.tint` below it.
-    ///
-    /// Erased rather than `Color?` with an `.accentColor` fallback, because
-    /// the unmedalled badge has always been `.tint` and therefore follows a
-    /// host's `.tint()`; collapsing it to `.accentColor` would be a silent
-    /// behaviour change for every rank from fourth down.
-    ///
-    /// Used where a rank is *one large thing beside a name*: the card's badge,
-    /// the gallery's identity row, the columns detail's. See `tableStyle`
-    /// below for the dense case and why it differs.
+    /// Style for a rank on a **headline** surface — medal on the podium, `.tint` below. Erased
+    /// because the two branches return different style types.
     internal static func style(forRank rank: Int) -> AnyShapeStyle {
         if let medal = RankMedal(rank: rank) {
             AnyShapeStyle(medal.color)
@@ -153,21 +114,8 @@ internal enum RankMedal: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// The style for a rank in a **column** — the same podium colours,
-    /// `.secondary` below them (5 Aug 2026).
-    ///
-    /// **The two fallbacks differ on purpose, and the podium does not.** Gold,
-    /// silver and bronze come from `medal.color` in both, so the podium can
-    /// never be one colour in the table and another on a card — which is the
-    /// guarantee this type was created for. What diverges is everything from
-    /// fourth down, and it diverges because the surfaces are not doing the same
-    /// job: a headline shows *one* rank next to a name and `.tint` reads as
-    /// emphasis, while the table shows a *column* of them and a run of accent
-    /// blue down the leading edge is noise competing with the names beside it.
-    ///
-    /// Recorded rather than left as two call sites making different choices,
-    /// because "the ranks are blue in one view and grey in another" is exactly
-    /// the kind of thing that reads as a bug until someone finds the reason.
+    /// Style for a rank in a **column** — same podium colours, `.secondary` below. The fallbacks
+    /// differ on purpose; the podium must not: one colour everywhere or the table and cards disagree.
     internal static func tableStyle(forRank rank: Int) -> AnyShapeStyle {
         if let medal = RankMedal(rank: rank) {
             AnyShapeStyle(medal.color)
@@ -177,23 +125,9 @@ internal enum RankMedal: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-/// The ladder position as a chip.
-///
-/// **One caller since 5 Aug 2026** — the card, and through it the icons grid.
-/// This doc said "one rendering behind the icons badge and the table's Rank
-/// column" until the table's column became plain text: a capsule for ranks 1–3
-/// and a bare number below meant the column changed *shape* three rows in.
-/// The guarantee that sentence was protecting survives intact and moved down a
-/// level: the podium colours come from `RankMedal.color` in every surface, so
-/// gold is gold whether it is worn by a chip, a headline or a table cell.
-///
-/// Kept rather than inlined into the card. A chip is a real thing a card wants
-/// and a second host is plausible; what is *not* plausible is a second host
-/// that wants it at a different colour, which is the only failure this type
-/// exists to prevent.
-///
-/// The outer inset deliberately stays with the caller: the card needs it to
-/// hold the chip off its corner, and a table cell must not inherit it.
+/// The ladder position as a chip — one caller (the card) since the table went plain text; kept
+/// because a second host wanting a *different colour* is the failure this type prevents.
+/// The outer inset stays with the caller: the card needs it, a table cell must not inherit it.
 internal struct RankBadge: View {
     
     internal let rank: Int
@@ -209,24 +143,17 @@ internal struct RankBadge: View {
     }
 }
 
-/// The Players analogue of `LibraryGameCardView`, used by the icons grid,
-/// the columns details, and the gallery filmstrip. `rank` (M-prs.4) earns
-/// the badge — passed by the Players hosts since D48′ put the ladder in
-/// every mode; before the merge it was Rankings' distinguishing input.
-/// Players have no destructive actions (D9′ — the registry is
-/// machine-managed); the one non-selection affordance is M-prs.6's
-/// optional "Show in Library" context menu, threaded from the
-/// destinations so the card stays sidebar-unaware.
+/// The Players analogue of `LibraryGameCardView` (icons grid, columns detail, gallery
+/// filmstrip); `rank` earns the badge.
 internal struct PlayerCardView: View {
     
     // MARK: Stored Properties
     let stats: PlayerStats
     let isSelected: Bool
     let onSelect: () -> Void
-    /// Ladder position; nil hides the badge (previews, rank-free contexts).
+    /// Ladder position; nil hides the badge.
     var rank: Int? = nil
-    /// Presents the "Show in Library" context menu when set (M-prs.6).
-    /// Optional so previews and any selection-only context stay unchanged.
+    /// Presents "Show in Library" when set; optional so previews stay unchanged.
     var onShowInLibrary: (() -> Void)? = nil
     
     // MARK: Body
@@ -247,14 +174,8 @@ internal struct PlayerCardView: View {
             
             Text(stats.name)
                 .font(.callout)
-            // Capped, no longer reserved (Bera, 1 Aug — reversing the
-            // earlier call this comment used to justify). The reservation
-            // bought uniform card heights across the two differently-sorted
-            // destinations, at the price of a blank line under every
-            // one-line name — which is most of them — and the empty band
-            // read worse than the ragged rows it prevented. Accepted: the
-            // same player can be two heights in two grids; the grid's own
-            // row alignment absorbs it.
+            // Capped, no longer reserved (Bera's reversal): uniform card heights bought a blank line under
+            // every single-line name.
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .padding(.vertical, 2)
@@ -272,21 +193,12 @@ internal struct PlayerCardView: View {
         .padding(.vertical, 8)
         .contentShape(Rectangle())
         .onTapGesture(perform: onSelect)
-        // Same trap as `LibraryGameCardView`: without `.combine`, macOS
-        // exposes only the inner texts and the identifier never lands on
-        // a tappable element.
+        // Without `.combine`, macOS exposes only the inner texts — the identifier never lands on a
+        // tappable element.
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier(AccessibilityID.playerCard(stats.name))
-        // The conditional Show in Library — and the reason Get Info sits
-        // outside it — moved into `PlayerActionsMenu`, which is where all
-        // three Players hosts now get their menu. This card is the host that
-        // *had* the conditional, so it is the one whose shape the shared type
-        // had to grow an optional to keep.
-        //
-        // The closure is adapted rather than re-typed: a card is handed a
-        // no-argument action because it draws exactly one player and the host
-        // already closed over which. Widening it to take a key would make
-        // every caller pass back the id the card was built from.
+        // The conditional Show in Library moved into `PlayerActionsMenu` — this card is the host whose
+        // shape the shared type absorbed.
         .contextMenu {
             PlayerActionsMenu(
                 key: stats.id,
@@ -321,9 +233,8 @@ internal struct PlayerCardView: View {
     .padding()
 }
 
-/// Monogram edge cases — the initials derivation is the interesting part:
-/// single names, diacritics, comma-form display names, and a very long name
-/// that must not blow the card's width.
+/// Monogram edge cases: single names, diacritics, comma forms, and a very long name that must
+/// not blow the card's width.
 #Preview("Name Edge Cases") {
     let names = ["Bera", "Magnus Carlsen", "Ding Liren",
                  "Nepomniachtchi, Ian", "Šarić, Ivan", "X"]

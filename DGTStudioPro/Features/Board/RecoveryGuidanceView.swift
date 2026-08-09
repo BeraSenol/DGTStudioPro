@@ -1,19 +1,8 @@
 import SwiftUI
 
-/// The square-by-square restore checklist shown under the status card in
-/// the sidebar's `SessionSidebarPanel` while the session is `recovering`
-/// (M6.2; re-homed by D15′ — the panel owns outer spacing now). Pure
-/// presentation: the panel hands
-/// in a freshly computed `RecoveryGuidance` on every physical board change,
-/// so rows disappear live as the player fixes squares. Discard Game remains
-/// available in the inspector as the escape hatch — this panel is guidance,
-/// not a dialog (Decision #1: restoring the position is the only
-/// resolution, so there is nothing to confirm).
-///
-/// Also the home of "Export Diagnostics…" (M6.3), wiring the long-built
-/// `DGTSessionLog.exportViaSavePanel()`: a real desync is exactly the
-/// moment the session log is worth saving, so the affordance lives here
-/// rather than in a buried menu.
+/// The square-by-square restore checklist under the status card while recovering. Pure
+/// presentation over `RecoveryGuidance`; a checklist, not a dialog — restoring the position is
+/// the only resolution (Decision #1).
 internal struct RecoveryGuidanceView: View {
     
     // MARK: Stored Properties

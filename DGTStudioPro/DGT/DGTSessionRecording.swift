@@ -2,26 +2,9 @@ import Foundation
 
 // MARK: Recording
 
-/// An immutable, `Codable` recording of a live board session: the ordered
-/// stream of physical-board snapshots, each stamped with a millisecond offset
-/// from the session's start, plus the board's identity.
-///
-/// Capture one from real hardware via `DGTConnection`'s recorder, then replay
-/// it through the pure analysis below to develop and regression-test move
-/// reconstruction / recovery against genuine board behavior — no board required
-/// after the first capture. This complements `DGTBoardSimulator` (which
-/// *fabricates* lift/place sequences); this replays *recorded* ones.
-///
-/// Snapshots are captured on every physical change (each field update), so a
-/// recording preserves the intermediate states of a slide and any sensor
-/// flicker — exactly the noise reconstruction must tolerate. Which snapshots the
-/// live session would actually have evaluated (the 300 ms debounce) is
-/// recomputed at replay from the timestamps via `settledBoards(quiescence:)`, so
-/// the quiescence window can be re-tuned offline without re-capturing.
-///
-/// Pure value type: no logging, no I/O beyond the explicit `Codable`/export
-/// helpers. It reads the (also pure) chess and reconstruction types; it never
-/// touches `DGTLiveSession` or the serial layer.
+/// Immutable `Codable` recording of a live board session: timestamped physical-board snapshots
+/// plus the board identity. Captured from hardware, replayed deterministically for regression —
+/// pure; reads the chess/reconstruction types, never the session.
 internal struct DGTSessionRecording: Codable, Equatable {
     
     /// One captured physical-board snapshot.
@@ -67,11 +50,8 @@ internal struct DGTSessionRecording: Codable, Equatable {
 
 extension DGTSessionRecording {
     
-    /// The board snapshots the live session would have *settled* on: each entry
-    /// followed by a quiescence-length gap with no further change, plus the
-    /// final snapshot. Reproduces the live 300 ms debounce from the recorded
-    /// timestamps — deterministically, with no waiting — so intermediate
-    /// mid-move states are filtered out exactly as the real timer filters them.
+    /// The snapshots the live session would have *settled* on — reproduces the 300 ms debounce from
+    /// recorded timestamps, deterministically.
     internal func settledBoards(quiescence: Duration = .milliseconds(300)) -> [Position] {
         let gap = quiescence.inMilliseconds
         var settled: [Position] = []
@@ -90,19 +70,9 @@ extension DGTSessionRecording {
         internal let outcome: DGTReconstruction
     }
     
-    /// Walks the settled snapshots through the pure reconstructor starting from
-    /// `initialState`, advancing the game on each committed `.move`, and returns
-    /// the per-snapshot outcome.
-    ///
-    /// This is the replay that answers the hardware session's central question —
-    /// *does reconstruction hold up against this real game, or does sensor noise
-    /// trip a spurious `.unresolved` (false desync)?* The state advances only on
-    /// `.move`, mirroring the live session: `.castlingInProgress` and
-    /// `.correctable` don't advance (the completing `.move` lands on a later
-    /// settled snapshot), and a genuine fumble shows up as `.unresolved`.
-    ///
-    /// Pure — no `DGTLiveSession`, no timer, no I/O. Also reusable behind a
-    /// future in-app "replay this log" debug view.
+    /// Walks the settled snapshots through the pure reconstructor from `initialState`, advancing
+    /// only on committed `.move` — the field-desync replay ("would this recording trip a false
+    /// desync?").
     internal func reconstructions(
         from initialState: GameState,
         quiescence: Duration = .milliseconds(300)
@@ -140,9 +110,7 @@ extension DGTSessionRecording {
 
 // MARK: Recorder (mutable accumulator)
 
-/// Builds a `DGTSessionRecording` from live board changes. Owned (optionally) by
-/// `DGTConnection`, which calls `record(_:)` on each physical change. MainActor
-/// only — it's driven from the connection, which is `@MainActor`.
+/// Accumulates a recording from live changes; MainActor — driven from the connection.
 @MainActor
 internal final class DGTSessionRecorder {
     
@@ -151,26 +119,15 @@ internal final class DGTSessionRecorder {
     private let recordedAt = Date.now
     private(set) internal var entries: [DGTSessionRecording.Entry] = []
     
-    /// Stamped onto the finished recording; set from the board's reported
-    /// identity when recording stops (identity arrives during the handshake,
-    /// possibly after recording began).
+    /// Stamped when recording stops — identity arrives during the handshake, possibly late.
     internal var identity = DGTSessionRecording.Identity()
     
     internal init() {
         start = clock.now
     }
     
-    /// Hard cap on retained snapshots — the recorder's half of M10.2's
-    /// growth-bound answer (the log's half is `DGTSessionLog.maxEntries`).
-    /// A full game with handling noise is a few hundred snapshots; 10 000
-    /// bounds a *forgotten* recording (started from Diagnostics and left
-    /// running across a marathon session) at well under a megabyte while
-    /// keeping multi-game headroom. Oldest entries drop first: the
-    /// stop-and-export workflow debugs the *newest* window, and absolute
-    /// `offsetMillis` values stay valid under a dropped prefix — settle
-    /// analysis reads gaps between retained neighbours, not a baseline.
-    /// Rejected: a `dropped` count on the finished recording; it would
-    /// change the JSON schema for a diagnostic nicety.
+    /// Hard cap — the recorder's half of the growth bound (the log's is `maxEntries`). A forgotten
+    /// marathon recording stays under a megabyte; replay reads gaps between retained neighbours.
     private let maxEntries = 10_000
     
     internal func record(_ board: Position) {
@@ -188,8 +145,7 @@ internal final class DGTSessionRecorder {
 // MARK: Duration → milliseconds
 
 extension Duration {
-    /// Whole milliseconds in this duration (truncating). `Duration.components`
-    /// gives `(seconds, attoseconds)`; 1 ms = 1e15 attoseconds.
+    /// Whole milliseconds (truncating); 1 ms = 1e15 attoseconds.
     fileprivate var inMilliseconds: Int {
         let parts = components
         return Int(parts.seconds * 1000 + parts.attoseconds / 1_000_000_000_000_000)
@@ -204,14 +160,8 @@ import UniformTypeIdentifiers
 
 extension DGTSessionRecording {
     
-    /// Presents an `NSSavePanel` and writes the recording as JSON. Returns the
-    /// URL written, or nil if the user cancelled. Mirrors the session log's
-    /// save-panel affordance in shape but deliberately *not* in error
-    /// contract: this one throws on encode/write failure, because the caller
-    /// (the M8.3 Diagnostics menu) has somewhere better to put the failure —
-    /// the session log's timeline (flag C) — while a recording has no
-    /// timeline of its own. The log's export swallows-and-Console-logs for
-    /// the mirrored reason; see its doc comment.
+    /// Save panel + JSON write. Deliberately throws (unlike the log's panel): the caller shows the
+    /// failure.
     @MainActor
     @discardableResult
     internal func exportViaSavePanel() throws -> URL? {

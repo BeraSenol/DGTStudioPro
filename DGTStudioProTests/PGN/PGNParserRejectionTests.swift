@@ -1,20 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The parser's *rejection* contract — the mirror of
-/// `FENParsingRejectionTests` for the PGN door.
-///
-/// Born from the M9 coverage audit (July 2026): the three specialized
-/// parser suites (dates, line endings, `[%eval]`) exercised the happy
-/// scanner thoroughly, but all three `PGNParser.Error` throw paths and the
-/// small tag helpers (`parseTag`, `parseResult`, `parseRound`,
-/// `parseTimeControl`) had zero direct witnesses — every red region the
-/// coverage pass showed in the *live* pipeline traced back here. (The same
-/// audit retired the superseded `parseMoves`/`strip` pipeline outright, so
-/// this suite witnesses `parseMovesAndEvaluations` — the only movetext
-/// scanner — plus the tag layer.)
-///
-/// Nonisolated: `PGNParser` is a pure static enum.
+/// The parser's rejection contract — `FENParsingRejectionTests`' mirror for the PGN door.
 @Suite("PGN Parser — Rejection and Tag Edges")
 struct PGNParserRejectionTests {
     
@@ -127,25 +114,9 @@ struct PGNParserRejectionTests {
         #expect(pgn.moves == ["e4", "f5", "Qh5+", "g6"])
     }
 
-    /// The `#` case of the sibling above, split out because a **false claim
-    /// rested on it for a week** and the sibling was green throughout.
-    ///
-    /// `GameClassification` documented its `contains("#")` gate as necessary
-    /// "because annotations survive import, so `Qd2#!` claims mate", the
-    /// instructions carried a matching open item, and `PlayerStatsTests`
-    /// reproduced the impossible record as if it were a bug — all while the
-    /// test one function up proved annotations are stripped. **The check and
-    /// the claim simply never met**, which is a species worth naming: not an
-    /// unchecked claim, but one already contradicted by a passing test nobody
-    /// had connected to it. The sibling used `+`, so nothing forced the
-    /// connection; this one uses `#` and says what follows from it.
-    ///
-    /// What follows: `GameRecord.endedInMate`'s `hasSuffix("#")` and the
-    /// classifier's `contains("#")` **cannot disagree on a stored game**,
-    /// because no writer can put `#` anywhere but last — this door strips
-    /// annotations, and the other two store canonical `san(for:)` output.
-    /// Delete `stripAnnotations`, or add a writer that skips it, and this goes
-    /// red rather than the divergence quietly becoming real.
+    /// The `#` case, split out because a false claim rested on it for a week: `!`/`?` are stripped
+    /// at import (`flushToken` appends cleaned tokens only), so `hasSuffix("#")` and `contains("#")`
+    /// **cannot disagree on a stored game** — the divergence is only reachable through the editor door.
     @Test func annotationsDoNotSurviveImport() throws {
         let pgn = try PGNParser.parse(pgnText(movetext: "1. f3 e5 2. g4 Qh4#! 0-1"))
 

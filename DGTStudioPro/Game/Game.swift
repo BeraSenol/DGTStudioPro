@@ -1,22 +1,8 @@
 import Foundation
 import os
 
-/// Live, ephemeral working model for a single chess game.
-///
-/// Built on top of a persisted ``PGN`` (the archive form): walks the move
-/// list once at construction time and caches the per-ply ``GameState`` and
-/// ``PieceTracker`` so the inspector, board view, and keyboard scrubber
-/// can read "everything at ply N" in O(1).
-///
-/// `Game` is not persisted. SwiftData stores `PGN`; the cumulative state
-/// list lives in memory only and is rebuilt cheaply each time a game is
-/// opened. Per the Phase 8 design locks: SwiftData rows stay lean (no
-/// derived-data bloat), and all scrub navigation — forward, backward, or
-/// random jump — is constant-time.
-///
-/// The default scrub position is end-of-game, matching the convention
-/// established by Lichess, Chess.com, and ChessBase: open a game, see the
-/// final state, scrub backward to study.
+/// Ephemeral working model over a persisted `PGN`: walks the moves once at construction,
+/// caches per-ply `GameState`s, and scrubs. Not persisted — rebuilt cheaply per open.
 @Observable
 @MainActor
 internal final class Game {
@@ -28,10 +14,7 @@ internal final class Game {
     // MARK: Errors
     
     internal enum BuildError: Error, Equatable {
-        /// A SAN string in `pgn.moves` failed to parse against the state
-        /// reached after the prior moves. The index, original SAN, and
-        /// underlying parser error are carried so callers can surface
-        /// "move 14 ('Bxd5'): no legal move matches" diagnostics.
+        /// A SAN failed to parse; index, SAN and parser error carried for "move 14 ('Bxd5'): …" diagnostics.
         case invalidMove(index: Int, san: String, underlying: SANParseError)
     }
     
@@ -41,48 +24,34 @@ internal final class Game {
     
     // MARK: Cached State Walk
     
-    /// State at each ply boundary. `states[0]` is the starting position
-    /// (no moves played); `states[i]` is the state reached after applying
-    /// `moves[i - 1]`. Length is always `pgn.moves.count + 1`.
+    /// `states[0]` is the start; `states[i]` follows `moves[i-1]`. Always `moves.count + 1` long.
     internal let states: [GameState]
     
-    /// Mirror of `states` for piece-identity tracking. Indexing matches.
-    /// Used by the board view to keep animation identity stable across
-    /// promotions and castling.
+    /// Mirror of `states` for piece-identity tracking — stable animation identity across promotions
+    /// and castling.
     internal let trackers: [PieceTracker]
     
-    /// The parsed `Move` objects produced by walking each SAN string.
-    /// `moves[i]` is the move played between `states[i]` and `states[i + 1]`.
-    /// Length is `pgn.moves.count`.
+    /// Parsed moves; `moves[i]` sits between `states[i]` and `states[i+1]`.
     internal let moves: [Move]
     
     // MARK: Scrub State
     
-    /// Current ply index in `0 ... moves.count`. 0 = before any move is
-    /// played; `moves.count` = after the final move (default).
+    /// Current ply in `0...moves.count`; 0 = before any move, end = default.
     internal private(set) var currentPly: Int
     
     // MARK: Computed Properties
     
     internal var currentState: GameState { states[currentPly] }
     internal var currentTracker: PieceTracker { trackers[currentPly] }
-    
-    // `currentFEN` was deleted here (3 Aug 2026 audit): its doc named two
-    // consumers — "copy FEN" and engine handoff — and neither ever existed;
-    // no app code read it (`LiveGame` carried the same dead twin). The
-    // spelling at any future call site is `FEN(currentState)`; re-adding
-    // the convenience needs a reader first — the `Player.createdAt` rule.
 
-    /// The last move played to reach `currentState`, or `nil` at ply 0.
-    /// The board view uses this for the "last move" highlight.
+    /// The last move reaching `currentState`, or nil at ply 0 — the last-move highlight.
     internal var lastMove: LastMove? {
         guard currentPly > 0 else { return nil }
         let move = moves[currentPly - 1]
         return LastMove(from: move.from, to: move.to)
     }
     
-    /// Square of the side-to-move's king when in check; `nil` otherwise.
-    /// Drives the king-in-check highlight on the board.
+    /// The side-to-move king's square when in check — the check highlight.
     internal var checkSquare: Square? {
         guard currentState.isInCheck else { return nil }
         return currentState.position.kingSquare(for: currentState.activeColor)
@@ -91,20 +60,8 @@ internal final class Game {
     internal var canAdvance: Bool { currentPly < moves.count }
     internal var canRetreat: Bool { currentPly > 0 }
     
-    /// The evaluation of the position at `currentPly`, or nil at the start
-    /// and for a game with no analysis.
-    ///
-    /// The off-by-one is the contract worth naming: `PGN.evaluations[i]`
-    /// scores the position reached *after* `moves[i]`, while `currentPly`
-    /// counts positions — so ply *n* reads index *n − 1*, and ply 0 has no
-    /// entry at all, being the one position no move produced. The
-    /// empty-versus-full array shapes are `PGN.evaluation(atPly:)`'s job.
-    ///
-    /// Consumed since M3 by the vertical evaluation bar
-    /// (`BoardDestination.content` feeds it to `EvaluationBarReading`) —
-    /// built with the walk it belongs to rather than re-derived at the bar,
-    /// exactly as planned when this sat caller-less in the
-    /// `BoardView.selectedSquare` category.
+    /// Evaluation at `currentPly`, or nil. The off-by-one is the contract: `evaluations[i]` scores
+    /// the position *after* `moves[i]`, so this reads `currentPly - 1`.
     internal var currentEvaluation: Evaluation? {
         guard currentPly > 0 else { return nil }
         return pgn.evaluation(atPly: currentPly - 1)
@@ -112,11 +69,8 @@ internal final class Game {
     
     // MARK: Initializer
     
-    /// Builds a `Game` from a `PGN` by walking the move list and caching
-    /// every intermediate state. Throws on the first SAN string that
-    /// fails to parse — the caller should treat that as corrupt PGN data
-    /// (the import path catches its own malformed cases earlier; reaching
-    /// here means the stored row diverged from the chess core's rules).
+    /// Walks the move list, caching every state; throws on the first unparseable SAN — the stored
+    /// row diverged from the core's rules.
     internal init(pgn: PGN) throws(BuildError) {
         self.pgn = pgn
         
@@ -184,8 +138,7 @@ internal final class Game {
         currentPly -= 1
     }
     
-    /// Jumps to an arbitrary ply, clamping to the valid range. Used by
-    /// `MoveHistoryView` tap-to-jump and (Phase 11) keyboard home/end.
+    /// Jumps to a ply, clamped.
     internal func jump(to ply: Int) {
         currentPly = max(0, min(ply, moves.count))
     }

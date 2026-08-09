@@ -3,14 +3,7 @@ import Testing
 
 @testable import DGTStudioPro
 
-/// D45′ — the collapse store's contract, pinned rather than trusted for
-/// `SleepInhibitorPreferenceTests`' reason: the default and the persistence
-/// are the whole of what this type promises, and both are the kind of thing
-/// that looks obviously right in a diff and is silently wrong on next launch.
-///
-/// `@MainActor` because the subject is, per the standing suite-isolation rule.
-/// That is the ordinary case here and not a load-bearing annotation — compare
-/// `RosterSummaryTests`, where the *non*-isolation is what does the pinning.
+/// D45′ — the collapse store's contract: the default and the persistence are the whole promise.
 @MainActor
 @Suite("Inspector section collapse")
 internal struct InspectorSectionCollapseTests {
@@ -28,12 +21,8 @@ internal struct InspectorSectionCollapseTests {
 
     // MARK: Default
 
-    /// Sections default open, and the representation is what guarantees it:
-    /// an absent key decodes to the empty set, so there is no `?? true` to
-    /// keep in step with a second reader. This is the assertion that would
-    /// fail if someone ever "improved" the store to hold the *expanded*
-    /// sections instead — at which point a fresh install would open with
-    /// every inspector folded shut.
+    /// Sections default open via the representation: an absent key decodes to the empty set — no
+    /// `?? true` to keep in step.
     @Test func absentKeyLeavesEverySectionOpen() throws {
         try withScratchDefaults { defaults in
             let collapse = InspectorSectionCollapse(defaults: defaults)
@@ -173,11 +162,8 @@ internal struct InspectorSectionCollapseTests {
         }
     }
 
-    /// Raw values are the stored form, so they must be distinct — synthesised
-    /// ones would be by construction, but these are hand-written precisely so
-    /// a case rename cannot reach the store, and hand-written means two cases
-    /// *can* collide. This is the one check that a compiler does not do for
-    /// us here.
+    /// Raw values are stored form and hand-written (so a rename can't reach the store), which means
+    /// two *can* collide — the one check the compiler doesn't do.
     @Test func everySectionHasADistinctStoredKey() {
         let keys = Set(InspectorSection.allCases.map(\.rawValue))
         #expect(keys.count == InspectorSection.allCases.count)

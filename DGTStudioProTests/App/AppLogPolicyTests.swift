@@ -1,21 +1,8 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The logging gate (D63′).
-///
-/// **Nonisolated deliberately** — `AppLog` and `TestHost` are namespaces over
-/// pure functions, and a suite that needed the main actor would mean one of
-/// them had acquired isolation it has no use for. The D44′ shape: the suite is
-/// the compile-time witness.
-///
-/// **Every test here drives the environment as a parameter rather than reading
-/// the process's own, and that is the whole point.** `AppLog.isEnabled` and
-/// `TestHost.isActive` are constants whose value is fixed by the fact that a
-/// test is running: the first is always `false` here and the second always
-/// `true`. Asserting them is the "check that could never fail" shape this
-/// project keeps cataloguing — it would pass forever while exercising one arm
-/// of a two-arm decision. The pure twins exist so the *other* arm, the one a
-/// real launch takes, is reachable from a place where it could come out wrong.
+/// The logging gate (D63′). Nonisolated; the pure twins exist because the constants are fixed
+/// in any given process — only the parameterized forms make the other arm reachable.
 @Suite("App log policy")
 struct AppLogPolicyTests {
 
@@ -38,11 +25,8 @@ struct AppLogPolicyTests {
         #expect(TestHost.isActive(in: [variable: "/tmp/whatever"]))
     }
 
-    /// And the live constant agrees with the pure function about the process
-    /// this suite is actually running in. The one assertion here that *is*
-    /// one-armed, kept because it is what ties the testable spelling to the
-    /// shipped one — without it, the pure function could be correct while the
-    /// constant read some other variable entirely.
+    /// The live constant agrees with the pure probe about *this* process — the one one-armed
+    /// assertion, kept because it ties the testable spelling to the shipped one.
     @Test func theShippedConstantMatchesThePureProbe() {
         #expect(TestHost.isActive)
     }
@@ -60,11 +44,7 @@ struct AppLogPolicyTests {
         #expect(AppLog.isEnabled(in: [variable: "/tmp/whatever"]) == false)
     }
 
-    /// `DGT_LOG=1` re-arms it, and it is checked *before* the host probe —
-    /// which is the only ordering that makes the escape hatch usable, since
-    /// the situation it exists for is precisely the one the host probe vetoes.
-    ///
-    /// Suppressing diagnostics is only a defensible trade while this passes.
+    /// `DGT_LOG=1` outranks the host probe — the only ordering that makes the escape hatch usable.
     @Test func theEscapeHatchOutranksTheTestHost() {
         let underTest = [
             "XCTestConfigurationFilePath": "/tmp/whatever",
@@ -88,12 +68,8 @@ struct AppLogPolicyTests {
 
     // MARK: The door
 
-    /// Suppressed means **nil**, not a logger that discards.
-    ///
-    /// That distinction is the feature: optional chaining short-circuits the
-    /// whole postfix expression, so a suppressed call never interpolates its
-    /// message. A discarding logger would still pay for every string in a
-    /// 986-test run.
+    /// Suppressed means **nil**, not a discarding logger: optional chaining short-circuits, so a
+    /// suppressed call never interpolates.
     @Test func aSuppressedCategoryHasNoLogger() {
         #expect(AppLog.logger(.dgt, enabled: false) == nil)
     }
@@ -110,24 +86,14 @@ struct AppLogPolicyTests {
 
     // MARK: Categories
 
-    /// Raw values are distinct, which is the one thing the compiler cannot
-    /// check about hand-written raw values — the `InspectorSection` lesson.
-    /// Two categories sharing a string would silently merge two subsystems in
-    /// Console, and the symptom would be a `log stream` filter returning more
-    /// than it should, which reads as "chatty" rather than "broken".
+    /// Raw values are distinct — the one thing the compiler cannot check about hand-written ones.
     @Test func everyCategoryHasADistinctRawValue() {
         let raws = AppLog.Category.allCases.map(\.rawValue)
         #expect(Set(raws).count == raws.count)
     }
 
-    /// The three categories the manual-check list names by string are still
-    /// spelled that way.
-    ///
-    /// Asserted on literals deliberately, which is rare and correct here: a
-    /// written procedure says to run `log stream --predicate 'category ==
-    /// "uci"'` against a live board, and nothing else in the app would notice
-    /// if that string moved. This is the only place that check can fail before
-    /// somebody is standing at the board with a cable in their hand.
+    /// The three categories the manual checks name by string keep their spelling — asserted on
+    /// literals, rare and correct: the check's runner is a person at a Console.
     @Test func theCategoriesNamedInManualChecksKeepTheirSpelling() {
         #expect(AppLog.Category.uci.rawValue == "uci")
         #expect(AppLog.Category.eco.rawValue == "eco")

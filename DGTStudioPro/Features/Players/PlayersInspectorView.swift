@@ -1,11 +1,8 @@
 import SwiftData
 import SwiftUI
 
-/// The player profile (M-prs.3; absorbed the Rankings inspector in D48′):
-/// pure-value inputs — the ranked row and rating history arrive computed;
-/// only the recent-games list carries models, for the `openWindow` handle.
-/// One profile grid with each fact stated once (the old pair said Wins three
-/// ways between them), then the rating trend, then recent games.
+/// The player profile (absorbed the Rankings inspector, D48′): pure-value inputs; only the
+/// recent-games list carries models, for the `openWindow` handle. One grid, each fact once.
 internal struct PlayersInspectorView: View {
 
     // MARK: Stored Properties
@@ -13,29 +10,9 @@ internal struct PlayersInspectorView: View {
     internal let history: [Glicko1.Sample]
     internal let recentGames: [PGN]
 
-    /// How many players the selection holds. `ranked` arrives nil for empty
-    /// *and* plural selections, so without this the view cannot tell "select
-    /// someone" from "you selected five people". Defaulted so previews read
-    /// unchanged; the destination always passes it.
+    /// Selection count: `ranked` arrives nil for empty *and* plural, so this tells "select someone"
+    /// from "you selected five".
     internal var selectionCount: Int = 0
-
-    // The header's three controls left one at a time — D40′ took Delete to the
-    // toolbar, D52′ took Merge and the ellipsis menu holding it, M10 took the
-    // pencil to Get Info — and `onRename` outlived all of them, surviving D52′
-    // documented as "the one left" and M10 as the seam Get Info would plug
-    // into. The 4 Aug review found it wired to nothing from either end. The
-    // lesson is not that keeping a seam is wrong: a seam with no caller and no
-    // *test* is indistinguishable from dead code, and only a sentence separated
-    // them. What is left here is a chevron.
-    //
-    // **Delete is deliberately not here (D40′)**, and this outlives the property
-    // it was attached to. M5's per-player Delete was guarded by
-    // `recentGames.isEmpty`, which could never be true: this view is only handed
-    // rows the stats index emitted, the index folds `GameRecord`s, and a
-    // record's sides come from resolved links — so every selectable player has
-    // a game. Orphans, the only rows the store's delete accepts, appear in no
-    // view mode. Any future player-scoped operation belongs on the toolbar or
-    // in Get Info, never gated on the *selected* player lacking games.
 
     // MARK: Body
     internal var body: some View {
@@ -68,8 +45,7 @@ internal struct PlayersInspectorView: View {
         )
     }
 
-    /// The counting variant — the Library inspector's shape and symbol, so
-    /// every "you selected many" surface speaks one vocabulary.
+    /// The counting variant — the Library inspector's shape and symbol, one vocabulary.
     private var multiSelectionState: some View {
         InspectorEmptyState(
             title: "\(selectionCount) Players Selected",
@@ -87,33 +63,18 @@ private struct ProfileSection: View {
     let ranked: RankedPlayer
     let ratedGames: Int
 
-    /// `.playerProfile` — the surviving identity of the D48′ merge.
-    /// `.rankingProfile` is retired from `InspectorSection` with the
-    /// destination that owned it: the two grids stopped being different
-    /// content the moment they became one grid, so keeping both cases would
-    /// have minted two names for one section. A stored collapse under the
-    /// retired raw value evicts on the next write, per D45′'s designed cost.
-    ///
-    /// One control in the header now: the chevron. It was three (chevron,
-    /// pencil, ellipsis menu) at M5, two after D52′ retired merge, and one
-    /// after M10 moved rename to Get Info. The "chevron leads so the verb
-    /// stays rightmost" rule is not gone — it is `InspectorSectionHeader`'s,
-    /// and it governs the Library's PGN header, which is where the app's two
-    /// remaining header verbs sit.
+    /// `.playerProfile` — the surviving identity of the D48′ merge; a stored collapse under the
+    /// retired raw value evicts on the next write (D45′'s designed cost).
     var body: some View {
         CollapsibleSection(.playerProfile, title: ranked.stats.name) {
-            // Rank leads because it is what the destination sorts by
-            // (D11′); Record absorbs the old separate Wins row — the
-            // RankingsInspectorView Wins-twice open item, closed by
-            // deleting the duplication rather than the row.
+            // Rank leads (the default sort, D11′); Record absorbs the old separate Wins row.
             LabeledContent("Rank", value: "#\(ranked.rank)")
             LabeledContent("Games", value: "\(ranked.stats.games)")
             LabeledContent("Record", value: "\(ranked.stats.wins)–\(ranked.stats.draws)–\(ranked.stats.losses)")
             LabeledContent("Win Rate", value: ranked.stats.winRate.formatted(.percent.precision(.fractionLength(0))))
             LabeledContent("Rating", value: ranked.rating?.displaySummary ?? "Unrated")
             if let rating = ranked.rating {
-                // The deviation IS the honesty of the number above —
-                // surface it instead of hiding it in the provisional flag.
+                // The deviation IS the honesty of the number above — surfaced, not hidden in the provisional flag.
                 LabeledContent("Uncertainty", value: "±\(Int(rating.deviation.rounded()))")
             }
             LabeledContent("Rated Games", value: "\(ratedGames)")
@@ -121,74 +82,15 @@ private struct ProfileSection: View {
             LabeledContent("First Played", value: RosterSummary.displayDate(ranked.stats.firstPlayed))
             LabeledContent("Last Played", value: RosterSummary.displayDate(ranked.stats.lastPlayed))
         } actions: {
-            // The player's name is the title above — not "Player Profile" — for
-            // the reason it always was: the destination already says what kind
-            // of thing this is, and the header is the one place that can say
-            // *which*.
-            //
-            // The lone D26′ pencil, its one fixed meaning intact (edit *this*
-            // thing's name). The ellipsis menu that used to sit beside it
-            // existed for exactly one item — Merge Into… — after D40′ took
-            // Delete out of it; when D52′ removed merge, the menu had nothing
-            // left to hold and went too. If a second player-scoped verb ever
-            // arrives, the two-control precedent lives in the Library's
-            // PGN header, not here.
-            // The pencil is gone (M10). Rename is Get Info's — the Players
-            // instance of one verb the Library and Board also have, not a
-            // pencil rehomed, which is what makes retiring it a generalization
-            // rather than a removal.
-            //
-            // The `onRename` seam that survived here "for the length of one
-            // pass" is gone too, and the deadline its comment set was met the
-            // way deadlines should be: by the door existing. `GetInfoWindow`'s
-            // player form carries the field, the `PGNStore.retag` call and
-            // D39′'s refusal alert. Nothing routes through this header any
-            // more, so this slot is empty rather than merely quiet.
+            // The player's name is the title — the destination says what kind of thing this is; the header
+            // says *which*.
         }
-        // Stays on the section, not the header, so it named what the flow
-        // tests looked for. Collapsing hides the rows and not this — the
-        // seeded run had an empty collapsed set, so those tests saw the
-        // section open regardless.
-        //
-        // Closed UNRESOLVED (D51′). Three flow tests failed here with the
-        // pencil and the menu not resolving by identifier while this
-        // identifier resolved fine. The suite was deleted 3 Aug 2026 before
-        // the cause was found; if a UI suite ever returns, expect these three
-        // to fail again for the same unknown reason.
-        //
-        // What was ruled out, inlined here 7 Aug 2026 when the audit document
-        // holding it was deleted — a ruled-out cause is worth more than an
-        // untried one, and a citation into a file that no longer exists is
-        // worth less than nothing:
-        //
-        //   - **Shadowing is disproved, not merely unconfirmed.** M8 moved
-        //     this identifier from a `Section` onto a `CollapsibleSection`
-        //     whose subtree contains both header controls, and the failures
-        //     read `No matches found` rather than "not hittable" — the
-        //     signature of an absent element rather than a covered one.
-        //     `.accessibilityElement(children: .contain)` ahead of this line
-        //     changed nothing; all nine failures reproduced identically.
-        //   - **The three-inspector discriminator was a coincidence of
-        //     shape.** Players (identifier on the collapsible, two controls
-        //     inside) failed; Rankings (on the collapsible, no controls) and
-        //     Library (on inner content) passed. One difference, one failure
-        //     set — the form a real finding takes, and here it was
-        //     pattern-matching against whichever diff was in front of me.
-        //   - **What survives and is independently checkable:** the controls
-        //     *render*. A resolved `playersInspectorProfile` proves
-        //     `stats != nil` and a drawn `ProfileSection`, since the empty
-        //     branch carries a different identifier. They exist on screen and
-        //     are not addressable by identifier. Cause unknown.
+        // Identifier stays on the section: collapsing hides the rows, not this. A future suite should
+        // expect the § Zero failures here — header controls unresolvable by identifier, cause unknown
+        // (shadowing disproved; closed unresolved with D51′).
         .accessibilityIdentifier(AccessibilityID.playersInspectorProfile)
     }
 }
-
-// `TrendSection` lived here until 4 Aug 2026 — replaced whole by
-// `PlayerRatingGraph` (its own file), which redraws the same `.ratingTrend`
-// section over games played instead of time. The date axis spent its width
-// on pauses; the ordinal axis spends it on games, which is the rating's own
-// clock under c = 0 (D11′). The D48′ provenance travels with the new file's
-// doc.
 
 // MARK: Recent Games
 
@@ -217,9 +119,7 @@ private struct RecentGamesSection: View {
         }
     }
 
-    /// Row tap opens the game — the inspector's open affordance, same
-    /// `openWindow(value:)` route as the Library inspector (macOS dedups
-    /// and tabs the windows).
+    /// Row tap opens the game — same `openWindow(value:)` route as the Library inspector.
     private func row(for game: PGN) -> some View {
         Button {
             openWindow(value: game.persistentModelID)
@@ -252,18 +152,15 @@ private struct RecentGamesSection: View {
         .environment(InspectorSectionCollapse.preview)
 }
 
-/// The counting branch: nil `ranked` with a plural count — a rubber-band
-/// or ⌘-click selection. No fixture reaches it by accident.
+/// The counting branch — no fixture reaches it by accident.
 #Preview("Multi-Selection") {
     PlayersInspectorView(ranked: nil, history: [], recentGames: [], selectionCount: 5)
         .frame(width: 300, height: 400)
         .environment(InspectorSectionCollapse.preview)
 }
 
-/// A provisional rating meeting the merged grid: the qualifier string is the
-/// longest value in the section — the one that can wrap in a 260 pt
-/// inspector — and Uncertainty renders beneath it. The single-sample trend
-/// rides along: a one-point domain is where chart axes misbehave.
+/// Provisional rating: the longest value in the section (can wrap at 260 pt), Uncertainty
+/// beneath, single-sample trend (one-point domains are where chart axes misbehave).
 #Preview("Provisional Rating") {
     PlayersInspectorView(
         ranked: RankedPlayer(
@@ -279,8 +176,7 @@ private struct RecentGamesSection: View {
     .environment(InspectorSectionCollapse.preview)
 }
 
-/// Unrated: a resolved player whose games never produced a rated pairing —
-/// the Rating row's nil branch, no Uncertainty row, an empty trend.
+/// Unrated: the Rating row's nil branch, no Uncertainty, empty trend.
 #Preview("Unrated") {
     PlayersInspectorView(
         ranked: RankedPlayer(rank: 1, stats: PreviewFixtures.topStats(), rating: nil),
@@ -292,8 +188,7 @@ private struct RecentGamesSection: View {
     .environment(InspectorSectionCollapse.preview)
 }
 
-/// A long history with a visible swing — the trend line's real shape, and
-/// the y-domain's stress case.
+/// Long history with a visible swing — the y-domain's stress case.
 #Preview("Long History") {
     let samples = (0..<24).map { step in
         Glicko1.Sample(

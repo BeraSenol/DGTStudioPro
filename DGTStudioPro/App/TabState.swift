@@ -1,104 +1,42 @@
 import Foundation
 import SwiftData
 
-/// Per-tab ephemeral state that survives sidebar destination switches
-/// within a single tab.
-///
-/// `NavigationSplitView`'s `switch selection { … }` body recreates the
-/// detail view every time the sidebar changes destination. State stored
-/// directly on a destination as `@State` is destroyed and reinitialized
-/// on the switch, so scrub position, board perspective, inspector
-/// visibility, etc. would be lost on every Board→Library→Board round-trip.
-///
-/// Hoisting that state into a per-tab `@Observable` held by `ContentView`
-/// (which DOES survive the destination switch) restores the Safari/Finder
-/// behavior the user expects: the tab remembers what you were doing on
-/// each destination.
-///
-/// One instance per `ContentView` — i.e. one per native macOS tab. Tabs
-/// do not share state with each other; that separation is what makes
-/// `TabState` "per tab" rather than "per app".
-///
-/// Per-destination inspector visibility lives here (rather than as one
-/// shared boolean) because Library, Board, and Players show
-/// different inspector content; carrying one bool per destination matches
-/// each destination's natural default (Board on, Library off, etc.) and
-/// preserves the user's per-destination preference across switches.
+/// Per-tab ephemeral state that survives sidebar destination switches — the split view's
+/// `switch` recreates destination views, so anything worth keeping across a Board↔Library
+/// round trip lives here. Tabs do not share state.
 @Observable
 @MainActor
 internal final class TabState {
     
     // MARK: Board Destination
     
-    /// Concrete PGN looked up from the tab's bound `loadedGameID`.
-    /// `BoardDestination.loadIfNeeded()` resolves the ID and caches the
-    /// resolved PGN here so the round-trip cost is paid once per game,
-    /// not once per destination switch.
+    /// The resolved PGN cache — the round trip is paid once per game, not per destination switch.
     internal var boardPGN: PGN?
     
-    /// Working-copy `Game` built from `boardPGN`. Holds the per-ply
-    /// state walk and the current scrub position. Surviving the
-    /// destination switch is the whole point — the user keeps their
-    /// scrub position when they peek at Library and come back.
+    /// Working `Game` from `boardPGN`; surviving the switch is the point — the user keeps their
+    /// scrub position.
     internal var boardGame: Game?
     
-    /// Last load error for the bound `loadedGameID`, or `nil`. Drives
-    /// the Board destination's error state when the lookup fails or
-    /// the PGN's move list won't parse.
+    /// Last load error for the bound id — drives the load-error card.
     internal var boardLoadError: String?
     
-    /// Per-tab board perspective. Flipping the board in tab A doesn't
-    /// affect tab B (they have separate `TabState`s); within tab A,
-    /// flipping survives a Board→Library→Board round-trip.
+    /// Per-tab board perspective; survives a round trip, doesn't leak across tabs.
     internal var boardPerspective: PieceColor = .white
     
-    /// Whether the Board destination's inspector is open. Default `true`
-    /// matches the design intent (game inspector is the primary content
-    /// affordance on the Board destination).
+    /// Board inspector open? Default true.
     internal var boardInspectorPresented: Bool = true
     
-    /// True while a new-game sheet has been requested manually — from the
-    /// sidebar session panel's New Game button (D15′) — as opposed to the
-    /// session's auto-offer. Lives here rather than as destination
-    /// `@State` because the requester (the sidebar, via `ContentView`)
-    /// and the presenter (`BoardDestination`, where the sheet is
-    /// destination furniture) are different views sharing one tab.
-    /// Deliberate consequence: an unanswered request now survives a
-    /// destination round-trip and re-presents on return to Board — the
-    /// old close-and-forget was an artifact of `@State` placement, not a
-    /// design.
+    /// A manually-requested new-game sheet (sidebar's New Game). Here rather than destination
+    /// `@State` so an unanswered request survives a destination round trip and re-presents.
     internal var manualNewGameRequested: Bool = false
     
     // MARK: Library Destination
     
-    /// Whether the Library destination's inspector is open. Default
-    /// `true` — the 25 July UI pass chose inspector-open as the Library's
-    /// resting shape (this doc had rotted to `false`; code is truth).
-    /// `LibraryDestination` additionally force-opens it for Gallery view
-    /// via `onAppear`/`onChange(of: viewMode)` — that hook only ever
-    /// opens, so the two never fight.
+    /// Library inspector open? Default `true` (code is truth — this doc had rotted to false).
+    /// Gallery force-opens it; that hook only ever opens, so the two never fight.
     internal var libraryInspectorPresented: Bool = true
-
-    // `analysisQueue` lived here until 6 Aug 2026 — `let analysisQueue =
-    // AnalysisQueueController()`, one engine queue per tab.
-    //
-    // It moved to `DGTStudioProApp` and reaches destinations through the
-    // environment (controller decision 2, which carries the argument). The half
-    // of its rationale that belonged to *this* type is worth keeping, because
-    // it is the reason it was here and not destination `@State`: a batch must
-    // survive Board↔Library switches, which is exactly the class of state
-    // `TabState` exists to preserve. What did not survive is the other half —
-    // that per-tab was *right* rather than merely sufficient. Two tabs meant
-    // two Stockfish subprocesses fighting over one Mac, and one person cannot
-    // watch two batches.
-    //
-    // Nothing replaced it here, deliberately: a `TabState` property forwarding
-    // to an app-global object would be a second door onto one queue, and the
-    // destinations that need it read the environment directly.
 
     // MARK: Players Destination
 
     internal var playersInspectorPresented: Bool = true
-    // `rankingsInspectorPresented` left with the Rankings destination (D48′)
-    // — the merged Players inspector answers to the flag above.
 }

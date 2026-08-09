@@ -2,18 +2,8 @@ extension GameState {
     
     // MARK: State Application
     
-    /// Applies `move` to this state and returns a new `GameState` with all
-    /// six fields updated: position, side to move, castling rights, EP
-    /// target, halfmove clock, fullmove number.
-    ///
-    /// The single state-transition primitive: SAN serialization, live play,
-    /// board reconstruction, movetext validation, and preview walks all reach
-    /// the next state through here. Deliberately not enumerated further — a
-    /// caller list on a primitive this central is a comment that rots.
-    ///
-    /// The caller is expected to pass a legal move; behavior on illegal input
-    /// is the same as `Position.applying` — the position transitions, but
-    /// derived state may not be meaningful.
+    /// Applies `move`, returning a new state with all six fields updated. Every path to a next
+    /// state goes through here; hand-built states are the caller's problem.
     internal func applying(_ move: Move) -> GameState {
         GameState(
             position: position.applying(move),
@@ -27,12 +17,8 @@ extension GameState {
     
     // MARK: Per-Field Helpers
     
-    /// Castling rights are revoked from three triggers:
-    ///   1. Any king move (including castling itself) revokes both for that color.
-    ///   2. A rook leaving its home corner revokes the matching side.
-    ///   3. A capture landing on the opponent's home rook square revokes
-    ///      their matching side. (Idempotent if the rook had already moved —
-    ///      the right was revoked then, revoking again is a no-op.)
+    /// Rights revoke on: any king move (both sides), a rook leaving home (that side), a capture on
+    /// a rook's home corner (that side).
     private func updatedCastlingRights(for move: Move) -> CastlingRights {
         var rights = castlingRights
         let color = activeColor

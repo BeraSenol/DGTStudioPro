@@ -3,16 +3,8 @@ import SwiftUI
 import Testing
 @testable import DGTStudioPro
 
-/// The View Options panel's value layer: grid geometry, the sort grammar, and
-/// the persistence contract.
-///
-/// **`@MainActor` because `CollectionViewOptions` is** — it is an
-/// `@Observable` class injected into a `WindowGroup` and read from views. The
-/// column-count arithmetic is `static` and could have been checked from
-/// anywhere, and it is deliberately *not* split into a nonisolated suite: the
-/// isolation here is a fact about the type, not a constraint worth routing
-/// around, and D44′'s lesson cuts the other way too — a suite should sit where
-/// its subject does unless the nonisolation is itself the claim.
+/// The panel's value layer: grid geometry, sort grammar, persistence contract. @MainActor — a
+/// fact about the type, not a constraint worth routing around.
 @MainActor
 @Suite("Collection view options")
 struct CollectionViewOptionsTests {
@@ -31,13 +23,7 @@ struct CollectionViewOptionsTests {
 
     // MARK: Column derivation
 
-    /// The shipped default reproduces the geometry that stood before the
-    /// slider existed: 6 columns at 120pt in a window that was showing 6.
-    ///
-    /// This is the pin that says the migration was a no-op for anyone who
-    /// never opens the panel — `CollectionGridMetrics.columnCount` was a hard
-    /// 6, and a change that quietly repacked every existing grid would be a
-    /// visual regression nobody asked for.
+    /// The shipped default reproduces the pre-slider geometry: 6 columns at 120 pt.
     @Test func theDefaultsReproduceTheOldSixColumnGrid() {
         // 6 cards at 120 + 5 gutters at 16 + 2 insets at 16 = 832.
         let count = CollectionViewOptions.columnCount(
@@ -92,18 +78,8 @@ struct CollectionViewOptionsTests {
 
     // MARK: Clamping and persistence
 
-    /// **This one crashed rather than failed, and that is the useful part.**
-    /// The clamp was written in `didSet` as a self-assignment — correct for a
-    /// plain stored property, where Swift will not re-run an observer for an
-    /// assignment made inside it, and infinitely recursive on an `@Observable`
-    /// type, where the macro has already rewritten the property into a
-    /// computed one over private storage. The symptom was
-    /// `EXC_BAD_ACCESS (code=2)` on the stack guard page: a memory error
-    /// spelling a control-flow bug.
-    ///
-    /// Kept as three writes rather than split, because reaching the *second*
-    /// one at all is most of what it proves — a recursing setter never
-    /// returns.
+    /// **This one crashed rather than failed**: a `didSet` self-assignment recurses on an
+    /// `@Observable` (the macro re-enters observers) — hence computed-over-storage.
     @Test func sizesClampToTheirRangesOnWrite() {
         let options = CollectionViewOptions(defaults: Self.scratch())
 
@@ -120,15 +96,7 @@ struct CollectionViewOptionsTests {
         #expect(options.spacing == CollectionViewOptions.spacingRange.lowerBound)
     }
 
-    /// A clamped write must still **persist** the corrected value, not the
-    /// one that was asked for.
-    ///
-    /// The recursion fix moved the `defaults.set` from a `didSet` into a
-    /// setter, and the obvious way to write that setter — store, then write
-    /// `newValue` — persists the unclamped number. Nothing in memory would
-    /// show it: the property reads back correct all session, and the floor
-    /// only appears on the next launch, through the clamp on load. Reload is
-    /// the only place this is visible.
+    /// A clamped write persists the *corrected* value — visible only on reload.
     @Test func aClampedWritePersistsTheClampedValue() {
         let defaults = Self.scratch()
         let first = CollectionViewOptions(defaults: defaults)
@@ -143,12 +111,8 @@ struct CollectionViewOptionsTests {
         )
     }
 
-    /// The init must write **storage**, not go through the setters.
-    ///
-    /// Routing initialization through the accessors would persist the defaults
-    /// on first launch, turning "absent" into "present" — which destroys the
-    /// distinction `object(forKey:)` is read for two tests up, silently and
-    /// only for users who never touch the panel.
+    /// Init writes **storage**, not the setters — routing through accessors would persist defaults
+    /// for users who never touch the panel.
     @Test func constructionWritesNothingToDefaults() {
         let defaults = Self.scratch()
         _ = CollectionViewOptions(defaults: defaults)
@@ -158,11 +122,8 @@ struct CollectionViewOptionsTests {
         #expect(defaults.object(forKey: StorageKeys.librarySort) == nil)
     }
 
-    /// **The `object(forKey:)` pin.** `double(forKey:)` answers 0 for an
-    /// absent key, and 0 is below both floors — so reading that way and
-    /// clamping would hand every fresh install the smallest icon in the range
-    /// while looking exactly like a stored preference. The arm that catches it
-    /// is an empty suite, which is the state a new Mac is in.
+    /// The `object(forKey:)` pin: `double(forKey:)` answers 0 for absent, and clamping 0 hands
+    /// every fresh install the floor.
     @Test func anAbsentPreferenceReadsTheDefaultRatherThanTheFloor() {
         let options = CollectionViewOptions(defaults: Self.scratch())
 
@@ -204,13 +165,8 @@ struct CollectionViewOptionsTests {
     }
 }
 
-/// The sort grammar itself — the half that has to survive a table header and a
-/// picker writing the same value.
-///
-/// **Nonisolated, and that is load-bearing.** `CollectionSort` and both field
-/// enums are pure value types with no view and no store; a suite that needed
-/// the main actor here would mean one of them had acquired isolation it has no
-/// use for. The D44′ compile-time witness.
+/// The sort grammar — the half that survives a header and a picker writing one value.
+/// Nonisolated, load-bearing: the types must stay value-layer.
 @Suite("Collection sort fields")
 struct CollectionSortFieldTests {
 
@@ -271,11 +227,8 @@ struct CollectionSortFieldTests {
         #expect(PlayersSortField.allCases.allSatisfy { !$0.rawValue.contains(":") })
     }
 
-    /// **A persistence contract, asserted on literals** — one of the few
-    /// places a hard-coded string is the correct thing to test (D36′'s
-    /// `theCheckmateTypeFieldKeepsItsStoredRawValue`). These land in
-    /// `UserDefaults`; letting a Swift rename move them would silently reset
-    /// the user's sort, and nothing else in the app would notice.
+    /// A persistence contract asserted on literals — one of the few places a hard-coded string is
+    /// the correct thing to test.
     @Test func libraryFieldRawValuesAreStable() {
         #expect(LibrarySortField.index.rawValue == "index")
         #expect(LibrarySortField.checkmateType.rawValue == "checkmateType")
@@ -285,13 +238,7 @@ struct CollectionSortFieldTests {
         #expect(PlayersSortField.specialMates.rawValue == "specialMates")
     }
 
-    /// The two statements of the launch order must agree.
-    ///
-    /// `LibraryDestination.defaultSortOrder` and `LibrarySortField.default`
-    /// are the same claim in two files — the destination's is what the mode
-    /// views' previews use, this one is what an absent preference reads as. If
-    /// they diverge, the app opens on one order and every canvas shows
-    /// another, which is invisible until someone compares them side by side.
+    /// The two statements of the launch order must agree — goes red if either moves alone.
     @Test func theLibraryDefaultMatchesTheDestination() {
         let fromField = CollectionSort<LibrarySortField>.default.comparators
         let fromDestination = LibraryDestination.defaultSortOrder

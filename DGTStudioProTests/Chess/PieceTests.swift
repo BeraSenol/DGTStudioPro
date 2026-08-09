@@ -1,17 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// Pins the parts of `Piece` that only *views* consume, so they finally have
-/// a unit witness.
-///
-/// Born from the M9 coverage audit (July 2026): the packed-rawValue plumbing
-/// and `fenCharacter` were green through FEN and the move generators, but the
-/// `imageNames` table and `imageName` accessor were exercised nowhere outside
-/// `SquareView` — a typo in that table renders as an *invisible piece on the
-/// mirror*, with no test able to notice. (`materialValue` had zero call sites
-/// anywhere and was deleted by the same audit rather than tested.)
-///
-/// Nonisolated: `Piece` is a pure `Sendable` value type.
+/// The parts of `Piece` only *views* consume, given a unit witness.
 @Suite("Piece — Image Names and Packing")
 struct PieceTests {
     
@@ -84,12 +74,7 @@ struct PieceTests {
         #expect(Piece.empty.fenCharacter == ".")
     }
 
-    /// The SAN letter table. The exhaustive switch is compiler-witnessed for
-    /// *coverage*; the values themselves were pinned only incidentally,
-    /// through whichever pieces the SAN serializer fixtures happened to move.
-    /// The pawn's empty string is the load-bearing case — every pawn move's
-    /// SAN starts with the target or the file letter precisely because this
-    /// returns "".
+    /// The SAN letter table pinned directly; the pawn's empty string is the load-bearing case.
     @Test func notationIsTheSANLetterAndPawnIsEmpty() {
         let letters = PieceType.allCases.map(\.notation)
         #expect(letters == ["", "N", "B", "R", "Q", "K"])

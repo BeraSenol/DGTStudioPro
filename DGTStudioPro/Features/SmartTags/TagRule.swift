@@ -1,71 +1,26 @@
 import Foundation
 
-/// One row of a smart tag (M-prs.5, D12′): field + comparison + value,
-/// evaluated against a `GameRecord`. Pure, `Codable`, stored as an array
-/// on the `SmartTag` model (the `PGN.evaluations` precedent for Codable
-/// value arrays on a `@Model`).
-///
-/// Value storage is deliberately flat — `text`, `number`, `date`,
-/// `gameResult` slots, with the field's kind deciding which is live. An
-/// associated-value enum would be tighter, but the editor binds controls per
-/// slot: dead slots cost a few bytes, enum bindings cost real friction. Boolean
-/// fields need no slot — the comparison (`isTrue`/`isFalse`) *is* the value.
-///
-/// Matching rules, recorded:
-/// - String comparisons fold **both sides** through `PlayerName.folded` +
-///   `lowercased()` (D30′) — the identity philosophy (case and whitespace runs
-///   folded, diacritics preserved), not locale collation. This changed matching
-///   for already-saved tags, accepted at decision time.
-/// - A string rule with empty/whitespace text matches **nothing** — the
-///   row-level sibling of "zero rules matches nothing"; without it a freshly
-///   added `contains ""` row would match the whole Library.
-/// - `player` means either seat, and seats are the *resolved* display names, so
-///   an unresolved `"?"` seat is simply absent.
-/// - Unknowns never match: a nil `round` fails numeric rules, an undated game
-///   fails date rules (`importedAt` orders folds; it does not answer "when was
-///   this played").
-/// - **Negation included** (D30′): an unknown single subject fails `.notEquals`
-///   too. "White is not X" means *White is known and isn't X*; a game that
-///   doesn't say can neither prove nor disprove it. Positive comparisons are
-///   deliberately untouched — "Event is ?" still finds ?-event games, because
-///   explicit is different from accidental.
-/// - D34′'s pair inherits both rules rather than inventing any: `opening` is an
-///   ordinary string field over the full name, so an unclassified game presents
-///   `""` and fails negation like any other unknown; `checkmateType` is the
-///   first field whose subject is an optional *enum* and guards nil the same
-///   way — see the switch arm for why that is less obvious than it sounds.
+/// One smart-tag rule: field + comparison + value over a `GameRecord`. Pure, `Codable`, stored
+/// as an array blob on `SmartTag` (D12′). Flat value storage — dead slots cost bytes, enum
+/// bindings cost friction. Rules of record (D30′): both sides fold through
+/// `PlayerName.folded` + lowercase; unknowns never match, negation included; zero rules match nothing.
 internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
     
     // MARK: Field
     
     internal enum Field: String, Codable, CaseIterable, Identifiable, Sendable {
         case white, black, player, event, site, name
-        /// The M4 addition (D34′). A string field over the *full* opening
-        /// name — `"French Defense: Winawer Variation"` — not the family
-        /// alone, so a rule can reach a variation. The consequence worth
-        /// knowing: `opening is French Defense` matches only games whose
-        /// line has no variation, while `opening begins with French Defense`
-        /// is the family-level query and `contains` (the string default)
-        /// does what most rules want. One subject for every comparison,
-        /// deliberately — switching subjects per comparison would be the
-        /// kind of cleverness that reads as a bug six months on.
+        /// D34′: a string field over the *full* opening name, so a rule can reach a variation —
+        /// `is` matches variation-less lines only, `begins with` is family-level, `contains` is what
+        /// most rules want.
         case opening
         case result
         case round, moves
         case date
         case checkmate, analyzed, timed
-        /// Which recognised checkmate type the game ended on — distinct from
-        /// `checkmate`, which only asks *whether* it ended in mate.
-        ///
-        /// **The raw value stays `"matePattern"` and must.** This case was
-        /// spelled `matePattern` until 5 Aug 2026, when the user-facing name
-        /// became "Checkmate Type"; `Field` is `String, Codable` and its raw
-        /// values are encoded into every saved `SmartTag`'s rule blob, so
-        /// letting the implicit raw value follow the Swift name would have
-        /// silently dropped the rule from every tag that used it — including
-        /// the seeded "Smothered Mates" default. Hand-written for exactly the
-        /// reason `InspectorSection`'s raw values are: a rename that reads as a
-        /// refactor must not reset stored state.
+        /// Which checkmate type — distinct from `checkmate` (whether it was mate at all).
+        /// **The raw value stays `"matePattern"` and must**: it is encoded in every saved tag's blob,
+        /// and following the Swift name would silently drop the rule from every tag using it.
         case checkmateType = "matePattern"
 
         internal enum Kind { case string, result, number, date, boolean, checkmateType }
@@ -92,8 +47,7 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
             }
         }
 
-        /// The comparisons this field's kind admits; the first is the
-        /// editor's default when the field changes.
+        /// The comparisons this field's kind admits; the first is the editor's default.
         internal var comparisons: [Comparison] {
             switch kind {
             case .string:           return [.contains, .equals, .notEquals, .beginsWith]
@@ -159,31 +113,9 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
 
     // MARK: Codable
 
-    /// A **defaulting** decoder, because `[TagRule]` is stored as one Codable
-    /// blob on `SmartTag` (D12′).
-    ///
-    /// Synthesized decoding requires every non-optional key to be present, so
-    /// the moment this type grew its eighth slot every previously-saved tag
-    /// would have failed to decode — the sidebar silently emptying, with the
-    /// rules the user wrote gone. That is the D28′ draft-schema stance
-    /// (additive fields are not breaking) owed to the *other* Codable-on-a-
-    /// model type, and paying it once here makes every future slot free.
-    ///
-    /// The fallbacks come from a default-constructed instance rather than
-    /// being spelled again per key: two lists of defaults that must agree is
-    /// the twin-read-site pattern this codebase keeps finding and fixing, and
-    /// the designated initializer is the one place they should live.
-    /// `encode(to:)` stays synthesized against these same keys.
-    ///
-    /// The keys are spelled out rather than left to synthesis. The compiler
-    /// would synthesize them here — it still synthesizes `encode(to:)`, which
-    /// brings `CodingKeys` along — but the on-disk key names of a type whose
-    /// blobs must survive a schema change are not something to leave to a
-    /// behaviour you'd have to look up. They match the property names, which
-    /// is what every already-saved tag was written with.
-    /// `private`: synthesis of `encode(to:)` and the hand-written
-    /// `init(from:)` both live in this file, so nothing outside it has any
-    /// business naming the on-disk keys.
+    /// A **defaulting** decoder: `[TagRule]` is one blob on `SmartTag`, and synthesized decoding
+    /// would fail every saved tag when a field is added — the sidebar silently emptying. Fallbacks
+    /// come from a default-constructed instance, not a second list of literals.
     private enum CodingKeys: String, CodingKey {
         case id, field, comparison, text, number, date, gameResult, specialCheckmate
     }
@@ -216,20 +148,16 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
             case .player:
                 let seats = [record.white?.name, record.black?.name]
                     .compactMap { $0.map(fold) }
-                // Unknowns never match, negation included: a game with no
-                // resolved seat can neither prove nor disprove a player rule.
+                // Unknowns never match, negation included: no resolved seat proves nothing.
                 guard !seats.isEmpty else { return false }
-                // A negated comparison over two seats flips the quantifier.
-                // "Player is not Bera" has to mean *neither* seat is Bera;
-                // `contains` made it "some seat isn't Bera", which is true of
-                // every game Bera played against anyone — the exact inverse.
+                // A negated comparison over two seats flips the quantifier: "player is not X" means *neither*
+                // seat is X — `contains` made it true of every game X played.
                 return comparison == .notEquals
                 ? seats.allSatisfy { compareString($0, needle) }
                 : seats.contains { compareString($0, needle) }
             default:
                 let subject = fold(stringSubject(of: record))
-                // D30′ — the `.player` guard, extended to single subjects for
-                // the negated case only (see the type doc's recorded rules).
+                // D30′ — the unknown guard, `.notEquals` only (positive comparisons deliberately untouched).
                 if comparison == .notEquals {
                     guard !subject.isEmpty, subject != "?" else { return false }
                 }
@@ -257,24 +185,17 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
             return comparison == .isFalse ? !subject : subject
 
         case .checkmateType:
-            // Unknowns never match, negation included — the D30′ rule, and
-            // the tension is worth naming rather than glossing: a nil motif
-            // means either "classified, and it's an ordinary mate" or "not
-            // classified yet", and the rule cannot tell them apart (the same
-            // conflation `backfillClassifications` makes with `ecoCode`).
-            // Reading nil as "not smothered" would make "checkmate type is not
-            // smothered" quietly true for every unclassified game in the
-            // Library — precisely the failure D30′ closed for "White is
-            // not X".
+            // Unknowns never match, negation included (D30′): a nil motif means "ordinary mate" or "not
+            // classified yet", and the rule cannot tell — reading nil as "not X" would match every
+            // unclassified game.
             guard let subject = record.specialCheckmate else { return false }
             let hit = subject == specialCheckmate
             return comparison == .notEquals ? !hit : hit
         }
     }
     
-    /// The tag-level combinator: `matchAll` picks all/any; **zero rules
-    /// matches nothing** (D12′ — an empty tag is inert, never a
-    /// select-all).
+    /// The combinator: `matchAll` picks all/any; **zero rules matches nothing** (a fresh tag is
+    /// inert, never select-all).
     internal static func evaluate(
         _ rules: [TagRule],
         matchAll: Bool,
@@ -288,10 +209,8 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
     
     // MARK: Private Helpers
 
-    /// The D30′ string fold — `PlayerName.folded` + `lowercased()`, i.e. the
-    /// identity fold `Player.normalizedKey` and the content hash compose.
-    /// Applied to *both* sides of every string comparison, so a rule and a
-    /// tag can never disagree about what "Magnus  Carlsen" is.
+    /// The D30′ string fold — the same fold `Player.normalizedKey` and the hash compose, applied to
+    /// *both* sides.
     private func fold(_ value: String) -> String {
         PlayerName.folded(value).lowercased()
     }
@@ -312,9 +231,8 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
         case .event: return record.event
         case .site:  return record.site
         case .name:  return record.name
-        // The full name, so a rule can reach a variation. An unclassified
-        // game yields "", which the `.notEquals` guard above then treats as
-        // an unknown — the same reading `event` and `site` get.
+        // Full name, so a rule can reach a variation; unclassified yields "", which `.notEquals` treats
+        // as unknown.
         case .opening: return record.opening?.fullName ?? ""
         default:     return ""
         }

@@ -6,15 +6,8 @@ internal struct MoveHistoryView: View {
     internal let moves: [String]
     internal let currentMoveIndex: Int?
     internal let onMoveTapped: ((Int) -> Void)?
-    /// Whether this view brings its own `ScrollView`.
-    ///
-    /// `true` (the default, preserving every existing call site) is the
-    /// self-contained pane — a bordered material panel of fixed height.
-    /// `false` emits the rows bare, for a host that embeds them in its own
-    /// `List`: a `List` proposes its rows unbounded height, so a nested
-    /// scroll view can only ever be a fixed-size box inside an infinite
-    /// one. Embedded, the moves run to the bottom of the sidebar and the
-    /// host's list does the scrolling.
+    /// Whether this view brings its own `ScrollView` — `false` lets a host `List` own scrolling
+    /// (a nested scroll view is a fixed-size box inside an infinite proposal).
     internal var scrollsIndependently: Bool = true
     
     // MARK: Computed Properties
@@ -118,12 +111,8 @@ internal struct MoveHistoryView: View {
 
 extension View {
     
-    /// Keeps the scroll container this is applied to pinned to the current
-    /// ply. Lives here rather than inside `MoveHistoryView` because the
-    /// `ScrollViewReader` has to wrap the container that actually scrolls —
-    /// which, for an embedded move list, is the host's `List`. One
-    /// implementation, both shapes: the pane applies it to its own
-    /// `ScrollView`, the inspectors apply it to their `List`.
+    /// Pins the applied container to the current ply — lives here because `ScrollViewReader` must
+    /// wrap the container that actually scrolls.
     internal func scrollsToCurrentMove(_ index: Int?) -> some View {
         modifier(CurrentMoveScrollSync(currentMoveIndex: index))
     }

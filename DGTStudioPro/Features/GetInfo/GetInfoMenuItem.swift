@@ -2,20 +2,8 @@ import SwiftUI
 
 // MARK: - Menu Item
 
-/// The Get Info menu item, everywhere it appears.
-///
-/// **One type rather than a line per context menu** — D26′'s argument applied
-/// to a verb instead of a glyph. A hand-written item in each of the six context
-/// menus is six chances to disagree about label, symbol, shortcut, or — worst
-/// and least visible — which subject the request names.
-///
-/// It owns `openWindow` rather than taking a closure, the arrangement
-/// `PlayersInspectorView` and `PlayersColumnsView` already use for the
-/// game-window route.
-///
-/// Two doors because a `Commands` scene has no `openWindow`: the menu-bar item
-/// can only *ask* a view to open one (`SmartTagCommands`' trigger-binding
-/// shape). ⌘I is attached here so the shortcut travels with the item.
+/// The Get Info menu item, everywhere it appears — one type so the label, symbol and key
+/// cannot drift across hosts (a `Commands` scene can only *ask* a view to open the window).
 internal struct GetInfoMenuItem: View {
 
     // MARK: Door

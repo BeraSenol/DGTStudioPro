@@ -1,18 +1,7 @@
 import SwiftUI
 
-/// The Board inspector's live-game variant (M3.3), shown when a live game
-/// exists and no PGN is loaded in the tab. Mirrors `BoardInspectorView`'s
-/// sidebar-list shape: a roster summary (with Edit Details), the SAN
-/// transcript, and the game-lifecycle controls.
-///
-/// The transcript reuses `MoveHistoryView` with taps disabled — live games
-/// don't scrub (the board always mirrors the physical pieces). The three
-/// lifecycle actions each sit behind a confirmation; the destructive
-/// choices can't be undone (Decision #1: no takebacks, FIDE semantics).
-///
-/// Sheets and confirmations are owned locally; the actions themselves are
-/// closures into `DGTLiveSession` so every game mutation keeps flowing
-/// through the session (and its diagnostic timeline).
+/// The Board inspector's live variant: roster (with Edit Details), SAN history, result
+/// controls — `BoardInspectorView`'s sidebar-list shape.
 internal struct LiveGameInspectorView: View {
     
     // MARK: Stored Properties
@@ -132,12 +121,8 @@ internal struct LiveGameInspectorView: View {
         }
     }
     
-    /// `.lifecycle`, **not** `.roster`, despite the title being "Game". This is
-    /// the section that made `InspectorSection` an enum rather than a key
-    /// derived from the header: Resign / Agree Draw / Discard is a set of verbs
-    /// on the game in progress, while the section actually *about* the game is
-    /// the roster above, titled with the game's name. Two sections called Game,
-    /// and identity by title would have merged them.
+    /// `.lifecycle`, **not** `.roster`, despite the title "Game" — the section that made
+    /// `InspectorSection` an enum: Resign/Draw/Discard is a set of verbs, not the game.
     private var lifecycleSection: some View {
         CollapsibleSection(.lifecycle, title: "Game") {
             if !game.isFinished {

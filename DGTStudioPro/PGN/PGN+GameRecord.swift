@@ -1,17 +1,10 @@
 import Foundation
 
-/// The projection seam (D10′): the only place the M-prs cores' input
-/// touches the model layer, split out — the `LiveGame+Draft` pattern —
-/// so `GameRecord` itself stays a passive pure value with no SwiftData
-/// import. A pure read; call sites map `@Query` results
-/// (`games.map(\.gameRecord)`) after the player-link backfill has run.
+/// The projection seam (D10′) — the only place the cores' input touches the model layer.
 extension PGN {
     
-    /// The one effective-date rule (D11′), at the model. `GameRecord` owns it
-    /// for the pure folds, but a view sorting *models* needs the same answer,
-    /// and `PlayersDestination` re-derived `date ?? importedAt` inline — the
-    /// second implementation the rule exists to prevent, under a comment that
-    /// named the rule it wasn't using.
+    /// The one effective-date rule at the model (D11′) — a view sorting *models* needs the same
+    /// answer the pure folds use.
     internal var effectiveDate: Date { date ?? importedAt }
     
     internal var gameRecord: GameRecord {
@@ -28,12 +21,7 @@ extension PGN {
             name: name,
             round: round,
             plyCount: moves.count,
-            // `hasScoredPly`, not `!evaluations.isEmpty` (D68′). This was the
-            // last door on the old spelling and the only one that reaches
-            // stored user state: `TagRule.analyzed` is its sole consumer, so
-            // a saved "Analyzed" tag now stops matching a game whose pass
-            // scored nothing. That change is the point rather than a side
-            // effect — see D68′ for why a matching change is accepted here.
+            // `hasScoredPly`, not `!evaluations.isEmpty` (D68′) — the last door on the old spelling.
             hasAnalysis: hasScoredPly,
             isTimed: timeControl != nil,
             opening: opening,

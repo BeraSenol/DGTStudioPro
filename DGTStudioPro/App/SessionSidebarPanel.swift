@@ -1,24 +1,8 @@
 import SwiftUI
 
-/// M-ux.3 (D15′): the sidebar's session surface — the single home for
-/// connection and session messaging, pinned under the sidebar list of
-/// every tab. Everything that used to render above (or over) the board
-/// lives here now: the status card (`LiveGameHUDView`), the recovery
-/// checklist, the restored flash, and the per-tab load-error card. The
-/// stage above the board stays clear by invariant; on-board overlays
-/// (last move, check, ghost rook, recovery attention/target) are
-/// unaffected — they are the mirror's, not messaging.
-///
-/// Placement: `safeAreaInset(edge: .bottom)` on the sidebar `List` — the
-/// platform's status-footer shape — so the panel never scrolls with the
-/// tags and never steals a selection row. One panel per tab (`ContentView`
-/// owns it beside `TabState`): session state is app-global and simply
-/// renders identically in every tab's sidebar, while the load error is
-/// genuinely per-tab.
-///
-/// Rejected (recorded with D15′): a floating HUD over the board (occludes
-/// the star; the sidebar already owns session identity) and the split
-/// brain of some status above the board, some in the inspector.
+/// The sidebar's session surface (D15′) — the single home for connection and session messaging,
+/// pinned under every tab's sidebar list. The stage above the board stays clear; only the
+/// recovery *overlays* stay on the board (they are the mirror's, not messaging).
 internal struct SessionSidebarPanel: View {
     
     // MARK: Environment
@@ -29,33 +13,25 @@ internal struct SessionSidebarPanel: View {
     
     // MARK: Stored Properties
     
-    /// Read for the per-tab `boardLoadError`; `@Observable` tracks the read.
+    /// Read for the per-tab `boardLoadError`.
     internal let tabState: TabState
     
-    /// Navigates to Board and requests the new-game sheet. The sheet's
-    /// presenter stays `BoardDestination` — only the *affordance* re-homed
-    /// (see `ContentView`'s wiring for the why).
+    /// Navigates to Board and requests the new-game sheet — only the affordance re-homed; the
+    /// presenter stays `BoardDestination`.
     internal let onNewGame: () -> Void
     
-    /// Clears the tab's bound game ID — the real resolution for a failed
-    /// load (see `loadErrorCard`'s doc).
+    /// Clears the tab's bound game ID — unbinding is the real resolution.
     internal let onDismissLoadError: () -> Void
     
     // MARK: View State
     
-    /// True for a beat after recovery auto-resolves, flashing "Position
-    /// restored — play continues." (M6.2). Transient by design; living on
-    /// the panel it now also survives destination switches, which is
-    /// strictly less surprising than the old vanish-on-round-trip.
+    /// A beat's "Position restored" flash after recovery auto-resolves. Transient by design.
     @State private var showsRestoredFlash = false
     
     // MARK: Body
     
     internal var body: some View {
-        // The empty guard keeps a disconnected, error-free sidebar exactly
-        // as it was — no blank inset at the bottom of every tab. All
-        // transitions that matter happen while `hudPhase` is non-nil, so
-        // the `onChange` below is always installed when it can fire.
+        // The empty guard keeps a disconnected, error-free sidebar exactly as it was — no blank inset.
         if hasContent {
             VStack(alignment: .leading, spacing: 8) {
                 if let phase = hudPhase {
@@ -66,12 +42,8 @@ internal struct SessionSidebarPanel: View {
                     )
                 }
                 
-                // M6.2 — the restore checklist, under the status card
-                // while recovering; M6.3's Export Diagnostics… rides on
-                // it (a desync is when the log is worth saving). The
-                // empty-guidance guard covers the brief window where the
-                // board is already fixed but the session's next settle
-                // hasn't exited recovery yet.
+                // The restore checklist under the status card; Export Diagnostics rides on it. The empty-
+                // guidance guard covers the window where the board is fixed but the settle hasn't exited yet.
                 if let guidance = recoveryGuidance, !guidance.isEmpty {
                     RecoveryGuidanceView(
                         guidance: guidance,
@@ -92,8 +64,7 @@ internal struct SessionSidebarPanel: View {
                     .transition(.opacity)
                     .accessibilityIdentifier(AccessibilityID.liveRecoveryRestoredFlash)
                     .task {
-                        // Auto-dismiss; cancellation on disappear is the
-                        // cleanup.
+                        // Auto-dismiss; cancellation on disappear is the cleanup.
                         try? await Task.sleep(for: .seconds(2.5))
                         withAnimation { showsRestoredFlash = false }
                     }
@@ -106,9 +77,7 @@ internal struct SessionSidebarPanel: View {
             .padding(10)
             .animation(.default, value: session.needsRecovery)
             .onChange(of: session.needsRecovery) { wasRecovering, isRecovering in
-                // Flash only on a genuine auto-exit back into play —
-                // discard / new-game also clear the flag, but they change
-                // the whole surface, where a flash is noise.
+                // Flash only on a genuine auto-exit — discard / new-game change the whole surface.
                 if wasRecovering, !isRecovering,
                    let game = session.liveGame, !game.isFinished {
                     withAnimation { showsRestoredFlash = true }
@@ -126,15 +95,8 @@ internal struct SessionSidebarPanel: View {
     
     // MARK: Load Error
     
-    /// The load-error card (M8.2, re-homed by D15′ — behavior unchanged,
-    /// only the surface moved; the identifiers were renamed with it, a
-    /// deliberate breaking change executed through the registry). Dismiss
-    /// clears the tab's `loadedGameID`, converting the tab into an honest
-    /// live tab: `loadIfNeeded()`'s nil branch then clears the error and
-    /// the caches. Merely clearing the error string would leave the dead
-    /// ID bound and the card would return on the next Board visit —
-    /// unbinding is the real resolution, and matches Erase Library's
-    /// "open tabs revert to the live board" intent.
+    /// The load-error card (re-homed by D15′, identifiers renamed with it). Dismiss clears
+    /// `loadedGameID` — the tab becomes an honest live tab.
     private func loadErrorCard(_ message: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
@@ -168,35 +130,16 @@ internal struct SessionSidebarPanel: View {
     
     // MARK: Phase Derivation
     
-    /// Derives the status-card phase from session + connection state, in
-    /// priority order: connection truth first — a pulled cable outranks
-    /// everything, and M7.3 splits it: an active auto-reconnect loop reads
-    /// as "reconnecting…", while plain disconnected is nil (no card at
-    /// all) — then recovery, then the gentle correction nudge, then setup,
-    /// then the game itself, then the idle invitation.
-    ///
-    /// Why nil instead of a `disconnected` phase: the message carried no
-    /// action, and with no board there is never a live game, so the live
-    /// inspector's empty state is free to say it. `reconnecting` can't
-    /// make the same move — it co-occurs with a live game, whose inspector
-    /// is showing that game — so it stays a card. (Moved verbatim from
-    /// `BoardDestination.hudPhase` by D15′.)
-    /// Delegates since 3 Aug 2026. The priority ordering used to live here in
-    /// full; the Board's toolbar subtitle became its second consumer, so it
-    /// moved to `LiveGameHUDView.Phase.current(session:connection:)` — the
-    /// `RecoveryGuidance.current` treatment, for the same reason and with the
-    /// same signature. Two views computing this is fine; two views *spelling*
-    /// it is how the sidebar and the toolbar end up disagreeing on screen.
+    /// Status-card phase, priority-ordered: connection truth first (a pulled cable outranks
+    /// everything; reconnecting reads as its own card). Delegates to `SessionPhase.current` —
+    /// the ordering is the content, and two surfaces must agree on it.
     private var hudPhase: LiveGameHUDView.Phase? {
         .current(session: session, connection: connection)
     }
     
-    /// The restore checklist while `recovering`, nil otherwise. Recomputed
-    /// on every observable change of `connection.physicalBoard`, so rows
-    /// disappear live as squares are fixed. `BoardDestination` computes the
-    /// same diff for the board's attention/target *overlays* (which stay on
-    /// the board by invariant) — two 64-square diffs per render is still
-    /// cheap; the original `.task(id:)` memoization note stands.
+    /// The restore checklist while recovering; recomputed per observable change so rows disappear
+    /// live. `BoardDestination` computes its own diff for the *overlays* — two 64-square diffs per
+    /// render is cheap.
     private var recoveryGuidance: RecoveryGuidance? {
         .current(session: session, connection: connection)
     }
@@ -204,11 +147,8 @@ internal struct SessionSidebarPanel: View {
 
 // MARK: Previews
 
-/// Only the load-error arm is reachable: `DGTConnection.status` is
-/// `private(set)`, so a preview can't reach `.connected` and `hudPhase`
-/// stays nil. The phase card previews live on `LiveGameHUDView` ("All
-/// Phases") and the checklist on `RecoveryGuidanceView` — this preview
-/// covers what's genuinely this view's own: the M8.2 card, re-homed by D15′.
+/// Only the load-error arm is canvas-reachable (`DGTConnection.status` is private(set)); phase
+/// cards preview on `LiveGameHUDView`, the checklist on `RecoveryGuidanceView`.
 #Preview("Load Error") {
     let tabState = TabState()
     tabState.boardLoadError = "The game could not be found in the library."
@@ -224,8 +164,7 @@ internal struct SessionSidebarPanel: View {
     .environment(DGTSessionLog())
 }
 
-/// The empty guard: disconnected and error-free renders *nothing* — no
-/// blank inset at the bottom of every tab. The canvas should be empty.
+/// The empty guard: disconnected and error-free renders *nothing* — the canvas should be empty.
 #Preview("Empty Guard") {
     SessionSidebarPanel(tabState: TabState(), onNewGame: {}, onDismissLoadError: {})
         .frame(width: 260, height: 80)

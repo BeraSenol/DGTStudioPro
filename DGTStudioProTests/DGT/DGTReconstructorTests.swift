@@ -1,12 +1,8 @@
 import Testing
 @testable import DGTStudioPro
 
-/// Per-move-class tests for the reconstruction engine, driven by the
-/// hardware-free `DGTBoardSimulator`. Each test replays a realistic lift/place
-/// update sequence for one move class and asserts that the *final* board
-/// reconstructs to the intended legal move, while *intermediate* (piece-in-hand)
-/// boards report `.inProgress` (or `.castlingInProgress`) rather than firing a
-/// move or a false desync. Recovery (D6) consumes the `.unresolved` case.
+/// Per-move-class reconstruction tests over the hardware-free simulator: realistic lift/place
+/// sequences, asserting the final board resolves to the move.
 @Suite("DGT Reconstructor")
 struct DGTReconstructorTests {
     
@@ -112,14 +108,8 @@ struct DGTReconstructorTests {
         #expect(DGTReconstructor.reconstruct(from: state, physical: boards[2]) == .move(expected))
     }
     
-    /// A very common casual-play slip: the attacker lands on the en-passant
-    /// target but the player forgets to lift the captured pawn. The EP diff is
-    /// otherwise indistinguishable from a plain pawn push, so the candidate's
-    /// `applying(...)` check fails and a naive engine would flag a desync.
-    /// Instead this surfaces as a gentle `.correctable` — the recognized EP
-    /// move plus the square the player must still clear — NOT `.unresolved`, so
-    /// recovery never takes over. The completing `.move` lands once the pawn is
-    /// lifted (see `enPassantReconstructs`).
+    /// The common slip: EP capture without lifting the captured pawn — indistinguishable from a
+    /// plain push until `applying` fails. `.correctable`, NOT `.unresolved`: recovery never takes over.
     @Test func enPassantWithoutLiftingCapturedPawnIsCorrectable() throws {
         let state = try GameState.parsing("4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1")
         let ep = try legalMove(state, from: Squares.e5, to: Squares.d6)
@@ -163,11 +153,8 @@ struct DGTReconstructorTests {
         )
     }
     
-    /// `.correctable` is narrow: it only rescues a *recognized legal* en
-    /// passant. The identical physical pattern (attacker on the EP target, the
-    /// neighbouring enemy pawn still present) with no EP right is simply an
-    /// illegal pawn move and must remain `.unresolved` — the correctable nudge
-    /// must never paper over a genuine fumble.
+    /// `.correctable` rescues only a *recognized legal* EP; the identical pattern with no EP right
+    /// stays `.unresolved` — the nudge must never paper over a genuine fumble.
     @Test func epTargetReachedWithoutLegalEnPassantIsUnresolved() throws {
         // Same shape as the correctable case, but no EP target in the FEN.
         let state = try GameState.parsing("4k3/8/8/3pP3/8/8/8/4K3 w - - 0 1")
@@ -227,11 +214,8 @@ struct DGTReconstructorTests {
         #expect(DGTReconstructor.reconstruct(from: state, physical: boards[1]) == .castlingInProgress(expected))
     }
     
-    /// Regression — field desync of 2026-07-18 (ply-20 O-O). King-first
-    /// two-motion castling: king placed on g8, then the h8 rook lifted — and
-    /// the quiescence with the rook in hand fell through to `.unresolved`,
-    /// tripping recovery mid-legal-castle. Pinned at the exact field position;
-    /// every settled interim of the gesture must classify as in progress.
+    /// Regression (field desync 2026-07-18, ply-20 O-O): king placed, rook in hand fell through to
+    /// `.unresolved` — every settled interim of the gesture must classify as in progress.
     @Test func castlingRookInHandStaysInProgress() throws {
         let state = try GameState.parsing(
             "rn1qk2r/1p3ppp/4pn2/p2p4/5Qb1/PB1P4/1PP2PPP/RN2K1NR b KQkq - 0 10"
@@ -419,16 +403,8 @@ struct DGTReconstructorTests {
 
     // MARK: Field DESYNC Fixtures (20 July 2026)
 
-    /// The first of the two field-session desyncs (M1 item 19): with the
-    /// white king on e2 and the black queen on a3 along a clear third
-    /// rank, the king landed on f3 — a single-piece diff whose only
-    /// pairing (e2→f3) walks straight into the queen's rank, so no legal
-    /// move matches and reconstruction must land on `.unresolved` (the
-    /// `enterRecovery` door; the session-level round trip is pinned in
-    /// `DGTLiveSessionTests`). The full field boards were not recorded —
-    /// these fixtures rebuild the *recorded geometry*: king-into-check,
-    /// single-piece diff, no legal match, which is exactly what the
-    /// verdict turns on. On failure, both boards attach as PNGs.
+    /// The first field-session desync: two pieces adjacent along a clear rank produced a
+    /// single-piece diff no legal move matches — must land `.unresolved` (the `enterRecovery` door).
     @MainActor
     @Test func fieldDesyncKingIntoQueensRankIsUnresolved() throws {
         let previous = Position.make { pos in

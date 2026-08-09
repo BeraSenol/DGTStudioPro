@@ -1,24 +1,8 @@
 import SwiftUI
 
-/// The Diagnostics menu (M8.3, flag C) — wiring the last unsurfaced
-/// diagnostics features: the session-log export (also reachable from the
-/// M6.3 recovery panel; a menu path means it needn't wait for a desync to
-/// be worth saving) and the opt-in board-stream recording for offline,
-/// hardware-free replay of reconstruction/recovery (`DGTSessionRecording`).
-///
-/// Holds the app-global objects directly — passed in by `DGTStudioProApp`,
-/// which owns them — rather than via `@FocusedValue`: unlike the Game menu,
-/// diagnostics are app-scoped, not per-tab. Reading `connection.isRecording`
-/// and `connection.isConnected` inside `body` registers Observation
-/// dependencies, so the menu's titles and enabled states track live state.
-///
-/// Stop and export are one action, deliberately: a recording is
-/// diagnostic-only, so stopping without saving has no audience — cancelling
-/// the save panel discards it, the same outcome with one fewer menu item.
-/// A recording-export write failure is recorded into the session log itself
-/// (Console + buffer) rather than alerted: a `Commands` scene has no
-/// natural presentation surface, and a diagnostics failure landing in the
-/// diagnostics timeline is exactly where the person debugging would look.
+/// The Diagnostics menu: session-log export and the board-stream recorder. App-scoped — a
+/// `Commands` scene has no `modelContext`. Stop-and-export is one action: a diagnostic
+/// recording stopped without saving has no audience.
 internal struct DiagnosticsCommands: Commands {
     
     internal let connection: DGTConnection

@@ -1,26 +1,8 @@
 import Foundation
 
-/// Glicko-1 (Glickman), the amateur-friendly rating (D11′): the per-player
-/// deviation replaces Elo's one-size K, so a fresh player converges in a
-/// handful of games while an established one barely moves on an upset.
-///
-/// Locked parameters and deliberate deviations from the paper:
-/// - Initial 1500 / RD 350, RD floor 30, cap 350, draws score 0.5.
-/// - **c = 0** — no RD inflation over time. The paper grows uncertainty
-///   between periods via wall-clock; dropping it makes the whole system a
-///   pure deterministic fold over ordered records (no "now" input), the
-///   same testability contract as everything else here. Revisit only if
-///   inactivity decay ever matters for a household ladder.
-/// - **Rating period = one game** in the fold (the FICS-style degenerate
-///   case). `updated(_:against:)` still takes an *array* because it is
-///   the textbook multi-opponent period formula — which is exactly what
-///   lets the tests pin Glickman's canonical worked example directly.
-/// - `isProvisional` while deviation exceeds 110 — our chosen display
-///   threshold for "too few games to trust", not an external standard.
-///
-/// This is the secondary stat: Rankings *order* is total wins
-/// (`PlayerStats.rankingOrder`); this fold supplies the number beside it
-/// and the trend line behind it.
+/// Glicko-1 (D11′): per-player deviation replaces Elo's one-size K. Locked: initial 1500/350,
+/// floor 30, cap 350, c = 0 (a pure deterministic fold — no wall-clock input), one game per
+/// period, provisional while RD > 110. Reference values pinned at full double precision.
 internal enum Glicko1 {
     
     // MARK: Parameters (D11′)
@@ -45,27 +27,9 @@ internal enum Glicko1 {
         
         internal var isProvisional: Bool { deviation > provisionalDeviationThreshold }
         
-        /// The one display rule for a rating — "1662" or "1662*" —
-        /// centralized because it was about to exist in four views.
-        /// "Unrated" (the nil case) stays at call sites: only they know
-        /// whether nil means no player or no rated games.
-        ///
-        /// **The marker was the word "(provisional)" until 5 Aug 2026**, when
-        /// the Players table gained a Rating column: thirteen characters of
-        /// parenthetical in a 120 pt cell truncate, and a rating that reads
-        /// "1662 (provisi…" is worse than no marker at all. The asterisk is
-        /// also the convention a chess reader already knows, so it needs no
-        /// legend — which the word did not, but the word was only ever
-        /// affordable in the two roomy surfaces that existed before the
-        /// column.
-        ///
-        /// **`*` means something else in this app, and that is worth naming
-        /// rather than discovering.** It is PGN's ongoing-result token, which
-        /// Decision #3 refuses at the archive door and D55′ folds to an em
-        /// dash on display. The two never meet: this one always trails digits
-        /// inside a Rating cell, that one stands alone in a Result cell. A
-        /// genuine collision would be a *result* surface reaching for this
-        /// glyph, and the separation is the reason to state it here.
+        /// The one display rule — "1662" or "1662*" — centralized because it was about to exist in four
+        /// views. "Unrated" (nil) stays at call sites: only they know their layout. The `*` never
+        /// collides with the result token: this one always trails digits.
         internal var displaySummary: String {
             let rounded = Int(mean.rounded())
             return isProvisional ? "\(rounded)*" : "\(rounded)"
@@ -79,8 +43,7 @@ internal enum Glicko1 {
         internal let score: Double
     }
     
-    /// One point of a player's rating history; `date` is the game's
-    /// `effectiveDate`.
+    /// One history point; `date` is the game's `effectiveDate`.
     internal struct Sample: Sendable, Hashable {
         internal let date: Date
         internal let rating: Rating
@@ -88,8 +51,7 @@ internal enum Glicko1 {
     
     // MARK: Period Update
     
-    /// The Glicko-1 period update. Empty outcomes return the input
-    /// unchanged (with c = 0 an idle period is a no-op by construction).
+    /// The period update; empty outcomes return the input unchanged (c = 0 makes idle a no-op).
     internal static func updated(_ player: Rating, against outcomes: [Outcome]) -> Rating {
         guard !outcomes.isEmpty else { return player }
         
@@ -119,17 +81,9 @@ internal enum Glicko1 {
     
     // MARK: The Fold
     
-    /// Rating histories over a set of game records, keyed like
-    /// `PlayerStats` by the resolved player key. Order-of-input
-    /// independent: records are sorted by `GameRecord.chronologicalOrder`
-    /// before folding — the determinism contract.
-    ///
-    /// A record is **rated** only when its result is decided *and* both
-    /// sides are resolved (you can't update against an unknown opponent's
-    /// rating; a win over `"?"` is a win in `PlayerStats`, not here).
-    /// Both participants update **simultaneously** from their pre-game
-    /// ratings — sequential updates would make the outcome depend on
-    /// which side you processed first.
+    /// Histories over records, keyed like `PlayerStats`. Order-of-input independent (sorted by
+    /// `chronologicalOrder`). Rated = decided *and* both seats resolved; participants update
+    /// simultaneously from pre-game states.
     internal static func histories(from records: [GameRecord]) -> [String: [Sample]] {
         var current: [String: Rating] = [:]
         var histories: [String: [Sample]] = [:]
@@ -172,8 +126,7 @@ internal enum Glicko1 {
     
     // MARK: Private Helpers
     
-    /// The paper's g(RD): dampens an opponent's influence by their own
-    /// uncertainty.
+    /// The paper's g(RD): dampens an opponent's influence by their own uncertainty.
     private static func g(_ deviation: Double) -> Double {
         1 / (1 + 3 * q * q * deviation * deviation / (Double.pi * Double.pi)).squareRoot()
     }

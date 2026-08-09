@@ -1,22 +1,8 @@
 import SwiftUI
 
-/// A `Section` whose header carries the D45′ chevron and whose body obeys it.
-///
-/// **Exists to make one defect unrepresentable.** A collapsible section is two
-/// facts that must agree — which section the chevron toggles, and which one the
-/// body checks — and hand-written they are two arguments that can differ.
-/// `.moves` in the header with `.evaluation` in the guard compiles, renders,
-/// and fails only when a reader folds one section and watches another
-/// disappear. D40′'s "one predicate, called twice" in its structural form:
-/// **one argument, used twice, by a type the host cannot route around.**
-///
-/// It also keeps the environment out of the hosts — two files hold it, this one
-/// gating the body and `InspectorSectionHeader` drawing the chevron. A host
-/// holding the store is a host that can be tempted to write to it.
-///
-/// `InspectorSectionHeader.section` is the parameter this drives and has no
-/// other intended caller: a header given a `section:` outside this type gets a
-/// chevron toggling state nothing reads — the same defect, other face.
+/// A `Section` whose header carries the D45′ chevron and whose body obeys it. **Exists to make
+/// one defect unrepresentable**: header-toggles-X-while-body-checks-Y compiles and renders —
+/// one argument, used twice, by a type the host cannot route around.
 internal struct CollapsibleSection<Content: View, Actions: View>: View {
 
     // MARK: Stored Properties
@@ -43,11 +29,8 @@ internal struct CollapsibleSection<Content: View, Actions: View>: View {
     // MARK: Body
     internal var body: some View {
         Section {
-            // Not `.opacity` or a zero frame: a collapsed section's rows must
-            // not be *built*, because some of them are expensive to build. The
-            // Library's PGN row re-serializes the whole game on every body
-            // pass, and that section is the longest one precisely because it is
-            // the one people fold away.
+            // Not `.opacity` or a zero frame: a collapsed section's rows must not be *built* — the PGN row
+            // re-serializes the whole game per body pass.
             if !collapse.isCollapsed(section) {
                 content()
             }

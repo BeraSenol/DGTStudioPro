@@ -1,23 +1,8 @@
 import Foundation
 
-/// M-lib.1 (D16′): the New Game dialog's round prefill — "the latest round
-/// among archived games pairing these two players, plus one." A pure fold
-/// over `GameRecord` in the D10′ shape: no SwiftData, no fixtures, opaque
-/// identity keys (the caller resolves display text to `normalizedName`
-/// keys; this fold only compares them).
-///
-/// The recorded rules:
-/// - **F9 reading**: a record belongs to the pairing iff its two resolved
-///   seat keys equal the queried pair *as a set* — either color
-///   assignment counts, and a game against any third player never counts.
-/// - **"Latest" is the numeric maximum**, not the chronologically last
-///   game's round: rounds are the rivalry's counter, and re-importing an
-///   old round-2 game must not wind an established round-7 pairing
-///   backwards. (Sub-decision recorded with D16′ at delivery.)
-/// - **Unknowns never inform** (the D12′ philosophy): a record with an
-///   unresolved seat can't prove the pairing, and a pairing record with a
-///   nil round contributes nothing to the maximum. A pairing with games
-///   but no numbered rounds has no round history — nil, Round stays empty.
+/// The New Game round prefill (D16′): latest round among games pairing these two, plus one.
+/// The pair matches as a *set*; "latest" is the numeric maximum — a late-imported old game
+/// can't wind the rivalry counter backwards; unknowns never inform.
 internal enum PairingRound {
     
     /// The suggested Round for a new game between `first` and `second`

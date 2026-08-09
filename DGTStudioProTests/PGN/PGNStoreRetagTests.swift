@@ -3,22 +3,8 @@ import Foundation
 import SwiftData
 @testable import DGTStudioPro
 
-/// M5's store door: rename and delete over `Player` (D37′, D39′).
-///
-/// The claims worth pinning are the ones cheap to get wrong and invisible once
-/// wrong: that a rename reaches the *games'* stored tags rather than the
-/// registry row (D37′, which is what makes export tell the truth); that a
-/// rewrite which would collide two games' content hashes is refused **before**
-/// anything is written (D39′); and that a self-play row — one player on both
-/// sides — is a single rewrite carrying both seats, not two half-rewrites whose
-/// prospective hashes the game never reaches.
-///
-/// Merge was the third verb until D52′ removed it. Its four pins went with the
-/// door; D38′'s finding survives at the anchor, where it constrains any future
-/// door that moves players between rows.
-///
-/// `@MainActor`: fronts `PGNStore` and realized `@Model`s, matching the other
-/// store suites.
+/// M5's store door: rename and delete over `Player` (D37′, D39′) — refusal before writing,
+/// both-seat rewrites, and the orphan cascade.
 @MainActor
 @Suite("PGN Store — Player Retag and Delete")
 struct PGNStoreRetagTests {
@@ -70,19 +56,9 @@ struct PGNStoreRetagTests {
         try context.fetch(FetchDescriptor<Player>()).filter(PGNStore.isOrphaned)
     }
 
-    /// Mints a linkless registry row.
-    ///
-    /// **Since D60′ this fixture is the only way to produce one**, which is the
-    /// point rather than a quirk: every door collects now, so an orphan exists
-    /// only in the instant between `resolvePlayer` creating a row and something
-    /// linking it. That instant is unreachable from the app and reachable from
-    /// here, which is what lets the collection tests have a subject at all.
-    ///
-    /// Through `resolvePlayer`, not `context.insert(Player(...))`: D9′'s single
-    /// creation door is the whole reason a row exists, and a fixture building one
-    /// directly would pin the collector against a shape the app cannot produce.
-    /// The explicit `save` is not ceremony — the door inserts without saving by
-    /// contract, and these suites fetch.
+    /// Mints a linkless row — **since D60′ the only way to produce one**. Through `resolvePlayer`,
+    /// not `context.insert`: D9′'s single door, or the collector is pinned against a shape the app
+    /// cannot produce.
     private static func orphanedRow(
         _ store: PGNStore,
         in context: ModelContext,
@@ -100,34 +76,16 @@ struct PGNStoreRetagTests {
         try #require(try store.resolvePlayer(named: tag))
     }
 
-    /// The identity key a raw *tag* resolves to — `resolvePlayer`'s own route,
-    /// tag → display form → fold.
-    ///
-    /// Spelled once, because `Player.normalizedKey(for:)` takes a **display**
-    /// form: handing it a comma tag gives `"senol, bera"`, a key no player row
-    /// ever carries, and every lookup written that way quietly returns nil and
-    /// passes an "it's gone" assertion for the wrong reason.
+    /// The identity key a raw tag resolves to — `resolvePlayer`'s own route.
     private static func key(forTag tag: String) -> String {
         Player.normalizedKey(for: PlayerName.displayForm(of: tag))
     }
 
     // MARK: Library Index — D58′
 
-    /// The index is filing, not identity: one game filed under two different
-    /// numbers is one game, so the second import is refused as a duplicate.
-    ///
-    /// **Asserted as the behaviour rather than as a digest comparison**, which
-    /// is both the stronger claim and the only one available — `contentHash`
-    /// is private to the store, and widening it to suit a test would trade the
-    /// one-hash invariant's encapsulation for a weaker assertion.
-    ///
-    /// Checked on the *identifier* rather than on the bare fact of a throw, the
-    /// `renamedGameExportRoundTrips` rule: a refusal naming some other game
-    /// would satisfy a weaker test while meaning the opposite.
-    ///
-    /// This is the field most likely to be folded into the hash by a future
-    /// reader, because unlike `board` and `timeControl` it *looks* like an
-    /// identifier. If it ever is, this test is what says so.
+    /// The index is filing, not identity: two ordinals, one game, second import refused. Asserted
+    /// through the door, not the digest — the field most likely to be folded into the hash by a
+    /// future refactor.
     @Test("A game filed under two different numbers is still one game")
     func theLibraryIndexIsOutsideTheContentHash() throws {
         let store = try Self.store()
@@ -147,11 +105,7 @@ struct PGNStoreRetagTests {
         }
     }
 
-    /// An import with no ordinal keeps none — nil is a real answer, and the
-    /// door must not invent one to fill the column.
-    ///
-    /// The negative half of the pair above, and the one that would fail if
-    /// somebody "helpfully" defaulted the parameter to a running count.
+    /// Nil is a real answer — the door must not invent an ordinal.
     @Test("A game imported without a filename ordinal keeps none")
     func textImportCarriesNoIndex() throws {
         let store = try Self.store()
@@ -325,21 +279,10 @@ struct PGNStoreRetagTests {
         #expect(game.white == "Senol, Bera")
     }
 
-    // The four merge pins (moves-and-deletes, survives-applyEdit,
-    // merge-into-self, colliding-merge-refused) went with `merge` itself
-    // (D52′, 4 Aug 2026). What they guarded that still needs guarding is
-    // guarded: the rename pins cover the same retag door — collision
-    // refusal, fold-equivalent identity, resolver-only target creation —
-    // and the applyEdit re-resolve contract is pinned by the rename
-    // round-trips above.
-
     // MARK: Orphan collection (D60′ — automatic, unasked)
 
-    /// The rule, stated as the thing it replaced: a linked player is never
-    /// collected. `.nullify` leaves the games' tags intact and the Library's
-    /// next `backfillPlayerLinks()` resolves them again, so collecting a linked
-    /// row would be undone within one navigation — which is why D38′ made the
-    /// old manual delete orphan-only and why the automatic one keeps that floor.
+    /// A linked player is never collected: `.nullify` leaves tags intact and the next backfill
+    /// would resurrect the row anyway.
     @Test("A linked player is never collected")
     func linkedPlayerIsNeverCollected() throws {
         let (store, context) = try Self.storeAndContext()
@@ -362,18 +305,8 @@ struct PGNStoreRetagTests {
         #expect(try store.player(withNormalizedKey: Self.key(forTag: "Ghost, Casper")) == nil)
     }
 
-    /// **The generator this decision was minted for**, and the one a reader
-    /// would not guess from the rule's wording: re-spelling a seat.
-    ///
-    /// Every distinct spelling committed to a seat mints a row, because
-    /// `applyEdit` re-resolves both seats unconditionally (D18′) and
-    /// `resolvePlayer` is a creation door (D9′). Correcting a name therefore
-    /// used to leave the misspelling behind forever — which is exactly what the
-    /// seat pickers were found offering. Here the correction collects it.
-    ///
-    /// The two spellings have genuinely different identity keys, which is what
-    /// makes this a second row rather than a rename: "Bera" folds to `bera`,
-    /// while "Senol, Bera" displays as "Bera Senol" and folds to `bera senol`.
+    /// **The generator D60′ was minted for**: re-spelling a seat — `applyEdit` re-resolves,
+    /// `resolvePlayer` creates, and the old spelling's row lingered forever.
     @Test("Correcting a seat collects the row the old spelling minted")
     func reSpellingASeatCollectsTheStrandedRow() throws {
         let (store, context) = try Self.storeAndContext()
@@ -405,11 +338,8 @@ struct PGNStoreRetagTests {
         #expect(try store.player(withNormalizedKey: Self.key(forTag: "Senol, Bera")) != nil)
     }
 
-    /// The backlog arm: rows orphaned before this rule existed are touched by
-    /// no door, so nothing would ever collect them. `backfillPlayerLinks` does,
-    /// because it is the one pass that already walks every game and every
-    /// player — and it collects **after** relinking, never before, or it would
-    /// delete the rows that pass is about to attach games to.
+    /// The backlog arm: `backfillPlayerLinks` collects — **after** relinking, or it would delete
+    /// rows the loop is about to link.
     @Test("The backfill collects the pre-existing backlog, after relinking")
     func backfillCollectsTheBacklogAfterRelinking() throws {
         let (store, context) = try Self.storeAndContext()
@@ -425,11 +355,8 @@ struct PGNStoreRetagTests {
 
     // MARK: Delete — the game-deletion cascade
 
-    /// The decision: deleting the last game a player appears in takes the row
-    /// with it. This is the half of D9′'s "no collector" that is narrowed —
-    /// and it works where the roadmap's old delete-player could not, because
-    /// the seat tags go with the game, leaving `backfillPlayerLinks()` nothing
-    /// to resolve the row back out of.
+    /// Deleting the last game collects both players — works where delete-player could not, because
+    /// the tags go with the game.
     @Test("Deleting the last game collects both of its players")
     func deletingTheLastGameCollectsItsPlayers() throws {
         let store = try Self.store()
@@ -459,11 +386,7 @@ struct PGNStoreRetagTests {
         #expect(try store.player(withNormalizedKey: Self.key(forTag: "Reinaud, Lorenzo")) == nil)
     }
 
-    /// One player on both sides is one row, collected once. A seat-wise reading
-    /// reaches `modelContext.delete` twice for the same model here — the
-    /// identifier-keyed fold in `playersOrphaned(byDeleting:)` is what prevents
-    /// it, and this is the fixture that exercises it (`selfPlayRewritesBothSeats`
-    /// is the same shape guarding the retag).
+    /// Self-play is one row, collected once — the identifier-keyed fold prevents a double delete.
     @Test("A self-play game's single player is collected once")
     func selfPlayCollectsTheRowOnce() throws {
         let (store, context) = try Self.storeAndContext()
@@ -492,16 +415,8 @@ struct PGNStoreRetagTests {
         #expect(try store.player(withNormalizedKey: Self.key(forTag: "Senol, Bera")) == nil)
     }
 
-    /// The propagation-timing pin, and the reason it is spelled as a *pure*
-    /// question rather than a post-delete relationship read.
-    ///
-    /// This asserts the predicate answers correctly with **nothing deleted
-    /// yet** — no `modelContext.delete` has been called, so an implementation
-    /// that asked `isOrphaned` after the fact could not produce this answer at
-    /// all. It is the shape of check the project keeps rediscovering it needs:
-    /// one that could have failed. A test that deleted the game first and
-    /// looked for the row would pass whenever SwiftData happened to have
-    /// propagated the inverse, and pass just as quietly on the day it doesn't.
+    /// The propagation-timing pin, spelled as a *pure* question: post-delete `.nullify` propagation
+    /// cannot be relied on, and a post-hoc read would pass by accident.
     @Test("The cascade is answerable before anything is deleted")
     func theCascadeIsComputedBeforeTheDeletion() throws {
         let store = try Self.store()
@@ -542,11 +457,8 @@ struct PGNStoreRetagTests {
         let game = try store.importPGN(text: Self.pgnText())
         try store.retag(try Self.player(store, named: "Senol, Bera"), to: "Şenol, Bera")
 
-        // The import door *throws* on a duplicate rather than handing back the
-        // existing row, so "dedupes" is asserted as a refusal — and against
-        // the identifier, not merely the fact of a throw, because a refusal
-        // naming some other game would pass a bare `#expect(throws:)` while
-        // meaning the opposite.
+        // The import door *throws* on a duplicate; "dedupes" is asserted as a refusal naming the
+        // identifier — a refusal naming some other game would pass a weaker test meaning the opposite.
         do {
             _ = try store.importPGN(text: game.pgnText)
             Issue.record("Expected the re-import to be refused as a duplicate")

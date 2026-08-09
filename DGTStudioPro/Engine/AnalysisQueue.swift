@@ -1,32 +1,6 @@
-/// Pure decisions behind batch engine analysis — ordering, dedupe,
-/// advancement, and outcome bookkeeping — extracted from
-/// `AnalysisQueueController` for the same reason `DGTAutoConnectPolicy`
-/// was extracted from `DGTConnection`: the interesting choices are
-/// unit-testable without SwiftData or an engine subprocess. The controller
-/// keeps only the transport (model resolution, the Stockfish walk,
-/// run-task plumbing) around these calls.
-///
-/// Generic over the id rather than bound to `PersistentIdentifier` so the suite
-/// runs hermetically on plain strings; the controller instantiates
-/// `AnalysisQueue<PersistentIdentifier>`.
-///
-/// Semantics, each pinned by a test:
-/// - **FIFO.** `enqueue` appends in the order given — callers pass display
-///   order — and `startNext` pops the head.
-/// - **Dedupe on entry.** An id already waiting or running is skipped, its
-///   in-flight pass *being* the analysis. An id with a recorded outcome
-///   re-queues (the re-analyze path) and its old outcome is dropped, so
-///   `status(of:)` never reports a stale result for a game back in line.
-/// - **A fresh batch resets the log.** `enqueue` onto a fully-idle queue clears
-///   the finished log, so "3 of 7" counts the batch just started rather than
-///   history. Enqueueing *during* a run extends the same batch, and the totals
-///   grow — correct, since more work was added.
-/// - **Outcomes are recorded, never inferred.** `finishCurrent` appends in
-///   completion order; `failures` filters it for the popover.
-/// - **The queue owns the line; the controller owns the engine.**
-///   `removeWaiting` and `clearWaiting` never touch `current` — stopping the
-///   running pass is `skipCurrent`/`stopAll`, reporting back through
-///   `finishCurrent(.cancelled)`.
+/// Pure decisions behind batch analysis — ordering, dedupe, advancement, outcomes — extracted
+/// so the interesting choices are suited without an engine. FIFO; enqueue dedupes against line
+/// and running; a fresh batch clears the finished log; the running item is the controller's to stop.
 internal struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
     
     // MARK: Outcomes
@@ -35,13 +9,10 @@ internal struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
     internal enum Outcome: Equatable, Sendable {
         case done
         case failed(message: String)
-        /// Stopped by the user (skip / Stop All) or by teardown. Any
-        /// evaluations recorded before the stop stay in the PGN — same
-        /// contract as the driver's `stop()` always had.
+        /// Stopped by user or teardown; evaluations recorded before the stop stay.
         case cancelled
         
-        /// The popover's filter, named once instead of an `if case` at each
-        /// use site.
+        /// The failure filter, named once instead of an `if case` per site.
         internal var isFailure: Bool {
             if case .failed = self { true } else { false }
         }
@@ -53,11 +24,10 @@ internal struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
         internal let outcome: Outcome
     }
     
-    /// The queue's answer to "where does this game stand?" — what the
-    /// inspector's analysis control row switches on.
+    /// The queue's answer to "where does this game stand?".
     internal enum ItemStatus: Equatable, Sendable {
         case notQueued
-        /// In line; `position` is 1-based ("#2 in line").
+        /// In line; `position` is 1-based.
         case waiting(position: Int)
         case running
         case finished(Outcome)
@@ -84,54 +54,33 @@ internal struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
     
     internal var completedCount: Int { finished.count }
     
-    /// The batch size as the user sees it: everything finished, running,
-    /// or in line since the batch began.
+    /// The batch size as the user sees it.
     internal var totalCount: Int { completedCount + remainingCount }
 
-    /// The 1-based position the batch is on — the "3" in "Analyzing 3 of 18",
-    /// and the numerator of the toolbar's "3/18".
-    ///
-    /// **One spelling, because there were two** (8 Aug 2026): the queue window
-    /// showed `completedCount + 1` while the Library toolbar showed
-    /// `completedCount`, so the same moment read "Analyzing 1 of 110" in one
-    /// place and "0/110" in the other — both defensible alone (games *begun*
-    /// versus games *done*) and wrong together, since the two render
-    /// simultaneously. Position-of-current wins: a batch that has started its
-    /// first game is on game 1, which is how every pager and installer counts.
-    ///
-    /// While active, clamped to `totalCount` for the transient lap between one
-    /// game finishing and the next being promoted (the window's old guard,
-    /// moved here with the arithmetic). Drained, it is simply `completedCount`
-    /// — "5/5", agreeing with "Analysis finished" beside it rather than
-    /// claiming a sixth game.
+    /// The 1-based position the batch is on — one spelling, because there were two: the window and
+    /// the toolbar once disagreed by one.
     internal var batchPosition: Int {
         isActive ? min(completedCount + 1, totalCount) : completedCount
     }
     
-    /// Failed items, in completion order, for the popover's error list.
+    /// Failed items, completion order.
     internal var failures: [Finished] {
         finished.filter(\.outcome.isFailure)
     }
     
-    /// `contains`, not `!failures.isEmpty`: the toolbar item reads this on
-    /// every render, and the array form built the whole list to ask whether
-    /// it was empty.
+    /// `contains`, not `!failures.isEmpty` — the array form built the whole list to ask if it was empty.
     internal var hasFailures: Bool {
         finished.contains { $0.outcome.isFailure }
     }
     
     // MARK: Mutations
     
-    /// Appends `ids` in order, skipping any already waiting or running.
-    /// Returns how many were actually added. See the type doc for the
-    /// fresh-batch reset and the re-queue rule.
+    /// Appends in order, skipping already-waiting/running; returns how many were added.
     @discardableResult
     internal mutating func enqueue(_ ids: [ID]) -> Int {
         if !isActive && !ids.isEmpty {
-            // Fresh batch: without this, yesterday's log makes today's
-            // progress read "5 of 7" before anything has run. Guarded on
-            // non-empty input so an accidental `enqueue([])` doesn't
-            // erase a drained batch's history for nothing.
+            // Fresh batch: without this, yesterday's log makes today read "5 of 7" before anything runs.
+            // Guarded on non-empty input so `enqueue([])` doesn't erase a drained batch's history.
             finished.removeAll()
         }
         var accepted = 0
@@ -144,9 +93,7 @@ internal struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
         return accepted
     }
     
-    /// Promotes the head of the line to `current` and returns it; `nil`
-    /// while something is already running or the line is empty. (The
-    /// controller's loop shape: `while let id = queue.startNext()`.)
+    /// Promotes the head to `current`; nil while running or empty. (Loop shape: `while let`.)
     internal mutating func startNext() -> ID? {
         guard current == nil, let next = waiting.first else { return nil }
         waiting.removeFirst()
@@ -154,22 +101,19 @@ internal struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
         return next
     }
     
-    /// Records the running item's outcome and clears `current`. No-op
-    /// with nothing running — teardown paths call this defensively.
+    /// Records the outcome, clears `current`; no-op with nothing running (teardown calls defensively).
     internal mutating func finishCurrent(_ outcome: Outcome) {
         guard let current else { return }
         finished.append(Finished(id: current, outcome: outcome))
         self.current = nil
     }
     
-    /// Removes an id from the waiting line only — the running item is the
-    /// controller's to stop (see the type doc's last bullet).
+    /// Waiting line only — the running item is the controller's to stop.
     internal mutating func removeWaiting(_ id: ID) {
         waiting.removeAll { $0 == id }
     }
     
-    /// Empties the waiting line; `current` is untouched for the same
-    /// reason as `removeWaiting`.
+    /// Empties the waiting line; `current` untouched, same reason.
     internal mutating func clearWaiting() {
         waiting.removeAll()
     }
@@ -181,8 +125,7 @@ internal struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
     
     // MARK: Queries
     
-    /// The most recent word on `id`. A re-queued game reports its place in
-    /// line, never its dropped prior outcome (see `enqueue`).
+    /// The most recent word on `id` — a re-queued game reports its place in line, never its dropped outcome.
     internal func status(of id: ID) -> ItemStatus {
         if current == id { return .running }
         if let index = waiting.firstIndex(of: id) {

@@ -3,42 +3,19 @@ import Foundation
 import SwiftData
 @testable import DGTStudioPro
 
-/// Transport-level pin for the controller's run-task plumbing. The pure
-/// decisions are `AnalysisQueueTests`' job; this suite exists for the one
-/// defect that lived *between* the pure queue and the engine — the
-/// enqueue-during-drain race (M1 item 1) — which no pure test can see
-/// because it is made of task lifetimes and a real 500 ms shutdown grace.
-/// Real engine, binary-gated like `StockfishEngineTests`; in-memory
-/// container like the store suites; `@MainActor` to match its subject.
+/// Transport-level pin — the one defect that lived *between* the pure queue and the engine.
 @MainActor
 @Suite("Analysis Queue Controller — drain race")
 struct AnalysisQueueControllerTests {
 
-    // `nonisolated`, load-bearing: `.enabled(if:)` evaluates its
-    // condition in a `Sendable` closure outside the suite's isolation,
-    // and in a `@MainActor` suite a bare static inherits main-actor
-    // isolation — the macro expansion then fails to compile.
-    // (`StockfishEngineTests` never needed this; that suite is
-    // nonisolated.) Any future `@MainActor` suite gating on the binary
-    // wants this same spelling.
+    // `nonisolated`, load-bearing: `.enabled(if:)` evaluates in a `Sendable` closure outside the
+    // suite's isolation.
     private nonisolated static var stockfishAvailable: Bool {
         StockfishEngine.defaultBinaryURL != nil
     }
 
-    /// An `enqueue` landing inside the drain's `driver.shutdown()` grace
-    /// must start a fresh run once the task clears itself. Pre-fix,
-    /// `startRunIfNeeded` saw the stale `runTask`, refused the start,
-    /// nothing ever re-checked, and the item sat "#1 in line" forever —
-    /// this test's pre-fix failure mode is the second poll timing out
-    /// with B still `.waiting`.
-    ///
-    /// Determinism note: observing `completedCount == 1` from the main
-    /// actor is only possible once the run task has suspended, and its
-    /// first suspension after recording A's outcome *is* the shutdown
-    /// grace — so B reliably lands inside the window. Should scheduling
-    /// ever delay this test past the grace, B lands after the task
-    /// cleared and the test still passes, merely exercising the ordinary
-    /// path that run.
+    /// An `enqueue` landing inside the drain's shutdown grace must start a fresh run once the task
+    /// clears — pre-fix it was refused and the batch sat queued forever.
     @Test(.enabled(if: stockfishAvailable))
     func enqueueDuringDrainGraceStartsAFreshRun() async throws {
         let container = try ModelContainer(

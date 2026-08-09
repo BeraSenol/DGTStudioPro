@@ -1,13 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// Acceptance coverage for `FEN(parsing:)` — the happy path: the starting
-/// position, real reference positions, both field-count variants, every
-/// accepted per-field form, whitespace tolerance, and the full round-trip.
-/// Its complement, `FENParsingRejectionTests`, owns *all* malformed-input
-/// pins; a rejection case belongs there, not here (the two suites carried
-/// duplicated rejection tests for a while — that overlap has been removed,
-/// with this file keeping acceptance only).
+/// Acceptance for `FEN(parsing:)` — the happy path; rejections live in the rejection suite.
 @Suite("FEN String Parsing")
 struct FENParsingTests {
 
@@ -184,20 +178,9 @@ struct FENParsingTests {
     // MARK: Position Key
 
     @Test func positionKeyCarriesEveryDoublePushEPTarget() throws {
-        // `updatedEnPassantTarget` is *permissive*: it stamps the skipped
-        // square after every double push, capturable or not — so two states
-        // identical in placement, side, and rights get different
-        // `positionKey`s when only a dead EP right separates them. After
-        // 1. e4 no black pawn attacks e3, yet the key still says `e3`.
-        //
-        // Pinned as documentation, not endorsement: `positionKey` has no
-        // repetition consumer today, but FIDE's repetition rule counts the
-        // EP square only when the capture is actually playable (capturer
-        // present, unpinned, not in check). Any future threefold/fivefold
-        // fold over this key must strictify the EP field first, or it will
-        // miss exactly the repetitions players notice. The convention
-        // choice is a decision for that feature; this test is the tripwire
-        // that makes it one.
+        // `updatedEnPassantTarget` is *permissive*: it stamps the skipped square after every double
+        // push, so a dead EP right splits two otherwise-identical `positionKey`s. Pinned as
+        // documentation, not endorsement — no repetition-detection consumer exists yet.
         let start: GameState = .starting
         let afterDoublePush = start.applying(try start.parseSAN("e4"))
 

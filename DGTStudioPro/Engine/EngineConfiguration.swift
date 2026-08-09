@@ -1,60 +1,31 @@
 import Foundation
 
-/// The single source of truth for the Stockfish options the app controls —
-/// born from the M11 decoupling review, which caught the Settings pane
-/// asserting configuration that lived nowhere: "Depth 20" (the real default
-/// was 18, duplicated across two `analyze` signatures) and "Hash 128 MB /
-/// Threads 1" (never sent, so the engine silently ran on Stockfish's own
-/// defaults — 16 MB of hash). Every consumer now reads *this* type: the
-/// Settings pane binds to the same keys, `GameAnalysisDriver` takes its
-/// depth default from `current`, and `StockfishEngine.start()` sends
-/// `uciOptionLines` in the `uciok` → `isready` window per the UCI contract.
-///
-/// Values clamp on init, so a stale or hand-edited defaults plist can never
-/// push the engine outside sane bounds. Rejected: `UserDefaults.register` —
-/// clamping at the single read site is stronger, because it also repairs
-/// out-of-range values that are *present*, which registration can't.
+/// Single source of truth for the Stockfish options the app controls (M11 review: Settings
+/// asserted values that lived nowhere — the engine silently ran on 16 MB hash). Values clamp on
+/// init, so a hand-edited plist can never reach the engine out of range.
 internal struct EngineConfiguration: Equatable, Sendable {
     
     // MARK: Bounds
     
-    /// 8 is the floor where per-ply evaluations stop being noise; 30 is the
-    /// ceiling where a full-game pass stops being an interactive wait.
+    /// 8 = floor where per-ply evals stop being noise; 30 = ceiling where a pass stops being interactive.
     internal static let depthRange = 8...30
     
-    /// The transposition-table sizes offered in Settings. Stockfish accepts
-    /// arbitrary megabyte values; a fixed menu keeps the choice legible and
-    /// gives the clamp a nearest-size snap target.
+    /// Fixed menu of hash sizes — legible, and the clamp gets a nearest-size snap target.
     internal static let hashChoicesMB = [16, 64, 128, 256, 512, 1024]
     
-    /// One thread minimum; the machine's active cores as the ceiling.
-    /// Computed, not stored — core count is a fact about the host.
+    /// One thread minimum; active cores as ceiling. Computed — core count is a fact about the host.
     internal static var threadsRange: ClosedRange<Int> {
         1...max(1, ProcessInfo.processInfo.activeProcessorCount)
     }
 
     // MARK: Syzygy Bounds
 
-    /// Stockfish's own range for `SyzygyProbeDepth`, taken from its option
-    /// advertisement rather than invented: `spin default 1 min 1 max 100`.
-    ///
-    /// The knob is "how shallow in the tree may we probe". 1 probes everywhere
-    /// and is the most accurate; raising it trades tablebase hits for search
-    /// speed, which matters when the tables sit on a spinning disk or a network
-    /// volume. Left at 1 by default because this app analyzes archived games
-    /// off a local SSD, where the probe is cheap.
+    /// Stockfish's own range for `SyzygyProbeDepth` (`spin default 1 min 1 max 100`) — how shallow
+    /// in the tree probing may go; 1 probes everywhere.
     internal static let syzygyProbeDepthRange = 1...100
 
-    /// `SyzygyProbeLimit`, `spin default 7 min 0 max 7` — the largest piece
-    /// count to probe.
-    ///
-    /// **7 is a ceiling, not a promise.** Setting it to 7 with only 3-4-5 tables
-    /// installed costs nothing: the engine probes what exists. Lowering it is
-    /// how you stop probing a set you *have* — the case being a 7-piece
-    /// collection on slow storage where the largest tables are the expensive
-    /// ones. Zero disables probing entirely while keeping the path configured,
-    /// which is a useful A/B and the reason the range starts there rather than
-    /// at 3.
+    /// `SyzygyProbeLimit` (`spin default 0..7`) — the largest piece count to probe. **7 is a
+    /// ceiling, not a promise**: with only 3-4-5 tables Stockfish probes what it has.
     internal static let syzygyProbeLimitRange = 0...7
 
     // MARK: Values
@@ -63,40 +34,21 @@ internal struct EngineConfiguration: Equatable, Sendable {
     internal let hashMB: Int
     internal let threads: Int
 
-    /// The tablebase folder, as a plain filesystem path, or nil when none is
-    /// configured.
-    ///
-    /// **A resolved path rather than a bookmark, and this type never opens
-    /// it.** `SyzygyPath` is a UCI option and UCI options are strings; the
-    /// security-scoped access that makes the path openable is `SyzygyLocation`'s
-    /// job and must outlive this value — see the note on `current(syzygyPath:)`
-    /// for why that separation is load-bearing rather than tidy.
+    /// The tablebase folder as a plain path, or nil. A resolved path, not a bookmark — this type
+    /// never opens the folder; holding scoped access is `SyzygyLocation.Access`'s job.
     internal let syzygyPath: String?
 
     internal let syzygyProbeDepth: Int
     internal let syzygy50MoveRule: Bool
     internal let syzygyProbeLimit: Int
     
-    /// Depth 18 preserves the pre-configuration behavior exactly (the old
-    /// twin default, now living once); 128 MB makes the Settings pane's
-    /// long-standing promise true; 1 thread keeps analysis polite to the
-    /// rest of the app.
-    /// The Syzygy members default to **Stockfish's own defaults**, deliberately
-    /// spelled here rather than left implicit: with no path configured this
-    /// type emits no Syzygy options at all, so the values only ever describe
-    /// what the engine would have done anyway.
+    /// Depth 18 preserves pre-configuration behaviour (the old twin default, now once); 128 MB
+    /// makes Settings true; 1 thread stays polite. Syzygy members default to Stockfish's own — with
+    /// no path the type emits no Syzygy options at all.
     internal static let `default` = EngineConfiguration(depth: 18, hashMB: 128, threads: 1)
 
-    /// Clamps depth and threads into range; snaps hash to the nearest
-    /// offered size, so a plist-edited 100 becomes 128 rather than
-    /// rejecting or defaulting. The two Syzygy spins clamp the same way,
-    /// against the ranges Stockfish itself advertises.
-    ///
-    /// An **empty** `syzygyPath` folds to nil rather than being passed through.
-    /// `setoption name SyzygyPath value ` with nothing after it is a real
-    /// command that Stockfish reads as "clear the tables", and a cleared path
-    /// and an unconfigured one are the same state — so representing them
-    /// identically is what stops "no tablebases" having two spellings.
+    /// Clamps depth/threads; snaps hash to the nearest offered size (a plist-edited 100 → 128).
+    /// Syzygy spins clamp against Stockfish's advertised ranges.
     internal init(
         depth: Int,
         hashMB: Int,
@@ -121,30 +73,14 @@ internal struct EngineConfiguration: Equatable, Sendable {
     
     // MARK: Persistence
     
-    /// The persisted configuration, clamped on read. `UserDefaults` is
-    /// thread-safe, so this is callable from the engine actor at launch and
-    /// from the driver's default argument at each analyze call. Settings
-    /// changes therefore apply to the *next* run with no restart story:
-    /// depth is read per call, and hash/threads are read at engine launch —
-    /// which M-batch guarantees happens per run, since the engine releases
-    /// at drain.
+    /// Persisted configuration, clamped on read. `UserDefaults` is thread-safe, so callable from
+    /// the actor at launch and the driver per call — Settings apply to the *next* run, no restart story.
     internal static var current: EngineConfiguration {
         current(syzygyPath: nil)
     }
 
-    /// The persisted configuration with a tablebase folder threaded in.
-    ///
-    /// **The path is a parameter rather than another `UserDefaults` read, and
-    /// that asymmetry is the point.** Every other value here is a number in the
-    /// plist; the Syzygy folder is a security-scoped resource that has to be
-    /// *held open* while the engine runs. Reading it here would produce a path
-    /// string whose access token had already been released by the time this
-    /// function returned — a path that looks right and opens nothing. The
-    /// caller resolves it, keeps the token, and passes what it opened.
-    ///
-    /// `StockfishEngine.start()` is the one caller that passes a path;
-    /// `GameAnalysisDriver`'s depth default takes the pathless form, since it
-    /// wants one number and starts no engine.
+    /// The persisted configuration with a tablebase folder threaded in. The path is a parameter,
+    /// not another defaults read — resolving the bookmark and holding scoped access is the caller's.
     internal static func current(
         syzygyPath: String?,
         in defaults: UserDefaults = .standard
@@ -168,23 +104,9 @@ internal struct EngineConfiguration: Equatable, Sendable {
 
     // MARK: UCI
 
-    /// The `setoption` lines `StockfishEngine.start()` sends after `uciok`
-    /// and before `isready` — the UCI contract's one window for options.
-    ///
-    /// **`SyzygyPath` goes last, and the order is not cosmetic.** Stockfish
-    /// loads the tables synchronously when that option is set and answers with
-    /// an `info string` naming what it found; sending it after the others keeps
-    /// that answer as the final line of the option block, where
-    /// `StockfishEngine` reads it without having to correlate it against
-    /// anything. The other three configure the probe and mean nothing until
-    /// there are tables to probe.
-    ///
-    /// **All four are omitted entirely with no path.** Sending
-    /// `SyzygyProbeDepth` to an engine with no tables is harmless and
-    /// meaningless, and it would put four lines in every UCI log for a feature
-    /// nobody has switched on — the log-noise argument D63′ makes about the
-    /// engine's own option advertisement, applied to our half of the
-    /// conversation.
+    /// The `setoption` lines sent after `uciok`, before `isready` — the one window.
+    /// **`SyzygyPath` goes last**: Stockfish loads tables the moment it sees the path, under
+    /// whatever probe settings are already in effect.
     internal var uciOptionLines: [String] {
         var lines = [
             "setoption name Hash value \(hashMB)",
@@ -200,9 +122,8 @@ internal struct EngineConfiguration: Equatable, Sendable {
 }
 
 extension Comparable {
-    /// The standard clamp the stdlib doesn't ship. Two hand-rolled
-    /// `min(max(…))` pairs in the initializer above were the whole reason
-    /// this file had arithmetic in it at all.
+    /// The standard clamp the stdlib doesn't ship — two hand-rolled `min(max())` pairs were the
+    /// file's only arithmetic.
     internal func clamped(to range: ClosedRange<Self>) -> Self {
         min(max(self, range.lowerBound), range.upperBound)
     }

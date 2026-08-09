@@ -1,30 +1,13 @@
 import SwiftUI
 
-/// The Players icons grid, with the Library grid's two Finder gestures
-/// since the Players selection went multi (2 Aug 2026): arrow keys walk the
-/// grid from the last-touched card, and a click-drag from empty space
-/// sweeps a rubber-band over the cards it crosses.
-///
-/// The scaffolding here restates `LibraryIconsView`'s on purpose — the
-/// grammar the two grids must agree on (arrow stepping, band
-/// normalization) lives once in `IconGridSelection`, while the plumbing
-/// (frames, focus, gesture state) is per-view: the element types and cards
-/// differ, and collapsing the remainder means a container generic over its
-/// content, which two grids haven't earned. The `OpeningSection` em-dash
-/// argument, applied to interaction code.
-///
-/// Same content-anchored coordinate space as the Library's, for the same
-/// reason: viewport-anchored frames made every scroll tick rewrite every
-/// frame ("Geometry action is cycling between duplicate values").
+/// The Players icons grid — the Library grid's two Finder gestures; the shared grammar lives in
+/// `IconGridSelection` (the half that must not fork).
 internal struct PlayersIconsView: View {
 
     // MARK: Static Constants
 
-    /// A coordinate-space name, not an accessibility identifier — the
-    /// registry governs the latter only. `nonisolated` for the
-    /// `LibraryIconsView.gridSpace` reason: `View` conformance infers
-    /// `@MainActor` onto statics, and the geometry transform closure is
-    /// `@Sendable`.
+    /// A coordinate-space name, not an identifier. `nonisolated` — `View` conformance infers
+    /// @MainActor onto statics and the transform closure is `@Sendable`.
     private nonisolated static let gridSpace = "playersIconsGrid"
 
     // MARK: Stored Properties
@@ -36,26 +19,17 @@ internal struct PlayersIconsView: View {
 
     @Environment(CollectionViewOptions.self) private var options
 
-    // The `IconGridWidthBox` mirror stood here from 7 Aug 2026 to 8 Aug 2026
-    // — deleted with the type for the Library grid's reason: `.onMoveCommand`
-    // is inside the `GeometryReader`'s scope, so `move` takes the width as a
-    // parameter and the mirror never needed to exist.
-
-    /// Realized cards' frames in `gridSpace` — a box, not observed state
-    /// (see `IconGridFrameStore`); the sweep re-checks membership against
-    /// `players` rather than trusting the keys. **Populated only while a band
-    /// is sweeping** (8 Aug 2026) — the Library grid's transform gate, and
-    /// its comment carries the account.
+    /// Card frames — a box, not observed state; **populated only while a band sweeps** (the Library
+    /// grid's transform gate carries the account). Membership re-checked against `players`.
     @State private var cardFrames = IconGridFrameStore<PlayerStats.ID>()
     @State private var rubberBand: CGRect?
-    /// The card the last selection gesture touched — where an arrow steps
-    /// from.
+    /// The card the last gesture touched — where an arrow steps from.
     @State private var anchorKey: PlayerStats.ID?
     @FocusState private var isFocused: Bool
 
     // MARK: Body
     var body: some View {
-        // One Bool for all the transform closures — the Library grid's gate.
+        // One Bool for all transform closures — the Library grid's gate.
         let isSweeping = rubberBand != nil
         return GeometryReader { geometry in
             ScrollViewReader { proxy in
@@ -65,9 +39,7 @@ internal struct PlayersIconsView: View {
                         spacing: options.spacing
                     ) {
                         ForEach(players) { player in
-                            // Rank always rides the card (D48′) — in name order
-                            // too, because the rank is a fact about the player,
-                            // not about the current sort.
+                            // Rank always rides the card (D48′) — rank is a fact about the player, not the sort.
                             PlayerCardView(
                                 stats: player.stats,
                                 isSelected: selectedKeys.contains(player.id),
@@ -77,19 +49,14 @@ internal struct PlayersIconsView: View {
                             )
                             .id(player.id)
                             .onGeometryChange(for: CGRect.self) { geometry in
-                                // Gated on the sweep — the fifth correction on
-                                // the cycling warning, shared with the Library
-                                // grid, whose transform comment carries the
-                                // whole account: idle returns one constant, so
-                                // launch wobble has no value stream to cycle.
+                                // Gated on the sweep — the fifth cycling correction, shared with the Library grid.
                                 isSweeping
                                 ? IconGridSelection.stableFrame(
                                     geometry.frame(in: .named(Self.gridSpace))
                                 )
                                 : .null
                             } action: { frame in
-                                // A box write: free, and invisible to the
-                                // render pass — no invalidation, no loop.
+                                // A box write: free, invisible to the render pass.
                                 cardFrames.frames[player.id] = frame
                             }
                         }
@@ -98,21 +65,16 @@ internal struct PlayersIconsView: View {
                     .frame(maxWidth: .infinity)
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        // Empty space, or the gutters between cards — a card's
-                        // own tap wins before this fires.
+                        // Empty space or gutters — a card's own tap wins first.
                         selectedKeys.removeAll()
                         anchorKey = nil
                         isFocused = true
                     }
-                    // The background's own context menu (7 Aug 2026). It sits
-                    // on the same `contentShape` the clear-selection tap uses, so
-                    // it covers the gutters too — a right-click *between* cards is
-                    // a background right-click, which is what Finder does and what
-                    // a reader trying to reach this will actually aim at. A card's
-                    // own menu wins over its own bounds, so the two never compete.
+                    // Background menu on the same `contentShape` as the clear tap — covers the gutters (Finder's
+                    // behaviour); a card's own menu wins over its bounds.
                     .contextMenu { ShowViewOptionsButton() }
                     .gesture(rubberBandGesture)
-                    // Content-anchored, deliberately — see the type doc.
+                    // Content-anchored — see the type doc.
                     .coordinateSpace(name: Self.gridSpace)
                     .overlay(alignment: .topLeading) {
                         if let band = rubberBand {
@@ -131,9 +93,7 @@ internal struct PlayersIconsView: View {
                 .focusable()
                 .focusEffectDisabled()
                 .focused($isFocused)
-                // The Library grid's arrangement: the proxy's own width,
-                // captured at key-press time. The width box and its geometry
-                // action stood here until 8 Aug 2026.
+                // The proxy's own width, captured at key-press time.
                 .onMoveCommand { direction in
                     move(direction, width: geometry.size.width, proxy: proxy)
                 }
@@ -149,8 +109,7 @@ internal struct PlayersIconsView: View {
         isFocused = true
     }
 
-    /// Sweeping replaces the selection with the crossed cards — Finder's
-    /// plain drag; the anchor follows the sweep.
+    /// Sweeping replaces the selection (Finder's plain drag); the anchor follows.
     private var rubberBandGesture: some Gesture {
         DragGesture(minimumDistance: 4, coordinateSpace: .named(Self.gridSpace))
             .onChanged { value in
@@ -161,13 +120,8 @@ internal struct PlayersIconsView: View {
                         .filter { cardFrames.frames[$0.id]?.intersects(band) == true }
                         .map(\.id)
                 )
-                // The Library grid's guard, and it bought more here — see
-                // `LibraryIconsView` for the argument. `selectedKeys` is
-                // `@State` on `PlayersDestination`, whose body folds the whole
-                // Library, so every frame of a sweep that crossed nothing new
-                // used to re-run `Glicko1.histories` and `PlayerStats.index`.
-                // The memo took most of that; this takes the rest of the
-                // render.
+                // The Library grid's guard, worth more here: `selectedKeys` is `@State` on a destination whose
+                // body folds the whole Library.
                 guard crossed != selectedKeys else { return }
                 selectedKeys = crossed
                 anchorKey = crossed.isEmpty ? nil : players.first { crossed.contains($0.id) }?.id
@@ -189,7 +143,7 @@ internal struct PlayersIconsView: View {
                 count: players.count
             )
         } else {
-            // Nothing anchored: the first arrow lands on the first card.
+            // Nothing anchored: first arrow lands on the first card.
             target = 0
         }
         let player = players[target]
@@ -213,12 +167,8 @@ internal struct PlayersIconsView: View {
     .environment(PreviewFixtures.viewOptions())
 }
 
-/// Wide enough for a full row — wrapping only shows itself with more players
-/// than one row holds. The column count is derived from this frame's width
-/// and the View Options icon size, so the 860 here is load-bearing: it is
-/// what makes this preview show two rows rather than one.
-/// Preselected with *two* cards, the state the single-select grid could
-/// never render.
+/// Wide enough for a full row — the 860 is load-bearing (column count derives from it), making
+/// two rows. Preselected with *two* cards, the state single-select could never render.
 #Preview("Wraps To Two Rows, Multi") {
     @Previewable @State var selection: Set<PlayerStats.ID> = Set(
         PreviewFixtures.deepRankedPlayers().prefix(2).map(\.id)

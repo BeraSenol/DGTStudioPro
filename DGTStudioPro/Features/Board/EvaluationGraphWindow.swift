@@ -1,18 +1,9 @@
 import SwiftData
 import SwiftUI
 
-/// What the magnifier asks for: one game's evaluation curve, enlarged.
-///
-/// **The wrapper is the whole reason this type exists.** `openWindow(value:)`
-/// routes by the value's *type*, and the main `WindowGroup` already claims
-/// `PersistentIdentifier` — a second group over it would leave every existing
-/// call unspecified, which shows up as "opening a game from the Library opens
-/// a graph". The wrapper makes the routing a fact about the type system rather
-/// than about scene declaration order. The rejected alternative was passing
-/// `id:` at every call site and trusting the untagged calls elsewhere.
-///
-/// D46′. `GetInfoRequest` is the second instance (D53′), which is what makes
-/// this a pattern rather than a quirk.
+/// The magnifier's request. **The wrapper is the whole reason this type exists**:
+/// `openWindow(value:)` routes by type, and the main group already claims `PersistentIdentifier`
+/// — a second group over it would make every existing call unspecified.
 internal struct EvaluationGraphRequest: Codable, Hashable, Sendable {
 
     internal let gameID: PersistentIdentifier
@@ -22,31 +13,15 @@ internal struct EvaluationGraphRequest: Codable, Hashable, Sendable {
     }
 }
 
-/// M8 (D46′) — the evaluation graph at full size, in its own window, with a
-/// read-out under the pointer.
-///
-/// **A window rather than a popover or a sheet**, chosen for what the enlarged
-/// graph is *for*: reading the curve while stepping through the game beside it.
-/// A popover dismisses the moment you click the board and a sheet takes the
-/// window over — both right for "glance bigger, dismiss fast", both fatal to the
-/// one use that needed more room.
-///
-/// **Field-tested, not merely argued**: the popover was built on 4 Aug 2026 and
-/// reverted the same night. The dismiss-on-step price read fine on paper and was
-/// unlivable in use, which is the strongest justification this decision will
-/// have. What the day-trip paid for stayed — `EvaluationGraphContent`, which
-/// scopes pointer invalidation and renders this body.
-///
-/// **Hover read-outs are what the small graph cannot afford.** A 100 pt sidebar
-/// strip has no room to say which ply is which; at window size the curve is
-/// legible enough that "which move was that?" becomes the obvious next question.
-/// Bigger does not make it better — bigger makes a different question askable.
+/// The evaluation graph at full size with a pointer read-out (D46′). A window, not a popover or
+/// sheet — field-tested, not argued: the popover was built and reverted in one day (dismisses on
+/// the first board click, killing the companion-while-scrubbing use). Hover read-outs are what
+/// 100 pt in a sidebar cannot afford — bigger makes a different question askable.
 internal struct EvaluationGraphWindow: View {
 
     // MARK: Static Constants
 
-    /// Matches the inspector graph's own inset so the two read as the same
-    /// object at two sizes.
+    /// Matches the inspector graph's inset so the two read as one object at two sizes.
     private static let contentPadding: CGFloat = 20
 
     // MARK: Stored Properties
@@ -56,20 +31,15 @@ internal struct EvaluationGraphWindow: View {
     @Environment(\.modelContext) private var modelContext
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
 
-    /// Resolved once per request rather than computed in `body` — a store
-    /// lookup does not belong on a render path, and the pointer lives inside
-    /// `EvaluationGraphContent`, so this body re-runs only when the request
-    /// or the resolved game changes.
+    /// Resolved once per request — a store lookup does not belong on a render path; the pointer
+    /// lives inside `EvaluationGraphContent`.
     @State private var pgn: PGN?
 
     // MARK: Body
     internal var body: some View {
         Group {
-            // `hasScoredPly`, not `!evaluations.isEmpty` (7 Aug 2026): an
-            // all-nil array passed the old gate and reached `graph(for:)`,
-            // whose `?? 0.5` map then drew a flat curve on the midline
-            // instead of the empty state two lines down. The window had a
-            // correct answer for this case and was walking past it.
+            // `hasScoredPly`, not `!evaluations.isEmpty`: an all-nil array passed the old gate and the
+            // `?? 0.5` map drew a flat midline curve instead of the empty state below.
             if let pgn, pgn.hasScoredPly {
                 graph(for: pgn)
             } else {
@@ -84,11 +54,8 @@ internal struct EvaluationGraphWindow: View {
 
     // MARK: Instance Methods
 
-    /// The cast is paired with an `isDeleted` check, per the standing
-    /// invariant: `model(for:)` will happily hand back a tombstone for a game
-    /// deleted while this window was open, and every property read on one
-    /// traps. The window then shows its unavailable state, which is the honest
-    /// answer — the game it was opened for is gone.
+    /// Cast paired with `isDeleted`, per the standing invariant — `model(for:)` hands back
+    /// tombstones, and every property read on one traps.
     private func resolve() {
         guard let request,
               let model = modelContext.model(for: request.gameID) as? PGN,
@@ -100,8 +67,7 @@ internal struct EvaluationGraphWindow: View {
     }
 
     private func graph(for pgn: PGN) -> some View {
-        // The curve maps *here*, once per resolved game — not per pointer
-        // move. `EvaluationGraphContent` owns the pointer; see its doc.
+        // The curve maps *here*, once per resolved game — not per pointer move.
         EvaluationGraphContent(
             moves: pgn.moves,
             evaluations: pgn.evaluations,
@@ -110,10 +76,8 @@ internal struct EvaluationGraphWindow: View {
         )
     }
 
-    /// Two causes, one state, deliberately: the game is gone, or it was never
-    /// analysed. Splitting them would mean a window that explains a deletion
-    /// the reader performed themselves, and the remedy is the same either way
-    /// — close this and pick a game with analysis.
+    /// Two causes, one state: gone, or never analysed. Splitting would explain a deletion the
+    /// reader performed; the remedy is identical.
     private var unavailable: some View {
         InspectorEmptyState(
             title: "No Analysis",
@@ -126,25 +90,8 @@ internal struct EvaluationGraphWindow: View {
 
 // MARK: Graph Content
 
-/// The graph plus its hover read-out, split from the window so the pointer
-/// invalidates only this subtree (4 Aug 2026). `hoveredPly` used to be
-/// `@State` on the window, which made every mouse movement re-run the whole
-/// window body — including the `evaluations.map` feeding the curve, the cost
-/// the 1 Aug review's P3 note called out as beneath this file's own standard
-/// (its resolve doc had hoisted the *store lookup* off the pointer for
-/// exactly this reason). The parent maps once per resolved game; the pointer
-/// touches nothing above this struct.
-///
-/// Takes `evaluations` *and* the pre-mapped `curve` rather than re-deriving
-/// one from the other: the read-out needs the real `Evaluation?`s (its label
-/// speaks the pinned mate grammar), the graph needs the folded fractions,
-/// and mapping here would put the work right back on the pointer's path.
-///
-/// One host: the window's body. (It briefly served a popover on 4 Aug 2026 —
-/// both presentations, one reading, which is what made the same-night
-/// reversal a call-site change rather than a rebuild. The extraction itself
-/// predates that day-trip: it was cut to scope pointer invalidation, and
-/// that reason stands on its own.)
+/// Graph + read-out, split from the window so the pointer invalidates only this subtree —
+/// `hoveredPly` as window `@State` re-ran the whole body per mouse move, including the curve map.
 private struct EvaluationGraphContent: View {
 
     // MARK: Stored Properties
@@ -163,12 +110,8 @@ private struct EvaluationGraphContent: View {
         }
     }
 
-    /// Above the graph, not below it, and in a fixed-height slot: the pointer
-    /// is *on* the curve while reading this, so putting the text under the
-    /// pointer's own path would have the cursor sitting on the answer. The
-    /// fixed slot is the `EvaluationBarView` label's rule — a read-out that
-    /// appears and disappears makes the layout jump on hover, which is motion
-    /// the eye follows instead of the curve.
+    /// Above the graph in a fixed-height slot: below, the cursor would sit on the answer; an
+    /// appearing/vanishing read-out makes the layout jump on hover.
     private var readout: some View {
         let reading = hoveredPly.flatMap {
             EvaluationGraphReading(
@@ -202,11 +145,8 @@ private struct EvaluationGraphContent: View {
                 currentMoveIndex: hoveredPly,
                 style: style
             )
-            // `.onContinuousHover` rather than `.onHover`: the question is
-            // *where* the pointer is, which `onHover`'s bare Bool cannot
-            // answer. The ended case clears the read-out — a stale ply left
-            // on screen after the pointer leaves is a read-out describing
-            // nothing.
+            // `.onContinuousHover`: the question is *where*, which `onHover`'s Bool cannot answer. The
+            // ended case clears — a stale ply describes nothing.
             .onContinuousHover(coordinateSpace: .local) { phase in
                 switch phase {
                 case .active(let location):
@@ -226,24 +166,10 @@ private struct EvaluationGraphContent: View {
 
 // MARK: Magnifier
 
-/// The header control that opens the window, in both Evaluation sections.
-/// (It spent part of 4 Aug 2026 as a popover — split by host, then both
-/// hosts, then reverted the same night; the D46′ anchor carries the round
-/// trip and the field-tested reason the window won.)
-///
-/// **Not an `InspectorEditButtonView`**, and for that type's own stated reason:
-/// it hardcodes the pencil precisely so three inspectors' edit affordances
-/// cannot drift, and widening it to take a symbol would turn a named affordance
-/// into a generic icon button. The Library's Copy-PGN button makes the same
-/// argument and stays open-coded; this is the third member of that family, and
-/// three is the point at which it is worth saying out loud that the family is
-/// deliberate rather than neglected — extracting a shared `IconButton` now
-/// would collapse exactly the distinction D26′ buys.
-///
-/// It does share the two things that must not drift: `.font(.body)` for the hit
-/// target, and one `LocalizedStringKey` feeding both `.help` and
-/// `.accessibilityLabel` so a glyph-only button never announces "magnifying
-/// glass" to VoiceOver.
+/// The header control that opens the window, both Evaluation sections. (Spent part of 4 Aug as
+/// a popover; reverted — the D46′ anchor holds the round trip.) Not an `InspectorEditButtonView`
+/// — that hardcodes the pencil on purpose; shares only `.font(.body)` + one label for both
+/// `.help` and `.accessibilityLabel`.
 internal struct EvaluationMagnifierButton: View {
 
     // MARK: Stored Properties
@@ -270,14 +196,8 @@ internal struct EvaluationMagnifierButton: View {
 
 // MARK: Previews
 
-/// The read-out's two states are the thing worth seeing, and neither is
-/// reachable in a canvas: both need a pointer. What a preview *can* pin is
-/// the empty branch — the one a reader hits by accident, opening the
-/// magnifier on an unanalysed game — plus the content's populated layout,
-/// kept from the popover day-trip because it witnesses `EvaluationGraphContent`
-/// regardless of who presents it. All-nil evaluations are deliberate there:
-/// the curve draws from the pre-mapped values, so no fixture has to guess an
-/// `Evaluation` initializer to witness layout.
+/// Both read-out states need a pointer, so a canvas cannot reach them; this pins the empty
+/// branch and the populated layout (all-nil evaluations, deliberately).
 #Preview("No Analysis") {
     EvaluationGraphWindow(request: nil)
         .frame(width: 620, height: 380)

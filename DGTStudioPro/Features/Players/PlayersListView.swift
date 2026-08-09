@@ -4,36 +4,17 @@ import SwiftUI
 internal struct PlayersListView: View {
 
     let players: [RankedPlayer]
-    /// A set since 2 Aug 2026 (the Library's selection model, adopted):
-    /// `Table` gives ⌘/⇧-click multi-select for free once the binding
-    /// allows it.
+    /// A set (the Library's selection model): `Table` gives ⌘/⇧-click for free.
     @Binding var selectedKeys: Set<PlayerStats.ID>
     let onShowInLibrary: (PlayerStats.ID) -> Void
 
-    /// The header menu's state — see `LibraryListView`'s twin for why this is
-    /// `@AppStorage` where D45′'s collapse state is an owning type, and why
-    /// the customization IDs below are a persistence contract rather than
-    /// incidental strings.
-    ///
-    /// Including the correction recorded there on 5 Aug 2026: this stores
-    /// visibility and order, **not width**. Column widths are not restorable in
-    /// SwiftUI at all — no way to observe a resize, no way to set one from
-    /// code — so a resized column has never survived a relaunch.
+    /// Header menu state — visibility and order, **not width** (not restorable in code). See
+    /// `LibraryListView`'s twin; customization IDs are a persistence contract.
     @AppStorage(StorageKeys.playersColumns)
     private var columnCustomization = TableColumnCustomization<RankedPlayer>()
 
-    /// Click once to sort ascending, twice to reverse — the Library's twin, and
-    /// see its doc for why this is a binding rather than local state.
-    ///
-    /// **This is what replaced the D48′ sort picker**, and the substitution is
-    /// exact rather than approximate: the picker's two positions were "by rank"
-    /// and "by name", which are now the Rank and Player columns. What it gains
-    /// is the other seven columns, which the picker could never have offered
-    /// without becoming a menu of nine. What it costs is persistence — the
-    /// picker's choice survived a relaunch and this does not — and the default
-    /// is therefore stated in code (`.rank`, ascending) instead of in
-    /// `UserDefaults`, which is strictly better: there is now exactly one place
-    /// that says what order Players opens in.
+    /// The Library's twin (see its doc for binding-not-state). Replaced the D48′ sort picker —
+    /// the picker's two positions were the Rank and Player columns spelled a second way.
     @Binding var sortOrder: [KeyPathComparator<RankedPlayer>]
 
     var body: some View {
@@ -41,49 +22,13 @@ internal struct PlayersListView: View {
               selection: $selectedKeys,
               sortOrder: $sortOrder,
               columnCustomization: $columnCustomization) {
-            // Rank and Player were pinned visible until 5 Aug 2026, each
-            // carrying an identifier no other cell can serve. **Unpinned with
-            // the Library's White column**, under the collection-destination
-            // parity invariant and for its reason: D51′ deleted the suite those
-            // identifiers served, leaving a live restriction on the app paid for
-            // a consumer that does not exist.
-            //
-            // The identifiers stay where they are. Once any column can be
-            // hidden, no cell is a guaranteed address, so relocating one would
-            // swap one hideable host for another.
-            //
-            // Ascending rank IS the D11′ ladder, and that equivalence is what
-            // let the sort picker go: `rank` is assigned by folding
-            // `PlayerStats.rankingOrder` before this view sees the row, so
-            // sorting by the badge reproduces wins-then-win-rate-then-key
-            // without this table knowing that comparator exists. Pinned by
-            // `defaultSortReproducesTheLadder`, because the equivalence is the
-            // contract and is not visible from here.
+            // Rank and Player were pinned visible until D51′'s bet came due — unpinned with the Library's
+            // White column: a live restriction paid for a suite already deleted. Rank arrives computed
+            // through `PlayerStats.rankingOrder`, so sorting by badge number reproduces the ladder.
             TableColumn("Rank", value: \.rank) { player in
-                // The rank cell carries the order-pinning identifier
-                // (`rankingRow.1.Liren Ding`) — minted so the ladder UITest
-                // could assert the computed order without geometry queries,
-                // kept per the registry's bet (D51′). The Player cell keeps
-                // `playerRow(name)` from the rename/merge flows. Two cells,
-                // two currencies — one element can't serve both.
-                // **Plain text, one shape for every row** (5 Aug 2026, by
-                // request). This was a `RankBadge` capsule for ranks 1–3 and
-                // bare secondary text below, which meant the column changed
-                // *shape* three rows in — a chip, a chip, a chip, then a
-                // number — and a table column that renders two different kinds
-                // of thing reads as two columns badly aligned.
-                //
-                // The medal colours survive the badge because they were never
-                // the problem: `#1` in gold says the same thing the capsule
-                // said, in a column of numbers that now all sit on one
-                // baseline. The `#` comes along because it is what the gallery
-                // and the columns detail already print, so this is the fourth
-                // surface joining one rendering rather than a new one.
-                //
-                // `tableStyle` and not `style`: same podium colours, and
-                // `.secondary` rather than `.tint` from fourth down — argued at
-                // that function, which is where both fallbacks are visible
-                // together.
+                // The rank cell carries the order-pinning identifier (`rankingRow.1.…`), kept per the
+                // registry's bet; the Player cell keeps `playerRow`. Medal colours survive via
+                // `RankMedal.tableStyle` — same podium colours, `.secondary` below.
                 Text("#\(player.rank)")
                     .monospacedDigit()
                     .foregroundStyle(RankMedal.tableStyle(forRank: player.rank))
@@ -93,11 +38,8 @@ internal struct PlayersListView: View {
             }
             .width(52)
             .customizationID("rank")
-            // `stats.name` is the display form (D23′), which is what the cell
-            // prints — the Library's White column makes the same call for the
-            // same reason. Note this is NOT `stats.key`: the key is the folded,
-            // lowercased identity and sorting by it would put "de Firmian"
-            // somewhere a reader scanning capitals would not look.
+            // `stats.name` is the display form (D23′) — what the cell prints. NOT `stats.key`: sorting the
+            // folded identity would put "de Firmian" where no reader scanning capitals looks.
             TableColumn("Player", value: \.stats.name) { player in
                 Text(player.stats.name)
                     .accessibilityIdentifier(AccessibilityID.playerRow(player.stats.name))
@@ -108,24 +50,8 @@ internal struct PlayersListView: View {
             }
             .width(60)
             .customizationID("games")
-            // Spelled out rather than W/D/L. The initials were only ever
-            // legible next to each other — read alone in a header menu, or
-            // once a neighbour is hidden, "D" says nothing. The customization
-            // IDs deliberately do not follow the titles: they are stored
-            // state, and a layout saved under the old headers survives this
-            // rename untouched, which is the whole reason they were written by
-            // hand instead of derived.
-            //
-            // 60 pt, matching Games: these four are one family of integer
-            // counts and equal widths read as a group. 40 was sized for a
-            // single character and truncates "Losses".
-            // These four ascend on the first click like every other column, so
-            // one click on Wins shows the *fewest* wins first. That reads
-            // backwards for a scoreboard and is kept anyway: uniformity is the
-            // feature — a table where some headers start descending because
-            // someone judged them "achievement-like" is a table you have to
-            // learn. Finder and Mail both do it this way, and the second click
-            // is right there.
+            // Spelled out rather than W/D/L — initials are only legible next to each other. Customization
+            // IDs deliberately do not follow the titles: stored state.
             TableColumn("Wins", value: \.stats.wins) { Text("\($0.stats.wins)") }
                 .width(60)
                 .customizationID("wins")
@@ -139,39 +65,17 @@ internal struct PlayersListView: View {
             }
             .width(60)
             .customizationID("losses")
-            // The underlying `Double`, not the rendered percent string: the cell
-            // rounds to whole percent, so three players at 66.4%, 66.5% and
-            // 66.6% all print "66%" and sorting the text would order them
-            // arbitrarily while looking like a tie. Sorting the value keeps the
-            // order true and lets the display stay rounded.
+            // The underlying `Double`, not the rendered percent: three players printing "66%" would sort
+            // arbitrarily while looking like a tie.
             TableColumn("Win %", value: \.stats.winRate) { player in
                 Text(player.stats.winRate.formatted(.percent.precision(.fractionLength(0))))
                     .foregroundStyle(.secondary)
             }
             .width(60)
             .customizationID("winRate")
-            // `rating?.mean`, so unrated players sort together at one end rather
-            // than by the em dash's position in a string sort. The provisional
-            // marker is display only and deliberately not part of the key: a
-            // provisional 1700 is still a 1700, and D11′ already treats the
-            // deviation as a separate fact rather than a discount on the mean.
-            // Motif mates only (D19′ — smothered, back rank).
-            //
-            // Headed "Special Mates" and not "Special", which the first draft
-            // used on the reasoning that "the neighbour already says Mates".
-            // **There is no neighbour**: the total mate count lives in the
-            // profile grid, never in this table, so "Special" would have been a
-            // header qualifying a noun that appears nowhere on screen. Caught
-            // by reading the column list rather than by care — the same species
-            // this file's other comments keep recording.
-            //
-            // **`Special <= Mates` is not guaranteed**, which will look like a
-            // bug the first time it happens: `matesDelivered` asks
-            // `hasSuffix("#")` while the motif classifier asks `contains("#")`,
-            // so a game ending `Qd2#!` is a special mate that is not a mate.
-            // That divergence is a standing open item and this column is now
-            // the place it becomes visible — argued at `PlayerStats`, where the
-            // counting happens.
+            // `rating?.mean`, so unrated players group at one end; the provisional marker is display only
+            // (a provisional 1700 is still a 1700). Special Mates counts motif mates — and can exceed
+            // Mates while the two `#` spellings disagree (standing open item, pinned).
             TableColumn("Special Mates", value: \.stats.specialMatesDelivered) { player in
                 Text("\(player.stats.specialMatesDelivered)").foregroundStyle(.secondary)
             }
@@ -190,10 +94,7 @@ internal struct PlayersListView: View {
             .width(100)
             .customizationID("lastPlayed")
         }
-        // Single-subject even though the selection type is a set: both verbs
-        // describe one player, so this reads the first key rather than
-        // pretending a multi-selection means something here. The menu's own
-        // shape lives in `PlayerActionsMenu`.
+        // Single-subject even though the selection is a set: both verbs describe one player.
         .contextMenu(forSelectionType: PlayerStats.ID.self) { keys in
             if let key = keys.first {
                 PlayerActionsMenu(key: key, onShowInLibrary: onShowInLibrary)

@@ -2,20 +2,7 @@ import SwiftUI
 import Testing
 @testable import DGTStudioPro
 
-/// The icons grids' shared selection grammar (2 Aug 2026 — born in
-/// `LibraryIconsView`, extracted when the Players grid became its second
-/// host). Nonisolated deliberately: index math and rect normalization, no
-/// view rendered.
-///
-/// **The 6 below stopped being the shipped constant on 7 Aug 2026** and is
-/// now just a number these cases are written against. It used to be
-/// `CollectionGridMetrics.columnCount`, spelled literally so a metrics change
-/// would move the expectations consciously; the count is derived from window
-/// width now, so there is no constant to track and the literal is the whole
-/// truth. That is a *strengthening* rather than a loss — this suite tests the
-/// stepping grammar at an arbitrary width, and `CollectionViewOptionsTests`
-/// owns which width yields which count. Two questions, two suites, neither
-/// standing in for the other.
+/// The grids' shared selection grammar. Nonisolated: index math and rect normalization.
 struct IconGridSelectionTests {
 
     private let columns = 6
@@ -50,11 +37,8 @@ struct IconGridSelectionTests {
         #expect(IconGridSelection.destination(from: 13, direction: .down, columnCount: columns, count: 14) == 13)
     }
 
-    /// ↓ holds across the *whole* last row, not only on the last card — the
-    /// pre-fix formula slid 12 → 13 (6 columns, count 14): a vertical key
-    /// performing a horizontal move, asymmetric with `.up`'s hold. This is
-    /// the case the original pins missed; both shipped expectations above
-    /// are points where the broken formula happened to be right (4 Aug 2026).
+    /// ↓ holds across the *whole* last row — the pre-fix formula slid 12 → 13: a vertical key
+    /// performing a horizontal move.
     @Test func downHoldsAcrossTheWholeLastRow() {
         #expect(IconGridSelection.destination(from: 12, direction: .down, columnCount: columns, count: 14) == 12)
         // A *full* last row holds too — 12 of 12 at 6 columns has no hole
@@ -62,11 +46,7 @@ struct IconGridSelectionTests {
         #expect(IconGridSelection.destination(from: 9, direction: .down, columnCount: columns, count: 12) == 9)
     }
 
-    /// The galleries reuse the grammar as its one-row degenerate case
-    /// (`columnCount == count`, 4 Aug 2026): ← / → clamp without wrapping —
-    /// a strip has no next row to wrap onto — and ↑ / ↓ hold everywhere.
-    /// The ↓ hold is the last-row guard earning its keep a second time: on
-    /// the pre-fix formula, ↓ in a one-row strip jumped to the *last* card.
+    /// The galleries' one-row degenerate case: ← / → clamp without wrapping, ↑ / ↓ hold everywhere.
     @Test func aFilmstripIsAOneRowGrid() {
         #expect(IconGridSelection.destination(from: 2, direction: .right, columnCount: 5, count: 5) == 3)
         #expect(IconGridSelection.destination(from: 4, direction: .right, columnCount: 5, count: 5) == 4)
@@ -77,12 +57,8 @@ struct IconGridSelectionTests {
 
     // MARK: Geometry Stability
 
-    /// The transform-stability rule (the "cycling between duplicate values"
-    /// warning's fourth correction, 4 Aug 2026): sub-point wobble must map
-    /// to one value at every anchor macOS layout actually rests on —
-    /// integers at 1×, halves at 2×. `.integral` failed exactly this:
-    /// floor/ceil across 91.0 turned a ±0.0002 wobble into 91 ↔ 92, the
-    /// alternation the warning names.
+    /// The transform-stability rule: sub-point wobble maps to one value at every anchor macOS
+    /// layout rests on.
     @Test func stableFrameAbsorbsSubPointWobbleAtRealAnchors() {
         let a = IconGridSelection.stableFrame(
             CGRect(x: 90.9998, y: 10.4999, width: 160.0001, height: 199.9999)

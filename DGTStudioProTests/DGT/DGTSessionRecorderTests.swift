@@ -2,20 +2,8 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// Coverage for `DGTSessionRecorder` — the mutable accumulator the connection
-/// drives, turning a stream of physical-board snapshots into a finished
-/// `DGTSessionRecording`. The pure replay analysis it produces is tested in
-/// `DGTSessionRecordingTests`; this suite covers the accumulation itself.
-///
-/// `@MainActor`: `DGTSessionRecorder` is a `@MainActor final class` (it is
-/// called from the `@MainActor` connection), so the suite must be main-actor
-/// isolated to touch it at all — a genuine isolation requirement, unlike the
-/// pure-value suites.
-///
-/// Offsets come from a real `ContinuousClock`, so the assertions check
-/// *structure* — count, board values, identity carry-through, and that offsets
-/// are non-negative and non-decreasing — never exact millisecond values, which
-/// would be flaky.
+/// The mutable accumulator the connection drives (@MainActor — a genuine isolation). Offsets
+/// asserted non-negative and non-decreasing, never exact milliseconds.
 @MainActor
 @Suite("DGT Session Recorder")
 struct DGTSessionRecorderTests {

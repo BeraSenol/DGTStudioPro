@@ -4,25 +4,7 @@ import SwiftData
 import SwiftUI
 @testable import DGTStudioPro
 
-/// Pins `AnalysisGlyph.State` and the one rule that produces it.
-///
-/// **This suite closes a written waiver.** The register carried `AnalysisGlyph`
-/// as "three static one-liners: a predicate and two symbol-name mappings",
-/// witnessed by the sites that render it, with a suite named as the preferred
-/// close. It stopped being one-liners on 6 Aug 2026: the glyph now folds a
-/// stored array *and* live queue state through an ordering, and the ordering is
-/// the whole content.
-///
-/// **The defect these were written from.** `isAnalyzed` is true for any single
-/// scored ply, and `GameAnalysisDriver` records plies as the walk advances — so
-/// a game turned green at ply one and stayed green for the rest of its own
-/// analysis. Every assertion below that mentions `.analyzing` fails under the
-/// old `analyzed: Bool` rule, which is the property that makes them checks
-/// rather than decoration.
-///
-/// `@MainActor`: these front realized `@Model`s out of a `ModelContext`, same
-/// as the other store-adjacent suites. The rule itself is nonisolated and no
-/// claim is made about reaching it from elsewhere — every caller is a view.
+/// Pins `AnalysisGlyph.State` and the rule that produces it — closes the register's written waiver.
 @MainActor
 @Suite("Analysis Glyph — State")
 struct AnalysisGlyphStateTests {
@@ -37,13 +19,7 @@ struct AnalysisGlyphStateTests {
         return ModelContext(container)
     }
 
-    /// A three-ply game, inserted so it carries a real `PersistentIdentifier`.
-    ///
-    /// `scored` is how many of its plies carry an evaluation, counted from the
-    /// front — which is how a pass in flight leaves the array, and therefore
-    /// the shape the running-wins rule has to survive. `scored: 0` yields the
-    /// all-nil non-empty array the type doc calls out as the case a bare
-    /// `isEmpty` check answers wrongly.
+    /// A three-ply game, inserted so it carries a real id; `scored` counts evaluated plies.
     private static func game(
         in context: ModelContext,
         named name: String,
@@ -179,21 +155,9 @@ struct AnalysisGlyphStateTests {
 
     // MARK: Membership Is Asked Of The Games Passed In
 
-    /// **The shipped bug, kept as a pin on the rule that replaced the fix.**
-    ///
-    /// The Library toolbar's Analyze button resolved its selection through
-    /// `filteredGames`, so with the Not Analyzed chip active the running game
-    /// left the rendered list the moment its first ply was scored, and the glyph
-    /// fell back to the red x mid-batch while the engine worked on. A
-    /// selection-scoped overload comparing ids fixed it; the button was removed
-    /// by request hours later and took the overload with it.
-    ///
-    /// What survives is a **constraint on callers**, and this is where it is
-    /// checkable: a game absent from `games` is not running as far as this rule
-    /// is concerned, whatever the queue is doing. That is correct for the two
-    /// live callers — a row menu and a detail pane both hold what they draw —
-    /// and it is a trap for any future aggregate caller, which is why the
-    /// assertion is phrased as the trap rather than as the fix.
+    /// **The shipped bug, kept as a pin**: the toolbar once resolved its selection through
+    /// `filteredGames`, so the Not Analyzed chip emptied the set out from under the running check —
+    /// membership must be asked of the caller's real subject.
     @Test("A running game absent from the games passed in does not read analyzing")
     func membershipIsDecidedByTheGamesPassedIn() throws {
         let context = try Self.makeContext()
@@ -278,15 +242,8 @@ struct AnalysisGlyphStateTests {
 
     // MARK: The Projection Overload (D72′)
 
-    /// The row badges read `state(of:isAnalyzed:runningID:)`, with
-    /// `isAnalyzed` off the memoized `GameRecord` projection instead of the
-    /// model — so the two overloads answering identically is the whole claim,
-    /// and it is checked across every combination that could split them:
-    /// scored and unscored arrays, running and not.
-    ///
-    /// Driven through `\.gameRecord` — the projection the destinations
-    /// actually feed the badges — rather than hand-passed booleans, so this
-    /// fails if `hasAnalysis` and `hasScoredPly` ever stop being one spelling.
+    /// The projection overload is a cache, not a second opinion — both overloads answer identically
+    /// across scored/unscored, running or not.
     @Test("The projection overload agrees with the model overload")
     func theProjectionOverloadAgreesWithTheModelOverload() throws {
         let context = try Self.makeContext()

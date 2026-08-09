@@ -1,19 +1,7 @@
 import Foundation
 
-/// The derived board state a Library preview renders: the position reached by
-/// walking a game's SAN moves, plus the piece-identity tracker, the last move
-/// (for the highlight), and the side-to-move's king square when in check.
-///
-/// A pure value type — it holds only chess-core values and is computed by
-/// `compute(from:)`. `LibraryGamePreviewView` builds one from `game.moves` to
-/// show a thumbnail of the final position without constructing a full `Game`.
-///
-/// The walk mirrors `Game`'s per-ply walk (`parseSAN` → `applyMove` →
-/// `applying`), but is **non-throwing**: the first SAN that fails to parse
-/// stops the walk and the state reached so far is returned, so a preview always
-/// renders *something* (the last legal position) rather than failing. This is
-/// the right tradeoff for a thumbnail — unlike `Game.init`, which throws on
-/// corrupt data so the caller can surface a diagnostic.
+/// The derived board state a preview renders: position, tracker, last move, check square — a
+/// pure value computed by walking SAN, the exact pairing the review board renders.
 internal struct LibraryGamePreviewState: Equatable {
     
     // MARK: Stored Properties
@@ -41,12 +29,7 @@ internal struct LibraryGamePreviewState: Equatable {
     
     // MARK: Computation
     
-    /// Walks the SAN `moves` from the standard start, returning the state at
-    /// the end of the walk.
-    ///
-    /// Non-throwing by design: parsing stops at the first move that fails (an
-    /// unrecognised or illegal SAN), and the state after the last *successful*
-    /// move is returned. An empty list yields the starting state.
+    /// Walks `moves` from the standard start; an unparseable ply stops the walk at the last good state.
     internal static func compute(from moves: [String]) -> LibraryGamePreviewState {
         var state: GameState = .starting
         var tracker: PieceTracker = .starting

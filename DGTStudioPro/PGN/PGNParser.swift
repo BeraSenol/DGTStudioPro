@@ -15,18 +15,9 @@ internal enum PGNParser {
         GameResult.allCases.map(\.rawValue)
     )
     
-    /// Parses `[Date "yyyy.MM.dd"]` tags — pinned to **UTC** so that
-    /// parse → `PGNStore.hashDateString(from:)` (also UTC) is a perfect
-    /// round-trip. A PGN date is a calendar day with no timezone of its
-    /// own; the app's one convention is "PGN dates are UTC days."
-    ///
-    /// Without the pin this formatter used the machine's local zone, so in
-    /// any timezone east of UTC an imported "2026.05.28" parsed to local
-    /// midnight — May 27 in UTC — and hash-formatted back as "2026.05.27",
-    /// silently breaking one-hash/two-doors deduplication against a
-    /// same-day archived twin (requirement 8's import door). West-of-UTC
-    /// *display* of UTC-midnight dates is the mirror wrinkle; the fully
-    /// general fix — calendar-date storage — is parked in the roadmap.
+    /// `[Date]` parsing pinned to **UTC**, so parse → `hashDateString` round-trips perfectly. A PGN
+    /// date is a calendar day with no timezone; a local-time parse would shift west-of-UTC days and
+    /// silently break one-hash/two-doors dedupe.
     private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy.MM.dd"
@@ -40,12 +31,8 @@ internal enum PGNParser {
         case missingRequiredTags(Set<String>)
         case unbalancedBraces
         case unbalancedParentheses
-        /// The file holds more than one game. `parse` returns a single `PGN`,
-        /// and the movetext scanner has no notion of SAN shape — every token
-        /// that isn't a result token becomes a move — so without this the
-        /// second game's `[Event "…"]` block would be stored as plies and the
-        /// row would import silently corrupt. Refusing is the honest answer
-        /// until a splitting importer exists.
+        /// More than one game in the file. The movetext scanner has no notion of SAN shape, so the
+        /// second game's tag block would import as plies — refusing is the honest answer.
         case multipleGames
     }
     
@@ -67,8 +54,8 @@ internal enum PGNParser {
             throw Error.missingRequiredTags(missing)
         }
         
-        // A tag pair can only open a *new* game once the movetext has begun —
-        // legal movetext never starts a line with `[Key "`. See `Error.multipleGames`.
+        // A tag pair can only open a *new* game once movetext has begun — legal movetext never starts a
+        // line with `[Key "`.
         if containsTagPairLine(movetextSection) {
             logger?.error("Parse failed: file contains more than one game")
             throw Error.multipleGames
@@ -143,26 +130,15 @@ internal enum PGNParser {
         return dateFormatter.date(from: date)
     }
     
-    /// The writer's half of `parseDate` — same formatter, so parse and
-    /// serialize can't drift on the UTC-calendar-day convention
-    /// `PGNParserDateTests` pins. Lives here rather than on `PGNSerializer`
-    /// precisely so there is one formatter, not a twin.
+    /// The writer's half of `parseDate` — same formatter, so parse and serialize cannot drift.
+    /// Lives here, not on `PGNSerializer`, precisely so there is one formatter.
     internal static func pgnDateString(_ date: Date?) -> String {
         guard let date else { return RosterSummary.unknownDate }
         return dateFormatter.string(from: date)
     }
     
-    /// **Integer rounds only — the recorded contract (M2, D31′).** PGN
-    /// permits multipart rounds (`[Round "1.3"]`); this app does not model
-    /// them: `Int(_)` refuses anything but a plain integer, so a sub-round
-    /// imports as nil and exports as `[Round "?"]` — lossy, and deliberate.
-    /// Everything downstream of the tag is `Int`-shaped (`PGN.round` in the
-    /// content hash via `String.init`, `PairingRound`'s max-plus-one,
-    /// `TagRule`'s numeric rules, the New Game prefill), the DGT reference
-    /// files are integer-round, and nothing in this app's ecosystem
-    /// produces sub-rounds. Supporting them end to end would touch the
-    /// hash rendering for zero real input. Decided over full sub-round
-    /// support at D31′; `roundParsesIntegersOnly` is the pin.
+    /// **Integer rounds only (D31′)**: `Int(_)` refuses multipart rounds, so `1.3` imports as nil
+    /// and exports as `?` — lossy, and deliberate. Pinned by `roundParsesIntegersOnly`.
     internal static func parseRound(_ round: String?) -> Int? {
         guard let round else { return nil }
         return Int(round)
@@ -182,16 +158,8 @@ internal enum PGNParser {
     
     // MARK: Movetext Parsing
     
-    /// Single-pass scanner that produces both the move list and a parallel
-    /// array of evaluations sourced from `{[%eval ...]}` comments.
-    ///
-    /// `evaluations[i]` is the eval parsed from a brace comment following
-    /// `moves[i]` in the movetext, or `nil` if no such comment was present
-    /// for that ply. Multiple eval comments on a single move resolve to
-    /// the last one — matching Lichess's "most recent annotation wins"
-    /// convention. Eval comments inside RAVs (parenthesized variations)
-    /// are dropped along with the variations themselves, since variations
-    /// aren't preserved in the move list.
+    /// Single-pass scanner producing moves plus parallel evaluations from `{[%eval …]}` comments —
+    /// `evaluations[i]` follows `moves[i]`, the Lichess convention.
     internal static func parseMovesAndEvaluations(
         from movetext: String
     ) throws(Error) -> (moves: [String], evaluations: [Evaluation?]) {
@@ -206,9 +174,8 @@ internal enum PGNParser {
         var parenDepth = 0
         var inLineComment = false
         
-        // Emit the in-progress token (if it's a real move) and reserve
-        // its slot in `evaluations`. Result tokens (1-0, 0-1, etc.) and
-        // empties are dropped without consuming an eval slot.
+        // Emit the in-progress token (if a real move) and reserve its eval slot; result tokens and
+        // empties drop without consuming one.
         func flushToken() {
             defer { currentToken = "" }
             guard !currentToken.isEmpty else { return }
@@ -319,11 +286,8 @@ internal enum PGNParser {
         return (moves, evaluations)
     }
     
-    /// Scans a brace comment's contents for `[%eval ...]` annotations and
-    /// returns the parsed evaluation. Lichess can pack multiple PGN
-    /// annotations into a single comment (e.g. `[%eval 0.23] [%clk 0:00:30]`);
-    /// when more than one eval is present we return the last, which
-    /// matches the "most recent annotation wins" convention.
+    /// `[%eval …]` out of a brace comment; multiple annotations in one comment take the last
+    /// ("most recent wins").
     private static func extractEval(from braceContent: String) -> Evaluation? {
         var result: Evaluation?
         var search = Substring(braceContent)
@@ -346,22 +310,14 @@ internal enum PGNParser {
     }
     
     // MARK: Private Helpers
-    /// Normalizes CRLF and lone-CR line endings to LF before parsing. PGN
-    /// files exported on Windows (and by some DGT eBoard tooling) use CRLF;
-    /// `components(separatedBy: .newlines)` is a *CharacterSet* split, so it
-    /// treats the CR and LF of a CRLF as two separators and injects a spurious
-    /// empty line after every header line. `splitSections` then reads that
-    /// empty line as the end of the tag section and drops every tag after
-    /// Event. Collapsing endings to LF first makes parsing line-ending-agnostic.
+    /// CRLF and lone-CR → LF before parsing (Windows and some DGT tooling write CRLF).
     private static func normalizeLineEndings(_ text: String) -> String {
         text
             .replacingOccurrences(of: "\r\n", with: "\n")
             .replacingOccurrences(of: "\r", with: "\n")
     }
     
-    /// Whether any line of `text` opens a PGN tag pair. Used to detect a
-    /// second game inside what should be one game's movetext; deliberately
-    /// line-anchored, since `[` inside a brace comment is legal and common.
+    /// Any line opening a tag pair — line-anchored, since `[` inside a brace comment is legal.
     private static func containsTagPairLine(_ text: String) -> Bool {
         text.components(separatedBy: .newlines).contains { line in
             let trimmed = line.trimmingCharacters(in: .whitespaces)
@@ -386,7 +342,7 @@ internal enum PGNParser {
         return (tagLines, movetextLines)
     }
     
-    // Consumes \d+\.+ at `start`, returns index after; nil if not a move number.
+    // Consumes \d+\.+ at `start`; nil if not a move number.
     private static func consumeMoveNumber(_ chars: [Character], from start: Int) -> Int? {
         var i = start
         while i < chars.count, chars[i].isASCII, chars[i].isNumber { i += 1 }
@@ -395,13 +351,9 @@ internal enum PGNParser {
         return i
     }
     
-    /// Strips trailing `!`/`?` and **preserves** `+` and `#`.
-    ///
-    /// Load-bearing and easy to misread: `GameRecord.endedInMate` reads
-    /// `moves.last?.hasSuffix("#")`, and D24′ round-trips `Qxg2#` byte for
-    /// byte, so mate and check must survive import. The app's *other* suffix
-    /// stripper — `GameState.parseSAN`'s cleaning step — drops all four,
-    /// which is correct there and wrong here. These are the only two.
+    /// Strips trailing `!`/`?` and **preserves** `+`/`#` — mate must survive import
+    /// (`endedInMate`, D24′ round trips). The app's other stripper (`parseSAN`'s) drops them,
+    /// correctly there. These are the only two.
     private static func stripAnnotations(_ san: String) -> String {
         var result = san
         while let last = result.last, last == "!" || last == "?" {

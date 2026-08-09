@@ -1,10 +1,4 @@
-/// The difference between two board positions, expressed as the squares that
-/// lost a piece and the squares that now hold one. Pure value type.
-///
-/// This is the substrate the reconstruction engine reads to identify a move,
-/// and the same shape `RecoveryGuidance` reads to compute its remove / place /
-/// replace checklist and the board's attention/target highlights. It says
-/// nothing about legality — it is a literal before/after delta.
+/// The difference between two positions: squares that lost a piece, squares that now hold one.
 internal struct DGTBoardDiff: Equatable {
     
     /// Squares that went from occupied to empty. Value = the piece that was
@@ -19,17 +13,8 @@ internal struct DGTBoardDiff: Equatable {
     
     internal var isEmpty: Bool { vacated.isEmpty && placed.isEmpty }
     
-    /// Every square the two positions disagree about. The two maps are
-    /// disjoint by construction — each differing square lands in exactly one
-    /// of them, decided by whether it ends up occupied — so this is a
-    /// concatenation wearing a union's clothes, and `changedSquares.count`
-    /// always equals `vacated.count + placed.count`.
-    ///
-    /// No production caller: `DGTReconstructor`, `RecoveryGuidance` and
-    /// `DGTDebugFormat` each read the two maps directly, because every one of
-    /// them needs to know *which* side a square fell on. Kept as the accessor
-    /// that states the disjointness invariant they all depend on and none of
-    /// them asserts — the `FEN.legalMoves()` category, test-only by decision.
+    /// Every disagreeing square. The two maps are disjoint by construction (decided by end
+    /// occupancy) — asserted by the suite; this accessor is test-only by decision.
     internal var changedSquares: Set<Square> {
         Set(vacated.keys).union(placed.keys)
     }

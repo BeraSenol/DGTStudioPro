@@ -12,12 +12,8 @@ struct UCIProtocolTests {
         #expect(UCIProtocol.parse("\n") == nil)
     }
     
-    /// The distinguishing pin for the `.whitespacesAndNewlines` trim.
-    /// `emptyLineReturnsNil`'s `"\n"` case cannot do this job: pre-fix,
-    /// the un-trimmed newline fell through the unknown-keyword exit —
-    /// the same `nil` as the empty exit, so both spellings passed it.
-    /// A *keyword* wearing the newline only parses when the trim
-    /// actually removes it.
+    /// The distinguishing pin for the `.whitespacesAndNewlines` trim — a *keyword* wearing the
+    /// newline only parses when the trim actually runs.
     @Test func keywordSurvivesTrailingNewlineOrCR() {
         #expect(UCIProtocol.parse("readyok\n") == .readyOK)
         #expect(UCIProtocol.parse("uciok\r\n") == .uciOK)
@@ -242,14 +238,8 @@ struct UCIProtocolTests {
 
     // MARK: Known-and-ignored vs unrecognized (D63′)
 
-    /// `parse` returning nil means two different things, and until 5 Aug 2026
-    /// the engine treated both as **errors** — so Stockfish's twenty-five
-    /// option advertisements arrived on the error channel at every start,
-    /// under a comment saying that channel existed to spot real engine drift.
-    ///
-    /// These pin the split rather than the logging, because the split is the
-    /// part that can be wrong: a caller can only classify correctly if this
-    /// answers correctly.
+    /// nil means two things, and pre-D63′ both landed on the error channel — ~25 option lines per
+    /// start. This is the part a caller can only classify through.
     @Test(arguments: [
         "option name Hash type spin default 16 min 1 max 33554432",
         "option name Threads type spin default 1 min 1 max 1024",
@@ -261,16 +251,8 @@ struct UCIProtocolTests {
         #expect(UCIProtocol.isDeliberatelyIgnored(line), "but it is not news")
     }
 
-    /// Genuine drift is **not** absorbed by the new arm, which is the failure
-    /// mode worth guarding: a classifier that returns true too easily would
-    /// silence the very thing the error channel was cleared out to reveal.
-    ///
-    /// The banner is the interesting case. It is emitted by every real
-    /// Stockfish before the handshake and it is deliberately *not* on the
-    /// ignore list — it matches no keyword, so it reaches the error arm once
-    /// per start, which is the documented floor at the call site. Absorbing it
-    /// would need a rule ("anything before uciok") broad enough to swallow a
-    /// real protocol change made in the same window.
+    /// Genuine drift is NOT absorbed — a classifier too eager to say "known" silences the very
+    /// thing the error channel was cleared to reveal.
     @Test(arguments: [
         "Stockfish 18 by the Stockfish developers (see AUTHORS file)",
         "some future keyword we have never seen",

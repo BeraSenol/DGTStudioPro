@@ -11,29 +11,9 @@ internal struct BoardInspectorView: View {
     internal let style: BoardStyle
     internal let onMoveTapped: ((Int) -> Void)?
     
-    /// The edit request. Presentation belongs to `BoardDestination` (D15′ —
-    /// modals are destination furniture) and so does the write; this view only
-    /// asks, which is what keeps it renderable in a canvas.
-    ///
-    /// Optional and defaulted — the `LiveGameHUDView.onRetryArchive`
-    /// precedent — so a host with nothing to offer omits it and the button
-    /// simply doesn't render. That replaces the retired toolbar item's
-    /// `.disabled(boardPGN == nil)`: an affordance that can't act now doesn't
-    /// exist rather than sitting there greyed out.
-    ///
-    /// `onEditMoves` was the second of these until M10 made movetext
-    /// read-only here and the 4 Aug review found it wired to nothing. It is
-    /// not coming back as a seam: the Library owns that editor now, so a
-    /// closure here would be a request no destination is prepared to answer.
-    // `onEditInfo` was the last of these and went with D57′. Get Info's Details
-    // tab edits an archived game's roster now, reached by ⌘I from anywhere
-    // rather than from a pencil on a panel you have to already be looking at —
-    // D53′'s argument, arriving at the surface it had exempted. Not kept as a
-    // seam, for the reason the paragraph above gives about `onEditMoves`: a
-    // closure no destination answers is the thing that finding was about.
-    //
-    // This inspector now requests nothing. It is a reading surface, which is
-    // what D54′ already called the Board in as many words.
+    /// The edit request: presentation and the write belong to `BoardDestination` (D15′ — modals are
+    /// destination furniture); this view only asks, which keeps it canvas-renderable. The Board
+    /// presents no editor at all since D57′.
 
     internal var body: some View {
         List {
@@ -43,31 +23,23 @@ internal struct BoardInspectorView: View {
             movesSection
         }
         .listStyle(.sidebar)
-        // The list is the only scroller now, so it's the thing that has to
-        // follow the current ply.
+        // The list is the only scroller, so it follows the current ply.
         .scrollsToCurrentMove(currentMoveIndex)
     }
     
     // MARK: Instance Methods
-    /// The action slot D22′ built and named this exact button for: "the review
-    /// side's eventual 'Edit Info…' will be its own registry entry". It rides
-    /// the section header, trailing the headline — the same shape and the
-    /// same place as the live inspector's Edit Details, so the two metadata
-    /// surfaces read as one idea in two states.
+    /// The roster under the D20′ headline — the same shape and place as the live inspector's, so
+    /// the two metadata surfaces read as one idea in two states.
     private var metadataSection: some View {
-        // The action slot is empty since D57′ and the section keeps it, because
-        // `SevenTagRosterSection`'s slot is a `@ViewBuilder` every host fills
-        // differently — an empty one here is the honest statement that this
-        // host has no verb, not a leftover parameter.
+        // The action slot is empty since D57′ and kept: an empty `@ViewBuilder` slot is the honest
+        // statement that this host has no verb.
         SevenTagRosterSection(
             roster: pgn.map { RosterSummary($0) },
             headline: headline
         )
     }
     
-    /// D20′ — "Reviewing 1. Magnus Carlsen vs Ian Nepomniachtchi". Falls
-    /// back to a bare noun with no game loaded (the preview's empty state):
-    /// a headline naming "? vs ?" would over-claim there.
+    /// D20′ headline; falls back to a bare noun with no game — "? vs ?" would over-claim.
     private var headline: String {
         guard let pgn else { return "Game" }
         return GameHeadline.text(
@@ -75,14 +47,8 @@ internal struct BoardInspectorView: View {
         )
     }
     
-    /// The magnifier renders only over a game the Library knows about, and it
-    /// simply doesn't exist otherwise — the rule `onEditInfo` used to carry
-    /// here (an affordance that can't act now shouldn't sit there greyed out),
-    /// applied to the same condition. That closure went with D57′ and the rule
-    /// outlived it, which is why this sentence names the rule rather than
-    /// citing the symbol. A live game has no `PGN` until it archives, so there is
-    /// nothing for the window to resolve; the bar and the inspector graph are
-    /// still there, which is what a live game's evaluation surface was anyway.
+    /// The magnifier renders only over a game the Library knows about and doesn't exist otherwise —
+    /// an affordance that can't act shouldn't sit greyed out.
     private var evaluationSection: some View {
         CollapsibleSection(.evaluation, title: "Evaluation") {
             EvaluationGraphView(
@@ -98,19 +64,10 @@ internal struct BoardInspectorView: View {
         }
     }
     
-    /// Edit Moves lives in the **header** — where the roster section's action
-    /// now sits too, so what was once a deliberate break is the inspector's
-    /// one rule. The reason it arrived there first still holds on its own:
-    /// `MoveHistoryView` doesn't scroll itself (`scrollsIndependently: false`)
-    /// — the enclosing List does — so a row after it is a row after every ply,
-    /// which on a hundred-move game is an affordance the user has to go
-    /// looking for.
+    /// `MoveHistoryView` doesn't scroll itself, so the header keeps the section's controls reachable.
     private var movesSection: some View {
-        // Was a hand-rolled `HStack` reimplementing `InspectorSectionHeader` —
-        // and disagreeing with it on three counts: `Spacer(minLength: 0)`
-        // against 8, no `.textCase(nil)`, no `.lineLimit(1)`. It predated the
-        // shared type and was never migrated, so this file's roster header went
-        // through the type while its moves header quietly didn't.
+        // Was a hand-rolled `HStack` reimplementing `InspectorSectionHeader` and disagreeing on three
+        // counts — predated the shared type, never migrated.
         CollapsibleSection(.moves, title: "Moves") {
             MoveHistoryView(
                 moves: moves,
@@ -121,24 +78,8 @@ internal struct BoardInspectorView: View {
             .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
             .listRowSeparator(.hidden)
         } actions: {
-            // No pencil here, deliberately and permanently: movetext is
-            // read-only on this destination in **both** branches, live and
-            // review, and the editor lives in the Library.
-            //
-            // **Live was always the stranger of the two.** Decision #1 says
-            // the physical board is truth and the live game is append-only —
-            // no takebacks, ever — and an editor that could rewrite the
-            // movetext mid-game was the one surface that could contradict the
-            // board it mirrors. In review the argument is weaker but points
-            // the same way: a game on the board is a game being *read*, and
-            // the Library is where its bytes are managed.
-            //
-            // The seam went with the pencil. M10 removed the control and left
-            // `onEditMoves` behind "for the length of one pass" as the seam
-            // either answer would use, which the 4 Aug review correctly called
-            // a D40′ lie one layer down — a wired closure nothing could call.
-            // D18′'s validator is not surface-less any more; it is the
-            // Library's, and `library.editMoves` is where it is reached.
+            // No pencil, deliberately and permanently: movetext is read-only on this destination in both
+            // branches (Decision #1 live; the editor is Get Info's for review).
         }
     }
 }

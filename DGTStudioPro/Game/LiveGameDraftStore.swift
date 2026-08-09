@@ -1,17 +1,9 @@
 import Foundation
 import os
 
-/// Atomic single-file persistence for the one `LiveGameDraft` (M4.1).
-///
-/// One draft, one file: `LiveGameDraft.json` in Application Support (the
-/// sandbox container already scopes that directory to this app). Writes are
-/// atomic, so a crash mid-save leaves either the old draft or the new one —
-/// never a torn file. The directory is injectable so tests run against a
-/// temp directory and never touch the real sidecar.
-///
-/// The store is dumb on purpose: it moves bytes and validates the schema
-/// version, nothing else. *When* to save, load, or delete is the session's
-/// policy (M4.2); *what* a draft means is `LiveGameDraft`'s schema.
+/// Atomic single-file persistence for the one draft: atomic writes mean a crash mid-write
+/// leaves the previous draft, never a torn file. Directory injectable for tests. The store is
+/// dumb on purpose — the session owns *when*.
 @MainActor
 internal final class LiveGameDraftStore {
 

@@ -1,23 +1,12 @@
 import SwiftUI
 
-/// The DGT-board connection control, as `ToolbarContent` a host composes into
-/// its **own** builder — not a `.toolbar` modifier. The modifier form is gone
-/// on purpose (see the note at the foot of this file): a second `.toolbar`
-/// merge is what kept Board's inspector column from running full height and
-/// made item order an accident of modifier nesting.
-///
-/// The button's icon and tint reflect the app-global `DGTConnection` status —
-/// green cable when connected, red-tinted slashed cable on failure, a small
-/// spinner mid-handshake or mid-reconnect — so the toolbar doubles as a live
-/// connection indicator. The sheet is the host's `@State`; this only flips it.
+/// The connection control as `ToolbarContent` a host composes into its own builder — a second
+/// `.toolbar` modifier leaves the toolbar undivided. The sheet is the host's `@State`; this
+/// only flips it.
 internal struct DGTConnectionToolbarContent: ToolbarContent {
     
-    /// The status as a plain value rather than a `DGTConnection` read from the
-    /// environment, and the sheet as a `Binding` rather than owned `@State`:
-    /// dynamic properties inside a custom `ToolbarContent` are not the
-    /// well-trodden path they are inside a `View`, and neither is needed —
-    /// every branch below is a function of `status`, and the host already
-    /// holds both.
+    /// Status as a plain value, sheet as a `Binding`: dynamic properties inside a custom
+    /// `ToolbarContent` are not reliably observed.
     internal let status: DGTConnection.Status
     
     /// No default, per the `board.connectButton` agreement: a shared fallback
@@ -83,10 +72,3 @@ internal struct DGTConnectionToolbarContent: ToolbarContent {
         }
     }
 }
-
-// The `DGTConnectionToolbarModifier` / `.dgtConnectionToolbar(identifier:)`
-// pair is deleted here, not parked: its one host now composes
-// `DGTConnectionToolbarContent` into its own builder, because a second
-// `.toolbar` modifier is what kept Board's inspector column from running full
-// height and made its item order an accident of nesting. A modifier that
-// re-introduces that is worse than no convenience at all.

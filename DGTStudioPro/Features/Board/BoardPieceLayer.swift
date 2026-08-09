@@ -1,12 +1,7 @@
 import SwiftUI
 
-/// One piece, drawn — the glyph, its aspect fit, and the 6% breathing room,
-/// stated once.
-///
-/// Shared by the layer (real pieces) and `SquareView` (the mid-castle ghost),
-/// because the ghost must be pixel-identical to the piece it foreshadows and
-/// the 0.06 padding lived one refactor away from becoming a twin the moment
-/// piece drawing moved out of the square.
+/// One piece, drawn — glyph, aspect fit, 6% breathing room, stated once. Shared by the layer
+/// and the mid-castle ghost, which must be pixel-identical to the piece it foreshadows.
 internal struct PieceGlyph: View {
 
     // MARK: Stored Properties
@@ -26,57 +21,17 @@ internal struct PieceGlyph: View {
     }
 }
 
-/// M6 — every piece on the board, rendered in one identity-keyed layer above
-/// the square grid.
-///
-/// The squares stopped drawing pieces when this landed. A square can only pop
-/// its content into existence; a layer whose `ForEach` keys on
-/// `ResolvedPiece.key` gets the whole animation contract from identity alone —
-/// a persisting key whose square changes **glides**, a key that appears or
-/// vanishes **fades**. No case analysis, no animation flags: `PieceIdentity`
-/// decides who persists and this view obeys. A board dump re-keys everything
-/// and fades; a proven move keeps its key and glides; a lifted piece loses its
-/// square and fades where it stood, which is the truthful rendering of a piece
-/// in a hand.
-///
-/// `matchedGeometryEffect` was rejected: it pairs an insertion with a removal
-/// across two views, meaning a namespace threaded through 64 clipped, overlaid
-/// cells — and it has no vocabulary for "this change must not animate", which
-/// the dump case needs and identity churn expresses for free.
-///
-/// Geometry: the layer frames itself to the grid's exact side and converts each
-/// square with the same XOR `BoardView.square(visualRow:visualColumn:)` uses in
-/// the other direction — one mask, two directions, so layer and grid cannot
-/// disagree about where e4 is. Hit testing stays off; squares own interaction
-/// and keep the accessibility identifiers.
-///
-/// Reduce Motion honours the system setting by dropping the animation, not
-/// the layer: positions still update, nothing slides.
+/// M6 — every piece in one identity-keyed layer above the squares (D47′). Not
+/// `matchedGeometryEffect`: MGE has no vocabulary for "this change must not animate", which the
+/// board-dump case needs — identity churn expresses it free (a dump re-keys wholesale, so 32
+/// pieces fade rather than fly). Reduce Motion drops the animation, not the layer.
 internal struct BoardPieceLayer: View {
 
     // MARK: Static Constants
 
-    /// The glide duration's guardrails and default — a user preference
-    /// since 2 Aug 2026, replacing the fixed `glide` constant. 0.22 s is
-    /// the shipped feel: quick enough to read as the piece landing, slow
-    /// enough to read as motion. The range is the chosen envelope
-    /// (0.1–1 s), clamped on every read — the `EngineConfiguration`
-    /// stance: the slider can't leave the range, and a hand-edited
-    /// default gets repaired rather than obeyed.
-    ///
-    /// One sentence the old constant's doc carried no longer always
-    /// holds: above 0.3 s a glide can still be in flight when the
-    /// session's 300 ms quiescence settles the move. That is visual only
-    /// — the animation retargets mid-flight, and nothing about commit
-    /// timing reads the animation — and it is the accepted price of
-    /// making the speed a preference.
-    /// All three are `nonisolated`: `View` conformance infers `@MainActor`
-    /// onto a type's statics, and `BoardPieceLayerTests` is deliberately
-    /// nonisolated — the suite is the compile-time witness (the D44′
-    /// shape) that plain value arithmetic stays callable from anywhere,
-    /// and it caught exactly this. Deeply immutable values and a pure
-    /// function need no isolation; `glide(duration:)` stays isolated
-    /// because its only consumer is `body`.
+    /// Glide guardrails and default (user preference). 0.22 s is the shipped feel; the range
+    /// deliberately passes the 300 ms quiescence — above it a glide can still be in flight at the
+    /// settle. Visual only: the animation retargets mid-flight, nothing about commit timing reads it.
     internal nonisolated static let durationRange: ClosedRange<Double> = 0.1...1.0
     internal nonisolated static let defaultDuration: Double = 0.22
 
@@ -84,8 +39,7 @@ internal struct BoardPieceLayer: View {
         min(max(raw, durationRange.lowerBound), durationRange.upperBound)
     }
 
-    /// The glide at an already-clamped duration — `.snappy` stays the
-    /// curve; only the duration is the user's.
+    /// The glide at an already-clamped duration — `.snappy` stays the curve.
     internal static func glide(duration: Double) -> Animation {
         .snappy(duration: duration)
     }
@@ -97,11 +51,8 @@ internal struct BoardPieceLayer: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// D21′'s shape: read here because the layer is the duration's one
-    /// consumer. Settings binds the same key, and both initial values are
-    /// spelled `BoardPieceLayer.defaultDuration`, so the number lives
-    /// once (the `EngineConfiguration` arrangement, documented at
-    /// `StorageKeys`).
+    /// Read here because the layer is the duration's one consumer; Settings binds the same key,
+    /// both defaults spelled off `BoardPieceLayer.defaultDuration`.
     @AppStorage(StorageKeys.pieceAnimationDuration)
     private var animationDuration = BoardPieceLayer.defaultDuration
 
@@ -124,9 +75,8 @@ internal struct BoardPieceLayer: View {
 
     // MARK: Instance Methods
 
-    /// The inverse of `BoardView.square(visualRow:visualColumn:)` — same
-    /// mask, involutive XOR, so a flipped perspective moves every cell and
-    /// the layer follows without a second flip rule.
+    /// The inverse of `BoardView.square(visualRow:visualColumn:)` — same mask, involutive XOR, so a
+    /// flip moves every cell and the layer follows without a second rule.
     private func center(of square: Square) -> CGPoint {
         let visual = square ^ (perspective == .white ? 56 : 7)
         let row = visual / 8
@@ -140,9 +90,7 @@ internal struct BoardPieceLayer: View {
 
 // MARK: Previews
 
-/// The full asset set at the layer's own rendering — migrated from
-/// `SquareView` when piece drawing moved here, because a preview should live
-/// with the code it witnesses.
+/// The full asset set at the layer's own rendering — a preview lives with the code it witnesses.
 #Preview("All Pieces") {
     let pieces: [Piece] = [
         .whitePawn, .whiteKnight, .whiteBishop, .whiteRook, .whiteQueen, .whiteKing,
@@ -163,8 +111,7 @@ internal struct BoardPieceLayer: View {
     .padding()
 }
 
-/// The 6% padding at three sizes — the scaling contract `SquareView`'s old
-/// `pieceImage` carried.
+/// The 6% padding at three sizes — the scaling contract.
 #Preview("Size Scaling") {
     HStack(alignment: .bottom, spacing: 8) {
         ForEach([40, 80, 120] as [CGFloat], id: \.self) { size in
@@ -175,17 +122,8 @@ internal struct BoardPieceLayer: View {
     .padding()
 }
 
-/// M6's gate, watchable: e4, the en-passant capture, the promotion morph,
-/// and O-O, in one scripted line stepped by hand. Every step recomputes
-/// position and tracker through `LibraryGamePreviewState.compute` — the same
-/// pairing the review board renders — so what animates here is exactly what
-/// animates when stepping a real game.
-///
-/// What to look for, per shape: e4 glides two squares; exf6 glides the
-/// capturing pawn diagonally while the f5 pawn fades from the odd square;
-/// gxh8=Q glides out of g7 and lands already a queen (one identity, the
-/// pawn's — `PieceTracker.applyMove`'s reuse rule made visible); O-O glides
-/// king and rook simultaneously, crossing.
+/// M6's gate, watchable: e4, the en-passant capture, the promotion morph, and O-O, stepped by
+/// hand through `LibraryGamePreviewState.compute` — exactly what the review board renders.
 #Preview("Four Shapes, Interactive") {
     @Previewable @State var plyCount = 0
     let script = [

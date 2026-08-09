@@ -2,16 +2,8 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// Pins the timezone convention for `[Date]` tags: **PGN dates are UTC
-/// calendar days.** `PGNParser.parseDate` and `PGNStore`'s hash formatter
-/// must agree on the zone, or parse → hash-format stops round-tripping and
-/// one-hash/two-doors deduplication silently breaks — which is precisely
-/// what happened before the pin: in any timezone east of UTC, an imported
-/// "2026.05.28" parsed to *local* midnight (= May 27 in UTC) and
-/// re-formatted as "2026.05.27", so a same-day archived twin never
-/// deduplicated against its imported copy.
-///
-/// Nonisolated: `PGNParser` is stateless static parsing over value types.
+/// The timezone convention: **PGN dates are UTC calendar days** — parser and hash formatter
+/// must agree on the zone or parse → hash-format stops round-tripping and dedupe silently breaks.
 @Suite("PGN Parser — Date Tags")
 struct PGNParserDateTests {
     
@@ -47,13 +39,8 @@ struct PGNParserDateTests {
         #expect(PGNParser.parseDate(nil) == nil)
     }
 
-    /// A *partially* unknown date discards the known components too:
-    /// `parseDate` refuses any `?`, so `[Date "2026.??.??"]` imports as nil —
-    /// the year is lost, D31′'s sub-round shape in date clothing. Fine for
-    /// the DGT ecosystem's files, which are full-or-unknown; year-only dates
-    /// are common in wild PGN, so if bulk import ever lands this pin is the
-    /// entry in the ledger that makes keeping or lifting the loss a decision
-    /// rather than a surprise.
+    /// A partially unknown date discards the known components too (`parseDate` refuses any `?`) —
+    /// fine for the DGT ecosystem's full-or-unknown files.
     @Test(arguments: ["2026.??.??", "2026.05.??", "??26.05.15"])
     func partiallyUnknownDatesDiscardTheKnownComponents(raw: String) {
         #expect(PGNParser.parseDate(raw) == nil)
