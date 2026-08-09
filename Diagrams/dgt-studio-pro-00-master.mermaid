@@ -1,6 +1,7 @@
 %% DGT Studio Pro — 00 master: launch to destinations
-%% Authored 5 Aug 2026 against the tree at 75a02d3, read from source.
-%% Legend and class vocabulary: DIAGRAMS.md. Shared style block at the foot.
+%% Re-authored 9 Aug 2026 against the tree at 5f82de7 plus the comment-reduction
+%% working tree, read from source. Legend and class vocabulary: DIAGRAMS.md.
+%% Shared style block at the foot.
 %% (Spelled around deliberately: writing the directive's name here put a false
 %%  positive into the very audit that reads these files. The project's own
 %%  "never write a prohibited token verbatim in a comment" rule, self-inflicted.)
@@ -10,7 +11,7 @@ flowchart TD
     LAUNCH(("Launch")) --> INIT["App.init - runs EXACTLY once<br/>the content closure runs once per tab,<br/>so nothing here may live there"]
 
     subgraph WIRING["Construct and wire - DGTStudioProApp.init"]
-        INIT --> MAKE["Construct the three app-global observables:<br/>DGTSessionLog, DGTConnection, DGTLiveSession"]
+        INIT --> MAKE["Construct the app-global observables:<br/>DGTSessionLog, DGTConnection, DGTLiveSession,<br/>AnalysisQueueController - app-global since 6 Aug:<br/>one driver, one engine, never two racing,<br/>and a scene receives values, not a tab's instance"]
 
         MAKE --> HOOKS["Wire all seven settable hooks, in order:<br/>sessionLog x2, onBoardChanged, boardIdentity D28′,<br/>requestBoardResync D49′, shouldAutoReconnect,<br/>onDesync D13′, draftStore, onGameFinished<br/>A NIL hook is what makes unit tests headless"]
 
@@ -18,21 +19,24 @@ flowchart TD
 
         STORE --> DRAFT["session.loadPendingDraft<br/>turns a relaunch into Resume / Delete on the HUD"]
 
-        DRAFT --> INHIB["SleepInhibitor.observe session, connection<br/>D14′ / D25′ - re-entry guarded"]
+        DRAFT --> INHIB["SleepInhibitor.observe session, connection,<br/>analysis - D14′ / D25′, widened by D66′:<br/>TWO causes, TWO gates. A live game or recording<br/>needs the serial link; a batch needs the engine.<br/>Re-entry guarded"]
     end
 
-    INHIB --> HERMETIC{"XCTest host?<br/>XCTestConfigurationFilePath or<br/>XCTestSessionIdentifier present"}
+    INHIB --> HERMETIC{"TestHost.isActive?<br/>the ONE spelling of am I under<br/>XCTest since D63′ - AppLog reads<br/>the same probe"}
 
     HERMETIC -->|"yes"| SKIP["Skip auto-connect ONLY<br/>the hooks above stay wired and the inhibitor<br/>stays armed - the guard is NARROW.<br/>What it prevents is serial I/O and real board<br/>traffic on the main actor during a run,<br/>competing with the 300 ms quiescence window"]
 
     HERMETIC -->|"no"| AUTO["Task - connection.autoConnectAtLaunch<br/>a Task from a main-actor init runs after init<br/>returns, so first render is not held hostage<br/>to IOKit plus the serial handshake"]
 
+    SKIP -.-> QUIET
+    QUIET["AppLog is SILENT under the test host D63′ -<br/>a test run's console is somebody else's output.<br/>DGT_LOG=1 re-arms it, checked BEFORE the host<br/>probe: the escape hatch exists for precisely the<br/>situation the probe vetoes"]
+
     SKIP --> SCENES
     AUTO --> SCENES
 
-    SCENES["Declare scenes: THREE WindowGroups keyed by<br/>DISTINCT value types, plus Settings, plus three<br/>Commands scenes<br/>DRILL-DOWN: diagram 04"]
+    SCENES["Declare scenes: FOUR WindowGroups keyed by<br/>DISTINCT value types, TWO singleton Windows<br/>opened by id, Settings, and FOUR Commands scenes<br/>DRILL-DOWN: diagram 04"]
 
-    SCENES --> CONTENT["ContentView per tab<br/>injects openGames, dgtConnection, dgtSession,<br/>sessionLog, inspectorCollapse<br/>ALL FOUR registries or a destination traps"]
+    SCENES --> CONTENT["ContentView per tab<br/>injects openGames, analysisQueue, dgtConnection,<br/>dgtSession, sessionLog, inspectorCollapse,<br/>viewOptions<br/>ALL SEVEN registries or a destination traps"]
 
     CONTENT --> SIDEBAR["Sidebar: destination list, smart tags D12′,<br/>and the session panel pinned by safeAreaInset<br/>D15′ - the stage above the board stays clear"]
 
@@ -40,7 +44,7 @@ flowchart TD
 
     DEST -->|"Board"| BOARD["Board - live play and review<br/>DRILL-DOWN: diagram 01"]
     DEST -->|"Library"| LIB["Library - import, browse, analyse<br/>DRILL-DOWN: diagram 02"]
-    DEST -->|"Players"| PLAY["Players - the D11′ ladder is the default sort<br/>DRILL-DOWN: diagram 03"]
+    DEST -->|"Players"| PLAY["Players - the ladder, method by D62′<br/>DRILL-DOWN: diagram 03"]
 
     BOARD -.-> TABS
     LIB -.-> TABS
@@ -58,6 +62,6 @@ flowchart TD
 
     class INIT,MAKE,HOOKS,STORE,DRAFT,INHIB,SKIP,AUTO,CONTENT,SIDEBAR act
     class HERMETIC,DEST dec
-    class TABS note
+    class TABS,QUIET note
     class SCENES,BOARD,LIB,PLAY drill
     class LAUNCH term

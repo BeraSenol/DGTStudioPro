@@ -1,5 +1,6 @@
 %% DGT Studio Pro — 01 live play: serial bytes to archived game
-%% Authored 5 Aug 2026 against the tree at 75a02d3, read from source
+%% Re-authored 9 Aug 2026 against the tree at 5f82de7 plus the comment-reduction
+%% working tree, read from source
 %% (DGTLiveSession.settle / settlePlaying / escalateOrResync / enterRecovery /
 %%  archiveFinishedGame, DGTConnection.requestBoardResync, BoardPieceLayer).
 
@@ -43,7 +44,8 @@ flowchart TD
 
     NG0 --> NG1["Offer New Game when the board reads the<br/>start position. A pending RESUME offer<br/>outranks it: both at once would let a fresh<br/>start silently overwrite the very draft<br/>being offered"]
     NG1 --> NG2["The seat fields are PICKERS over known players<br/>D16′, free text still allowed. They insert the<br/>remembered TAG form D29′, never a derived<br/>inverse. resolvePlayer stays the only creation<br/>door and fires at ARCHIVE time, never here.<br/>Once both seats resolve, Round prefills from the<br/>pairing history - matched as a SET, so a<br/>late-imported old game cannot wind the rivalry<br/>counter backwards"]
-    NG2 --> B1
+    NG2 --> NG3["One player cannot hold BOTH seats D61′:<br/>the form warns in words and Start disables -<br/>one predicate, read twice, D40′'s remedy.<br/>The IMPORT door still admits self-play,<br/>the Decision 3 asymmetry"]
+    NG3 --> B1
 
     subgraph SETTLE["settlePlaying - reconstruction dispatch"]
         SP0 --> SP1["clearPlayingOverlays - ghost and correction<br/>are mutually exclusive and recomputed each<br/>settle: clear both, then one branch re-sets"]
@@ -99,7 +101,7 @@ flowchart TD
         AR4 -->|"yes"| ARSKIP["Nothing to do"]
         AR4 -->|"no"| AR5{"onGameFinished wired?"}
         AR5 -->|"nil"| ARDRAFT["Draft simply stays current -<br/>it remains the safety net"]
-        AR5 -->|"wired"| AR6["PGNStore.archive - dedupe by content hash,<br/>stamp the Board tag D28′, resolve players"]
+        AR5 -->|"wired"| AR6["PGNStore.archive - dedupe by content hash,<br/>stamp the Board tag D28′, resolve players,<br/>and stamp the NEXT ordinal D58′ - max plus one,<br/>the number its exported file will carry.<br/>A dedupe keeps the EXISTING row's ordinal"]
             AR6 --> AR6B["The inspector headline is a pure formatter<br/>carrying the PAIRING, not the game's name D20′ -<br/>Recording 101. White vs Black while live,<br/>Reviewing 1. … once archived"]
         AR6B --> AR7{"Outcome?"}
         AR7 -->|"archived or deduplicated"| AR8["Retire the draft - the game is safe"]
@@ -131,7 +133,7 @@ flowchart TD
     classDef drill fill:#e3f2e3,stroke:#4f8a4f,color:#123312
     classDef term  fill:#2f3640,stroke:#1b1f24,color:#ffffff
 
-    class B1,B2,B3,B5,B5D,B6,Q1,Q2,SP0,SP1,SP2,SP3,NG0,NG1,NG2,WAIT,TOPLAY,RCWAIT,RCOUT,RLOG,RLOG2,RGHOST,RCORR,CM5,SD,AR2,AR6,AR6B,AR8,ARSKIP,ARDRAFT,E0,EDEBT,E3,E4,E2B,RV0,RV1,RV2,RV3 act
+    class B1,B2,B3,B5,B5D,B6,Q1,Q2,SP0,SP1,SP2,SP3,NG0,NG1,NG2,NG3,WAIT,TOPLAY,RCWAIT,RCOUT,RLOG,RLOG2,RGHOST,RCORR,CM5,SD,AR2,AR6,AR6B,AR8,ARSKIP,ARDRAFT,E0,EDEBT,E3,E4,E2B,RV0,RV1,RV2,RV3 act
     class B4,S0,AS0,RC0,PF0,R0,CM0,GO1,E1,E2,AR4,AR5,AR7 dec
     class F5,AR9 bad
     class STAR,LOSS,MIRROR,GLIDE note

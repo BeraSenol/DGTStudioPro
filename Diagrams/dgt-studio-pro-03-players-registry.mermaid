@@ -1,6 +1,7 @@
 %% DGT Studio Pro — 03 players and the registry
-%% Authored 5 Aug 2026 against the tree at 75a02d3, read from source
-%% (PlayersDestination, PGNStore.retag / refuseCollisions /
+%% Re-authored 9 Aug 2026 against the tree at 5f82de7 plus the comment-reduction
+%% working tree, read from source
+%% (PlayersDestination, PlayerRanking, PGNStore.retag / refuseCollisions /
 %%  collectOrphanedPlayers / playersOrphaned, PlayerStats, Glicko1).
 
 flowchart TD
@@ -8,29 +9,39 @@ flowchart TD
     P0(("Players destination")) --> P1["ONE query since D60′: PGN by importedAt.<br/>The second query over Player existed only so<br/>D40′'s sweep toolbar could count orphans<br/>reactively - with collection automatic this<br/>destination has no reason to know the<br/>registry exists"]
 
     subgraph FOLD["Pure folds D10′ - GameRecord in, no SwiftData imported"]
-        P1 --> P2["games.map to GameRecord<br/>ordering contract: date or importedAt, then<br/>importedAt, then contentHash. A fold's output<br/>is only as deterministic as its order, so the<br/>chain down to a TOTAL tiebreak is the contract"]
+        P1 --> P2["games.map to GameRecord, MEMOIZED on a content<br/>key D70′ - records, index and histories fold<br/>together, once per CHANGE, so a click, a<br/>keystroke or an engine's per-ply write never<br/>re-folds the Library.<br/>Ordering contract: date or importedAt, then<br/>importedAt, then contentHash - the chain down<br/>to a TOTAL tiebreak is the contract"]
         P2 --> P3["PlayerStats.index - emits only players<br/>holding at least one game"]
         P3 --> P4["Glicko1.histories - 1500 / RD 350,<br/>floor 30, cap 350, c = 0, one game per period,<br/>provisional while RD above 110.<br/>c = 0 means no wall-clock input: the rating<br/>is a PURE deterministic fold"]
-        P4 --> P5["RankedPlayer - rank under D11′ plus the<br/>rating riding along"]
+        P4 --> P5["RankedPlayer - the rank badge plus the<br/>rating riding along"]
     end
 
     P3 -.-> INV
     INV["INVARIANT D40′: an orphaned player is unreachable<br/>through SELECTION, permanently and by<br/>construction. A record's sides come from RESOLVED<br/>links, so a linkless row is in no view mode.<br/>Anything gated on the SELECTED player having no<br/>games is dead code with a green build"]
 
-    P5 --> SORT{"Sort order - set by clicking a LIST-MODE<br/>column header since 5 Aug 2026.<br/>Once ascending, twice descending"}
-    SORT -->|"Rank, ascending - the default"| SORT1["IS the D11′ ladder: wins down, win rate down,<br/>key up. Not a reimplementation - rank was<br/>folded through PlayerStats.rankingOrder before<br/>any view saw the row, so ordering by the badge<br/>number reproduces the comparator exactly.<br/>That equivalence is what let D48′'s persisted<br/>rank/name picker be DELETED rather than kept<br/>beside this - two controls answering one<br/>question is the twin-read-site shape"]
-    SORT -->|"Player, or any of the other seven"| SORT2["Rank STILL renders in every ordering, because<br/>rank is a fact about the player and not a<br/>position in the current sort - the half of<br/>D48′ that outlived its picker.<br/>Session-only, deliberately: a sort is the<br/>question being asked now, not a preference"]
+    P5 --> METHOD{"Ranking METHOD - a toolbar menu,<br/>PERSISTED D62′. What rank 1 MEANS,<br/>never what order the rows appear in"}
+
+    METHOD -->|"Rank by Wins - the default"| M1["IS D11′: wins down, win rate down, key up.<br/>Delegates to PlayerStats.rankingOrder rather<br/>than restating the chain - this case is why<br/>that comparator still has a production caller"]
+    METHOD -->|"Rank by Win %"| M2["The reading D11′ rejected as the DEFAULT and<br/>never called worthless - a small-sample player<br/>tops it, which is the point of asking for it<br/>deliberately. Wins break ties"]
+    METHOD -->|"Rank by Rating"| M3["Glicko mean - the one method reading a number<br/>the other two cannot see, so the comparator<br/>takes a stats-plus-rating PAIR.<br/>UNRATED PLAYERS RANK LAST, always: a nil rating<br/>is NO opinion, not a low one - sorting them as<br/>1500 would drop them mid-ladder ahead of<br/>players who earned less"]
+
+    M1 --> SORT
+    M2 --> SORT
+    M3 --> SORT
+
+    SORT{"Row order - the column sort, a SEPARATE<br/>question: the badge travels with the player<br/>into every ordering. Set by a list-mode<br/>header OR the View Options panel, ONE value,<br/>persisted since D69′"}
+    SORT -->|"Rank, ascending - the default"| SORT1["Reproduces the chosen method's ladder exactly -<br/>rank was assigned by the method before any view<br/>saw the row, so ordering by the badge number<br/>reproduces the comparator. That equivalence is<br/>what let D48′'s persisted rank/name picker be<br/>DELETED rather than kept beside the headers -<br/>two controls answering one question is the<br/>twin-read-site shape"]
+    SORT -->|"Player, or any of the other eight"| SORT2["Rank STILL renders in every ordering, because<br/>rank is a fact about the player and not a<br/>position in the current sort - the half of<br/>D48′ that outlived its picker"]
 
     SORT1 --> SEARCH
     SORT2 --> SEARCH
 
-    SEARCH["Search text plus rated-ness chips<br/>the SAME D30′ fold the Library uses"]
+    SEARCH["Search text plus rated-ness chips<br/>the SAME D30′ fold the Library uses.<br/>Narrows the LIST only - a profile scrolled out<br/>by a query deliberately survives"]
     SEARCH --> MODE{"View mode?<br/>the shared key again"}
 
-    MODE -->|"list"| MD1["Table"]
-    MODE -->|"columns"| MD2["Finder-flat: one-column list plus detail.<br/>FLAT, not grouped - the letter and win-band<br/>buckets went with the card grid they navigated<br/>in the 2 Aug redesign. Its single header sorts<br/>by name and shares the comparator above, so it<br/>READS any ordering and can only SET that one"]
-    MODE -->|"icons"| MD3["Grid"]
-    MODE -->|"gallery"| MD4["Filmstrip"]
+    MODE -->|"list"| MD1["Table - Rank in podium colours, plain text;<br/>Special Mates counts from the MOTIF and can<br/>exceed Mates while the two hash-suffix<br/>spellings disagree, a standing open item"]
+    MODE -->|"columns"| MD2["Finder-flat: one-column list plus detail.<br/>Its single header sorts by name and shares the<br/>comparator above, so it READS any ordering and<br/>can only SET that one"]
+    MODE -->|"icons"| MD3["Grid - rubber band plus arrow keys,<br/>the rank chip riding every card"]
+    MODE -->|"gallery"| MD4["Filmstrip - the preview pane carries the<br/>eight-fact grid AND the rating trend since<br/>8 Aug, through the same chart the inspector<br/>draws - one chart, two hosts, no divergence"]
 
     MD1 --> PAINTED
     MD2 --> PAINTED
@@ -45,12 +56,12 @@ flowchart TD
 
     SELECT{"How many selected?"}
 
-    SELECT -->|"none"| NOSEL["No fallback, and never preview what the user<br/>did not pick - the Library's rule, which both<br/>galleries now share since 4 Aug 2026"]
-    SELECT -->|"one"| PROFILE["ONE profile grid states each fact ONCE:<br/>Rank, Games, Record, Win Rate, Rating,<br/>Uncertainty, Rated Games, Mates, First and<br/>Last Played. Record's first component absorbed<br/>the old duplicate Wins row"]
-    SELECT -->|"two"| SUB["Head-to-head line in the toolbar subtitle"]
+    SELECT -->|"none"| NOSEL["No fallback, and never preview what the user<br/>did not pick - the Library's rule, which both<br/>galleries share"]
+    SELECT -->|"one"| PROFILE["ONE profile grid states each fact ONCE:<br/>Rank, Games, Record, Win Rate, Rating,<br/>Uncertainty, Rated Games, Mates, Special Mates,<br/>First and Last Played. Record's first component<br/>absorbed the old duplicate Wins row"]
+    SELECT -->|"two"| SUB["Head-to-head line in the toolbar subtitle -<br/>ordered off the DISPLAYED ladder, so the<br/>sentence matches the rows on screen"]
     SELECT -->|"three or more - e.g. after Cmd-A"| SUBN["Count only. NO head-to-head line:<br/>that is a count-of-two state"]
 
-    PROFILE --> TREND["Rating trend - ordinal, ONE monotone line.<br/>Game number is the rating's own clock because<br/>under c = 0 idle time changes nothing, so a<br/>date axis would spend its width on pauses.<br/>x pins at game 1; axis labels are de-localised,<br/>because a locale was writing 1512 as 1.512"]
+    PROFILE --> TREND["Rating trend - ordinal, ONE monotone line<br/>starting at STEP 0: the 1500/350 prior,<br/>hollow-marked because it is not a game.<br/>Game number is the rating's own clock - under<br/>c = 0 idle time changes nothing, so a date axis<br/>would spend its width on pauses.<br/>Axis labels de-localised: a locale was writing<br/>1512 as 1.512"]
 
     TREND --> ACT{"Action?"}
     NOSEL --> P0
@@ -58,7 +69,7 @@ flowchart TD
     SUBN --> ACT
 
     ACT -->|"Get Info - Cmd-I"| RN0["The player form is the app's ONE rename door<br/>DRILL-DOWN: diagram 04"]
-    ACT -->|"Show in Library"| SHOW["Filter the Library to this player"]
+    ACT -->|"Show in Library - Shift-Cmd-L"| SHOW["Filter the Library to this player.<br/>The chip is that filter's one visible face<br/>and its exit"]
 
     SHOW --> DONE
 
@@ -92,13 +103,13 @@ flowchart TD
     COST2 --> DONE
 
     subgraph COLLECT["D60′ - orphans are collected automatically, unasked"]
-        CO0["Every door that can STRAND a row collects it:<br/>applyEdit and retag after re-resolving and<br/>BEFORE their save, so the edit stays one<br/>transaction; backfillPlayerLinks AFTER its<br/>relink loop, which is what heals the backlog"] --> CO1{"Any row nothing points at?"}
+        CO0["Every door that can STRAND a row collects it -<br/>SCOPED since D76′: applyEdit checks only the two<br/>rows it displaced, retag only its source, each<br/>before its save so the edit stays one<br/>transaction; backfillPlayerLinks keeps the<br/>GLOBAL sweep after its relink loop - the<br/>backlog is its job"] --> CO1{"Any candidate nothing points at?"}
         CO1 -->|"no"| CO2["Nothing to do - the common case"]
-        CO1 -->|"yes"| CO3["Delete it. The PGN files are the source of<br/>truth: a Player exists to give a seat tag an<br/>identity, and a row no game references is<br/>describing nobody"]
+        CO1 -->|"yes"| CO3["Delete it. The PGN files are the source of<br/>truth: a Player exists to give a seat tag an<br/>identity, and a row no game references is<br/>describing nobody. This is also what makes<br/>RENAME the merge replacement D52′ promised:<br/>retag onto an existing name, and the loser is<br/>collected rather than lingering"]
     end
 
-    %% Declared inside SWEEP above, so this edge is written AFTER the block:
-    %% mermaid places a node where it is FIRST SEEN, and naming SW0 up in the
+    %% Declared inside COLLECT above, so this edge is written AFTER the block:
+    %% mermaid places a node where it is FIRST SEEN, and naming CO0 up in the
     %% action fan-out would render it outside the very box it entitles.
     ACT -->|"nothing to invoke - see the note"| CO0
 
@@ -118,8 +129,8 @@ flowchart TD
     classDef drill fill:#e3f2e3,stroke:#4f8a4f,color:#123312
     classDef term  fill:#2f3640,stroke:#1b1f24,color:#ffffff
 
-    class P1,P2,P3,P4,P5,SORT1,SORT2,SEARCH,MD1,MD2,MD3,MD4,PAINTED,CMDA,PROFILE,TREND,SUB,SUBN,NOSEL,SHOW,RN1,RN2,RN4,RN5,RT0,RT1,RT2,RT6,RT7,CO0,CO2 act
-    class SORT,MODE,SELECT,ACT,RN3,RT3,CO1 dec
+    class P1,P2,P3,P4,P5,M1,M2,M3,SORT1,SORT2,SEARCH,MD1,MD2,MD3,MD4,PAINTED,CMDA,PROFILE,TREND,SUB,SUBN,NOSEL,SHOW,RN1,RN2,RN4,RN5,RT0,RT1,RT2,RT6,RT7,CO0,CO2 act
+    class METHOD,SORT,MODE,SELECT,ACT,RN3,RT3,CO1 dec
     class RT4,COST,COST2,CO3 bad
     class INV,CASCADE note
     class RN0 drill

@@ -4,39 +4,39 @@ Five Mermaid activity diagrams over the app's real control flow, plus the checks
 that keep them honest.
 
 **Provenance, stated because it is the only thing that makes the rest worth
-reading.** Authored 5 August 2026 against the tree at **`75a02d3`** plus that
-day's uncommitted work — column sorting, and D59′'s move of the movetext editor
-into Get Info — read from source, not from a description of the source. Every
-node traces to a file that was open at the time; the decision citations were
-verified to resolve against the D-anchors by the grep below rather than by
-recollection.
+reading.** Re-authored 9 August 2026 against the tree at **`5f82de7`** plus that
+day's working tree — the comment-reduction pass, whose diff is comment-only
+(verified: the code projection of every file is byte-identical to the commit),
+so "read from source" means the sources at `5f82de7`. The read is real rather
+than claimed: the same sitting's comment pass opened every app file, which is
+what made this re-authoring cheap. Every decision citation was verified to
+resolve against the D-anchors by grep 1 below on 9 August, not by recollection.
 
-**Re-pointed 7 August 2026.** Both greps below read `DECISIONS.md`, which has
-owned the anchors since M14 split them out of `PROJECT-INSTRUCTIONS.md`. As
-written they read the instructions, and against that file grep 1 returned **ten
-false positives** — decisions cited correctly by the diagrams and no longer
-*mentioned* in the document being grepped. A check pointed at the wrong file
-fails loudly here, which is lucky; the same mistake on grep 2 fails silently, by
-under-reporting the gap.
+This set supersedes the 5 August originals (authored at `75a02d3`), which
+pre-dated D61′–D73′ — the seat guard, the ranking methods, the ten-motif
+vocabulary, the second sleep gate, the one spelling of "analysed?", View
+Options, the fold memo, exit-only saves, the per-mode badges, and the Analysis
+Data window. All are drawn or triaged now; the exclusion table below is
+current.
 
 **Naming the base *and* the delta is the point**, not pedantry: a diagram set
 that cites a commit while describing a working tree is a claim about the
 filesystem that nothing checks, and this project has recorded that exact shape
 enough times to write it down. When this lands, the base is whatever commit
-carries D59′.
+carries the comment pass.
 
 A clean parse says nothing about whether these are *true*. The parse checks the
 grammar; the content is checked by a read against the sources, and that read has
-a date on it. Anything committed after `75a02d3` is unrepresented until someone
+a date on it. Anything committed after `5f82de7` is unrepresented until someone
 re-reads.
 
 | File | Subject |
 |---|---|
-| `dgt-studio-pro-00-master.mermaid` | Launch, hook wiring, the hermetic guard, scene declaration, the three destinations |
-| `dgt-studio-pro-01-live-play.mermaid` | Serial bytes → quiescence → settle → reconstruct → commit → archive, with recovery and the D49′ resync gate |
-| `dgt-studio-pro-02-library-analysis.mermaid` | Import, the narrowing pipeline, the four view modes, ⌘A, and every bulk action |
-| `dgt-studio-pro-03-players-registry.mermaid` | The pure folds, the ladder, rename through `retag`, the collision pre-flight, the orphan sweep |
-| `dgt-studio-pro-04-scenes-services.mermaid` | `openWindow(value:)` routing by type, Get Info's three subjects and **three** tabs, the movetext editor, the evaluation graph, the Commands scenes |
+| `dgt-studio-pro-00-master.mermaid` | Launch, hook wiring, the two-gate sleep observer, the hermetic guard, scene declaration, the three destinations |
+| `dgt-studio-pro-01-live-play.mermaid` | Serial bytes → quiescence → settle → reconstruct → commit → archive, with recovery, the D49′ resync gate, and the D61′ seat guard on New Game |
+| `dgt-studio-pro-02-library-analysis.mermaid` | Import, the memoized narrowing pipeline, the four view modes with their badges, ⌘A, every bulk action, and the D58′ folder reconcile |
+| `dgt-studio-pro-03-players-registry.mermaid` | The memoized folds, the three ranking methods, rename through `retag`, the collision pre-flight, automatic orphan collection |
+| `dgt-studio-pro-04-scenes-services.mermaid` | `openWindow` routing — four value types, two singletons — Get Info's three subjects and three tabs, the evaluation graph, the Analysis Data window, the queue window, View Options, the four Commands scenes |
 
 ---
 
@@ -84,7 +84,7 @@ Four checks run in order of what they can catch:
 3. **Placement** — the hazard a parse cannot see. A node first *referenced*
    outside a subgraph but *declared* inside it renders **outside the box it
    belongs to**, and parses identically either way. This check caught exactly one
-   such node while these files were being written (`SW0`, which entitled the
+   such node while the originals were being written (`SW0`, which entitled the
    sweep subgraph and was rendering outside it).
 4. **Render** — layout completes. Text metrics are stubbed, because jsdom ships
    no SVG layout engine, so this proves the graph *resolves*; it does not prove
@@ -94,6 +94,8 @@ Expected: `parse 5/5 | render 5/5 | structural issues 0 | placement issues 0`,
 and the run prints its own denominator. **A run that examined nothing must not be
 able to report success** — if it says anything other than five files, the glob
 missed something and every number above it is meaningless.
+
+Last run 9 August 2026, clean, on the re-authored set.
 
 Then look at the SVGs. A branch nobody has rendered has layout nobody has
 checked, and check 4 is not a substitute for opening them.
@@ -114,8 +116,12 @@ comm -23 <(grep -ohE "D[0-9]+′" Diagrams/*.mermaid | sort -u) \
          <(grep -ohE "D[0-9]+′" DECISIONS.md | sort -u)
 ```
 
-Expected output: **empty** — verified 7 August 2026. Current denominator: **36**
-distinct decisions cited (this line said 35; re-measured rather than carried).
+Expected output: **empty** — verified 9 August 2026, twice: after the
+re-authoring (49 cited) and again after the waste-audit fixes landed D74′–D78′
+into 02, 03 and 04 the same day. Current denominator: **54** distinct decisions
+cited (36 before the re-authoring; +12 drawn among D61′–D73′, +D52′, +the five
+minted with the fixes — the arithmetic closes, which is the point of stating
+the numbers).
 
 Note the `′` (U+2032 PRIME). It is load-bearing: `D13` and `D13′` do not grep
 against each other, so a diagram set that drops the primes is one whose every
@@ -141,40 +147,27 @@ remembered, so that a seventeenth entry is visibly new:
 | D26′ | Inspector chrome — shared components, structure not flow |
 | D27′ | Toolchain policy — process |
 | D31′ | Rounds are integers — a parser contract with no branch |
-| D33′ | The evaluation bar — presentation, no decision point |
+| D33′ | The evaluation bar — presentation; its *grammar* is cited where the graph, data and queue windows reuse it |
 | D36′ | Extends D30′'s rule to two fields; D30′ **is** drawn |
-| D38′ | Merge — removed as surface by D52′ |
+| D38′ | Merge — removed as surface by D52′, which **is** drawn (03's collection node) |
 | D41′ | A deleted stored property |
 | D42′ | swift-format declined — process |
 | D43′ | Swift language mode 6 — build configuration |
 | D44′ | An isolation attribute deleted — compile-time, not runtime |
-| D45′ | Inspector section collapse — structure |
+| D45′ | Inspector section collapse — structure (the table below) |
 | D51′ | The UI test target deleted — process |
-| D52′ | Merge removed — a deletion |
+| D64′ | Folder layout — structure, no activity |
 
-Sixteen — **and the current output is twenty-four.** The eight new ones are
-`D61′`–`D68′`, every decision minted after these diagrams were drawn on 5 August.
-That is the check doing exactly what it was built for, on its first run against
-the correct file.
-
-**They are listed rather than triaged, deliberately.** Assigning each a
-"why not drawn" row without re-reading the diagrams against the current tree
-would be inventing justifications to make a check come back clean, which is the
-failure this whole document is written against. What is owed is one pass with the
-five `.mermaid` files open:
-
-| Untriaged | First read, to be confirmed or overturned |
-|---|---|
-| D61′ | A commit-path guard — **likely a real gap** |
-| D65′ | Ten motifs, precedence narrowest-first; refines D34′, which **is** drawn — **likely a real gap** |
-| D66′ | A second sleep-inhibition cause with its own gate; D14′ and D25′ are both drawn — **likely a real gap** |
-| D67′ | One spelling of "is there analysis to show" — a guard, possibly drawable |
-| D62′ | Ladder ordering — a sort, presentation rather than flow |
-| D63′ | Logging owner and policy — cross-cutting process |
-| D64′ | Folder layout — structure |
-| D68′ | Extends D67′'s spelling to tag rules; the "extends X, X is drawn" pattern |
-
-Anything appearing beyond these eight is unrecorded drawable behaviour.
+Sixteen, verified 9 August 2026 — the current output matches this table
+exactly. The 5 August set left D61′–D68′ untriaged; that debt is paid: D61′ is
+drawn in 01 (New Game) and 04 (the Details-tab refusal arm), D62′ in 03 (the
+method fan-out), D63′ in 00 (the hermetic guard and the quiet console), D65′ in
+02 (the classify node), D66′ in 00 and 02 (the two-gate observer, the batch
+sleep note), D67′ in 02 and 04 (the gates), D68′ in 02 (the chips' spelling
+line), D69′ in 02, 03 and 04 (one sort, two doors, persisted; the panel), D70′
+in 02 and 03 (the memo notes), D71′ and D72′ in 02 (the analyse path, the badge
+note), D73′ in 04 (the data window). Anything appearing beyond this table is
+unrecorded drawable behaviour.
 
 ---
 
@@ -189,18 +182,21 @@ which is the notation they actually wanted:
 | Piece | Owner and shape | Worth knowing |
 |---|---|---|
 | `StorageKeys` | Constants namespace | The single home for every `@AppStorage` key. A preference stated in two places is the twin-read-site pattern D25′ names |
-| `SleepInhibitor` | App-owned, injected into **Settings only** | D14′ / D25′. Idle sleep is inhibited while a game is live or a recording runs; **display** sleep deliberately is not, and that is structural — it would take naming a second option, not editing a comment. The gate is an observable property, not an `@AppStorage` read, so switching it off mid-game releases the token on that edge |
+| `SleepInhibitor` | App-owned, injected into **Settings only** | D14′ / D25′ / D66′. **Two causes, two gates since D66′**: a live game or recording holds the token for the serial link, a running batch holds it for the engine — independent preferences, joined reason strings when both hold. **Display** sleep deliberately is not inhibited, and that is structural — it would take naming a second option, not editing a comment. The gates are observable properties, not `@AppStorage` reads, so switching one off mid-run releases the token on that edge |
 | `InspectorSectionCollapse` | App-owned, injected into the **WindowGroup** | D45′. Stores the **collapsed** set, not the expanded one — so an absent key and an empty set are the same state, and "sections default open" is a property of the representation rather than a fourth `?? true` |
+| `CollectionViewOptions` | App-owned, injected into the WindowGroup **and** the View Options window | D69′. Owns icon size, grid spacing and both destinations' sorts — values read by grid and card alike go through properties here, defaults stated once, clamped on every read-back. `activeSubject` is deliberately session-only: a fact about what is on screen, not a preference |
+| `AppLog` / `TestHost` | Constants + one factory | D63′. The app's only `Logger` factory, returning `Logger?` — suppression short-circuits before interpolation. Silent under the test host; `DGT_LOG=1` re-arms it. `TestHost.isActive` is the one spelling of "am I under XCTest?", read by `AppLog` and the App's hermetic guard |
 | `DGTSessionLog` | App-owned, wired to both DGT objects | Ring-bounded. `record` buffers and mirrors to Console, `capture` buffers only, `recordDesync` carries the full context for an irreconcilable board |
 | `AccessibilityID` | Constants registry | Dotted lowercase, `String`-only signatures. **No longer a tested contract** since D51′ deleted the UI suite, so the discipline is carried by the sweep's grep alone. The count deliberately lives in the grep, not in prose: `grep -c 'static let\|static func' DGTStudioPro/App/AccessibilityID.swift` |
 | `OpenGamesRegistry` | App-owned, injected into the WindowGroup | Drives the Library's delete-path discard confirmation. `markDirty` has no app caller **by honest pre-wiring** — every editor commits on OK, so `isDirty` is always false and that branch is dormant by design rather than dead |
 
 ---
 
-## Three findings this set recorded rather than drew
+## Findings recorded rather than drawn
 
 Each was a question asked of the tree while authoring, and each has an answer
-that belongs in the record rather than in a node.
+that belongs in the record rather than in a node. The first three are the
+5 August originals, still true; the fourth is the re-authoring's.
 
 **The glide preference does not clamp under the quiescence window.**
 `BoardPieceLayer.durationRange` is `0.1...1.0`, clamped on every read, default
@@ -225,3 +221,12 @@ so nothing needs fixing in source, but drawing it as a live branch would be a
 guard whose enabling value the drawn path cannot supply, which is the
 `.disabled(…)` shape D40′ exists to stop. It is a `note` in `01`; the reachable
 source of a star result is the **import** door, in `02`.
+
+**The toolbar's remaining verbs are the diagram's own denominator.** The
+6 August removals left the Library toolbar with Import, the conditional
+Reconcile, the queue's status item, the view-mode picker and the inspector
+toggle — every other verb lives on the row menus with its key equivalent. `02`
+states this at the action fan-out rather than leaving the old five-button
+toolbar implied, because a reader comparing the diagram to the screen would
+otherwise conclude the diagram was stale in the one place it was making a
+current claim.
