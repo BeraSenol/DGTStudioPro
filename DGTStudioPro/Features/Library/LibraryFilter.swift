@@ -1,34 +1,14 @@
 import Foundation
 import SwiftData
 
-/// What the Library is currently narrowed to (M-prs.5): a smart tag or a
-/// player — one filter seam for both, built once against final types
-/// (which is exactly why it waited for this slice instead of wrapping
-/// the old enum and swapping payloads later). Holds live models, so it
-/// stays inside the `@MainActor` view layer; the pure logic it fronts is
-/// `TagRule.evaluate` and the resolved-link comparison.
+/// What the Library is narrowed to: a smart tag or a player — one filter seam for both.
 internal enum LibraryFilter {
     case smartTag(SmartTag)
     case player(Player)
 
-    /// Takes the record alongside the model since 7 Aug 2026, rather than
-    /// projecting one per call.
-    ///
-    /// `pgn.gameRecord` decodes two Codable arrays off the model (`moves` and
-    /// `evaluations`), and this ran once per game per render — so an active
-    /// smart tag put two blob decodes per game on every keystroke, click and
-    /// drag callback. The caller memoizes the projection now
-    /// (`CollectionFoldKey`), which it can only do if the projection is passed
-    /// in rather than taken here.
-    ///
-    /// **The record must be `pgn`'s own**, which is the trap the signature
-    /// cannot state: handing over a mismatched pair type-checks and silently
-    /// filters the Library against the wrong game. The one caller zips the two
-    /// arrays it already holds in the same order.
-    ///
-    /// The `.player` arm ignores the record deliberately — a link comparison
-    /// is the M-prs.1 identity door and a projection would flatten it back to
-    /// the raw tags that door exists to bypass.
+    /// Takes the record alongside the model, rather than projecting one per call (the memo pass).
+    /// **The record must be `pgn`'s own** — a mismatched pair type-checks and silently filters on
+    /// the wrong game's facts; the pairing is the caller's contract.
     internal func matches(_ pgn: PGN, record: GameRecord) -> Bool {
         switch self {
         case .smartTag(let tag):
@@ -37,6 +17,31 @@ internal enum LibraryFilter {
             // Resolved links, never raw tags — the M-prs.1 identity door.
             return pgn.whitePlayer?.persistentModelID == player.persistentModelID
             || pgn.blackPlayer?.persistentModelID == player.persistentModelID
+        }
+    }
+
+    /// The narrowing identity as a value (D78′): everything `matches` reads that can move without
+    /// the games' content moving — a tag's rules are editable on the live model, and a rule edit
+    /// must invalidate the narrow memo. A missed input here is stale rows on screen.
+    internal struct Signature: Equatable {
+        internal let tagID: PersistentIdentifier?
+        internal let matchAll: Bool?
+        internal let rules: [TagRule]?
+        internal let playerID: PersistentIdentifier?
+    }
+
+    internal var signature: Signature {
+        switch self {
+        case .smartTag(let tag):
+            Signature(
+                tagID: tag.persistentModelID, matchAll: tag.matchAll,
+                rules: tag.rules, playerID: nil
+            )
+        case .player(let player):
+            Signature(
+                tagID: nil, matchAll: nil,
+                rules: nil, playerID: player.persistentModelID
+            )
         }
     }
 

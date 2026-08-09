@@ -5,51 +5,30 @@ import SwiftUI
 internal struct SettingsView: View {
     
     // MARK: Static Constants
-    // M11.4: the category was "pgnstore", a copy-paste that misled Console
-    // filtering. Since 5 Aug 2026 it is a `Category` case rather than a
-    // string, so that particular mistake is no longer spellable.
     private static let logger = AppLog.logger(.settings)
     
     // MARK: Private Properties
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
-    /// M7.2 — the launch auto-connect preference. The `true` here and the
-    /// `?? true` fallback in `DGTConnection.autoConnectAtLaunch()` encode the
-    /// same "absent reads as enabled" default in two places, unavoidably: an
-    /// `@AppStorage` initial value is supplied at the read site, not
-    /// registered where the connection could see it. Change one and you must
-    /// change the other, or this toggle and launch behavior disagree about
-    /// what "never touched" means. `StorageKeys` documents the contract.
+    /// Twin default with `autoConnectAtLaunch()`'s `?? true` — unavoidable (`@AppStorage` initials
+    /// live at the read site). `StorageKeys` documents the contract.
     @AppStorage(StorageKeys.autoConnectOnLaunch) private var autoConnectOnLaunch = true
     
-    /// M-ux.1 (D13′) — the illegal-move sound preference. Same twin-default
-    /// contract as `autoConnectOnLaunch` above: the `true` here and the
-    /// `?? true` fallback in the App's `onDesync` closure encode "absent
-    /// reads as enabled" in two places, unavoidably. `StorageKeys`
-    /// documents the pairing.
+    /// Twin default with the App's `onDesync` closure (D13′) — same unavoidable pairing.
     @AppStorage(StorageKeys.illegalMoveSoundEnabled) private var illegalMoveSoundEnabled = true
     
-    // M11 review — the Engine section used to display constants that lived
-    // nowhere (and had drifted: "20" against a real default of 18, "128 MB"
-    // never sent). These bind to the same keys `EngineConfiguration.current`
-    // reads, and the initial values come from `EngineConfiguration.default`,
-    // so — unlike the auto-connect twin above — the numbers live exactly
-    // once.
+    // Engine values bind to the keys `EngineConfiguration.current` reads; initials come from
+    // `EngineConfiguration.default`, so the numbers live exactly once.
     @AppStorage(StorageKeys.analysisDepth) private var analysisDepth
     = EngineConfiguration.default.depth
     @AppStorage(StorageKeys.engineHashMB) private var engineHashMB
     = EngineConfiguration.default.hashMB
     @AppStorage(StorageKeys.engineThreads) private var engineThreads
     = EngineConfiguration.default.threads
-    /// D21′ — the board's coordinate labels. Twin default with `BoardView`'s
-    /// own read (absent reads as **true**), the same unavoidable pairing as
-    /// the two toggles above; `StorageKeys` documents it.
+    /// Twin default with `BoardView`'s own read (D21′; absent reads true).
     @AppStorage(StorageKeys.showBoardCoordinates) private var showsBoardCoordinates = true
     
-    /// 2 Aug 2026 — the piece glide duration. The `EngineConfiguration`
-    /// arrangement: initial value and bounds come from the owning type
-    /// (`BoardPieceLayer`), so the numbers live exactly once. The slider's
-    /// range makes an out-of-bounds write unrepresentable from here; the
-    /// layer additionally clamps its own read against a hand-edited default.
+    /// Glide duration — initial value and bounds from `BoardPieceLayer`, so the numbers live once;
+    /// the slider's range makes out-of-bounds unrepresentable from here.
     @AppStorage(StorageKeys.pieceAnimationDuration) private var pieceAnimationDuration
     = BoardPieceLayer.defaultDuration
     
@@ -79,20 +58,13 @@ internal struct SettingsView: View {
     
     // MARK: General
     private var generalTab: some View {
-        // D25′ — the sleep gate is an observable property on the inhibitor,
-        // not an `@AppStorage` mirror of it: the running tracking loop must
-        // see the flip so that switching off mid-game releases the
-        // assertion on that edge. Consequence for this file: no twin
-        // default to document, unlike the three `@AppStorage` toggles above.
+        // D25′ — the sleep gates are observable properties on the inhibitor, not `@AppStorage`
+        // mirrors: the tracking loop must see the flip mid-game. No twin default to document.
         @Bindable var inhibitor = sleepInhibitor
         
         return Form {
-            // M7.3 deliberately has no toggle here: standing down mid-game
-            // reconnection is a per-incident choice, not a preference — a
-            // switch flipped weeks ago shouldn't decide whether a live game
-            // gets its board back. The connect dialog's "Stop Trying" button
-            // is that per-incident door; the footer states the split so the
-            // player isn't left hunting for a setting that doesn't exist.
+            // M7.3 deliberately has no toggle: standing down reconnection is per-incident ("Stop Trying"),
+            // not a preference. The footer states the split.
             Section {
                 Toggle("Connect to board automatically", isOn: $autoConnectOnLaunch)
                     .accessibilityIdentifier(AccessibilityID.settingsAutoConnectToggle)
@@ -117,13 +89,7 @@ internal struct SettingsView: View {
                 )
             }
             
-            // M11.4 (23 July): the section shipped a single Stepper bound to
-            // `analysisDepth` but labelled "Threads" and displaying
-            // `engineThreads` — the control said one thing, edited another,
-            // and hash/threads had no control at all. The keys were bound;
-            // the UI wasn't. Bounds and choices come from
-            // `EngineConfiguration`, so the numbers still live exactly once
-            // and a value can't leave the range the clamp would repair.
+            // M11.4: this section once had one Stepper labelled "Threads" editing `analysisDepth`.
             Section {
                 Stepper(value: $analysisDepth, in: EngineConfiguration.depthRange) {
                     LabeledContent("Search Depth", value: "\(analysisDepth)")
@@ -151,12 +117,8 @@ internal struct SettingsView: View {
                 )
             }
 
-            // 7 Aug 2026 — Syzygy. Its own file rather than another forty lines
-            // here, because unlike the three steppers above it carries a state
-            // machine: a folder that has to be re-openable across launches, and
-            // a verification that starts an engine to ask what it loaded. That
-            // check is the section's reason for existing — see its doc for the
-            // sandbox question it is built to answer.
+            // Syzygy is its own file: unlike the steppers it carries a state machine — a folder re-openable
+            // across launches and a verification that starts an engine.
             SyzygySettingsSection()
             
             Section {
@@ -174,12 +136,8 @@ internal struct SettingsView: View {
             } header: {
                 Text("Energy")
             } footer: {
-                // One footer for two toggles, and it names each cause's own
-                // consequence rather than generalising over them — "keeps the
-                // Mac awake" is what they share, and the *reason* is the part
-                // a reader is deciding between. The display sentence is last
-                // because it is true of both and is the question anyone asks
-                // second (D14′'s non-goal, still structural).
+                // One footer for two toggles, naming each cause's own consequence; the display sentence is last
+                // because it is true of both (D14′'s non-goal, still structural).
                 Text(
                     "During play, keeps the Mac from sleeping and dropping the "
                     + "board connection mid-think. During analysis, keeps a "
@@ -194,11 +152,8 @@ internal struct SettingsView: View {
     
     // MARK: Board
     
-    /// D15′(c): the Board tab joins the grouped-form language of the other
-    /// two tabs — it was the window's only non-`Form` tab, a bare `VStack`
-    /// with ad-hoc padding. The swatch buttons stay as the control: a
-    /// visual style is picked visually (a `Picker` of names would hide
-    /// exactly the information being chosen).
+    /// The Board tab in the grouped-form language of the other tabs. Swatches stay the control — a
+    /// visual style is picked visually.
     private var boardTab: some View {
         Form {
             Section {
@@ -341,24 +296,18 @@ internal struct SettingsView: View {
     
     // MARK: Actions
     
-    /// Batch-deletes every `PGN` in a single transaction. Open Board tabs aren't
-    /// closed here (that would require window enumeration from this separate
-    /// scene); instead each one's `loadIfNeeded` fails its lookup on the next
-    /// pass and falls back to the live mirror — acceptable for a deliberate,
-    /// nuclear reset.
+    /// Batch-deletes every `PGN` in one transaction. Open tabs aren't closed — each `loadIfNeeded`
+    /// fails its next lookup and falls back to the mirror; acceptable for a nuclear reset.
     private func eraseLibrary() {
         do {
             try modelContext.delete(model: PGN.self)
-            // The registry goes too. This is the one deletion path that does
-            // not run through `PGNStore.delete(_ pgns:)` and therefore does not
-            // get its orphan cascade — a bulk `delete(model:)` never
-            // materializes the rows, which is the point of it. Erasing every
-            // game orphans every player by definition, so the cascade's own
-            // rule gives this exact answer; spelling it as a second bulk
-            // delete keeps the nuclear reset from being the one door that
-            // leaves a registry full of names behind an empty Library.
+            // The registry goes too: this is the one deletion path outside `PGNStore.delete` and gets no
+            // orphan cascade — a bulk `delete(model:)` never materializes rows, which is its point.
             try modelContext.delete(model: Player.self)
             try modelContext.save()
+            // The converged stamp described the store this just emptied (D75′) — a fresh library
+            // earns its own clean pass.
+            UserDefaults.standard.set(false, forKey: StorageKeys.playerBackfillsConverged)
             Self.logger?.info("Library and player registry erased via Settings")
         } catch {
             Self.logger?.error("Library erase failed: \(error.localizedDescription, privacy: .public)")

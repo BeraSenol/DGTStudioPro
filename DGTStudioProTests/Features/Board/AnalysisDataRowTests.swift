@@ -1,12 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// Pins the Analysis Data window's row fold (D73′).
-///
-/// Nonisolated — pure values in, pure values out, the D10′ posture. The claim
-/// with teeth is the nil rule: this fold *diverges* from the bar's nil→drawn
-/// display fold on purpose, and a divergence that is deliberate today is one
-/// refactor away from being "unified" tomorrow unless something goes red.
+/// The Analysis Data row fold (D73′). Nonisolated — pure values (D10′).
 @Suite("Analysis Data — Rows")
 struct AnalysisDataRowTests {
 
@@ -14,13 +9,8 @@ struct AnalysisDataRowTests {
 
     // MARK: The Nil Rule
 
-    /// **The deliberate divergence, pinned.** `EvaluationBarReading(nil)` folds
-    /// to `.drawn` and prints "0.0", because a bar must render something at
-    /// every ply. A data table printing "0.0" for a ply the engine never
-    /// scored would manufacture exactly the false reading D67′ names — so an
-    /// unscored ply is nil here, and the window draws the house em dash. If a
-    /// future pass "unifies" the two folds, this is the test that says the
-    /// difference was a decision.
+    /// **The deliberate divergence, pinned**: the bar folds nil to "0.0" (it must render
+    /// something); the data table carries nil — "0.0" for a never-scored ply is a lie.
     @Test("An unscored ply carries nil, never the bar's 0.0 fold")
     func unscoredPliesAreNilNotZero() {
         let rows = AnalysisDataRow.rows(
@@ -45,6 +35,45 @@ struct AnalysisDataRowTests {
 
         #expect(rows.count == moves.count)
         #expect(rows.allSatisfy { $0.evaluation == nil })
+    }
+
+    // MARK: Swing (D77′)
+
+    /// The step against the ply before, in percentage points of white's win
+    /// probability — the blunder signal, folded from data the app already
+    /// stores. Expected values computed through `whiteWinProbability` itself,
+    /// which is a **base-e** sigmoid at k=400: 0 cp = 50%, +100 cp ≈ 56%, a
+    /// mate clamps to 100%. (The first spelling of this test assumed base-10 —
+    /// 64% at +100 cp — and ⌘U corrected the author, not the fold.)
+    @Test("The swing is the win-probability step against the ply before")
+    func swingIsTheStepAgainstThePreviousPly() {
+        let rows = AnalysisDataRow.rows(
+            moves: moves,
+            evaluations: [.centipawns(0), .centipawns(100), .mate(3), .centipawns(0)]
+        )
+
+        #expect(rows[0].swing == nil)      // nothing before ply 0
+        #expect(rows[1].swing == "+6")     // 50% → 56%
+        #expect(!rows[1].swingIsMajor)     // 6 sits under the 15 pp threshold
+        #expect(rows[2].swing == "+44")    // 56% → 100% (mate clamps)
+        #expect(rows[2].swingIsMajor)
+        #expect(rows[3].swing == "-50")    // 100% → 50%
+        #expect(rows[3].swingIsMajor)
+    }
+
+    /// No fake deltas across gaps: a book hole (D74′ leaves the prefix nil)
+    /// or a dead-engine hole must not produce a swing computed against a
+    /// ply nobody scored.
+    @Test("No swing across an unscored gap")
+    func noSwingAcrossUnscoredGaps() {
+        let rows = AnalysisDataRow.rows(
+            moves: moves,
+            evaluations: [nil, nil, .centipawns(80), .centipawns(80)]
+        )
+
+        #expect(rows[2].swing == nil)      // the ply before is unscored
+        #expect(rows[3].swing == "+0")     // a flat step is a real, zero swing
+        #expect(!rows[3].swingIsMajor)
     }
 
     // MARK: Shared Grammars

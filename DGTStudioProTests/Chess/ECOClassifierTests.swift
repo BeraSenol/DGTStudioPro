@@ -34,6 +34,23 @@ struct ECOClassifierTests {
         #expect(ruy?.code == "C60")
     }
 
+    @Test("The match carries the book depth in plies (D74′)")
+    func matchCarriesTheMatchedLength() {
+        let match = Self.fixture.match(
+            for: ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6"]
+        )
+        #expect(match?.opening.code == "C68")
+        // Six of the eight plies are book — the analysis skip starts at the seventh.
+        #expect(match?.plies == 6)
+    }
+
+    @Test("A one-ply match reports depth one, not zero")
+    func shallowMatchReportsItsOwnDepth() {
+        let match = Self.fixture.match(for: ["d4", "d5"])
+        #expect(match?.opening.code == "A40")
+        #expect(match?.plies == 1)
+    }
+
     @Test("A game deeper than the table keeps the deepest line it reached")
     func gameDeeperThanTableFallsBackToDeepestMatch() {
         let opening = Self.fixture.opening(

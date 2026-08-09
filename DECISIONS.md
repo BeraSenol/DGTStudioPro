@@ -26,7 +26,7 @@ Locked product decisions #1–#8 and their interpretation flags were recorded in
 
 Old milestone and finding tags (M7.2, M-prs.1, F1–F9…) survive in code comments and below as provenance only — they identify where a decision came from; they schedule nothing.
 
-D-numbers are sequential and never reused. Next free number: **D74′**. (D71′–D73′ minted 8 Aug 2026, in the release-audit sitting, *with* the work rather than after it. D69′ and D70′ were minted 8 Aug 2026 for the View Options panel and the memoized collection folds — both recording work that had already shipped into the working tree unnumbered, which is the failure their entries open by naming.) (This line said D47′ until the 3 Aug audit — it had not been advanced since the M6 revision while the header above was; the header is the owner and this line now just repeats it.)
+D-numbers are sequential and never reused. Next free number: **D79′**. (D74′–D78′ minted 9 Aug 2026, in the waste-audit sitting, *with* the work. D71′–D73′ minted 8 Aug 2026, in the release-audit sitting, *with* the work rather than after it. D69′ and D70′ were minted 8 Aug 2026 for the View Options panel and the memoized collection folds — both recording work that had already shipped into the working tree unnumbered, which is the failure their entries open by naming.) (This line said D47′ until the 3 Aug audit — it had not been advanced since the M6 revision while the header above was; the header is the owner and this line now just repeats it.)
 
 ### D9′ — Player is a machine-managed @Model
 
@@ -1158,3 +1158,69 @@ By request, 8 August 2026, later the same sitting. Three moves that read as one:
 Registry: `analysisData.button`, `analysisData.window.table`, `analysisData.window.empty` — the button one identifier across future hosts, on `evaluationMagnifier`'s reasoning.
 
 Rejected: **a fourth Get Info tab** (couples the data to one subject's window when its natural neighbour is the graph, and Get Info is already the app's largest view file); **rows inside the Evaluation section** (a hundred rows in a 335 pt sidebar is a scroll inside a scroll); **keeping the File tab's Analysis section alongside the window** (two tellers of coverage, one of them four summaries of the other — the twin-read-site shape as a product decision); **showing reached depth as "12 / 18"** (still spins, which is the complaint, and the progress bar one row up already carries the motion).
+
+### D74′ — an analysis pass is a plan: the book is skipped, and re-analysis deepens
+
+By the 9 Aug 2026 waste audit's ranking (A1+A3 — the one item that changes felt wall-clock by an integer factor). Two additive columns, one pure type, one reordered door.
+
+**The finding that minted it:** the driver searched every ply of every game at full depth, book moves included, while `ECOClassifier` *already computed* the matched book prefix at classification time and threw the length away. And re-analysis always started from zero, structurally: `Evaluation` stores value with no depth, so "already scored at ≥ target" was unknowable.
+
+**The schema.** `PGN.ecoDepth: Int?` — the matched prefix in plies, stamped by `classify` with the other four columns (D34′'s one door; `GameClassification` carries `openingPlies`, `ECOClassifier.match(for:)` returns the pair). `PGN.analysisDepths: [Int?]` — parallel to `evaluations`, same empty-or-`moves.count` invariant, written beside each evaluation, cleared with them by `applyMovetextEdit`. Both additive-optional/defaulted — lightweight migration, the D28′ stance.
+
+**The plan is pure.** `AnalysisPlan.plan(moveCount:evaluations:depths:bookPlies:targetDepth:)` returns the searchable indices and whether storage resets. Rules, each pinned: plies below the book exit are never searched; a ply with an evaluation *and* a recorded depth ≥ target is kept; an unknown depth (legacy games — depths absent) is searchable but **not** a reset, so old scores survive until each ply is actually re-searched; only an evaluations-length mismatch resets (narrowing M1 9a's blanket reset, which destroyed the previous analysis on every pass).
+
+**The door reordered.** `classify` now runs *before* engine start — the plan reads the freshly stamped `ecoDepth` — and a fully satisfied plan returns `.done` without ever spawning a subprocess. The M1 9a guard survives relocated: storage still resets only after a successful start.
+
+**The estimator follows the unit.** `plyCounts` at enqueue are *searchable* plies (the same plan), or a skipped book registers as impossible speed; driver progress is searched/searchable; the queue window's row reads "N plies to search". An unclassified game estimates full-length and tightens after its first pass — recorded, not hidden.
+
+**Costs, named:** the evaluation curve and the bar render the book prefix as unscored (the graph's `?? 0.5` midline through the book — visually honest for theory); the Analysis Data window shows em-dash rows there, which D73′'s vocabulary already means; a depth change in Settings re-opens every ply (deepen is the feature, not a leak).
+
+Rejected: **storing depth inside `Evaluation`** (changing a stored Codable enum's payload breaks every existing blob's decode — the D36′ hazard as a certainty); **a Settings toggle for the skip** (a preference for "waste time on theory" is not a choice anyone makes on purpose; the data window shows exactly what was skipped); **skipping via a shallow pass over the book** (spends engine time to reproduce the table's own answer).
+
+### D75′ — the player backfills retire behind a converged stamp
+
+The waste audit's B1: `backfillPlayerLinks` + `backfillPlayerTagNames` ran fetch-all-and-scan on **every** Library and Players appearance, months after they last healed anything — the app's most-frequently-run redundant work, unpredicable by nature (a nil link on a `"?"` row is *correct*).
+
+**The gate.** `PGNStore.healPlayersIfNeeded(defaults:)` — the one door both destinations now call. Stamped (`StorageKeys.playerBackfillsConverged`) only after a pass that healed **zero** rows; a healing pass leaves the stamp unset so the *next* appearance confirms convergence. Stamped, it returns before fetching anything.
+
+**Why the gate is sound:** imports link at the door, archives link at the door, and D60′ collects rather than nullifies — no live door can re-create the work the backfills exist for. Erase Library clears the stamp with the store it described (a fresh library earns its own clean pass).
+
+**The priced residue, asserted rather than assumed** (`stampSkipsAndClearingHeals` pins the skip *happening*): a row inserted around the doors after convergence stays unhealed until the stamp is cleared. Nothing in the app inserts around the doors; the recovery is deleting one default.
+
+Rejected: **a version/count heuristic** (a changed count doesn't mean unhealed rows; an unchanged one doesn't mean none); **gating per-launch instead of persistently** (keeps one full scan per launch for nothing); **clearing the stamp on every import** (imports link at the door — clearing would re-run the scan for exactly the door that cannot need it).
+
+### D76′ — orphan collection is scoped to the displaced rows at the editing doors
+
+The audit's B5. D60′ chose the global fetch-all spelling for one-implementation simplicity; the amplification showed up at Get Info, where every per-field Return fetched **every** player and faulted relationships to find the one row a re-spelling might have stranded.
+
+**The shape keeps D60′'s rule singular:** `collectOrphanedPlayers(among:)` is the core — the same `isOrphaned` predicate over a candidate list — and the global door delegates to it with the full fetch. `applyEdit` passes the two players it captured *before* re-resolving (the only rows that edit can strand); `retag` passes its source row (the rename's whole residue, per D60′'s own sentence). `backfillPlayerLinks` keeps the global sweep — the backlog is its job, which is also what keeps D75′'s gate honest: after convergence, every door that can strand self-collects, scoped.
+
+A self-play edit passes one row twice; the `isDeleted` guard makes the second visit a no-op — the identifier-keyed-fold lesson from `playersOrphaned(byDeleting:)`, one door over.
+
+**The behaviour change, stated:** an *unrelated* pre-existing orphan now survives a seat edit (pinned) — previously the edit swept it as a side effect. That sweep was load-bearing for nothing: the backlog was already healed, and the backfill still owns it.
+
+Rejected: **scoping the backfill's arm too** (its candidates *are* everyone — that is what a backlog healer is); **a second predicate spelling at the doors** (the twin-read-site pattern D40′ retired; `among:` keeps one spelling with two callers).
+
+### D77′ — the data window carries the swing
+
+The audit's C3 — the highest product value per line of code on the list, because every input already existed: per-ply `whiteWinProbability` is stored, and the blunder signal is its first difference.
+
+`AnalysisDataRow.swing` — the step against the ply before, in percentage points, white-relative like every number on the surface — with `swingIsMajor` at |Δ| ≥ 15 pp (a judgement call, documented as one). **Nil when either side of the step is unscored**: a D74′ book hole or a dead-engine gap must not produce a delta against a ply nobody scored, so the first scored ply after a gap carries no swing rather than a fake one. A flat step is `"+0"` — a real, zero swing, not an absence.
+
+Rendered as a fifth column, emphasis by **weight, not colour**: the sign is white-relative, so red-means-bad would lie for one side of the board every time.
+
+Rejected: **mover-relative sign** (every other number on the surface is white-relative; one column flipping per row is the confusion, not the cure); **a "largest swings" section** (the column *is* the fold; sorting can come to the table later without new data); **swing vs. the previous *scored* ply across gaps** (bridges positions many plies apart and calls the bridge a blunder).
+
+### D78′ — narrowing and sort are memoized on the fold key's discipline
+
+The audit's B2+B3, D70′'s pattern applied one stage downstream — ahead of the Instruments pass by choice, because the shape was already proven and the cost already censused (`filteredGames`' unconditional `sorted(using:)` per render, with the ECO comparator rehydrating `ECOOpening` per comparison; the smart-tag rule fold per game per render).
+
+**One cache per destination, keyed on every input the stage reads.** The Library's `NarrowKey`: the projection's `FoldKey` (content + queue counters), the filter's `Signature`, query, tokens, sort. Players' `DisplayKey`: content key, ranking method, sort, query, tokens — the value carries ranked, displayed and searched together, so the ladder fold, the sort and the search re-run only when an input moves.
+
+**`LibraryFilter.Signature` exists because a tag's rules are live-model state** — editable without any game's content moving — so the one input `CollectionFoldKey` cannot see is carried explicitly (tag id, `matchAll`, rules; player id for the player filter).
+
+**A memo key's only defence is field-list completeness**, and that is the suite (`DestinationDisplayKeyTests`): every input moved singly must move the key — a field the key stops covering goes red there before it goes stale on screen. The action-time contract survives unchanged: `gamesInDisplayOrder` re-reads the cache, which recomputes iff an input moved — the same correctness as re-deriving fresh, cheaper.
+
+Cost, accepted: the `NarrowKey` is built per render (O(n) over cheap fields — the price D70′ already pays for `CollectionFoldKey`), and cached values retain model references; every retaining key contains the games' content rows, so a deletion moves the key before a stale model could render.
+
+Rejected: **sorting off stored `ecoCode` to cheapen the comparator** (trades away the both-or-neither accessor a recorded column note defends, to optimize a path the memo now makes cold); **memoizing inside the `Table`** (display order feeds export numbering, queue order and tab order through the destination — the sort must live where `filteredGames` applies it, which is the recorded reason it sits there at all).

@@ -1,43 +1,14 @@
 import SwiftData
 import SwiftUI
 
-/// The analysis queue in full: what the engine is searching right now, how long
-/// the batch has taken and roughly how long is left, everything still in line,
-/// and everything already done with its outcome.
-///
-/// **Replaces `AnalysisQueueStatusView`, which was a toolbar popover** (6 Aug
-/// 2026, by request). The popover is deleted rather than kept alongside: it
-/// dismissed on the first click anywhere else, which is precisely the gesture a
-/// reader makes while a batch runs — scroll the Library, open a game, keep
-/// working. D46′ field-tested that exact trade on the evaluation graph across a
-/// same-day round trip and reverted to a window; a queue that runs for minutes
-/// is the stronger case of the two, so this takes the finding as settled rather
-/// than re-testing it.
-///
-/// What the extra room bought, in the order it matters:
-///
-/// - **The running search**, live off the driver — depth, evaluation, speed and
-///   which ply. A popover could not have held it and a progress bar could not
-///   have said it.
-/// - **Elapsed and a projection.** Measured and guessed respectively, and
-///   spelled differently on purpose (`BatchProgressEstimate` argues the format).
-/// - **The finished log, whole.** The popover listed failures only, so a
-///   drained batch showed nothing about the games that worked.
-/// - **No row cap.** The popover truncated at eight with "…and N more" because
-///   a hundred rows do not belong in a popover. They belong in a scroll view.
-///
-/// Pure rendering over `AnalysisQueueController` — every mutation routes through
-/// the controller, so the queue's decisions stay in one place. The window reads
-/// it from the environment rather than taking it as a parameter, because a
-/// scene's content cannot be handed a reference at the call site.
+/// The analysis queue in full: the live search, both clocks, everything in line, everything
+/// done with its outcome — the room the popover never had.
 internal struct AnalysisQueueStatusWindowView: View {
 
     // MARK: Static Constants
 
-    /// The scene id, spelled once. `openWindow(id:)` takes a bare `String` and
-    /// a typo in it fails at *runtime* with a console warning and no window —
-    /// the one failure mode a `Window` scene has that a value-routed
-    /// `WindowGroup` does not, since those at least fail by type.
+    /// The scene id, once: `openWindow(id:)` takes a bare `String`, and a typo fails at *runtime*
+    /// with a console warning and no window.
     internal static let sceneID = "analysis.queue"
 
     // MARK: Stored Properties
@@ -53,9 +24,7 @@ internal struct AnalysisQueueStatusWindowView: View {
                 if let search = controller.currentSearch {
                     searchPanel(search)
                 } else if controller.queue.current != nil {
-                    // Between plies, and between the engine handshake and the
-                    // first `info` line. A row of em dashes would flicker once
-                    // per ply; naming the state holds the layout still.
+                    // Between plies and before the first `info` line — naming the state holds the layout still.
                     Text("Waiting for the engine…")
                         .font(.callout)
                         .foregroundStyle(.secondary)
@@ -73,14 +42,8 @@ internal struct AnalysisQueueStatusWindowView: View {
 
     // MARK: Header
 
-    /// Title, counted position, and the two clocks.
-    ///
-    /// The timing row is wrapped in a `TimelineView` rather than driven by a
-    /// published tick on the controller — a per-second write to an `@Observable`
-    /// would invalidate every one of its observers once a second, and the only
-    /// one that wants a second hand is this window. `.periodic` from the batch
-    /// start so the seconds column turns over on the same boundary the elapsed
-    /// figure does, instead of drifting against it.
+    /// Title, counted position, two clocks. `TimelineView`, not a published tick — a per-second
+    /// write to an `@Observable` would invalidate every observer.
     @ViewBuilder
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -103,18 +66,12 @@ internal struct AnalysisQueueStatusWindowView: View {
         guard queue.isActive else {
             return queue.hasFailures ? "Analysis finished with errors" : "Analysis finished"
         }
-        // "Analyzing 3 of 18" — `batchPosition` is the one spelling of that
-        // numerator, shared with the Library toolbar's "3/18" so the two
-        // surfaces cannot disagree by one the way they used to (8 Aug 2026;
-        // the arithmetic and its clamp moved to the queue with the reason).
+        // `batchPosition` is the one spelling of the numerator, shared with the toolbar's "3/18".
         return "Analyzing \(queue.batchPosition) of \(queue.totalCount)"
     }
 
-    /// "4:12 elapsed · about 9 min left" — and only the half that is knowable.
-    ///
-    /// The projection drops off entirely once the queue drains, rather than
-    /// reading "about 0 sec": a finished batch has no remainder, and an estimate
-    /// of nothing is not the same statement as no estimate.
+    /// Only the knowable half: the projection drops off once the queue drains — "about 0 sec" is
+    /// not the same statement as no estimate.
     private func timingLine(now: Date, started: Date) -> String {
         let elapsed = BatchProgressEstimate.describe(
             elapsed: now.timeIntervalSince(started)
@@ -127,12 +84,8 @@ internal struct AnalysisQueueStatusWindowView: View {
 
     // MARK: Running Search
 
-    /// The game on the engine, its per-ply progress, and the search itself.
-    ///
-    /// The move is rendered in chess notation rather than as a ply ordinal —
-    /// "12… Nf6", not "ply 24" — for the reason `GameAnalysisDriver.moveLabel`
-    /// records: in a chess app a bare ordinal reads as a full-move number and
-    /// points at the wrong move for every black ply.
+    /// The move in chess notation, not a ply ordinal — a bare ordinal reads as a full-move number
+    /// and points at the wrong move for every black ply.
     private func searchPanel(_ search: GameAnalysisDriver.Search) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
@@ -153,17 +106,11 @@ internal struct AnalysisQueueStatusWindowView: View {
 
             HStack(alignment: .top, spacing: 24) {
                 searchFact("Move", moveLabel(search))
-                // The *target*, not the live iteration (8 Aug 2026, by
-                // request): `progress.depth` climbs 1→18 inside every ply and
-                // resets at the next, so the readout spun constantly and read
-                // as the depth *setting* bouncing. The argument and the kept
-                // live figure are at `Search.targetDepth`.
+                // The *target*, not the live iteration: `progress.depth` climbs 1→18 inside every ply, so the
+                // readout spun and read as the setting bouncing.
                 searchFact("Depth", "\(search.targetDepth)")
-                // Through `EvaluationBarReading` rather than formatted here, so
-                // this window and the board's bar cannot disagree about what
-                // "+1.3" or "#4" looks like — D33′ pinned that grammar and
-                // D46′'s graph window already reuses it, which makes this the
-                // third consumer of one spelling rather than a new one.
+                // Through `EvaluationBarReading` — this window, the graph and the bar cannot disagree about
+                // what "+1.3" or "#4" looks like (D33′'s pinned grammar).
                 searchFact("Evaluation", EvaluationBarReading(search.progress.evaluation).label)
                 searchFact("Speed", speedLabel(search.progress.nodesPerSecond))
             }
@@ -189,10 +136,7 @@ internal struct AnalysisQueueStatusWindowView: View {
         return "\(number)\(separator)\(search.san)"
     }
 
-    /// "8.9 Mn/s" — meganodes per second, which is the unit every engine front
-    /// end shows and the only one where a Stockfish figure fits in four
-    /// characters. Below a million it degrades to thousands rather than
-    /// printing "0.0".
+    /// "8.9 Mn/s" — the unit every engine front end shows; degrades to thousands below a million.
     private func speedLabel(_ nodesPerSecond: Int?) -> String {
         guard let nodesPerSecond else { return RosterSummary.displayUnknown }
         if nodesPerSecond >= 1_000_000 {
@@ -203,10 +147,8 @@ internal struct AnalysisQueueStatusWindowView: View {
 
     // MARK: Lists
 
-    /// Everything still in line, in the order it will run, with per-row removal.
-    ///
-    /// **No cap**, unlike the popover's eight. The rows are cheap and the window
-    /// scrolls; "…and 92 more" was a popover's apology for being a popover.
+    /// Everything in line, in run order, per-row removal. No cap — "…and 92 more" was a popover's
+    /// apology for being a popover.
     private var waitingSection: some View {
         section("Up Next", count: controller.queue.waiting.count) {
             ForEach(Array(controller.queue.waiting.enumerated()), id: \.element) { index, id in
@@ -234,14 +176,8 @@ internal struct AnalysisQueueStatusWindowView: View {
         }
     }
 
-    /// Everything already done, newest first, each with what happened to it.
-    ///
-    /// **Newest first, unlike the queue's own storage**, which appends in
-    /// completion order. A finished log read top-down during a live batch wants
-    /// the thing that just happened at the top; `AnalysisQueue.finished` keeps
-    /// completion order because that is what "in the order they finished" means
-    /// for anything reasoning about it, so the reversal is a view choice and
-    /// stays here.
+    /// Done, newest first — unlike the queue's completion-order storage: a log read during a live
+    /// batch wants the newest where the eyes already are.
     private var finishedSection: some View {
         section("Finished", count: controller.queue.finished.count) {
             ForEach(controller.queue.finished.reversed(), id: \.id) { record in
@@ -265,10 +201,8 @@ internal struct AnalysisQueueStatusWindowView: View {
         }
     }
 
-    /// Generic over the rows rather than taking `some View` as an opaque
-    /// parameter: an opaque type in a closure's *return* position inside a
-    /// result-builder parameter is the spelling that reads fine and does not
-    /// resolve. Named `Rows` so the builder has something concrete to infer.
+    /// Generic over the rows: an opaque return inside a result-builder parameter reads fine and
+    /// does not resolve. Named `Rows` so the builder has something to infer.
     private func section<Rows: View>(
         _ title: String,
         count: Int,
@@ -282,13 +216,11 @@ internal struct AnalysisQueueStatusWindowView: View {
         }
     }
 
-    /// "58 plies" for a queued game, or nothing when its count was never
-    /// captured. The count is the same number the estimate is denominated in,
-    /// which is why it is shown: a reader who wonders why "about 9 min" jumped
-    /// can see that the next game is four times the length of the last one.
+    /// "58 plies to search" — searchable, not total, since D74′: the number the estimate is
+    /// denominated in, so a jumped "about 9 min" is explicable.
     private func plyLabel(for id: PersistentIdentifier) -> String {
         guard let plies = controller.plyCount(for: id) else { return "" }
-        return "\(plies) plies"
+        return "\(plies) plies to search"
     }
 
     // MARK: Outcomes
@@ -301,9 +233,8 @@ internal struct AnalysisQueueStatusWindowView: View {
         }
     }
 
-    /// Green / secondary / red — and cancelled is deliberately *not* a warning
-    /// colour. The user pressed Skip or Stop All; reporting their own choice
-    /// back as a problem is the shape that teaches people to ignore warnings.
+    /// Cancelled is deliberately not a warning colour — reporting the user's own choice back as a
+    /// problem teaches people to ignore warnings.
     private func outcomeTint(_ outcome: AnalysisQueue<PersistentIdentifier>.Outcome) -> Color {
         switch outcome {
         case .done:      .green
@@ -322,9 +253,7 @@ internal struct AnalysisQueueStatusWindowView: View {
 
     // MARK: Footer
 
-    /// Pinned below the scroll rather than at the end of it: Stop All must be
-    /// reachable without scrolling past a hundred queued rows to find it, which
-    /// is the one thing a long list would otherwise cost.
+    /// Pinned below the scroll: Stop All must be reachable without scrolling past a hundred rows.
     @ViewBuilder
     private var footer: some View {
         HStack {
@@ -335,12 +264,8 @@ internal struct AnalysisQueueStatusWindowView: View {
                 }
                 .accessibilityIdentifier(AccessibilityID.analysisQueueStopAll)
             } else {
-                // Clearing the log also hides the Library's toolbar item (its
-                // visibility rule reads `hasFailures`), which is what makes
-                // this the acknowledgement rather than a mere tidy-up. The
-                // window stays open — a window that closed itself when you
-                // pressed a button inside it is the popover behaviour this
-                // whole view exists to leave behind.
+                // Clearing also hides the Library's toolbar item (`hasFailures`). The window stays open — a
+                // window that closes itself on a button press is the popover behaviour this view leaves behind.
                 Button("Clear") {
                     controller.clearFinished()
                 }
@@ -354,18 +279,8 @@ internal struct AnalysisQueueStatusWindowView: View {
 
 // MARK: Previews
 
-/// **One preview, and only the empty state**, which is a waiver rather than an
-/// oversight: `AnalysisQueue` is `private(set)` on the controller by design —
-/// every mutation goes through a controller method — so a canvas cannot seed a
-/// running batch without an engine subprocess and a model container. The states
-/// worth looking at are exactly the ones a preview cannot reach.
-///
-/// What this one *does* witness is the branch a reader hits by accident: opening
-/// the window from the Window menu with nothing running. That branch renders no
-/// header clock, no search panel and no lists, which would be an easy thing to
-/// leave as a blank rectangle — the layout it comes out with is the check.
-///
-/// The rest is the boardless checklist's, which names the states by hand.
+/// One preview, empty state only — a waiver: the queue is `private(set)` by design, so a canvas
+/// cannot seed a running batch without an engine and a container.
 #Preview("Idle") {
     AnalysisQueueStatusWindowView()
         .environment(AnalysisQueueController())

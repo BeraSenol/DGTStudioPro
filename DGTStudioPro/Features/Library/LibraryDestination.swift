@@ -1,7 +1,4 @@
-// `AppKit` explicitly, though `NSOpenPanel` below has compiled without it:
-// `selectAll(_:)` is a member of an AppKit *protocol*, and
-// `MemberImportVisibility` is precisely the upcoming feature that stops
-// members arriving through a module nobody imported.
+// Explicit: `selectAll(_:)` is an AppKit protocol member; MemberImportVisibility requires the import.
 import AppKit
 import os
 import SwiftData
@@ -13,28 +10,13 @@ internal struct LibraryDestination: View {
     // MARK: Static Constants
     private static let logger = AppLog.logger(.library)
 
-    /// Above this many, Open asks first (D56′).
-    ///
-    /// **A judgement call, stated as one** rather than given an invented
-    /// rationale. Calibrated against two populations with a wide gap between
-    /// them: the sets you mean to open are a rivalry, a round, a morning, all
-    /// single digits; the sets that arrive by accident come from ⌘A and are the
-    /// whole Library. That one exists matters more than its exact value.
-    ///
-    /// Open is the only bulk action here that confirms on *count* rather than
-    /// consequence. Delete confirms because it destroys; Analyze has a Stop All;
-    /// Export writes into one folder you chose. Open has none of those —
-    /// windows are not a queue, and closing four hundred tabs has no undo.
+    /// Above this many, Open asks first (D56′) — the one bulk action that confirms on count, not consequence.
     private static let openConfirmationThreshold = 10
     
     // MARK: Stored Properties
     internal let filter: LibraryFilter?
     
-    /// Clears the active filter back to the full Library (M-prs.6).
-    /// Owned by `ContentView` because a filter *is* a sidebar selection —
-    /// the destination can render the chip, but only the selection's
-    /// owner can leave it. Nil when unfiltered; the chip renders its ✕
-    /// unconditionally because every filtered construction passes it.
+    /// Clears the active filter; owned by `ContentView` because a filter is a sidebar selection. Nil when unfiltered.
     internal let onClearFilter: (() -> Void)?
     
     // MARK: Tab State (lives on enclosing `ContentView`)
@@ -42,164 +24,75 @@ internal struct LibraryDestination: View {
     
     // MARK: Private Properties
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
-    // Shared with Players (see `StorageKeys.collectionViewMode`): the last
-    // view mode used in either collection destination is what both show.
-    // The `.list` default is the documented twin of PlayersDestination's.
+    // Shared with Players (StorageKeys.collectionViewMode); the `.list` default is the documented twin of PlayersDestination's.
     @AppStorage(StorageKeys.collectionViewMode) private var viewMode: CollectionViewMode = .list
     @Environment(\.modelContext) private var modelContext
 
-    /// The View Options panel's subject (7 Aug 2026). Read here rather than
-    /// only in the icons grid because this destination owns the *sort*, which
-    /// the panel sets and the table header also sets — see `sortOrder`.
+    /// View Options panel subject — read here because this destination owns the sort.
     @Environment(CollectionViewOptions.self) private var options
 
-    /// Read back from the scene the line above publishes into. Circular by
-    /// appearance only: `focusedSceneValue` publishes to the *scene*, and
-    /// `@FocusedValue` resolves the **key** window's — so this is nil whenever
-    /// another window is front, which is exactly the signal the mirror needs.
+    /// Resolves the key window's value: nil whenever another window is front, which is the signal the mirror needs.
     @FocusedValue(\.collectionViewOptionsSubject) private var focusedSubject
 
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
     @Environment(OpenGamesRegistry.self) private var openGames
-    /// App-global since 6 Aug 2026 — it was `tabState.analysisQueue` until the
-    /// queue window needed an owner a scene could reach (controller decision 2).
-    /// Read from the environment beside `openGames`, which is the precedent it
-    /// followed.
+    /// App-global: the queue window needs an owner a scene can reach.
     @Environment(AnalysisQueueController.self) private var analysisQueue
     @Query(sort: \PGN.importedAt, order: .reverse) private var games: [PGN]
     @State private var pendingDeletion: PGN?
     @State private var pendingDirtyDeletion: PGN?
     @State private var pendingBatchDeletion: [PGN]?
 
-    /// D56′'s speed bump, held between offer and confirmation — the
-    /// `pendingBatchDeletion` shape, deliberately, because it is the same
-    /// question ("you asked for this to happen to N things, did you mean N?").
+    /// D56′'s speed bump, held between offer and confirmation.
     @State private var pendingBatchOpen: [PGN]?
     @State private var selectedPGNs: Set<PGN.ID> = []
     @State private var importProgress: ImportProgress?
 
-    /// What this destination's `GameRecord` projection depends on.
-    ///
-    /// **Content, plus an analysis signal, and the second half is why this is
-    /// its own type rather than a bare `CollectionFoldKey`.** Players can key
-    /// on content alone because nothing it folds reads `evaluations`. The
-    /// Library does read them, twice: the backlog count in the subtitle, and
-    /// `TagRule.analyzed` behind a smart tag. Keying on content alone would
-    /// leave both frozen for as long as an analysis ran, which is precisely
-    /// when they are being watched.
-    ///
-    /// **The signal is the queue's own counters, never the array.** Asking
-    /// `evaluations` whether anything changed is the work being avoided, so the
-    /// key reads what the queue already knows: which game is running, and how
-    /// many have drained. Both move once per *game* — and since D71′ so does
-    /// the driver's `modelContext.save()`, which used to move once per *ply*
-    /// and was the ratio this key was built against. The key still earns its
-    /// analysis half: it is what lets the *fold* skip on the per-game saves
-    /// and every other invalidation (drags, keystrokes) too, and it is the
-    /// belt to D71′'s braces if a per-ply write ever comes back.
-    ///
-    /// **The behaviour change this ships with, named rather than discovered.**
-    /// The backlog count used to drop the moment a game's first ply was scored,
-    /// because `hasScoredPly` is true after one. It now drops when that game
-    /// leaves the queue. That reads better — a game halfway through a pass is
-    /// not an analyzed game — but it is a change, and it is the kind that would
-    /// otherwise be found six months later and mistaken for a bug.
-    ///
-    /// `hasFailures` rides along because a failed pass ends without advancing
-    /// `completedCount` in a way this can rely on, and a drained-with-failures
-    /// batch must still settle the count.
-    private struct FoldKey: Equatable {
+    /// Memo key for the `GameRecord` projection: content plus an analysis signal.
+    /// The signal is the queue's counters, never the `evaluations` array — an array read would defeat the memo.
+    /// Internal (not private) so the D78′ key-completeness suite can construct one.
+    internal struct FoldKey: Equatable {
         let content: CollectionFoldKey
         let running: PersistentIdentifier?
         let completed: Int
         let hasFailures: Bool
     }
 
-    /// The Library's `GameRecord` projection, memoized.
-    ///
-    /// The projection itself is not new — `LibraryFilter` built one per game
-    /// per render, and the subtitle decoded `evaluations` per game per render
-    /// on top of it. What is new is that both now read one array that is
-    /// rebuilt only when `FoldKey` moves.
-    ///
-    /// **Accepted cost, stated because it is a real regression on one path.**
-    /// An unfiltered Library used to decode only `evaluations` for its backlog
-    /// count; it now projects a full `GameRecord`, which decodes `moves` as
-    /// well. That is twice the work on a miss, in exchange for misses becoming
-    /// rare — and one projection with two consumers rather than two walks that
-    /// could answer "analyzed?" differently, which is the same argument
-    /// `AnalysisGlyph` already makes for owning that question.
+    /// The Library's `GameRecord` projection, memoized — rebuilt only when `FoldKey` moves.
     @State private var foldCache = CollectionFoldCache<FoldKey, [GameRecord]>()
 
-    /// D58′'s backfill result, held for its report alert (M12.5). Two pieces of
-    /// state rather than one enum because they are not alternatives in the way
-    /// that shape implies: a report is the normal outcome including "nothing
-    /// matched", while a failure means the folder itself could not be read.
+    /// The narrowing inputs as one value (D78′): the projection's key plus everything filter,
+    /// search and sort read. A missed input here is stale rows on screen — the suite pins the
+    /// field list, which is the only defence a memo key has.
+    internal struct NarrowKey: Equatable {
+        let fold: FoldKey
+        let filter: LibraryFilter.Signature?
+        let query: String
+        let tokens: [LibrarySearchToken]
+        let sort: [KeyPathComparator<PGN>]
+    }
+
+    /// Narrowed pairs and their sorted projection, cached as one unit — the sort was the last
+    /// unconditional per-render O(n log n) (the ECO comparator rehydrates per comparison, censused).
+    internal struct NarrowResult {
+        let pairs: [(game: PGN, record: GameRecord)]
+        let sorted: [PGN]
+    }
+
+    @State private var narrowCache = CollectionFoldCache<NarrowKey, NarrowResult>()
+
+    /// D58′ backfill result for the report alert; failure is separate state — it means the folder itself was unreadable.
     @State private var backfillReport: PGNStore.LibraryIndexBackfill?
     @State private var backfillFailure: String?
-
-    // `editingMovetext` was here until D59′ — the `.sheet(item:)` subject
-    // driving D18′'s editor. Gone with the sheet: the editor is a Get Info tab
-    // now, so this destination holds no presentation state for it. Nothing in
-    // the app presents a modal over a model any more; the pattern is not
-    // deprecated, there is just no live example left to copy.
-    // `isQueuePopoverPresented` was here until 6 Aug 2026. The queue's toolbar
-    // item opens a window now, and a window's presentation is the scene's own
-    // state — nothing about "is it showing" belongs to this destination any
-    // more, which is one of the quieter arguments for the move.
     
-    // MARK: Search & Filters (2 Aug 2026 — native `.searchable`, restored
-    // the same day after a custom toolbar field was tried and reverted: the
-    // system field claims the toolbar's trailing edge and that isn't
-    // negotiable, but native search behavior won over field placement.)
+    // MARK: Search & Filters
     @State private var searchText = ""
-    /// The non-text facets, as chips inside the search field.
-    ///
-    /// Chips rather than the old `GameResult?` / `Bool?` pair, which was
-    /// single-valued (so "decisive games" was inexpressible) and announced only
-    /// by a filled glyph, which says *that* something narrows and never *what*.
-    /// The menu stays the discoverable entry point; its glyph tracks
-    /// `!tokens.isEmpty`.
+    /// Non-text facets as chips inside the search field; the Filter menu stays the discoverable entry point.
     @State private var searchTokens: [LibrarySearchToken] = []
 
-    /// The list mode's column sort.
-    ///
-    /// **Defaults to `#` descending** — the ordinal the folder on disk kept
-    /// before the app existed (D58′), not `importedAt`, which is only when this
-    /// app first saw a file. Re-importing an old game leaves it in place.
-    ///
-    /// **One comparator, not two**, so `#` twice reproduces the launch order
-    /// exactly; a hidden tiebreaker would make it a state no click can return
-    /// to. Cost: ties are unordered by contract — `libraryIndex` is not unique
-    /// and `sorted(using:)` is not stable. Display only; D10′'s total-tiebreak
-    /// rule governs the pure folds. Un-indexed games sort to the bottom.
-    ///
-    /// **Owned here rather than in `LibraryListView`**, which is the point:
-    /// `filteredGames` applies it last, so D24′'s export numbering, the queue's
-    /// running order and D56′'s tab order all see what the reader sees. Inside
-    /// the table it would reorder pixels while those three read the unsorted
-    /// array — nothing fails, the filenames just stop matching the screen.
-    ///
-    /// **Persisted since 7 Aug 2026, reversing a recorded rule.** It read
-    /// "not persisted: every launch opens on `#` descending", and the argument
-    /// behind that was real — a sort is the question being asked right now,
-    /// where a ranking method is a standing statement. What broke it is the
-    /// View Options panel: the same choice now sits beside an icon size that
-    /// *does* persist, and a panel where one control survives a relaunch and
-    /// the one above it silently does not is not a subtle distinction, it is a
-    /// bug report. The value lives in `CollectionViewOptions`.
-    ///
-    /// **A derived binding, not `@State`, so there is exactly one sort.** The
-    /// table header writes comparators; the panel writes a field and a
-    /// direction; both land in the same stored value, and each renders what the
-    /// other set. Keeping local state in step with the panel would be the
-    /// twin-read-site pattern with a round trip in it.
-    ///
-    /// The `set` arm **keeps the old sort when the round trip fails**, rather
-    /// than falling back to the default. A comparator `LibrarySortField` cannot
-    /// name — a column added with a `sortUsing:` and no case — should leave the
-    /// sort alone, not silently reset it to `#` under the reader's hands.
+    /// List-mode column sort. Defaults to `#` descending (D58′). One comparator, so clicking `#` twice
+    /// reproduces the launch order; ties are unordered (`sorted(using:)` is not stable). Display only.
     private var sortOrder: Binding<[KeyPathComparator<PGN>]> {
         Binding(
             get: { options.librarySort.comparators },
@@ -210,13 +103,7 @@ internal struct LibraryDestination: View {
         )
     }
 
-    /// The launch order, stated **once** — the `@State` initializer above and
-    /// every mode view's previews would otherwise repeat it (D25′'s
-    /// twin-read-site shape, whose harmless-looking version here is a canvas
-    /// that stops showing what the app opens on).
-    ///
-    /// Computed rather than stored, and `nonisolated` because `View`
-    /// conformance would otherwise infer `@MainActor` and lock out previews.
+    /// Launch order, stated once. `nonisolated`: `View` conformance would infer @MainActor and lock out previews.
     internal nonisolated static var defaultSortOrder: [KeyPathComparator<PGN>] {
         [KeyPathComparator(\PGN.libraryIndex, order: .reverse)]
     }
@@ -234,124 +121,83 @@ internal struct LibraryDestination: View {
     
     // MARK: Computed Properties
     
-    /// Every game paired with its record, memoized on `FoldKey`.
-    ///
-    /// Zipped rather than looked up by identifier: `records` is built by
-    /// mapping `games` in order, so index *is* the correspondence and a
-    /// dictionary would add hashing to restate what the array already says.
-    /// The pairing is what `LibraryFilter.matches(_:record:)` requires and
-    /// cannot check.
+    /// One spelling of the projection's key, shared by the fold cache and the narrow key.
+    private var currentFoldKey: FoldKey {
+        FoldKey(
+            content: CollectionFoldKey(games: games),
+            running: analysisQueue.runningID,
+            completed: analysisQueue.queue.completedCount,
+            hasFailures: analysisQueue.queue.hasFailures
+        )
+    }
+
+    /// Games paired with records, memoized. Zipped — index is the correspondence.
     private var pairedGames: [(game: PGN, record: GameRecord)] {
-        let records = foldCache.value(
-            for: FoldKey(
-                content: CollectionFoldKey(games: games),
-                running: analysisQueue.runningID,
-                completed: analysisQueue.queue.completedCount,
-                hasFailures: analysisQueue.queue.hasFailures
-            )
-        ) {
+        let records = foldCache.value(for: currentFoldKey) {
             games.map(\.gameRecord)
         }
-        // `pair in (pair.0, pair.1)`, not `{ (game: $0, record: $1) }` —
-        // `map` over a zipped sequence takes the pair as **one** argument, and
-        // the two-parameter spelling is the tuple splat Swift removed in 3.0.
-        // It reads like it should work, which is why it is worth a line.
+        // One argument: a two-parameter closure here is the tuple splat Swift 3 removed — reads right, won't compile.
         return zip(games, records).map { pair in (game: pair.0, record: pair.1) }
     }
 
-    /// Sidebar filter → search → menu filters, narrowing only, so the stages
-    /// compose without caring about each other. Every downstream consumer
-    /// (`selectedPGN`, `gamesInDisplayOrder`, and therefore batch
-    /// analyze/export/delete) reads this same narrowed set: a hidden game is
-    /// out of every bulk action, never silently included.
-    ///
-    /// **Narrowed but not sorted**, which is the one place this differs from
-    /// the `filteredGames` it was split out of. Sorting is `filteredGames`'
-    /// last stage and stays there; the only other consumer is the subtitle's
-    /// backlog count, which is an order-independent question. Sorting here
-    /// would sort an array on behalf of a caller that counts it.
-    ///
-    /// Each game keeps its record so that count reads the same projection the
-    /// filters did, rather than walking `evaluations` a second time to answer a
-    /// question the projection already holds.
-    private var narrowedPairs: [(game: PGN, record: GameRecord)] {
-        var result = pairedGames
-        if let filter {
-            result = result.filter { filter.matches($0.game, record: $0.record) }
-        }
-        // The emptiness guard only skips the walk — an empty query matches
-        // everything by the matcher's own contract.
-        if !searchText.isEmpty {
-            // Folded once, matched per game — `SearchMatch.Query`'s reason
-            // (4 Aug 2026): the one-shot form re-folded the query for every
-            // row of the walk.
-            let query = SearchMatch.Query(searchText)
-            result = result.filter {
-                query.matches(fields: searchFields(of: $0.game))
+    /// Sidebar filter → search → chips → sort, memoized as one unit (D78′): the walk and the sort
+    /// re-run only when a `NarrowKey` input moves, not per render.
+    private var narrowed: NarrowResult {
+        narrowCache.value(
+            for: NarrowKey(
+                fold: currentFoldKey,
+                filter: filter?.signature,
+                query: searchText,
+                tokens: searchTokens,
+                sort: sortOrder.wrappedValue
+            )
+        ) {
+            var result = pairedGames
+            if let filter {
+                result = result.filter { filter.matches($0.game, record: $0.record) }
             }
-        }
-        if !searchTokens.isEmpty {
-            // `record.hasAnalysis` is `AnalysisGlyph.isAnalyzed`'s own input —
-            // `PGN+GameRecord` builds it from `hasScoredPly`, which is the
-            // property that type forwards to. So this is still one spelling of
-            // "analyzed?", now read off the projection instead of decoding the
-            // array again per row. The token rule itself (OR within a facet,
-            // AND across facets) lives on the token, so this stays a projection
-            // and never a second opinion.
-            result = result.filter {
-                LibrarySearchToken.admit(
-                    searchTokens,
-                    result: $0.record.result,
-                    isAnalyzed: $0.record.hasAnalysis
-                )
+            // Guard skips only the walk; an empty query matches everything by contract.
+            if !searchText.isEmpty {
+                // Folded once per pass, not per row (`SearchMatch.Query`).
+                let query = SearchMatch.Query(searchText)
+                result = result.filter {
+                    query.matches(fields: searchFields(of: $0.game))
+                }
             }
+            if !searchTokens.isEmpty {
+                // `record.hasAnalysis` is `AnalysisGlyph.isAnalyzed`'s own input — still one spelling of "analyzed?".
+                result = result.filter {
+                    LibrarySearchToken.admit(
+                        searchTokens,
+                        result: $0.record.result,
+                        isAnalyzed: $0.record.hasAnalysis
+                    )
+                }
+            }
+            return NarrowResult(
+                pairs: result,
+                sorted: result.map { $0.game }.sorted(using: sortOrder.wrappedValue)
+            )
         }
-        return result
     }
 
-    /// The narrowed list in display order — what every consumer outside the
-    /// render pass wants.
-    ///
-    /// **Render reads it once; actions re-derive it fresh.** `coreContent`
-    /// takes `narrowedPairs` a single time per pass and threads both halves
-    /// onward (`PlayersDestination`'s arrangement, adopted after the walk was
-    /// found running three to four times a render). `gamesInDisplayOrder` calls
-    /// this directly on purpose — an action fires long after the fold that
-    /// painted the screen, and a stale narrowed list is what bulk actions must
-    /// not act on. Re-deriving is cheap now that the projection underneath is
-    /// memoized; before, this was the expensive path taken for safety.
-    ///
-    /// Sorting is the LAST stage — the stages above *remove* rows and compose
-    /// in any order, this only permutes, and sorting a set you are about to
-    /// filter is work thrown away.
-    ///
-    /// Unconditional rather than `sortOrder.isEmpty ? result : …`: nothing in
-    /// `Table`'s header behaviour empties the array, so that branch's condition
-    /// cannot be produced — the `.disabled(…)` shape D40′ names.
-    ///
-    /// Cost, accepted: the Library sorts every render. Invisible for `#`, not
-    /// for **ECO**, whose comparator rehydrates per comparison. Known-costs
-    /// census.
-    /// `map { $0.game }` rather than `map(\.game)` — key paths do not reach
-    /// tuple elements, which this project has recorded once already and which
-    /// fails at compile rather than at run time.
-    private var filteredGames: [PGN] {
-        narrowedPairs.map { $0.game }.sorted(using: sortOrder.wrappedValue)
-    }
+    /// Sidebar filter → search → chips, narrowing only; every bulk action reads this same narrowed set.
+    /// Narrowed but not sorted — the sort is `filteredGames`' last stage.
+    private var narrowedPairs: [(game: PGN, record: GameRecord)] { narrowed.pairs }
+
+    /// The narrowed list in display order — what every consumer outside the render pass wants.
+    /// Render reads it once; actions re-derive fresh (a re-read of the cache recomputes iff an
+    /// input moved, which is the same correctness, cheaper). Sort is unconditional.
+    private var filteredGames: [PGN] { narrowed.sorted }
     
-    /// The model side of the `LibraryFilter` split: the pure matcher takes
-    /// strings, this maps a game into its searchable ones. Every field, always —
-    /// the scope picker that once narrowed this set was retired because a query
-    /// already names its field ("1-0" is a result, "C60" an opening, a surname a
-    /// player), which is also why the result's raw value is included.
+    /// A game's searchable strings — every field, always; a query already names its own field.
     private func searchFields(of game: PGN) -> [String] {
         [game.name, game.whiteDisplayName, game.blackDisplayName,
          game.event, game.site, game.result.rawValue,
          game.opening?.code, game.opening?.fullName].compactMap { $0 }
     }
     
-    /// Whether the empty gate should read as "no matches" rather than
-    /// "no games".
+    /// "No matches" vs. "no games" for the empty gate.
     private var isNarrowedBySearchOrFilters: Bool {
         !searchText.isEmpty || !searchTokens.isEmpty
     }
@@ -360,59 +206,22 @@ internal struct LibraryDestination: View {
         !searchTokens.isEmpty
     }
     
-    /// The single selected game, nil for empty *and* multiple — the columns
-    /// detail's rule (2 Aug 2026): the inspector details one thing, and
-    /// with a rubber-band or ⌘-click selection "the first of the set" is an
-    /// arbitrary game wearing a specific game's face. The inspector gets
-    /// the count instead and names it.
+    /// Nil for empty *and* multiple: the inspector details one thing, never an arbitrary member of a set.
     private func selectedPGN(in games: [PGN]) -> PGN? {
         guard selectedPGNs.count == 1, let id = selectedPGNs.first else { return nil }
         return games.first(where: { $0.id == id })
     }
     
-    /// Resolves a selection to models in **display order**. A `Set` carries
-    /// none, and the order is load-bearing twice: the queue crunches
-    /// top-to-bottom as shown, and D24′'s export *numbers the filenames* from
-    /// it. Three callers had this line copied.
+    /// Selection → models in display order. Load-bearing twice: queue order, and D24′ export numbers filenames from it.
     private func gamesInDisplayOrder(_ ids: Set<PGN.ID>) -> [PGN] {
         filteredGames.filter { ids.contains($0.id) }
     }
 
-    /// ⌘A over all four view modes, as the system's own Edit ▸ Select All
-    /// rather than a shortcut of this destination's invention.
-    ///
-    /// `.onCommand` rides the responder chain, which both enables the menu item
-    /// and gives it its shortcut. Three things fall out rather than being
-    /// designed: ⌘A in the search field still selects *text* (the field answers
-    /// first); list and columns are `Table`s, so `NSTableView` answers and this
-    /// never fires — producing the identical set, since the table was built
-    /// from the same array; and icons and gallery have no such responder, so
-    /// for them this is the whole feature.
-    ///
-    /// **Selects what the render painted, not what `filteredGames` would answer
-    /// now** — the opposite of `gamesInDisplayOrder`, for the opposite reason.
-    /// That re-derives because a destructive action against a stale list is the
-    /// failure to prevent; this one *is* the visible state.
-    ///
-    /// Nil on an empty list rather than a closure assigning an empty set, so
-    /// the system disables Edit ▸ Select All — both arms producible, the D40′
-    /// check run at minting.
-    ///
-    /// Named so it is not read as an oversight: the icons grid's `anchorID` is
-    /// `@State` a destination cannot touch, so after ⌘A the next arrow steps
-    /// from the last card *clicked*.
+    /// ⌘A as the system's Edit ▸ Select All, riding the responder chain (search field and tables answer first;
+    /// empty list disables the item). Selects the painted list; the icons grid's arrow anchor stays where clicked.
     private func selectAll(_ games: [PGN]) {
         selectedPGNs = Set(games.map(\.id))
     }
-
-    // `applyEditedMovetext` lived here for one day (D54′, 4 Aug) and moved to
-    // `GetInfoWindow.applyMovetext` on 5 Aug with the editor it served. It had
-    // moved here from `BoardDestination` the day before that, which makes this
-    // the *second* relocation of one door in two days — worth a line, because
-    // the door never changed and its three homes each looked right at the time:
-    // the Board had the cached `Game`, the Library had the bytes, Get Info has
-    // the window that edits everything else about a game. Only the last one is
-    // an argument about where a *reader* would look for it.
 
 
     // MARK: Body
@@ -433,11 +242,7 @@ internal struct LibraryDestination: View {
                     ))
                 }
             )
-            // M12.5. Always reports, including "nothing matched" — a scan that
-            // finishes silently is indistinguishable from a scan that did not
-            // run, and this one is invoked rarely enough that the reader has no
-            // other way to tell. The `deleteOrphanedPlayers` argument: the
-            // dialog is doing the showing as well as the telling.
+            // Always reports, including "nothing matched" — a silent scan looks like a scan that never ran.
             .alert(
                 "Matched \(backfillReport?.stamped ?? 0) Games",
                 isPresented: Binding(present: $backfillReport),
@@ -483,37 +288,14 @@ internal struct LibraryDestination: View {
                     ))
                 }
             )
-            // `.onDeleteCommand` stood here: **plain ⌫ no longer deletes.**
-            // Asymmetry of cost — ⌫ is one keystroke from where your hands
-            // already are with a row focused, and its failure mode is a
-            // multi-selection you forgot about. No slipped finger reaches ⌘⌫.
-            //
-            // ⌘⌫ went to the toolbar's Delete button rather than here, because
-            // a shortcut on an always-present guarded control is live while the
-            // row menu's copy is only known to *render*. **That button has
-            // since been removed**, so ⌘⌫ now rests on exactly the copy that
-            // reasoning declined to trust — an open question, not a settled
-            // one. `GameActionsMenu`'s delete item carries the note.
-            // Publishes this destination as the View Options panel's subject
-            // (7 Aug 2026). Scene-scoped, so the panel and the ⌘J menu item
-            // follow whichever tab is frontmost — and a Board tab publishes
-            // nothing, which is what disables the item there. Carries the mode
-            // as well as the destination: the panel's grid section exists only
-            // for icons, and a gallery has no columns to give.
+            // Plain ⌫ deliberately does not delete (one slip from a forgotten multi-selection); ⌘⌫ is the only key,
+            // resting on the row menu's copy — known only to render, an open question rather than settled.
             .focusedSceneValue(
                 \.collectionViewOptionsSubject,
                 CollectionViewOptionsSubject(collection: .library, mode: viewMode)
             )
-            // Mirrors the focused subject into the app-global options object,
-            // which is what the View Options panel actually reads. The latch
-            // lives *here* rather than in the panel because this view is on
-            // screen while its own window is key — the panel never is at the
-            // moment a collection is front, so its own `@FocusedValue` was
-            // always nil by its first render.
-            //
-            // Only non-nil writes land: focus moving to the panel (or to a
-            // Board tab) must leave the panel describing the collection you
-            // opened it from, which is what Finder's ⌘J does.
+            // Mirrors the focused subject into the global options object — this view is on screen while its window is key;
+            // the panel never is. Only non-nil writes land, so focus moving away keeps the last collection.
             .onChange(of: focusedSubject, initial: true) { _, newValue in
                 guard let newValue else { return }
                 options.activeSubject = newValue
@@ -523,9 +305,7 @@ internal struct LibraryDestination: View {
                 backfillPlayerLinks()
                 applyInspectorPolicy(for: viewMode)
             }
-        // `.task`, not a fourth line in `onAppear`: this one has to await
-        // the ECO table, and awaiting it is the entire point — see
-        // `backfillClassifications()`.
+        // `.task`: has to await the ECO table — see `backfillClassifications()`.
             .task {
                 await backfillClassifications()
             }
@@ -534,35 +314,17 @@ internal struct LibraryDestination: View {
             }
     }
     
-    /// The library content plus its inspector, toolbar, drop target, and
-    /// import sheet — split out from the deletion alerts so neither modifier
-    /// chain trips SwiftUI's per-expression type-check budget. (Adding the
-    /// third alert pushed the single combined chain over that limit, which the
-    /// compiler reports as an "unable to type-check in reasonable time" error
-    /// pinned to an arbitrary modifier.)
+    /// Split from the deletion alerts: one combined modifier chain blew SwiftUI's type-check budget.
     private var coreContent: some View {
-        // One walk per render — see `filteredGames`'s doc. Every render-time
-        // consumer below reads these locals; none re-runs the filter.
-        //
-        // Taken as pairs so the subtitle's backlog count reads the records this
-        // walk already produced. It used to be `games.count(where:
-        // { !AnalysisGlyph.isAnalyzed($0) })`, which decoded every game's
-        // `evaluations` array on every render — the one unconditional blob
-        // decode in this destination, and therefore the one that fired on every
-        // drag callback and every per-ply save during a batch.
+        // One walk per render — consumers below read these locals; none re-runs the filter.
         let narrowed = narrowedPairs
         let games = narrowed.map { $0.game }.sorted(using: sortOrder.wrappedValue)
         let unanalyzedCount = narrowed.count { !$0.record.hasAnalysis }
-        // The row badges' input (D72′): membership built once per render off
-        // the same records the subtitle just counted, so every mode's badge
-        // reads the memoized projection rather than decoding `evaluations`
-        // per row — one spelling of "analyzed?" from one walk, four surfaces.
+        // Row badges (D72′): membership built once per render off the same records — one spelling of "analyzed?".
         let analyzedIDs = Set(
             narrowed.lazy.filter { $0.record.hasAnalysis }.map { $0.game.id }
         )
-        // Typed explicitly rather than left to a ternary's inference, and
-        // hoisted out of the modifier so the nil arm reads as the decision it
-        // is: no games means no Edit ▸ Select All, disabled by the system.
+        // Hoisted so the nil arm reads as the decision: no games ⇒ Select All disabled by the system.
         let selectAllAction: (() -> Void)? = games.isEmpty
         ? nil
         : { selectAll(games) }
@@ -573,11 +335,8 @@ internal struct LibraryDestination: View {
             }
             Group {
                 if games.isEmpty {
-                    // Two vocabularies for one gate: an empty *library*
-                    // invites importing; an empty *result set* names the
-                    // narrowing that caused it. The identifier stays on the
-                    // true empty state — placed for the seeded UI runs,
-                    // kept per the registry's bet (D51′).
+                    // Two vocabularies: an empty library invites importing; an empty result set names the narrowing.
+                    // Identifier stays on the true empty state (D51′).
                     if isNarrowedBySearchOrFilters {
                         ContentUnavailableView(
                             "No Matches",
@@ -594,26 +353,12 @@ internal struct LibraryDestination: View {
             }
             .accessibilityIdentifier(AccessibilityID.libraryContent)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            // On the content group rather than in `body`: the local `games` is
-            // the painted list this gesture is defined against (see
-            // `selectAll(_:)`), and `body`'s chain cannot see it. It also keeps
-            // the modifier off the chain whose type-check budget the third
-            // alert already blew. (This said "rather than beside
-            // `.onDeleteCommand`" until that modifier was removed on 5 Aug
-            // 2026 — the placement argument never depended on it.)
+            // Here because the painted `games` local defines ⌘A (and `body`'s chain is at its type-check budget).
             .onCommand(
                 #selector(NSStandardKeyBindingResponding.selectAll(_:)),
                 perform: selectAllAction
             )
-            // D56′'s threshold, and it lands here rather than beside the three
-            // deletion alerts in `body` for the reason those three are already
-            // split out: that chain is the one whose type-check budget the
-            // third alert blew, and a fourth is exactly the straw the comment
-            // there warns about. This group carries four short modifiers.
-            //
-            // Not `role: .destructive` — opening destroys nothing. The dialog
-            // is about *volume*, which is why the message counts tabs rather
-            // than warning about consequences it does not have.
+            // D56′'s threshold. Not `role: .destructive` — opening destroys nothing; the dialog is about volume.
             .alert(
                 "Open \(pendingBatchOpen?.count ?? 0) Games?",
                 isPresented: Binding(present: $pendingBatchOpen),
@@ -628,11 +373,7 @@ internal struct LibraryDestination: View {
             )
         }
         .navigationTitle(filter?.displayName ?? "Library")
-        // Counted over `filteredGames`, not the whole Library: the subtitle
-        // describes what you are looking at, so a smart tag that hides the
-        // backlog should quiet the line rather than keep reporting it. The
-        // backlog clause disappears at zero by construction — a fully
-        // analysed view shows a bare title, which is the point.
+        // Counted over `filteredGames`: the subtitle describes what you see; the backlog clause vanishes at zero.
         .navigationSubtitle(
             DestinationSubtitle.library(
                 selected: selectedPGNs.count,
@@ -645,34 +386,16 @@ internal struct LibraryDestination: View {
             return true
         }
         .inspector(isPresented: $tabState.libraryInspectorPresented) {
-            // `onEditMoves:` was a fourth argument here until 5 Aug 2026,
-            // passed only when a single game was selected so the pencil would
-            // not render over an empty or multi selection. Both went with the
-            // movetext door, which is Get Info's Move Text tab now.
-            //
-            // `queue:` followed it. The inspector threaded it into
-            // `LoadedSection` and **neither read it** — found only by a grep
-            // that stripped comments first, since every surviving mention was
-            // prose about the row that had consumed it.
             LibraryInspectorView(
                 pgn: selectedPGN(in: games),
                 selectionCount: selectedPGNs.count
             )
             .inspectorColumnWidth(min: 335, ideal: 335, max: 400)
         }
-        // The one write of the glyph's ambient state, for every mode view and
-        // context menu here. Applied once rather than per mode, so the four
-        // branches cannot disagree — a mode silently lacking it would show a
-        // stale green checkmark and nothing would fail.
-        //
-        // `runningID` changes once per game, and this body already re-renders
-        // on queue changes. Passing the controller instead would have every row
-        // observing the driver's per-ply progress.
+        // The one write of the glyph's ambient state — applied once so the four modes cannot disagree.
         .environment(\.analysisRunningGameID, analysisQueue.runningID)
         .toolbar { toolbarContent }
-        // Tokens ahead of the text, inside the field. `suggestedTokens` is
-        // every facet minus the ones already applied — offering a chip you
-        // are already wearing is how a suggestion list stops being read.
+        // Tokens ahead of the text; suggestions exclude chips already applied.
         .searchable(
             text: $searchText,
             tokens: $searchTokens,
@@ -684,32 +407,18 @@ internal struct LibraryDestination: View {
         ) { token in
             tokenLabel(token)
         }
-        // D18′'s editor was presented here — the destination owning the modal
-        // (D15′) while the inspector only requested it. Gone 5 Aug 2026 with
-        // the pencil: the editor is a *tab* in Get Info now, so there is no
-        // modal for a destination to own and no request for an inspector to
-        // make. The store write went with it, to the window that hosts the
-        // editor, which keeps "the surface that edits owns the door" true
-        // through the move.
         .sheet(isPresented: Binding(present: $importProgress)) {
             if let importProgress {
                 ImportStatusView(progress: importProgress) {
                     self.importProgress = nil
                 }
-                // The footer button is disabled until the batch finishes for
-                // exactly this reason, but ⎋ doesn't route through the button.
-                // Dismissing mid-run nils the progress while `runImport` keeps
-                // going, so the rest of the batch imports invisibly and the
-                // completion log reports zero.
+                // ⎋ bypasses the disabled footer button; dismissing mid-run would let the rest of the batch import invisibly.
                 .interactiveDismissDisabled(!importProgress.isFinished)
             }
         }
     }
     
-    /// The clearable filter chip (M-prs.6): "Tag: X ✕" / "Player: Y ✕".
-    /// For a smart-tag filter it doubles the sidebar highlight; for a
-    /// programmatic player filter it *is* the whole UI — the state's one
-    /// visible face and its exit (there is no sidebar row to un-click).
+    /// Clearable filter chip. For a programmatic player filter it is the whole UI — the state's one face and exit.
     private func filterChipBar(for filter: LibraryFilter) -> some View {
         HStack {
             HStack(spacing: 6) {
@@ -794,18 +503,8 @@ internal struct LibraryDestination: View {
         }
     }
     
-    /// Single resolution point for "open these games in their own windows"
-    /// (D56′ — it took one `PGN` until then). Threaded into every Library view
-    /// as the `onOpen` callback so the views stay window-system-unaware. macOS
-    /// handles dedup, tabbing (with "Prefer Tabs: Always"), and restoration —
-    /// which is what makes the plural safe to offer at all: re-opening a game
-    /// that already has a tab *focuses* it rather than making a second, so a
-    /// set containing already-open games opens fewer windows than its count.
-    ///
-    /// Arrives in display order and stays in it, because here that order is
-    /// visible as **tab order** — the same reason `gamesInDisplayOrder` exists
-    /// for export's filenames. Every host resolves through its own `games`
-    /// array before calling, so no re-derivation is needed or wanted.
+    /// One resolution point for "open these in windows" (D56′). macOS dedups and tabs, which makes the plural
+    /// safe; arrives and stays in display order — visible here as tab order.
     private func openGames(_ pgns: [PGN]) {
         guard !pgns.isEmpty else { return }
         if pgns.count > Self.openConfirmationThreshold {
@@ -823,39 +522,19 @@ internal struct LibraryDestination: View {
         }
     }
     
-    /// Single-game entry (card context menus, the gallery, the one-row
-    /// list case). Analysis is a batch of one since M-batch — see
-    /// `AnalysisQueueController`, decision 1 — so this enqueues, then
-    /// keeps the pre-queue affordance: select the game and surface the
-    /// inspector, which shows this game's progress, its skip control,
-    /// and the graph filling in. The one-shot `pendingAnalysisID` relay
-    /// this used to set is gone with the per-inspector driver it fed.
+    /// Single-game entry: enqueue (a batch of one), select, surface the inspector showing progress.
     private func requestAnalysis(_ pgn: PGN) {
         Self.logger?.info("Analyze requested: '\(pgn.name, privacy: .public)'")
         selectedPGNs = [pgn.id]
-        // Not in columns mode: its detail pane already shows the game being
-        // analyzed, and forcing the inspector open here would reintroduce the
-        // overflow the mode's own policy exists to prevent — from a code path
-        // nobody would think to check.
+        // Not in columns mode: its detail pane already shows the game; forcing the inspector would reintroduce overflow.
         if !viewMode.ownsDetailPane {
             tabState.libraryInspectorPresented = true
         }
         analysisQueue.enqueue([pgn], modelContext: modelContext)
     }
     
-    /// The two modes with an opinion about the inspector, in one place so
-    /// `onAppear` and `onChange` cannot answer differently.
-    ///
-    /// Gallery forces it **open** — the gallery is a picker and the inspector
-    /// is where the picked game is read. Columns forces it **shut**, because
-    /// columns renders its own detail pane (`CollectionViewMode.ownsDetailPane`,
-    /// which carries the full reason). The other two modes are left alone:
-    /// list and icons have no detail surface of their own, so whatever the
-    /// user last chose is still what they want.
-    ///
-    /// Leaving columns does not restore it. Remembering would need a
-    /// "was open before columns" flag, which is state that exists only to
-    /// undo a state change — and the toggle is one click away.
+    /// The two modes with inspector opinions, in one place so `onAppear` and `onChange` cannot disagree:
+    /// gallery forces open (it is a picker), columns forces shut. Leaving columns does not restore.
     private func applyInspectorPolicy(for mode: CollectionViewMode) {
         if mode.ownsDetailPane {
             tabState.libraryInspectorPresented = false
@@ -864,14 +543,7 @@ internal struct LibraryDestination: View {
         }
     }
 
-    /// Multi-game entry (the toolbar button, the list's contextual
-    /// selection): enqueues in **display order** — a `Set` carries none,
-    /// and top-to-bottom-as-shown is the order a batch should crunch in.
-    /// Leaves selection and inspector untouched: collapsing a hand-built
-    /// multi-selection to show progress would be hostile, and the
-    /// toolbar's queue item carries batch progress instead. A single id
-    /// routes through the single-game path, so right-click → Analyze on
-    /// one row keeps opening the inspector exactly as before.
+    /// Multi-game entry: enqueues in display order; leaves selection and inspector untouched.
     private func requestAnalysis(ids: Set<PGN.ID>) {
         let ordered = gamesInDisplayOrder(ids)
         guard !ordered.isEmpty else { return }
@@ -883,22 +555,12 @@ internal struct LibraryDestination: View {
         analysisQueue.enqueue(ordered, modelContext: modelContext)
     }
     
-    /// Split into named groups because `ToolbarContentBuilder` — like every
-    /// result builder — accepts at most ten statements per block, and D24′'s
-    /// Export item was the eleventh. Grouping rather than golfing keeps room
-    /// for the next item; the same move `coreContent` made when the third
-    /// alert blew the type-check budget.
+    /// Named groups: `ToolbarContentBuilder` tops out at ten statements.
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         filterToolbarItem
         ToolbarSpacer(.fixed)
-        // No `.fixed` break between these two since 6 Aug 2026, and the reason
-        // is the queue item's conditional presence rather than taste: it renders
-        // only while a batch is live or a failure is unacknowledged, so a spacer
-        // of its own would leave a gap with nothing on one side of it for most
-        // of the app's life — a break that only sometimes breaks something. It
-        // shares the pill with Import instead, which reads as one content group
-        // and does not move when the batch ends.
+        // No `.fixed` break: the queue item is conditional; a spacer would gap with nothing on one side most of the time.
         queueToolbarItem
         ToolbarSpacer(.fixed)
         transferToolbarItems
@@ -906,21 +568,12 @@ internal struct LibraryDestination: View {
         trailingToolbarItems
     }
     
-    /// The search-independent half of the 2 Aug 2026 search feature — see
-    /// the `searchTokens` declaration for why this stays a menu even now
-    /// that the chips are in the field. Content side of the break, the
-    /// Maintenance-menu argument:
-    /// it acts on what the list shows.
+    /// The search-independent half; stays a menu (the discoverable entry point), content side of the break.
     @ToolbarContentBuilder
     private var filterToolbarItem: some ToolbarContent {
         ToolbarItem {
             Menu {
-                // Toggles rather than pickers, because the underlying state
-                // stopped being single-valued: a `Picker` over an optional
-                // can't express "1-0 and 0-1 both selected", which is the
-                // whole reason the filters became tokens. Checkmarks are the
-                // menu's own multi-select idiom, and they stay in sync with
-                // the chips because both read `searchTokens`.
+                // Toggles, not a picker: the state stopped being single-valued ("1-0 and 0-1" must be expressible).
                 ForEach(LibrarySearchToken.allCases) { token in
                     Toggle(isOn: binding(for: token)) {
                         tokenLabel(token)
@@ -942,17 +595,8 @@ internal struct LibraryDestination: View {
         }
     }
 
-    /// One token, rendered — used by both the chip inside the search field
-    /// and the row in the Filter menu, so the two cannot drift.
-    ///
-    /// The analysis pair carries the same tinted badge it wears everywhere else
-    /// in the Library, through `AnalysisGlyph`'s one colour source. Result
-    /// tokens take no tint — a checkered flag has no state to signal.
-    ///
-    /// **These two pass their state as a literal and never consult the queue**,
-    /// which is the point: a token names a *facet*, and a facet is never
-    /// mid-analysis. `State` has three cases; a filter has two, permanently,
-    /// and a spinning chip would claim the filter itself was working.
+    /// One token rendering for chip and menu row, so the two cannot drift. State arrives as a literal —
+    /// a facet never consults the queue.
     @ViewBuilder
     private func tokenLabel(_ token: LibrarySearchToken) -> some View {
         switch token {
@@ -962,12 +606,7 @@ internal struct LibraryDestination: View {
         }
     }
 
-    /// One token's membership, as a `Binding<Bool>` for the menu's toggles.
-    ///
-    /// Appends rather than inserting at a fixed index, so the chips sit in
-    /// the order they were added — which is the order the user chose them in,
-    /// and the only order they can predict. Sorting them by facet would make
-    /// a chip appear somewhere other than where the click happened.
+    /// Membership as a `Binding<Bool>`; appends so chips sit in the order they were chosen.
     private func binding(for token: LibrarySearchToken) -> Binding<Bool> {
         Binding(
             get: { searchTokens.contains(token) },
@@ -981,40 +620,11 @@ internal struct LibraryDestination: View {
         )
     }
     
-    // `filterLabel(for:)` lived here until 3 Aug 2026. Its copy moved to
-    // `LibrarySearchToken.displayName` when the filters became chips — the
-    // same strings, now owned by the thing that renders them in two places
-    // (the chip and the menu row) instead of by the one menu that used to.
-    // The convention it carried survives with it: pair the word with PGN's
-    // own vocabulary, because the raw value is the app's one rendering of a
-    // result and a label that hides it makes the reader translate.
-    
-    /// The Library's file doors: in, out, and — only when it has work —
-    /// reconcile.
-    ///
-    /// Two `ToolbarItem`s with **no `ToolbarSpacer` between them**, which is
-    /// what makes adjacent items share a capsule. Identifiers, helps and
-    /// disabled state stay on the individual buttons, so per-button affordances
-    /// are unaffected by the grouping.
-    ///
-    /// (This doc described a single item and a `Divider` for a while — neither
-    /// existed. The arrangement changed under a doc that kept describing the
-    /// old one.)
-    ///
-    /// The third item is **present only while some game lacks an ordinal** —
-    /// the `queueStatusLabel` shape. A backfill retires itself: run it once and
-    /// every row is numbered, at which point D40′ says it should not sit on
-    /// screen greyed out.
+    /// File doors: in, out, and — only while some game lacks an ordinal — reconcile. No spacer: adjacent
+    /// items share a capsule. The third item vanishes at zero rather than sitting disabled (D40′).
     @ToolbarContentBuilder
     private var transferToolbarItems: some ToolbarContent {
         ToolbarItem {
-            // Restored in M-batch. The button had been lost in an earlier
-            // toolbar edit, leaving three fossils: `presentOpenPanel()`
-            // orphaned, this identifier copy-pasted onto the view-mode
-            // picker's chain (where the outer of two chained identifiers
-            // won, mislabeling the picker), and the import-button UITest
-            // green against that mislabeled picker. Drag-and-drop had
-            // silently become the only import route.
             Button {
                 presentOpenPanel()
             } label: {
@@ -1023,17 +633,7 @@ internal struct LibraryDestination: View {
             .help("Import PGN files")
             .accessibilityIdentifier(AccessibilityID.libraryImportButton)
         }
-        // The Export button sat here until 6 Aug 2026, removed by request with
-        // Analyze and Delete — see `queueToolbarItem` for the whole cut and what
-        // it costs. Export is the row menu's ⌘E now, and `requestExport(ids:)`
-        // keeps its callers there.
-        //
-        // The scan reads `games` rather than asking the store, deliberately:
-        // this is a `@Query`, so the item appears and disappears reactively as
-        // rows are imported and stamped, where a `hasUnnumberedGames()` fetch
-        // per body pass would cost more and still need invalidating by hand.
-        // O(n) over an `Int?` per render, which joins the known-costs census
-        // well below the `GameRecord`-per-row folds already on it.
+        // The presence scan reads `games` rather than asking the store, deliberately.
         if games.contains(where: { $0.libraryIndex == nil }) {
             ToolbarItem {
                 Button {
@@ -1050,13 +650,8 @@ internal struct LibraryDestination: View {
     @ToolbarContentBuilder
     private var viewModeToolbarItem: some ToolbarContent {
         ToolbarItem {
-            // NOTE: On macOS a `.segmented` Picker built from
-            // `Label(_:systemImage:)` renders icon-only, and AX exposes
-            // each segment as a radioButton keyed by its SF Symbol name
-            // (e.g. "square.grid.2x2"), NOT by any per-segment
-            // accessibilityIdentifier — the identifier below only tags
-            // the picker container. (The suite that addressed segments
-            // that way is gone — D51′; the platform behavior isn't.)
+            // NOTE: a `.segmented` Picker from `Label(_:systemImage:)` renders icon-only; AX keys segments by
+            // SF Symbol name, not per-segment identifier — only the picker container is tagged.
             Picker("View Mode", selection: $viewMode) {
                 ForEach(CollectionViewMode.allCases) { mode in
                     Label(mode.displayName, systemImage: mode.systemImage).tag(mode)
@@ -1067,44 +662,14 @@ internal struct LibraryDestination: View {
         }
     }
     
-    /// What is left of the analysis group: the queue's status item, and nothing
-    /// else.
-    ///
-    /// **Analyze, Delete and Export were removed from the toolbar by request.**
-    /// All three are still on every row's context menu at every arity; what
-    /// went is the always-present copy acting on the selection.
-    ///
-    /// **Two costs, named rather than discovered.** The sharp one is ⌘⌫: delete
-    /// was moved onto *this button* precisely because a `keyboardShortcut` on
-    /// an always-present, already-guarded control is live whenever the
-    /// destination shows, while the row menu's copy is known only to **render**.
-    /// Removing the button hands ⌘⌫, ⌘E and ⌘R back to that unmeasured copy —
-    /// accepted by request, with a `Commands` scene as the remedy if they turn
-    /// out dead, and the manual check as the thing that says which.
-    ///
-    /// The quieter one: nothing now shows "is my *selection* analyzed" at a
-    /// glance. The row menu answers per right-click and the queue item answers
-    /// "is anything running", which is the same information one gesture later.
-    ///
-    /// `AnalysisGlyph`'s selection-scoped `state` overload went with the
-    /// button — a door whose only surface is gone is the D40′ lie one layer
-    /// down. Its finding survives at the surviving overload.
+    /// Only the queue status item remains — Analyze, Delete and Export moved to the row menus by request.
     @ToolbarContentBuilder
     private var queueToolbarItem: some ToolbarContent {
-        // Visible only while a batch runs or a drained batch left
-        // failures behind — see `queueStatusLabel` for the full rule.
+        // Visible while a batch runs or failures are unacknowledged — see `queueStatusLabel`.
         if analysisQueue.queue.isActive || analysisQueue.queue.hasFailures {
             ToolbarItem {
                 Button {
-                    // Opens the window rather than a popover since 6 Aug 2026.
-                    // `openWindow(id:)`, not `(value:)`: there is exactly one
-                    // queue, so the scene is a singleton `Window` and there is
-                    // nothing to route — the wrapper type D46′ and D53′ each
-                    // had to mint is not needed a third time.
-                    //
-                    // Re-opening focuses the existing window rather than making
-                    // a second, which is `Window`'s whole contract and the
-                    // reason this needs no guard against double-clicks.
+                    // Window, not popover; `openWindow(id:)` — one queue, singleton scene, nothing to route (no D46′ wrapper).
                     openWindow(id: AnalysisQueueStatusWindowView.sceneID)
                 } label: {
                     queueStatusLabel
@@ -1115,14 +680,7 @@ internal struct LibraryDestination: View {
         }
     }
     
-    /// The pinned tail, shared with Players by arrangement: the inspector
-    /// toggle is always the trailing-most item, and the view-mode picker
-    /// always sits immediately to its left — the same two controls in the
-    /// same two places whichever collection destination is showing. The
-    /// spacer between them is `.fixed`, not flexible: adjacent, but the
-    /// toggle keeps its own group rather than sharing a pill with content
-    /// controls (the `InspectorToggleContent` contract — it acts on the
-    /// window, the picker on the destination's content).
+    /// Pinned tail, shared with Players: inspector toggle trailing-most, view-mode picker beside it; `.fixed` spacer.
     @ToolbarContentBuilder
     private var trailingToolbarItems: some ToolbarContent {
         viewModeToolbarItem
@@ -1133,12 +691,7 @@ internal struct LibraryDestination: View {
             } label: {
                 Label("Inspector", systemImage: "sidebar.trailing")
             }
-            // Disabled, not hidden. A control that vanishes on a mode switch
-            // reads as a glitch; a dimmed one reads as "not here" — and the
-            // `.help` below says why rather than leaving it to be guessed.
-            // Its guard is producible: `ownsDetailPane` is true for exactly
-            // one of four modes the user picks from, which is the check D40′
-            // taught this project to run before shipping a `.disabled(…)`.
+            // Disabled, not hidden — vanishing on a mode switch reads as a glitch; the guard is producible (D40′).
             .disabled(viewMode.ownsDetailPane)
             .help(viewMode.ownsDetailPane
                   ? "Columns view shows details in its own pane"
@@ -1147,25 +700,8 @@ internal struct LibraryDestination: View {
         }
     }
     
-    /// A **turning gear** with "2/18" while the run is live, a warning triangle
-    /// with the counts once a drained run left failures behind. The item
-    /// renders only in those two states: a clean drain hides it (the filled-in
-    /// graphs are the result), and failures keep it until the window's Clear
-    /// acknowledges them, so an error is never swallowed by the batch ending.
-    ///
-    /// **A gear rather than a `ProgressView`.** The spinner said "busy" in the
-    /// system's generic vocabulary while `AnalysisGlyph`'s gear means *engine
-    /// analysis* everywhere else — and with the toolbar's Analyze button gone,
-    /// this is the only place that meaning is visible without a right-click. A
-    /// bare indeterminate spinner beside a count also reads as two progress
-    /// indicators disagreeing, since the count *is* determinate.
-    ///
-    /// The count stays, being the half a gear cannot carry: current game,
-    /// per-ply progress, Skip and Stop All all live in the window.
-    ///
-    /// Drawn through `AnalyzingGear` so this and `AnalysisLabel` cannot pick
-    /// different motions — the gear's motion is the part still unsettled, and a
-    /// second spelling would mean fixing it twice.
+    /// Gear + count while live; warning + counts after a failed drain, until Clear acknowledges — an error is
+    /// never swallowed by the batch ending. A clean drain hides it. Drawn through `AnalyzingGear` with `AnalysisLabel`.
     private var queueStatusLabel: some View {
         HStack(spacing: 6) {
             if analysisQueue.queue.isActive {
@@ -1173,10 +709,7 @@ internal struct LibraryDestination: View {
             } else {
                 Image(systemName: "exclamationmark.triangle")
             }
-            // `batchPosition`, not `completedCount` (8 Aug 2026): this read
-            // "0/110" while the queue window said "Analyzing 1 of 110" — two
-            // spellings of one numerator, on screen at once. The queue owns
-            // the arithmetic now; both surfaces read it.
+            // `batchPosition`, not `completedCount` — the queue owns the arithmetic; both surfaces read it.
             Text("\(analysisQueue.queue.batchPosition)/\(analysisQueue.queue.totalCount)")
                 .monospacedDigit()
         }
@@ -1211,18 +744,8 @@ internal struct LibraryDestination: View {
         }
     }
 
-    /// D58′'s backfill (M12.5): point at the folder the PGNs live in and let
-    /// the content hash decide which row each file is.
-    ///
-    /// Directory mode, `PGNExporter.exportBatch`'s panel shape — the same
-    /// gesture pointed the other way, and a fresh panel selection carries its
-    /// own sandbox grant for the session, so no bookmark is involved.
-    ///
-    /// Synchronous, unlike `importURLs`: this reads and parses files but writes
-    /// one `Int?` per match and never resolves players, classifies or rehashes,
-    /// so it is a fraction of an import's work per file and has no progress to
-    /// report. If a folder ever gets large enough for that to be wrong, the
-    /// import pipeline's `ImportProgress` is the shape to copy.
+    /// D58′ backfill: point at the folder; the content hash decides which row each file is.
+    /// Stamps one `Int?` per match — never resolves players, classifies or rehashes.
     private func presentBackfillPanel() {
         let panel = NSOpenPanel()
         panel.title = "Match Folder to Library"
@@ -1251,11 +774,7 @@ internal struct LibraryDestination: View {
         Task { await runImport(urls) }
     }
     
-    /// Imports a batch, recording a per-file result and never aborting on
-    /// a failure — a bad file in the middle no longer drops the files
-    /// after it. Runs on the main actor (PGNStore touches the
-    /// `ModelContext`), yielding between files so the progress bar in the
-    /// status sheet animates as work proceeds.
+    /// Per-file results, never aborts on one failure; main-actor (ModelContext), yielding so progress animates.
     @MainActor
     private func runImport(_ urls: [URL]) async {
         Self.logger?.info("Import batch starting: \(urls.count) URL(s)")
@@ -1287,22 +806,8 @@ internal struct LibraryDestination: View {
         Self.logger?.info("Import batch complete: \(imported)/\(urls.count) imported")
     }
     
-    /// The confirmation's body: the lead sentence, plus a clause naming any
-    /// players the deletion would take with it.
-    ///
-    /// **Appended only when there are any**, so the ordinary delete reads as it
-    /// did before the cascade. A line saying "and no players will be removed"
-    /// on every deletion is the `.DS_Store` shape — text that is always there
-    /// stops being read, and the one time it matters scrolls past with the rest.
-    ///
-    /// Named rather than counted (D40′'s reason, weakened but still standing:
-    /// the effect lands in a destination the user isn't looking at, and a seat
-    /// menu quietly losing a name reads as a bug six months later). Capped at
-    /// five, matching the sweep, because it is the same list.
-    ///
-    /// Advisory, not authoritative — `PGNStore.delete(_:)` recomputes at write
-    /// time. A snapshot held across a confirmation is stale by construction, so
-    /// the message asks and the door decides.
+    /// Confirmation body; players clause appended only when the cascade would take any.
+    /// Advisory — `PGNStore.delete(_:)` recomputes at write time.
     private static func deletionMessage(for games: [PGN], lead: String) -> String {
         let stranded = PGNStore.playersOrphaned(byDeleting: games)
         guard !stranded.isEmpty else { return lead }
@@ -1317,18 +822,7 @@ internal struct LibraryDestination: View {
         return lead + " " + clause + more
     }
 
-    /// The backfill report in the reader's terms.
-    ///
-    /// **Leads with what did not happen when nothing did.** The two outcomes a
-    /// reader hits are "it filled everything in" and "it found none of my
-    /// games", and the second needs explaining rather than a bare zero — the
-    /// commonest cause is the wrong folder, so the message says so.
-    ///
-    /// `unmatched` is phrased as a **finding, not a fault**: a file the Library
-    /// does not hold is a game not imported. Capped at three names on the
-    /// `sweepMessage` precedent — the only place these filenames are shown, and
-    /// a bare count would ask the reader to trust a number about files they
-    /// have never seen.
+    /// Leads with what did not happen when nothing did; `unmatched` is a finding, not a fault (three names max).
     private static func backfillMessage(for report: PGNStore.LibraryIndexBackfill) -> String {
         guard report.scanned > 0 else {
             return "That folder has no PGN files in it."
@@ -1363,48 +857,27 @@ internal struct LibraryDestination: View {
         return parts.joined(separator: " ")
     }
 
-    // `requestDeleteSelection()` was here until 6 Aug 2026. It forwarded the
-    // current selection to `requestDelete(ids:)` and had exactly one caller —
-    // the toolbar's trash button — so it went with it rather than staying as a
-    // one-line hop nothing takes. The delete routes that survive both come from
-    // the row menus and already carry their own id sets.
-    //
-    // Worth the comment rather than a silent deletion, because this symbol is
-    // where the ⌘⌫ trail ran: plain ⌫ reached it until 5 Aug, then only ⌘⌫ via
-    // the toolbar button, and now neither. `queueToolbarItem` carries what that
-    // costs.
-
-    /// Routes a delete request for a specific set of game IDs (the context
-    /// menu's contextual selection). One game reuses the single-game flow (with
-    /// its dirty-changes confirmation); two or more go through a batch
-    /// confirmation.
+    /// Delete for an id set: one game reuses the single-game flow (dirty confirmation); more go to batch confirmation.
     private func requestDelete(ids: Set<PGN.ID>) {
         let games = gamesInDisplayOrder(ids)
         guard !games.isEmpty else { return }
         if games.count == 1 {
-            // Through the alert, not straight to `delete(_:)`. The card menus
-            // set `pendingDeletion` and get the "Delete Game?" confirmation;
-            // this path skipped it, so ⌫ and the toolbar deleted a single game
-            // outright while deleting *two* still asked. The alert's action
-            // calls `delete(_:)`, so the dirty-changes fork is unchanged.
+            // Through the alert — a single game must confirm like a batch does; the dirty-changes fork is unchanged.
             pendingDeletion = games[0]
         } else {
             pendingBatchDeletion = games
         }
     }
     
-    /// Deletes every game in `pgns` in a single transaction, closing any open
-    /// tabs first. Unsaved changes are discarded without a per-game prompt —
-    /// acceptable while the dirty path is dormant (no editor yet); the
-    /// single-game delete still routes dirty games through their confirmation.
+    /// One transaction; closes open tabs first. Unsaved changes discarded without prompt — acceptable while
+    /// the dirty path is dormant (no editor defers writes yet).
     private func performBatchDelete(_ pgns: [PGN]) {
         for pgn in pgns {
             let id = pgn.persistentModelID
             // Before the store delete — see `performDelete` for the why.
             analysisQueue.gameWasDeleted(id)
             openGames.markClean(id)
-            // Close the open tab (if any) before teardown, so it never renders
-            // against a tombstoned PGN.
+            // Close the tab before teardown so it never renders a tombstoned PGN.
             dismissWindow(value: id)
         }
         selectedPGNs.removeAll()
@@ -1419,23 +892,8 @@ internal struct LibraryDestination: View {
         }
     }
     
-    /// Entry point from the "Delete Game?" confirmation. Routes to a
-    /// second discard confirmation if the game is open with unsaved
-    /// changes; otherwise deletes and closes immediately.
-    ///
-    /// **The first arm is unreachable today, by design rather than by
-    /// accident** (recorded 6 Aug 2026, M12.3). Nothing calls
-    /// `OpenGamesRegistry.markDirty`: every edit surface in the app —
-    /// `applyEdit`, `applyMovetextEdit`, Get Info's per-field commits — writes
-    /// through the store when the reader acts, so no tab ever holds
-    /// uncommitted state and `isDirty` is permanently `false`.
-    ///
-    /// Named here because a branch whose condition can never be true is the
-    /// D40′ shape, and D40′'s defence is to say so at the site rather than
-    /// discover it at the next sweep. Kept rather than deleted: the registry is
-    /// suited, the branch is three lines, and any editor that defers its write
-    /// turns it on by calling `markDirty` alone. If none arrives, this arm and
-    /// the registry go together.
+    /// From "Delete Game?": dirty+open routes to a discard confirmation; otherwise deletes immediately.
+    /// The dirty arm is unreachable today by design — no editor defers writes (see `OpenGamesRegistry.markDirty`).
     private func delete(_ pgn: PGN) {
         if openGames.isDirty(pgn.persistentModelID) {
             pendingDirtyDeletion = pgn
@@ -1444,22 +902,16 @@ internal struct LibraryDestination: View {
         }
     }
     
-    /// Performs the deletion and closes any tab showing this game.
-    /// `dismissWindow(value:)` targets the window/tab presenting the
-    /// given value regardless of which tab invokes it, and is a harmless
-    /// no-op when no tab is open for the game.
+    /// Deletes and closes any tab showing the game; `dismissWindow(value:)` is a no-op when none is.
     private func performDelete(_ pgn: PGN) {
         let id = pgn.persistentModelID
         selectedPGNs.remove(pgn.id)
-        // Before the store delete: `gameWasDeleted` stops any running
-        // pass on this game synchronously (the analysis walk checks its
-        // cancellation flag before every PGN touch), so the engine never
+        // Before the store delete: `gameWasDeleted` stops the running pass synchronously — the engine never
         // writes into a tombstoned model.
         analysisQueue.gameWasDeleted(id)
         openGames.markClean(id)
         
-        // Close the open tab (if any) before the model is torn down, so
-        // the tab never renders against a tombstoned PGN.
+        // Close the tab before teardown so it never renders a tombstoned PGN.
         dismissWindow(value: id)
         
         let store = PGNStore(modelContext: modelContext)
@@ -1487,38 +939,17 @@ internal struct LibraryDestination: View {
         }
     }
     
-    /// M-prs.1 sibling of `backfillEmptyNames()`: the logic is store-owned and
-    /// idempotent, so both collection destinations call it from their own
-    /// `onAppear` (Players does the same). This is only the
-    /// Library's call site and its error sink.
+    /// Store-owned and idempotent; both collection destinations call it on appear. Behind the
+    /// converged stamp since D75′ — the healed steady state skips the scan. This is the Library's error sink.
     private func backfillPlayerLinks() {
         do {
-            let store = PGNStore(modelContext: modelContext)
-            try store.backfillPlayerLinks()
-            // D29′ — after links, which it reads (see the store doc).
-            try store.backfillPlayerTagNames()
+            try PGNStore(modelContext: modelContext).healPlayersIfNeeded()
         } catch {
             Self.logger?.error("Player-link backfill failed: \(error.localizedDescription, privacy: .public)")
         }
     }
     
-    /// D34′'s eager half: an opening name costs a dictionary probe, so the
-    /// Library heals pre-M4 rows on appearance rather than making the user
-    /// re-run a depth-18 analysis to learn one.
-    ///
-    /// Its own method with its own error sink, deliberately not a third line
-    /// inside `backfillPlayerLinks()` — that sink logs "Player-link backfill
-    /// failed", which a classification failure would turn into a lie. Unique
-    /// to the Library between the two collection destinations: Players
-    /// reads neither field (see the store doc).
-    ///
-    /// Async, and riding `.task` rather than `onAppear`, because the first
-    /// call is what forces the ECO table's parse. Awaiting `warmed()` puts
-    /// that work on a background thread and *suspends* the main actor instead
-    /// of blocking it; the model work after the await resumes on the main
-    /// actor, where the context needs it. Doing this synchronously in
-    /// `onAppear` hung the first Library appearance long enough to break two
-    /// UITest suites — the `LibraryGamePreviewView` lesson, in a new place.
+    /// D34′'s eager half: heals pre-M4 rows on appearance so an opening name never costs a depth-18 re-run.
     private func backfillClassifications() async {
         let table = await ECOTable.warmed()
         do {
@@ -1530,17 +961,13 @@ internal struct LibraryDestination: View {
     
     // MARK: Export (D24′)
     
-    /// Single-game entry (a card's context menu). One game means a save
-    /// panel: the user names the file.
+    /// Single-game entry: a save panel — the user names the file.
     private func requestExport(_ pgn: PGN) {
         Self.logger?.info("Export requested: '\(pgn.name, privacy: .public)'")
         PGNExporter.export([pgn])
     }
     
-    /// Multi-game entry (the list's contextual selection). Resolves the set
-    /// against `filteredGames` for the same reason `requestAnalysis(ids:)`
-    /// does — a `Set` carries no order, and here the order is *visible*: it
-    /// numbers the filenames. Leaves selection and inspector untouched.
+    /// Multi-game entry; resolves against `filteredGames` — the order numbers the filenames (D24′).
     private func requestExport(ids: Set<PGN.ID>) {
         let ordered = gamesInDisplayOrder(ids)
         guard !ordered.isEmpty else { return }
@@ -1552,28 +979,10 @@ internal struct LibraryDestination: View {
 // MARK: Presentation Bindings
 
 extension Binding where Value == Bool {
-    /// A presentation flag over optional state: `true` while a value is
-    /// present, and a dismissal clears the source.
-    ///
-    /// `BoardDestination`'s offer bindings look identical and are deliberately
-    /// **not** folded in: they ignore dismissal (`set: { _ in }` — D#3 is a
-    /// fork, not a suggestion). Same shape, different contract.
-    ///
-    /// **Waived, sunset by deletion (D43′).** These two captures are the app
-    /// target's only strict-concurrency residue — `Binding` is not `Sendable`
-    /// while `init(get:set:)` demands `@Sendable` closures. `T: Sendable`
-    /// would fix it and lock out the `@Model` callers, which are most of
-    /// them; the opt-outs this codebase has none of are spelled around on
-    /// purpose, so the sweep's own prohibition grep stays clean. It stays a
-    /// *warning* under mode 6, which reads as framework friction rather than
-    /// a defect here. The 2027 SDK's item-based `alert` /
-    /// `confirmationDialog` retire every call site and this helper with them.
-    ///
-    /// No caller count here on purpose — it has been wrong four times, most
-    /// recently in a sentence written *beside* the instruction not to write
-    /// counts. Nothing about a wrong count fails, so it goes stale silently.
-    /// The count lives in the command (D42′):
-    /// `grep -rn 'Binding(present:' DGTStudioPro/`.
+    /// Presentation flag over optional state: true while present; dismissal clears the source.
+    /// `BoardDestination`'s offer bindings look identical and are deliberately not folded in — they ignore dismissal.
+    /// Waived warning ×2: non-Sendable `Binding` captured in `@Sendable` closures; expires by deletion when
+    /// `.alert(item:)` ships (D43′ — the register's one compiler-warning waiver).
     internal init<T>(present source: Binding<T?>) {
         self.init(
             get: { source.wrappedValue != nil },

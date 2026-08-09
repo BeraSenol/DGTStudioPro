@@ -62,6 +62,8 @@ struct PGNStoreClassificationTests {
         #expect(game.ecoCode == "C60")
         #expect(game.ecoFamily == "Ruy Lopez")
         #expect(game.ecoVariation == nil)
+        // The whole line is book, and the stamp says so — the analysis skip's input (D74′).
+        #expect(game.ecoDepth == 5)
         #expect(game.specialCheckmate == nil)
     }
 

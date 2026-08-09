@@ -39,6 +39,7 @@ struct PGNStoreMovetextEditTests {
         let (store, _) = try Self.makeStore()
         let game = try store.importPGN(text: Self.sample())
         game.evaluations = [.centipawns(20), .centipawns(-15)]   // parallel to e4 e5
+        game.analysisDepths = [18, 18]
         let hashBefore = game.contentHash
 
         let outcome = try store.applyMovetextEdit(to: game, proposed: ["d4", "d5", "c4"])
@@ -46,6 +47,9 @@ struct PGNStoreMovetextEditTests {
         #expect(outcome == .success(["d4", "d5", "c4"]))
         #expect(game.moves == ["d4", "d5", "c4"])
         #expect(game.evaluations.isEmpty)
+        // Depths travel with the evaluations, always (D74′) — a stale depth over fresh moves
+        // would let the next pass skip plies it never scored.
+        #expect(game.analysisDepths.isEmpty)
         #expect(game.contentHash != hashBefore)
     }
 

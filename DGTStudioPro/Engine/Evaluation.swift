@@ -1,47 +1,28 @@
 import Foundation
 
-/// A single engine evaluation of a chess position.
-///
-/// All values are normalized to **white's perspective**: positive favors
-/// white, negative favors black. This is the PGN `[%eval ...]` convention
-/// used by Lichess, Chess.com, and ChessBase, and is the storage format
-/// throughout the app. UCI input from the engine arrives in side-to-move
-/// perspective and is flipped at the parsing layer when black is to move.
+/// One engine evaluation, normalized to **white's perspective** (the `[%eval]` convention).
 internal enum Evaluation: Equatable, Sendable, Codable {
     
     // MARK: Cases
     
-    /// Material-equivalent advantage in centipawns, signed from white's
-    /// perspective. `centipawns(0)` is a drawn position; `centipawns(100)`
-    /// is roughly "white is a pawn ahead".
+    /// Centipawns, signed from white's perspective; 100 ≈ a pawn.
     case centipawns(Int)
     
-    /// Forced mate in N plies, signed from white's perspective.
-    /// `mate(3)` means white mates in 3; `mate(-3)` means black mates
-    /// in 3. `mate(0)` indicates the position is already checkmate
-    /// (rarely emitted in stored evaluations) and is treated as 0.5
-    /// by the probability projection to avoid sign-of-zero ambiguity.
+    /// Mate in N plies, signed. `mate(0)` = already checkmate, treated as 0.5 by the probability
+    /// projection to dodge sign-of-zero.
     case mate(Int)
     
     // MARK: Static Constants
     
-    /// A dead-equal position: the sigmoid's fixed point, where
-    /// `whiteWinProbability` is exactly 0.5, and its own mirror under
-    /// `flipped` (`Int` has no negative zero). Named for the vertical
-    /// evaluation bar — which, since M3, consumes it: a nil per-ply
-    /// evaluation folds to this in `EvaluationBarReading`, so ply 0 reads
-    /// neutral without spelling `.centipawns(0)` at the fold site — the
-    /// `Position.starting` / `CastlingRights.none` convention.
+    /// Dead equal: the sigmoid's fixed point (probability exactly 0.5), its own mirror under
+    /// `flipped`. The bar folds a nil per-ply evaluation to this.
     internal static let drawn = Evaluation.centipawns(0)
     
     // MARK: Computed Properties
     
-    /// Probability that white wins the resulting game, in `[0, 1]`.
-    ///
-    /// Centipawns project via a sigmoid with k=400, the de-facto-standard
-    /// tuning used by Lichess and most analysis interfaces. Mate
-    /// evaluations clamp to 1.0 (white mates) or 0.0 (black mates).
-    /// This is what `EvaluationGraphView` consumes for its curve display.
+    /// White's win probability in [0, 1]: **base-e** logistic at k=400 — +100 cp ≈ 56%, gentler
+    /// than the base-10 reading of "k=400" (≈ 64%), which a test literal once assumed and ⌘U
+    /// corrected. Mates clamp to 1/0. Every consumer (bar, graph, swing) shares this one curve.
     internal var whiteWinProbability: Double {
         switch self {
         case .centipawns(let cp):
@@ -52,9 +33,7 @@ internal enum Evaluation: Equatable, Sendable, Codable {
         }
     }
     
-    /// Returns the evaluation with its sign flipped (white ↔ black
-    /// perspective). Used by the UCI parser to normalize side-to-move-
-    /// relative engine output to white-relative storage.
+    /// Sign flipped — the UCI parser normalizes side-to-move output to white-relative storage.
     internal var flipped: Evaluation {
         switch self {
         case .centipawns(let cp): return .centipawns(-cp)
@@ -67,24 +46,11 @@ internal enum Evaluation: Equatable, Sendable, Codable {
 
 extension Evaluation {
     
-    /// The widest centipawn magnitude an annotation may claim. Far past any
-    /// real engine output (a queen is ~900), so it rejects only nonsense —
-    /// but finite and well inside `Int`, which is what keeps
-    /// `Int(_: Double)` from trapping on a hostile file.
+    /// The widest centipawn magnitude accepted — rejects only nonsense, but finite and inside
+    /// `Int`, which keeps `Int(_: Double)` from trapping on a hostile file.
     private static let centipawnLimit: Double = 1_000_000
     
-    /// Parses the *content* of a `[%eval ...]` PGN comment tag (the value
-    /// between the keyword and the closing bracket — the caller is
-    /// expected to have stripped the wrapping syntax).
-    ///
-    /// Accepts the two industry-standard forms:
-    /// - **Decimal pawn advantage**, e.g. `"0.23"` → `.centipawns(23)`,
-    ///   `"-1.50"` → `.centipawns(-150)`. This is the Lichess /
-    ///   Chess.com export convention.
-    /// - **Mate notation**, e.g. `"#3"` → `.mate(3)`, `"#-3"` →
-    ///   `.mate(-3)`.
-    ///
-    /// Returns `nil` if the content doesn't match either form.
+    /// Parses the *content* of `[%eval …]` (wrapping syntax already stripped).
     internal init?(parsingEvalTagContent content: String) {
         let trimmed = content.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return nil }
@@ -94,15 +60,12 @@ extension Evaluation {
             guard let n = Int(mateStr) else { return nil }
             self = .mate(n)
         } else {
-            // Tolerate a leading `+` (some sources emit "+0.50" instead of "0.50").
+            // Tolerate a leading `+` ("+0.50").
             let normalized = trimmed.hasPrefix("+")
             ? String(trimmed.dropFirst())
             : trimmed
-            // `Double(_:)` accepts "inf", "nan" and overflowing literals, and
-            // `Int(_: Double)` traps on every one of them — so an untrusted
-            // `{[%eval inf]}` crashed the import instead of failing the
-            // annotation. The rejection belongs here, at the parse boundary,
-            // beside the others.
+            // `Double(_:)` accepts "inf"/"nan"/overflow and `Int(_: Double)` traps on all of them — the
+            // rejection belongs at the parse boundary.
             guard let pawns = Double(normalized), pawns.isFinite else { return nil }
             let cp = (pawns * 100).rounded()
             guard cp >= -Self.centipawnLimit, cp <= Self.centipawnLimit else { return nil }
@@ -110,15 +73,8 @@ extension Evaluation {
         }
     }
     
-    /// Parses a complete `[%eval ...]` tag, including its wrapping
-    /// brackets and keyword — recognizes the exact Lichess/Chess.com shape
-    /// and returns nil otherwise. Whitespace around the inner value
-    /// is tolerated; missing space between keyword and value is not.
-    ///
-    /// No production caller: the parser's scanner strips the wrapper itself
-    /// and calls `init?(parsingEvalTagContent:)`. Kept, with `evalTag`, as
-    /// the pinned round-trip pair — D24′ writes no evals, so the emitting
-    /// half waits for a decision that reverses that.
+    /// Parses a complete `[%eval …]` tag, the exact Lichess/Chess.com shape. Kept as the pinned
+    /// round-trip pair with `evalTag` — D24′ writes no evals.
     internal init?(parsingEvalTag tag: String) {
         let trimmed = tag.trimmingCharacters(in: .whitespaces)
         let prefix = "[%eval "
@@ -132,13 +88,7 @@ extension Evaluation {
         self.init(parsingEvalTagContent: inner)
     }
     
-    /// Renders the *content* of a `[%eval ...]` tag in the Lichess /
-    /// Chess.com convention.
-    ///
-    /// Centipawns emit as a decimal pawn value to two places —
-    /// `.centipawns(23)` → `"0.23"`, `.centipawns(-150)` → `"-1.50"`.
-    /// Mate evaluations emit as `#N` / `#-N`. Callers wrap this in
-    /// `"[%eval ...]"` for the full comment form via `evalTag`.
+    /// Content in the Lichess convention: centipawns as pawns to two places, mates as `#N`.
     internal var evalTagContent: String {
         switch self {
         case .centipawns(let cp):
@@ -149,10 +99,7 @@ extension Evaluation {
         }
     }
     
-    /// Renders the full `[%eval ...]` comment tag, ready to embed
-    /// inside `{...}` PGN movetext comments. Unused in production —
-    /// `PGNSerializer` writes no evaluations (D24′); this and
-    /// `init?(parsingEvalTag:)` exist as the round-tripped pair.
+    /// The full tag. Unused in production (D24′ writes no evaluations) — the round-tripped pair.
     internal var evalTag: String {
         "[%eval \(evalTagContent)]"
     }
