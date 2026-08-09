@@ -1091,6 +1091,15 @@ position.
   embedded in README.md under a Screenshots section — Board, Library's four
   modes and filter, the two analysis windows, Get Info's tabs, Players' four
   modes.
+- **The launch geometry warning, resolved structurally.** Both suspect
+  geometry actions dealt with in one pass: `IconGridWidthBox` deleted (the
+  arrow keys read the `GeometryReader`'s width as a parameter — the mirror
+  never needed to exist) and the per-card frame transforms gated on an
+  active rubber band, so idle grids observe nothing and there is no value
+  stream to cycle at launch. Fifth correction on that warning, first to
+  remove observation rather than tune quantization; confirmation launch on
+  the owed list, alongside re-observing whether the `FocusedValue` warning
+  was its shadow.
 
 **Manual checks owed** are on PROJECT-INSTRUCTIONS' list: the badge sweep
 across all four modes during a live batch, the counter agreeing at both

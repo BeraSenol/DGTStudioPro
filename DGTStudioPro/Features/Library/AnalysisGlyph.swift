@@ -368,9 +368,9 @@ internal struct AnalysisStatusBadge: View {
 
     internal var body: some View {
         AnalysisBadgeIcon(state: state)
-            .font(.title3)
-//            .padding(4)
-            .background(.thinMaterial, in: Circle())
+            .font(.title2)
+            .background(.ultraThinMaterial, in: Circle())
+//            .offset(x: 5, y: 5)
             .allowsHitTesting(false)
             .accessibilityLabel(AnalysisGlyph.statusLabel(state))
     }

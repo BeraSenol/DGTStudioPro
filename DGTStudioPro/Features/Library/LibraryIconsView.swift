@@ -20,7 +20,9 @@ import SwiftUI
 /// unchanged — what changed is where its one input comes from, and the reason
 /// the grid is *not* `.adaptive`: SwiftUI never reports the count an adaptive
 /// grid chose, so the arrows would step by a number the layout had no reason
-/// to agree with. See `containerWidth`.
+/// to agree with. Layout and the arrow keys both read the `GeometryReader`'s
+/// own width — the keys through a `move(_:width:proxy:)` parameter since
+/// 8 Aug 2026, which retired the mirrored width box.
 ///
 /// **Rubber band.** Cards report frames via `onGeometryChange` into an
 /// `IconGridFrameStore` — a reference box, not `@State`, because nothing in
@@ -79,25 +81,24 @@ internal struct LibraryIconsView: View {
     /// environment value's declaration; nil in the previews, which is honest.
     @Environment(\.analysisRunningGameID) private var runningAnalysisID
 
-    /// The container width, mirrored out of the `GeometryReader` so the arrow
-    /// keys can ask the same question the layout asked.
-    ///
-    /// **One number, two readers, and they must not fork.** The grid packs
-    /// `options.columnCount(containerWidth:)` columns and `move(_:proxy:)`
-    /// steps by it — that is exactly why the grid is not `.adaptive`, which
-    /// never reports the count it chose. Layout reads the proxy directly (so
-    /// it is never a frame behind); `move` reads the box, which has settled
-    /// long before a key press. Both call the one function.
-    ///
-    /// A **box**, not `@State`: see `IconGridWidthBox`, which carries the
-    /// account of why the first version of this line brought the "Geometry
-    /// action is cycling between duplicate values" warning back.
-    @State private var containerWidth = IconGridWidthBox()
+    // `containerWidth` (an `IconGridWidthBox`) stood here from 7 Aug 2026 to
+    // 8 Aug 2026 — a box mirroring the `GeometryReader`'s width out to the
+    // arrow keys, with a quantized geometry action feeding it. Deleted with
+    // the type: `.onMoveCommand` sits *inside* the `GeometryReader`'s scope,
+    // so `move` takes `geometry.size.width` as a parameter and the mirror
+    // never needed to exist. It was also one of the two suspects for the
+    // launch-time "Geometry action is cycling between duplicate values"
+    // warning, now gone by construction rather than by tuning.
 
     /// Realized cards' frames in `gridSpace` — see `IconGridFrameStore`
     /// for why this is a box and not observed state. Entries for deleted
     /// games go stale until their cell vanishes, so the sweep re-checks
     /// membership against `games` rather than trusting the keys.
+    ///
+    /// **Populated only while a band is sweeping** (8 Aug 2026, the fifth
+    /// correction on the cycling warning — see the transform at the card).
+    /// Empty at launch and between drags, which is honest: nothing reads it
+    /// then.
     @State private var cardFrames = IconGridFrameStore<PGN.ID>()
     @State private var rubberBand: CGRect?
     /// The card the last selection gesture touched — where an arrow steps
@@ -107,7 +108,10 @@ internal struct LibraryIconsView: View {
 
     // MARK: Body
     var body: some View {
-        GeometryReader { geometry in
+        // Read once per render, ahead of the `ForEach`, so sixty transform
+        // closures capture one Bool rather than sixty `@State` reads.
+        let isSweeping = rubberBand != nil
+        return GeometryReader { geometry in
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVGrid(
@@ -132,24 +136,34 @@ internal struct LibraryIconsView: View {
                             )
                             .id(game.id)
                             .onGeometryChange(for: CGRect.self) { geometry in
-                                // Fourth correction on the "cycling between
-                                // duplicate values" warning, each one a real
-                                // layer: viewport → content anchoring (a frame
-                                // shouldn't mean scroll offset), `@State` → box
-                                // (the observer shouldn't re-enter layout),
-                                // exact → quantized comparison — and now
-                                // `.integral` → half-point rounding, because
-                                // floor/ceil put the flip boundaries exactly on
-                                // the integers layout rests on and turned
-                                // sub-point wobble into the whole-point A/B the
-                                // warning names. The rule and the full account
-                                // live on `IconGridSelection.stableFrame`.
-                                IconGridSelection.stableFrame(
+                                // **Gated on the sweep — the fifth correction
+                                // on "cycling between duplicate values", and
+                                // the first that removes the observation
+                                // instead of tuning it** (8 Aug 2026; the
+                                // account of all five lives on
+                                // `IconGridSelection.stableFrame`). Idle, the
+                                // transform returns one constant, so there is
+                                // no value stream to cycle however layout
+                                // wobbles at launch. The frames are only ever
+                                // read mid-drag, and the drag's first
+                                // `onChanged` sets `rubberBand`, which
+                                // re-renders this grid, rebuilds these
+                                // transforms with `isSweeping` true, and
+                                // populates the box in the same layout pass —
+                                // so the band's second callback tests real
+                                // frames, which is Finder's own feel (the
+                                // first 4 pt of a sweep select nothing).
+                                isSweeping
+                                ? IconGridSelection.stableFrame(
                                     geometry.frame(in: .named(Self.gridSpace))
                                 )
+                                : .null
                             } action: { frame in
                                 // A box write: free, and invisible to the
                                 // render pass — no invalidation, no loop.
+                                // `.null` lands here once per card when a
+                                // sweep ends; harmless, `.null` intersects
+                                // nothing.
                                 cardFrames.frames[game.id] = frame
                             }
                         }
@@ -193,16 +207,12 @@ internal struct LibraryIconsView: View {
                 .focusable()
                 .focusEffectDisabled()
                 .focused($isFocused)
+                // `geometry.size.width` directly — the same proxy the layout
+                // reads, captured at key-press time when layout has long
+                // settled. The width box and its geometry action stood here
+                // until 8 Aug 2026; see the note at the retired property.
                 .onMoveCommand { direction in
-                    move(direction, proxy: proxy)
-                }
-                // A box write from a geometry action — free, and invisible to
-                // the render pass. The transform quantizes so `onGeometryChange`'s
-                // own duplicate-value comparison has a stable input.
-                .onGeometryChange(for: CGFloat.self) { proxy in
-                    IconGridWidthBox.quantized(proxy.size.width)
-                } action: { width in
-                    containerWidth.width = width
+                    move(direction, width: geometry.size.width, proxy: proxy)
                 }
             }
         }
@@ -277,14 +287,14 @@ internal struct LibraryIconsView: View {
             }
     }
 
-    private func move(_ direction: MoveCommandDirection, proxy: ScrollViewProxy) {
+    private func move(_ direction: MoveCommandDirection, width: CGFloat, proxy: ScrollViewProxy) {
         guard !games.isEmpty else { return }
         let target: Int
         if let anchorID, let current = games.firstIndex(where: { $0.id == anchorID }) {
             target = IconGridSelection.destination(
                 from: current,
                 direction: direction,
-                columnCount: options.columnCount(containerWidth: containerWidth.width),
+                columnCount: options.columnCount(containerWidth: width),
                 count: games.count
             )
         } else {

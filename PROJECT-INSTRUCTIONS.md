@@ -636,37 +636,27 @@ are in `git log`.
   reads as live. A click-to-move or setup surface consumes all three by passing
   one value. The transferable part: a name scan reports a symbol as *referenced*
   and says nothing about whether its consumer's branch can execute.
-- **Two launch warnings, and they are almost certainly one cause.** `Geometry
-  action is cycling between duplicate values` and `FocusedValue update tried to
-  update multiple times per frame` both fire at launch, and **both vanish when
-  the collection destinations are switched to List** — measured 8 Aug 2026.
+- **Two launch warnings — resolved structurally 8 Aug 2026, confirmation
+  owed.** `Geometry action is cycling between duplicate values` fired at
+  launch in icons view and vanished in List; the two suspects were the icons
+  grids' two geometry actions. The two-build experiment this entry prescribed
+  was superseded by removing both suspects in one pass, each on its own
+  merits: the container-width action is **deleted with `IconGridWidthBox`**
+  (`.onMoveCommand` sits inside the `GeometryReader`'s scope, so the arrow
+  keys take `geometry.size.width` as a parameter — the mirror never needed to
+  exist), and the per-card frame transforms are **gated on an active rubber
+  band** (idle they return one constant, so launch wobble has no value stream
+  to cycle; the frames were only ever read mid-drag). The fifth correction on
+  this warning, and the first that removes observation rather than tuning
+  quantization — `IconGridSelection.stableFrame`'s doc carries all five.
 
-  That one step refuted the two candidates this entry carried for three days.
-  It read: *"Either `\.boardGetInfoRequest` minting a fresh non-`Equatable`
-  `Binding` per body pass while `.onAppear` forces a second pass, or two
-  restored board windows both writing `\.activeGame` in one frame"* — and the
-  discriminator it proposed was to relaunch with a single board window. Both
-  candidates are **Board-destination** mechanisms with no dependence on which
-  view mode a *collection* is in, so neither can produce a warning that stops
-  when the Library switches to List. The proposed step would have returned
-  "still warns" and taught nothing.
-
-  What survives: the app has exactly **two** geometry actions and both are in
-  the icons grids — the per-card `CGRect` through `IconGridSelection.stableFrame`
-  (old, and the subject of that warning's four previous corrections) and the
-  container `CGFloat` through `IconGridWidthBox.quantized` (new on 7 Aug, when
-  the column count stopped being a constant). The next step is to disable one,
-  relaunch, and disable the other — two builds, decisive.
-
-  **The focus warning is most likely the geometry cycle's shadow rather than a
-  second bug**: a cycling geometry action means layout runs repeatedly inside one
-  frame, and `.focusedSceneValue` is re-applied on every pass. Recorded as the
-  reading rather than the finding — it is an inference from one correlation, and
-  the two-build step above is what would confirm it. Of the four focused-scene
-  values now published, the two the View Options pass added are the only ones
-  carrying an `Equatable` payload, so they are the least able to cause this.
-
-  Still unscheduled: redundant work, not a correctness bug — both settle.
+  **Owed:** a launch in icons view with the console open — expected silent —
+  and one rubber-band sweep confirming selection still tracks the band (the
+  gate's first 4 pt select nothing, Finder's own feel; a band that never
+  selects means the transform gate did not re-arm on the drag's first
+  render, and the fallback is ungating the transform). Then re-observe the
+  `FocusedValue` warning: it was read as this cycle's shadow, and whether it
+  went with the cycle is the remaining open question of the pair.
 - **The chevron's gap rests on `EmptyView` not being laid out.** The one thing in
   D45′ written from reasoning rather than read off a compiler. It compiles either
   way, so ⌘U cannot answer it; the *Collapsible, No Actions* row in the **Actions

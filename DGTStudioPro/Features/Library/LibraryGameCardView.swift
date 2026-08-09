@@ -5,7 +5,7 @@ internal struct LibraryGameCardView: View {
     
     // MARK: Stored Properties
     let game: PGN
-
+    
     /// The document sheet's width.
     ///
     /// **A parameter rather than an environment read**, so the gallery
@@ -21,7 +21,7 @@ internal struct LibraryGameCardView: View {
     /// exists to prevent. The value is the pre-slider width, so a host that
     /// passes nothing renders exactly as before.
     var glyphWidth: CGFloat = 60
-
+    
     /// The analysis badge's subject (D72′): green check analyzed, red x not,
     /// spinning gear while the engine has it — bottom-trailing on the sheet,
     /// every host, so the icons grid and the gallery filmstrip cannot answer
@@ -35,7 +35,7 @@ internal struct LibraryGameCardView: View {
     /// card render costs no blob decode (the D70′ discipline, held at the
     /// leaf).
     var analysisState: AnalysisGlyph.State = .unanalyzed
-
+    
     let isSelected: Bool
     let onSelect: () -> Void
     let onOpen: () -> Void
@@ -118,7 +118,7 @@ internal struct LibraryGameCardView: View {
             // reverse — see the gallery strip's height.
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.leading, 6)
-
+            
             // `.black`, and it is not a theme colour that forgot to be
             // semantic. The sheet above is explicitly `.white`, so this is ink
             // on that paper — the pair has to be stated together or a Light
@@ -162,7 +162,7 @@ internal struct LibraryGameCardView: View {
         // overlaps the paper's corner rather than floating in the gutter.
         .overlay(alignment: .bottomTrailing) {
             AnalysisStatusBadge(state: analysisState)
-                .padding(10)
+                .padding(9)
         }
     }
     

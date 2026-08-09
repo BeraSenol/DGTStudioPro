@@ -75,6 +75,19 @@ internal enum IconGridSelection {
     /// to .25/.75, where layout never lands — cells rest on integers at 1×
     /// and halves at 2× — so wobble collapses to one value at every real
     /// anchor. A rubber band is indifferent to half a point either way.
+    ///
+    /// **The fifth correction (8 Aug 2026) sits at the call sites, not
+    /// here, and it is a different kind: the observation is gated rather
+    /// than the values tamed.** The warning survived four rounds of tuning
+    /// because *any* fixed quantization grid has boundaries, and a launch
+    /// whose layout genuinely alternates between two solutions — window
+    /// restoration and split-view negotiation trading a fractional point —
+    /// can straddle one. Both grids' transforms now return `.null` unless a
+    /// rubber band is actively sweeping, which is the only time anything
+    /// reads the frames: idle, the transform is a constant, and a constant
+    /// cannot cycle whatever layout does underneath it. This function is
+    /// unchanged and still does its job for the frames that are reported —
+    /// the ones a live drag tests.
     internal static func stableFrame(_ rect: CGRect) -> CGRect {
         func quantized(_ value: CGFloat) -> CGFloat {
             (value * 2).rounded() / 2
@@ -104,36 +117,16 @@ internal final class IconGridFrameStore<ID: Hashable> {
     internal init() {}
 }
 
-/// The grid's measured container width, on the same terms and for the same
-/// reason (7 Aug 2026).
-///
-/// **This shipped as `@State` first and reproduced the warning on the first
-/// launch**, four times over — which is the fifth instance of a lesson this
-/// file already carried in writing, one declaration above. The shape is
-/// identical: a geometry action wrote observed state, the write invalidated
-/// the view, the invalidation re-entered layout, and layout produced another
-/// geometry report. Nothing in `body` reads this — the layout reads the
-/// `GeometryReader`'s proxy directly, and only `move(_:proxy:)` reads the
-/// stored width, from a key-press closure long after layout has settled. So
-/// the write must be invisible to the render pass, which is what a box is.
-///
-/// Kept separate from `IconGridFrameStore` rather than folded in as another
-/// property: the frames are per-card and keyed, this is one number for the
-/// container, and a store holding both would tempt a future reader into
-/// clearing them together.
-internal final class IconGridWidthBox {
-    internal var width: CGFloat = 0
-    internal init() {}
-
-    /// Half-point quantization, the `stableFrame` rule applied to a scalar.
-    ///
-    /// The box write cannot cycle, but `onGeometryChange` compares its
-    /// *transform's* output by exact equality and warns when consecutive
-    /// passes alternate between values it has seen. A flexible-column grid
-    /// divides non-integer widths freely, so the raw width wobbles sub-point;
-    /// rounding to the half-point grid puts the boundaries at .25/.75, where
-    /// layout never rests. A column count is indifferent to half a point.
-    internal static func quantized(_ width: CGFloat) -> CGFloat {
-        (width * 2).rounded() / 2
-    }
-}
+// `IconGridWidthBox` stood here from 7 Aug 2026 to 8 Aug 2026 — a reference
+// box mirroring each grid's container width out of its `GeometryReader` for
+// the arrow keys, fed by a second quantized geometry action per grid. Deleted
+// whole, because the mirror never needed to exist: `.onMoveCommand` sits
+// *inside* the `GeometryReader`'s scope in both grids, so `move(_:width:proxy:)`
+// takes `geometry.size.width` as a parameter, captured at key-press time when
+// layout has long settled. What its deletion also removed: one of the two
+// geometry actions suspected of the launch-time "cycling between duplicate
+// values" warning (the other is gated at the card transforms — see
+// `stableFrame`'s fifth-correction note). Its doc carried a real lesson —
+// this shipped as `@State` first and reproduced the warning on the first
+// launch, the observer-as-oscillator shape `IconGridFrameStore` records —
+// and that lesson survives on the store above, which is the living instance.

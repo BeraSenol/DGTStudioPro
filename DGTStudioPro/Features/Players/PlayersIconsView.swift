@@ -36,24 +36,16 @@ internal struct PlayersIconsView: View {
 
     @Environment(CollectionViewOptions.self) private var options
 
-    /// The container width, mirrored out of the `GeometryReader` so the arrow
-    /// keys can ask the same question the layout asked.
-    ///
-    /// **One number, two readers, and they must not fork.** The grid packs
-    /// `options.columnCount(containerWidth:)` columns and `move(_:proxy:)`
-    /// steps by it — that is exactly why the grid is not `.adaptive`, which
-    /// never reports the count it chose. Layout reads the proxy directly (so
-    /// it is never a frame behind); `move` reads the box, which has settled
-    /// long before a key press. Both call the one function.
-    ///
-    /// A **box**, not `@State`: see `IconGridWidthBox`, which carries the
-    /// account of why the first version of this line brought the "Geometry
-    /// action is cycling between duplicate values" warning back.
-    @State private var containerWidth = IconGridWidthBox()
+    // The `IconGridWidthBox` mirror stood here from 7 Aug 2026 to 8 Aug 2026
+    // — deleted with the type for the Library grid's reason: `.onMoveCommand`
+    // is inside the `GeometryReader`'s scope, so `move` takes the width as a
+    // parameter and the mirror never needed to exist.
 
     /// Realized cards' frames in `gridSpace` — a box, not observed state
     /// (see `IconGridFrameStore`); the sweep re-checks membership against
-    /// `players` rather than trusting the keys.
+    /// `players` rather than trusting the keys. **Populated only while a band
+    /// is sweeping** (8 Aug 2026) — the Library grid's transform gate, and
+    /// its comment carries the account.
     @State private var cardFrames = IconGridFrameStore<PlayerStats.ID>()
     @State private var rubberBand: CGRect?
     /// The card the last selection gesture touched — where an arrow steps
@@ -63,7 +55,9 @@ internal struct PlayersIconsView: View {
 
     // MARK: Body
     var body: some View {
-        GeometryReader { geometry in
+        // One Bool for all the transform closures — the Library grid's gate.
+        let isSweeping = rubberBand != nil
+        return GeometryReader { geometry in
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVGrid(
@@ -83,15 +77,16 @@ internal struct PlayersIconsView: View {
                             )
                             .id(player.id)
                             .onGeometryChange(for: CGRect.self) { geometry in
-                                // Half-point quantization — the warning's
-                                // fourth correction, shared with the Library
-                                // grid; `.integral`'s floor/ceil flipped whole
-                                // points at the integer anchors layout rests
-                                // on. The account lives on
-                                // `IconGridSelection.stableFrame`.
-                                IconGridSelection.stableFrame(
+                                // Gated on the sweep — the fifth correction on
+                                // the cycling warning, shared with the Library
+                                // grid, whose transform comment carries the
+                                // whole account: idle returns one constant, so
+                                // launch wobble has no value stream to cycle.
+                                isSweeping
+                                ? IconGridSelection.stableFrame(
                                     geometry.frame(in: .named(Self.gridSpace))
                                 )
+                                : .null
                             } action: { frame in
                                 // A box write: free, and invisible to the
                                 // render pass — no invalidation, no loop.
@@ -136,16 +131,11 @@ internal struct PlayersIconsView: View {
                 .focusable()
                 .focusEffectDisabled()
                 .focused($isFocused)
+                // The Library grid's arrangement: the proxy's own width,
+                // captured at key-press time. The width box and its geometry
+                // action stood here until 8 Aug 2026.
                 .onMoveCommand { direction in
-                    move(direction, proxy: proxy)
-                }
-                // A box write from a geometry action — free, and invisible to
-                // the render pass. The transform quantizes so `onGeometryChange`'s
-                // own duplicate-value comparison has a stable input.
-                .onGeometryChange(for: CGFloat.self) { proxy in
-                    IconGridWidthBox.quantized(proxy.size.width)
-                } action: { width in
-                    containerWidth.width = width
+                    move(direction, width: geometry.size.width, proxy: proxy)
                 }
             }
         }
@@ -188,14 +178,14 @@ internal struct PlayersIconsView: View {
             }
     }
 
-    private func move(_ direction: MoveCommandDirection, proxy: ScrollViewProxy) {
+    private func move(_ direction: MoveCommandDirection, width: CGFloat, proxy: ScrollViewProxy) {
         guard !players.isEmpty else { return }
         let target: Int
         if let anchorKey, let current = players.firstIndex(where: { $0.id == anchorKey }) {
             target = IconGridSelection.destination(
                 from: current,
                 direction: direction,
-                columnCount: options.columnCount(containerWidth: containerWidth.width),
+                columnCount: options.columnCount(containerWidth: width),
                 count: players.count
             )
         } else {
