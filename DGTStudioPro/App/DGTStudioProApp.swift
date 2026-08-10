@@ -149,53 +149,55 @@ internal struct DGTStudioProApp: App {
         // type makes existing calls unspecified.
         WindowGroup("Evaluation", for: EvaluationGraphRequest.self) { $request in
             EvaluationGraphWindow(request: request)
-                .fullScreenAuxiliary()
         }
         .modelContainer(sharedContainer)
         .defaultSize(width: 720, height: 420)
         // Floating (Bera's call): the graph hovers in front — a popover dismisses on the first board click.
         .windowLevel(.floating)
+        // D80′ — companions JOIN a full-screen space rather than claiming one. Scene-level, so the
+        // role is set BEFORE placement; the AppKit configurator wrote it after, and never could work.
+        .windowManagerRole(.associated)
 
         // D73′ — analysis as data, per-ply table. Fourth wrapper in the `openWindow(value:)` family.
         // Not floating, unlike the graph.
         WindowGroup("Analysis Data", for: AnalysisDataRequest.self) { $request in
             AnalysisDataWindow(request: request)
-                .fullScreenAuxiliary()
         }
         .modelContainer(sharedContainer)
         .defaultSize(width: 460, height: 520)
+        .windowManagerRole(.associated) // D80′
 
         // M10 Get Info — one group for all three subjects, so info windows tab with *each other*, never
         // behind a board. Not floating.
         WindowGroup("Info", for: GetInfoRequest.self) { $request in
             GetInfoWindow(request: request)
                 .environment(dgtSession)
-                .fullScreenAuxiliary()
         }
         .modelContainer(sharedContainer)
         .defaultSize(width: 460, height: 520)
+        .windowManagerRole(.associated) // D80′
 
         // The analysis queue's window — a `Window`, not a `WindowGroup`: exactly one queue, opened by
         // `openWindow(id:)`, so the wrapper-type trap is sidestepped rather than paid.
         Window("Analysis", id: AnalysisQueueStatusWindowView.sceneID) {
             AnalysisQueueStatusWindowView()
                 .environment(analysisQueue)
-                .fullScreenAuxiliary()
         }
         .modelContainer(sharedContainer)
         .defaultSize(width: 520, height: 560)
         .defaultLaunchBehavior(.suppressed)
+        .windowManagerRole(.associated) // D80′
 
         // View Options (⌘J) — a `Window` for the queue scene's reason: one panel, opened by id.
         Window("View Options", id: CollectionViewOptionsWindow.sceneID) {
             CollectionViewOptionsWindow()
                 .environment(viewOptions)
-                .fullScreenAuxiliary()
         }
         .defaultSize(width: 340, height: 300)
         .defaultLaunchBehavior(.suppressed)
         .windowResizability(.contentMinSize)
         .windowLevel(.floating)
+        .windowManagerRole(.associated) // D80′
 
         Settings {
             SettingsView()

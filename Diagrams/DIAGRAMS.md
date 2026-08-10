@@ -116,12 +116,14 @@ comm -23 <(grep -ohE "D[0-9]+′" Diagrams/*.mermaid | sort -u) \
          <(grep -ohE "D[0-9]+′" DECISIONS.md | sort -u)
 ```
 
-Expected output: **empty** — verified 9 August 2026, twice: after the
-re-authoring (49 cited) and again after the waste-audit fixes landed D74′–D78′
-into 02, 03 and 04 the same day. Current denominator: **54** distinct decisions
-cited (36 before the re-authoring; +12 drawn among D61′–D73′, +D52′, +the five
-minted with the fixes — the arithmetic closes, which is the point of stating
-the numbers).
+Expected output: **empty** — verified 9 August 2026, three times: after the
+re-authoring (49 cited), after the waste-audit fixes landed D74′–D78′ into 02,
+03 and 04, and after D79′'s red-ply highlight joined 04's rejection node; and
+a fourth time 10 August, after D80′ rewrote 04's AUX note (the companion
+windows' full-screen role moved from the AppKit configurator to the scene).
+Current denominator: **56** distinct decisions cited (36 before the
+re-authoring; +12 drawn among D61′–D73′, +D52′, +D74′–D80′ minted with their
+work — the arithmetic closes, which is the point of stating the numbers).
 
 Note the `′` (U+2032 PRIME). It is load-bearing: `D13` and `D13′` do not grep
 against each other, so a diagram set that drops the primes is one whose every

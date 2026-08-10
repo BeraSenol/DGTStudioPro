@@ -32,7 +32,7 @@ flowchart TD
     W4 --> W4A["NOT floating either - a table is CONSULTED,<br/>not glanced. Its own group, so two games' data<br/>windows tab with each other and never with<br/>the boards"]
 
     W1A -.-> AUX
-    AUX["Every companion scene is marked<br/>fullScreenAuxiliary: it JOINS a full-screen<br/>space rather than claiming one. AppKit, per<br/>scene, MUTATING the behaviour rather than<br/>assigning it - assignment would silently drop<br/>every flag the framework set, and a window that<br/>leaves Mission Control reads as an OS bug.<br/>The main group keeps fullScreenPrimary"]
+    AUX["Every companion scene carries<br/>windowManagerRole associated - D80′: it JOINS a<br/>full-screen space rather than claiming one.<br/>SCENE-level, so the role is set BEFORE the<br/>window is placed - the deleted AppKit<br/>configurator wrote the behaviour after, and a<br/>window already given its own Space is not<br/>re-homed by a later write.<br/>The main group keeps the primary role"]
 
     subgraph GRAPH["D46′ - the enlarged evaluation graph"]
         W2A --> G1{"Game resolvable, and hasScoredPly?<br/>the ONE spelling D67′ - an all-nil<br/>array is the empty state, not a<br/>flat 50/50 curve"}
