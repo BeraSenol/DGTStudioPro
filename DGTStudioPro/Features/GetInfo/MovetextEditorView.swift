@@ -14,21 +14,38 @@ internal struct MovetextEditorView: View {
     internal let onCommit: ([String]) -> Void
     
     // MARK: View State
-    
-    @State private var text: String
-    
+
+    /// `AttributedString` since D79′ — the macOS 26 `TextEditor` binding — so the offending ply
+    /// can render red *in the field*. Characters are the data; colour is derived, never typed.
+    @State private var text: AttributedString
+
     /// The seed, kept so **Revert** can restore it without re-reading `pgn` — a live `@Model` holds
     /// the *new* moves after a commit, and Revert must mean "what the tab opened with or last saved".
     @State private var seed: String
-    
+
+    /// The last character content the highlight pass styled — the guard that keeps the
+    /// attribute-only write in `restyle()` from re-entering `onChange` forever.
+    @State private var styledPlain: String
+
+    /// One replay per text change, not one per pull (D78′'s box, at editor scale): the status
+    /// line, the Save gate and the highlight all read this validation for the same characters.
+    @State private var checkCache =
+        CollectionFoldCache<String, (tokens: [String], validation: Validation)>()
+
     // MARK: Initializer
-    
+
     internal init(pgn: PGN, onCommit: @escaping ([String]) -> Void) {
         self.pgn = pgn
         self.onCommit = onCommit
         let seeded = Self.scoreSheet(pgn.moves)
-        _text = State(initialValue: seeded)
+        // Styled at init too: an imported game whose stored moves never replayed (diagram 02's
+        // import-never-replays note) shows its offending ply red on OPEN, before any edit.
+        _text = State(initialValue: Self.highlighted(
+            AttributedString(seeded),
+            validation: Self.check(seeded, claimedResult: pgn.result).validation
+        ))
         _seed = State(initialValue: seeded)
+        _styledPlain = State(initialValue: seeded)
     }
     
     // MARK: Score sheet
@@ -66,54 +83,95 @@ internal struct MovetextEditorView: View {
     }
     
     // MARK: Derived
-    
+
     private typealias Validation = Result<MovetextEdit.Accepted, MovetextEdit.Rejection>
-    
+
     /// Tokenization and validation as one step: `tokenize` refuses spliced input, so tokens and
     /// verdict travel together. On a splice the tokens are empty — safe, Save gates on `.success`.
-    private func checked() -> (tokens: [String], validation: Validation) {
+    private nonisolated static func check(
+        _ plain: String,
+        claimedResult: GameResult
+    ) -> (tokens: [String], validation: Validation) {
         do {
-            let tokens = try MovetextEdit.tokenize(text)
-            return (tokens, MovetextEdit.validate(tokens, claimedResult: pgn.result))
+            let tokens = try MovetextEdit.tokenize(plain)
+            return (tokens, MovetextEdit.validate(tokens, claimedResult: claimedResult))
         } catch {
             return ([], .failure(error))
         }
     }
-    
+
+    private func checked(_ plain: String) -> (tokens: [String], validation: Validation) {
+        checkCache.value(for: plain) {
+            Self.check(plain, claimedResult: pgn.result)
+        }
+    }
+
     private func isValid(_ validation: Validation) -> Bool {
         if case .success = validation { return true }
         return false
+    }
+
+    // MARK: Highlight (D79′)
+
+    /// Colours cleared, then the offending ply — and only it — painted red. Attribute-only: the
+    /// characters are never touched, so the caret stays put. Colour is the *pointer*; the words
+    /// stay in the status line, so the signal is never colour-alone.
+    private nonisolated static func highlighted(
+        _ text: AttributedString,
+        validation: Validation
+    ) -> AttributedString {
+        var styled = text
+        styled.foregroundColor = nil
+        guard case .failure(.illegalMove(let index, _, _)) = validation else { return styled }
+        let plain = String(styled.characters)
+        guard let range = MovetextEdit.characterRange(ofPly: index, in: plain) else { return styled }
+        let lower = styled.characters.index(styled.startIndex, offsetBy: range.lowerBound)
+        let upper = styled.characters.index(lower, offsetBy: range.count)
+        styled[lower..<upper].foregroundColor = .red
+        return styled
+    }
+
+    /// Re-derives the highlight after a character change. Typing at the edge of a red run briefly
+    /// inherits its colour — repainted here on the same change, so it never survives a frame the
+    /// reader can act on. The `styledPlain` guard swallows the attribute-only echo.
+    private func restyle() {
+        let plain = String(text.characters)
+        guard plain != styledPlain else { return }
+        styledPlain = plain
+        text = Self.highlighted(text, validation: checked(plain).validation)
     }
     
     // MARK: Body
     
     internal var body: some View {
-        // Validate once per render — as a computed property this was pulled twice per keystroke,
-        // replaying the whole game twice.
-        let check = checked()
-        
+        // One validation per character change (the cache), pulled once per render.
+        let plain = String(text.characters)
+        let check = checked(plain)
+
         VStack(spacing: 0) {
             statusLine(check.validation)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding([.horizontal, .top])
-            
+
             TextEditor(text: $text)
                 .font(.body.monospaced())
                 .frame(minHeight: 200)
                 .padding()
                 .accessibilityIdentifier(AccessibilityID.movetextEditorField)
-            
+                // Attribute-only writes re-enter here once; `restyle()`'s guard swallows the echo.
+                .onChange(of: text) { _, _ in restyle() }
+
             Divider()
-            
+
             HStack {
                 // **Revert, not Cancel** — a tab cannot close, so the button means "put the text back".
                 // Disabled state is producible (open the tab, touch nothing) — the D40′ check.
-                Button("Revert") { text = seed }
-                    .disabled(text == seed)
+                Button("Revert") { text = AttributedString(seed) }
+                    .disabled(plain == seed)
                     .accessibilityIdentifier(AccessibilityID.movetextEditorCancel)
-                
+
                 Spacer()
-                
+
                 // No `.keyboardShortcut(.defaultAction)`, deliberately: Return in a `TextEditor` is how you add
                 // a move, and a default-action Save would commit on the field's most ordinary keystroke.
                 Button("Save") {
@@ -121,12 +179,15 @@ internal struct MovetextEditorView: View {
                     // Re-render from the **accepted** moves — the canonical SAN the store persists — the one moment
                     // the editor can show exactly what landed (also re-aligns the score sheet).
                     if case .success(let accepted) = check.validation {
-                        text = Self.scoreSheet(accepted.moves)
+                        let sheet = Self.scoreSheet(accepted.moves)
+                        text = AttributedString(sheet)
+                        seed = sheet
+                    } else {
+                        seed = plain
                     }
-                    seed = text
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(!isValid(check.validation) || text == seed)
+                .disabled(!isValid(check.validation) || plain == seed)
                 .accessibilityIdentifier(AccessibilityID.movetextEditorSave)
             }
             .padding()
@@ -204,6 +265,17 @@ internal struct MovetextEditorView: View {
 #Preview("Result Mismatch") {
     MovetextEditorView(
         pgn: PGN(white: "Alice", black: "Bob", moves: ["f3", "e5", "g4", "Qh4#"], result: .whiteWins),
+        onCommit: { _ in }
+    )
+    .frame(width: 460, height: 420)
+}
+
+/// D79′'s witness, and the game-98 shape: stored moves that never replayed show their offending
+/// ply red **on open**. The defect this guards is visual — the wrong token painted, or the paint
+/// surviving a fix — which only a canvas can see.
+#Preview("Illegal Ply") {
+    MovetextEditorView(
+        pgn: PGN(white: "Alice", black: "Bob", moves: ["e4", "e5", "Qf4+"], result: .whiteWins),
         onCommit: { _ in }
     )
     .frame(width: 460, height: 420)

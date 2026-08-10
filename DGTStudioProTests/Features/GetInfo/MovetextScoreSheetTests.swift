@@ -99,4 +99,40 @@ struct MovetextScoreSheetTests {
         let nonsense = "99.  e4   e5\n 7.  Nf3  Nc6"
         #expect(try MovetextEdit.tokenize(nonsense) == ["e4", "e5", "Nf3", "Nc6"])
     }
+
+    // MARK: Ply ranges (D79′)
+
+    /// The range finder walks by `tokenize`'s own rules, and this is the pin
+    /// that keeps them agreeing: over the real rendered sheet — numbers,
+    /// gutters, padding, newlines — the substring at every ply's range is
+    /// exactly that ply's SAN.
+    @Test func everyPlyRangeExtractsItsOwnSANFromTheSheet() throws {
+        let moves = ["e4", "e5", "Nf3", "Nc6", "Qa1xd4#", "Kd7", "c4"]
+        let sheet = MovetextEditorView.scoreSheet(moves)
+        let characters = Array(sheet)
+
+        for (ply, san) in moves.enumerated() {
+            let range = try #require(MovetextEdit.characterRange(ofPly: ply, in: sheet))
+            #expect(String(characters[range.lowerBound..<range.upperBound]) == san)
+        }
+        #expect(MovetextEdit.characterRange(ofPly: moves.count, in: sheet) == nil)
+        #expect(MovetextEdit.characterRange(ofPly: -1, in: sheet) == nil)
+    }
+
+    /// A glued move number is prefix, not move: the range covers only the SAN.
+    @Test func gluedMoveNumbersStayOutsideTheRange() throws {
+        let text = "1.e4 e5"
+        let range = try #require(MovetextEdit.characterRange(ofPly: 0, in: text))
+        #expect(range == 2..<4)
+        #expect(Array(text)[range.lowerBound..<range.upperBound] == ["e", "4"])
+    }
+
+    /// A trailing result token is not a ply — asking for the index past the
+    /// last move answers nil rather than pointing at "1-0".
+    @Test func aTrailingResultTokenIsNotAPly() throws {
+        let text = "e4 e5 1-0"
+        let range = try #require(MovetextEdit.characterRange(ofPly: 1, in: text))
+        #expect(Array(text)[range.lowerBound..<range.upperBound] == ["e", "5"])
+        #expect(MovetextEdit.characterRange(ofPly: 2, in: text) == nil)
+    }
 }

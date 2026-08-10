@@ -105,7 +105,7 @@ extension MovetextEdit {
     }
     
     private static let resultTokens: Set<String> = Set(GameResult.allCases.map(\.rawValue))
-    
+
     /// Drops a leading `<digits><dots>` run. Only when a dot follows the digits — real SAN is never
     /// digit-led.
     private static func strippingMoveNumberPrefix(_ token: Substring) -> String {
@@ -114,5 +114,39 @@ extension MovetextEdit {
             return String(token)
         }
         return String(afterDigits.drop(while: { $0 == "." }))
+    }
+
+    /// The character range of ply `index`'s SAN inside `movetext` — the token `tokenize` would
+    /// emit at that position, minus any move-number prefix — or nil when no such ply exists.
+    /// Character offsets, so a display layer can mark the offending move without re-tokenizing
+    /// (D79′). Walks by `tokenize`'s own rules — same splitter, same prefix stripper, same
+    /// result-token skip — so the two cannot disagree about which token is ply N.
+    internal static func characterRange(ofPly index: Int, in movetext: String) -> Range<Int>? {
+        guard index >= 0 else { return nil }
+        var seen = 0
+
+        func match(_ token: String, endingAt end: Int) -> Range<Int>? {
+            let stripped = strippingMoveNumberPrefix(Substring(token))
+            guard !stripped.isEmpty, !resultTokens.contains(stripped) else { return nil }
+            defer { seen += 1 }
+            guard seen == index else { return nil }
+            return (end - stripped.count)..<end
+        }
+
+        var position = 0
+        var token = ""
+        for character in movetext {
+            if character.isWhitespace {
+                if !token.isEmpty {
+                    if let range = match(token, endingAt: position) { return range }
+                    token = ""
+                }
+            } else {
+                token.append(character)
+            }
+            position += 1
+        }
+        if !token.isEmpty, let range = match(token, endingAt: position) { return range }
+        return nil
     }
 }
