@@ -223,6 +223,18 @@ worth having**, and it is invisible to any single run.
 | 4 | **A Players browse**, then a rename | **Time Profiler**; **SwiftUI**; **Data Persistence** | `Glicko1.histories` building every player's full sample array per question — now on the *merged* body, so it runs on the destination you actually use; the destination folding once per body; `backfillPlayerLinks` again at its `onAppear`s; `retag`'s per-game re-resolve + MD5, O(linked games), **inside a modal save**; `collectOrphanedPlayers`' fetch-all-and-scan riding the same transaction (D60′) | Players in the fold; body evaluations per navigation; rename wall-clock against the linked-game count — this is the one that blocks a sheet, so it is the one a user feels |
 | 5 | **Type in the Library search field**, with a tag filter active and a non-default column sort | **SwiftUI** first, **Time Profiler** second | `CollectionSearch` folding every row's fields per keystroke; `LibraryFilter.matches` building a `GameRecord` per game per body pass; `AnalysisGlyph.isAnalyzed` scanning a game's full `evaluations` per row per body pass; `filteredGames`' unconditional `sorted(using:)`, whose **ECO** comparator rehydrates an `ECOOpening` per comparison per render | Keystrokes; body evaluations per keystroke; time per keystroke at 1× and 2× Library. **Sort by ECO and by `#` and compare** — same rows, one comparator rehydrating and one comparing `Int?` |
 
+*Corrected 10 August 2026, before the pass ever ran.* Rows 3–5 name costs that
+have since been retired or gated: `backfillPlayerLinks` runs behind the
+converged stamp (D75′), so its fetch-all is once per install rather than per
+`onAppear`; `collectOrphanedPlayers` at the editing doors scopes to the rows
+the edit displaced (D76′), leaving only the backfill arm global; and the
+destination folds, the tag-rule fold, the glyph scan (the 7 Aug memo) and
+narrowing/sort (D78′) all sit behind memo keys, so "per keystroke" and "per
+render" in those rows now mean *per input change*. The rows stay as written —
+the pass should confirm the memos hold under Instruments, because a key that
+misses every render profiles exactly like no key — but a reader taking them as
+live costs would measure work that no longer runs.
+
 **What the pass is allowed to change: nothing.** It produces numbers, and the
 numbers go into the instructions' known-costs list — each entry either gets a
 figure or is struck as negligible. Fixes are a separate decision with a
@@ -558,7 +570,10 @@ number lives in `DECISIONS.md`, which owns it since M14.
   body, `LibraryFilter.matches` building a `GameRecord` per game per body pass
   on the most invalidation-prone surface in the app, and the ECO comparator
   rehydrating an `ECOOpening` per comparison per render since the column sort
-  landed — but the run is what decides whether any of them is real.
+  landed — but the run is what decides whether any of them is real. *(All
+  three have since been memoized — the folds on 7 Aug, the sort with D78′ —
+  so the run's question about them changes from "how bad" to "does the memo
+  hold".)*
 
 **Gate.** ⌘U green, reported by Bera, on the whole of it. **This gate said
 something different when it was written**, and the change is instructive: it
@@ -1035,6 +1050,71 @@ decided.
 ---
 
 ## Landed
+
+### The 9–10 August close — game 98, the red ply, and the companion windows *(recorded 10 August 2026)*
+
+Uncommitted at this recording, above `2db96e8`. **Game 98's Move Text error
+adjudicated real, not a false positive**: the file writes `Qf4+` at ply 98
+where the position holds a white pawn on f4 (standing since `30. gxf4`), so
+the unique legal queen move to f4 is the *capture* and strict x-iff-capture
+SAN refuses — the DGT exporter dropped the `x`. Import never replays (the
+parser checks shape only, which is why the game sat quiet until Get Info's
+validator read it — diagram 02 now carries the import-never-replays note),
+and the definitive replay ran outside the app against the uploaded file:
+plies 1–97 clean, and with the one token fixed the rest replays to
+`52… Qf2#`. The remedy is a one-token edit in the Move Text tab, with the
+recorded cost that the hash moves and the on-disk file stops deduping against
+its own row.
+
+**D79′** followed by request: the editor's binding is `AttributedString` (the
+macOS 26 `TextEditor` overload — shipping, not the 2027 beta line) and the
+offending ply renders red on open and after every change. The range comes from
+`MovetextEdit.characterRange(ofPly:in:)` — the tokenizer's own walk, so the
+highlight and the validator cannot drift — and one validation per change
+feeds the status line, the Save gate and the paint through the fold cache.
+
+**D80′** closed the sittings, by defect report: with the main window full
+screen, the evaluation graph and the data window opened as their **own**
+full-screen Spaces. The AppKit configurator wrote `collectionBehavior` in
+`viewDidMoveToWindow` — after the window's Space was already decided — so it
+was structurally unable to affect first placement, its own reserved
+`updateNSView` remedy included; and its "SwiftUI cannot reach the flag"
+premise was false one level up. All five companion scenes now carry
+`.windowManagerRole(.associated)` (scene-level, applied before placement);
+`FullScreenAuxiliary` and its four-test suite are deleted, and the
+declaration-scan expected set shrinks by its two representable witnesses.
+
+**Gate evidence: ⌘U reported green by Bera, 10 August, on the whole of it.**
+The full-screen behaviour itself is manual-check territory and owed — the
+9–10 Aug list in PROJECT-INSTRUCTIONS.md carries it.
+
+### The 9 August sitting — comments cut to the why, the waste audit applied, the diagrams re-authored *(recorded 10 August 2026)*
+
+Three commits, one day, all by request. **`bc92c65`**: the comment pass —
+~19,000 comment lines to ~7,000, essays replaced by one-liners citing their
+D-anchor, verified by a byte-identical code projection across all 249 files
+before anything else moved. The three exemption classes (language rules,
+rejected local implementations, disposition records) survive whole and are
+now written into Working agreements as the new-comment guidance.
+
+**`4d81150`**: the five ranked fixes out of **`WASTE-AUDIT-2026-08-09.md`**
+(repo root — the diagram-driven waste analysis, its "Applied the same day"
+header mapping each fix to its number), minted D74′–D78′ *with* the work:
+incremental analysis with the book skip and per-ply depths (D74′), the
+converged backfill stamp (D75′), collection scoped to the displaced rows
+(D76′), the swing column (D77′), and narrowing/sort joining the fold memo
+(D78′). ⌘U came back red twice on the way, both times usefully: two swing
+literals had been written against a base-10 sigmoid the code never had —
+`whiteWinProbability` is **base-e** at k=400, and the `Evaluation` doc now
+says so at the declaration — and two `isDeleted` assertions learned that
+SwiftData answers *false* once the containing save expunges the row, so both
+suites assert deletion by fetch instead.
+
+**`2db96e8`**: the five activity diagrams re-authored whole at `5f82de7` plus
+the working tree — D61′–D78′ drawn or triaged, the checker green at
+parse 5/5 / render 5/5 / structural 0 / placement 0, every citation resolving
+against `DECISIONS.md`, and `Diagrams/DIAGRAMS.md` carrying provenance,
+denominator and the exclusions table.
 
 ### The 8 August sitting — release audit, per-game saves, badges everywhere, one counter, a wider gallery *(recorded 8 August 2026)*
 

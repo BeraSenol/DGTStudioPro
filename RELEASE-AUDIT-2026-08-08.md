@@ -148,7 +148,11 @@ sitting or queued above.
   find: its `makeNSView`/`updateNSView` witnesses joined the dead-name scan's
   false positives on 7 Aug and the grep's expected-output note still said
   two names — updated this sitting (a check's false positives are part of
-  the check).
+  the check). *(Postscript 10 Aug, D80′: "Clean" was the wrong verdict. The
+  why was sound and the moment was not — the configurator wrote the behaviour
+  after the window's Space was decided, so it never worked, and the audit read
+  the well-argued comment as evidence the mechanism had been exercised. The
+  scene-level role replaced it whole; the file and its suite are deleted.)*
 
 ## Engine/ (12)
 

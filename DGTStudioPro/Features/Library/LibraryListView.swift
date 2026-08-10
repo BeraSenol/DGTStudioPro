@@ -84,7 +84,7 @@ internal struct LibraryListView: View {
             .customizationID("result")
             // Code only (the family truncates at column width; the inspector has all three rows). Nothing
             // rather than an em dash — a column of dashes is noise. Read and sorted through `opening`,
-            // never `ecoCode` — rehydrates per render, censused.
+            // never `ecoCode` — rehydrates per sort recompute (memoized since D78′), censused.
             TableColumn("ECO", sortUsing: KeyPathComparator(\PGN.opening?.code)) { game in
                 Text(game.opening?.code ?? "").foregroundStyle(.secondary)
             }

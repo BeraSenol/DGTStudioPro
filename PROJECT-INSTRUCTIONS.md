@@ -51,19 +51,22 @@ six months" is the test.
 
 ## Where things stand
 
-Tree: **`e61ceb9`** plus the 8 August release-audit sitting's uncommitted work
-(D71′–D73′, the shared batch counter, the gallery growth, the renamed and
-README-embedded screenshots, and `RELEASE-AUDIT-2026-08-08.md` — the sitting's
-ROADMAP entry carries the list).
+Tree: **`2db96e8`** plus the 9–10 August close's uncommitted work: the red-ply
+highlight (D79′) with the editor rework and its pins, the game-98 diagram
+corrections, the companion-window fix (D80′) with its two file deletions, and
+two visual tweaks of Bera's (the monogram's fill, the preview's empty header).
+The committed run beneath it is the comment reduction (`bc92c65`), the
+waste-audit fixes D74′–D78′ (`4d81150`) and the diagrams re-authoring
+(`2db96e8`) — each sitting's ROADMAP entry carries its list.
 
 | | |
 |---|---|
-| Sources on disk | **249** — 149 app, 100 unit-test, 0 UITest |
-| Tracked (`git ls-files '*.swift'`) | **247** |
+| Sources on disk | **252** — 149 app, 103 unit-test, 0 UITest |
+| Tracked (`git ls-files '*.swift'`) | **254** |
 | Accessibility registry | **156** |
 
-The two source counts disagree by the sitting's two new files — see the
-untracked note below. All three are dated snapshots; the registry count
+The two source counts disagree by the two files D80′ deleted from disk with
+the deletions not yet staged. All three are dated snapshots; the registry count
 lives in its grep (D42′) and the source counts in `find`/`git ls-files`,
 because a number in prose decays and a number in a command cannot.
 
@@ -74,22 +77,24 @@ unchecked-`Sendable` or the unsafe-`nonisolated` opt-out anywhere in the app
 target. No TODO/FIXME/HACK markers, no commented-out code, no `#if DEBUG`
 regions.
 
-**⌘U:** green as reported by Bera on 8 August 2026 — **1108 tests, 101 suites**,
-against `275f037`, which is the whole View Options and performance work plus the
-review pass that followed it. Never claimed — ⌘U runs locally and Bera reports.
+**⌘U:** green as reported by Bera on 10 August 2026, on the tree carrying
+D74′–D80′ — counts not reported that run. The last counted run (8 August,
+against `275f037`) was **1108 tests, 101 suites**; the tree since adds four
+suites (the analysis plan, the heal gate, scoped collection, the display keys)
+and D80′ deleted one with its type, so a run reporting around 104 suites is
+the expected denominator. Never claimed — ⌘U runs locally and Bera reports.
 
 *The count is a dated snapshot and will decay; it is here because the
 denominator is the useful half — a run that reports far fewer suites than this
 is a run that skipped something, which is the failure a bare "green" cannot
 show.*
 
-**Untracked files a tracked file references will not build.** **Two are in
-that state at this recording** — `AnalysisDataWindow.swift`, referenced by
-`DGTStudioProApp` and `LibraryInspectorView`, and its suite
-`AnalysisDataRowTests.swift` — the D73′ files, awaiting staging alongside the
-sitting's document changes. The hazard has been the single most-repeated
-finding in this document's life: `git status` has caught it every time and the
-prose has never once prevented it. (An earlier version of this paragraph named
+**Untracked files a tracked file references will not build.** **None are in
+that state at this recording** — the D73′ pair that stood here was committed
+with its sitting, and every 9–10 August file landed tracked or sits as a
+modification. The hazard has been the single most-repeated finding in this
+document's life: `git status` has caught it every time and the prose has never
+once prevented it. (An earlier version of this paragraph named
 five such files, and before that miscounted them as two — the fourth species,
 inside the sentence warning about it. The check, not the count:)
 
@@ -134,7 +139,15 @@ both progress surfaces, the Players gallery preview at eight facts plus the
 rating trend, and the Analysis Data window — per-ply move / evaluation /
 win % behind the button beside the magnifier, superseding Get Info's removed
 Analysis section, with the queue window's Depth fact pinned to the configured
-target (D73′).
+target (D73′). Analysis is incremental since D74′ — the opening book is never
+searched, every evaluation carries its depth, an already-satisfied game never
+starts the engine, and raising the target deepens only what needs it. The
+player backfills retire behind a converged stamp (D75′), orphan collection at
+the editing doors scopes to the rows the edit displaced (D76′), the Analysis
+Data window carries the per-ply swing (D77′), narrowing and sort join the
+collection fold memo (D78′), the movetext editor paints the offending ply red
+in the field (D79′), and every companion window joins a full-screen space
+rather than claiming its own (D80′).
 
 ## Decisions
 
@@ -214,13 +227,17 @@ review), which is why the refinement milestones start at M12.
   classification columns are deliberately outside it; `PGN.name` too.
 - **Player links are store-owned (D9′).** `resolvePlayer(named:)` is the single
   creation door; both doors link on insert; `backfillPlayerLinks()` heals
-  pre-schema rows. `applyEdit` re-resolves unconditionally;
-  `applyMovetextEdit` deliberately does not.
+  pre-schema rows — behind a converged stamp since D75′, which Erase Library
+  clears. `applyEdit` re-resolves unconditionally; `applyMovetextEdit`
+  deliberately does not.
 - **Stored seat tags change through one door (D37′).** `PGNStore.retag(_:to:)`,
   with a pre-flight that refuses before writing (D39′) and a rehash riding the
   rewrite.
 - **"Orphaned" has one spelling (D40′)**, `PGNStore.isOrphaned(_:)` — and since
   D60′ orphans are collected automatically by every door that can strand one.
+  The editing doors ask it only of the rows the edit displaced (D76′); the
+  backfill arm stays global, because a backlog healer's candidates *are*
+  everyone.
 - **An orphaned player is unreachable through selection, by construction.** The
   collection destinations render folds over `GameRecord`s, whose sides come from
   resolved links. Anything gated on the *selected* player having no games is dead
@@ -287,6 +304,22 @@ review), which is why the refinement milestones start at M12.
   once per render; every badge and the list's Analysis column read membership
   plus the ambient `analysisRunningGameID`. A leaf asking a `PGN` directly is
   the per-row blob decode D70′ exists to prevent.
+- **Narrowing and sort live inside the fold memo (D78′)**, one cache per
+  destination keyed on every input the stage reads — and a memo key's only
+  defence is field-list completeness, which is a suite
+  (`DestinationDisplayKeyTests`: every input moved singly must move the key).
+  The action-time contract survives: `gamesInDisplayOrder` re-reads the cache,
+  which recomputes iff an input moved.
+- **Analysis is planned before the engine starts (D74′).** `AnalysisPlan` reads
+  stored evaluations, per-ply depths and the classified book prefix; only the
+  searchable set runs, a satisfied plan never spawns the process, and storage
+  resets only when the plan says so. The book is never searched — an opening
+  table's verdict outranks a depth-18 pass over its own rows.
+- **Companion scenes carry the associated window-manager role (D80′)** — scene
+  level, so the role precedes placement; a companion joins a full-screen space
+  and never claims one. The main group carries nothing and keeps the primary
+  role. A window-behaviour write that happens after placement is dead code
+  with a green build, which is what the deleted AppKit configurator was.
 
 ## Working agreements
 
@@ -385,12 +418,11 @@ find DGTStudioPro -name '*.swift' -exec sh -c 'sed "s|//.*||" "$1"' _ {} \; \
   | grep -oE '(func|var|let|struct|enum|final class|class|actor)[[:space:]]+[a-zA-Z_][a-zA-Z0-9_]*' \
   | awk '{print $NF}' | sort -u > decls
 awk 'NR==FNR { f[$2]=$1; next } { if (f[$1]==1) print $1 }' freq decls
-# Expected: DGTStudioProApp (@main), isOpen (kept by decision, M12.3), and
-# makeNSView / updateNSView (NSViewRepresentable witnesses in
-# FullScreenAuxiliary — the framework is their caller, which a token scan
-# cannot see; joined the expected set when that file landed 7 Aug and was
-# first noticed by the 8 Aug audit's run, which is this grep's own
-# false-positive rule arriving on schedule)
+# Expected: DGTStudioProApp (@main), isOpen (kept by decision, M12.3).
+# makeNSView / updateNSView left the set with FullScreenAuxiliary (D80′ — the
+# scene-level windowManagerRole replaced the app's one NSViewRepresentable),
+# so a representable witness reappearing here means someone reached for
+# AppKit again and the reason belongs in a D-entry.
 
 grep -rn '\.disabled(' --include='*.swift' DGTStudioPro   # every guard producible both ways
 grep -c  'static let\|static func' DGTStudioPro/App/AccessibilityID.swift
@@ -673,15 +705,15 @@ are in `git log`.
   two-element capture-offset array per pawn per call in `legalMoves()` — the one
   non-static offset table, mechanical to fix but it touches `Chess/` and so
   inherits the deep-perft gate; `retag`'s per-game re-resolve and rehash, O(linked
-  games) with an MD5 each, inside a modal save; `collectOrphanedPlayers` and
-  `backfillPlayerLinks` are fetch-all-and-scan by necessity (relationships cannot
-  go in a `#Predicate`); `UCIProtocol.parse` allocates ~3 arrays per info line;
-  `Position`'s `[Piece]` storage heap-allocates per `applying`; the New Game sheet
-  folds `games.map(\.gameRecord)` per seat edit; the Library inspector's PGN
-  section re-serializes per body pass while expanded (collapse-gated), and the
-  columns detail is a second such site, ungated; the Library's sort runs every
-  render — invisible for `#`, not for **ECO**, whose comparator rehydrates an
-  `ECOOpening` per comparison.
+  games) with an MD5 each, inside a modal save; `backfillPlayerLinks` is
+  fetch-all-and-scan by necessity (relationships cannot go in a `#Predicate`),
+  and `collectOrphanedPlayers`' global arm with it — though the editing doors
+  scope to the displaced rows since D76′, and the converged stamp (D75′) stops
+  the backfills re-running at all; `UCIProtocol.parse` allocates ~3 arrays per
+  info line; `Position`'s `[Piece]` storage heap-allocates per `applying`; the
+  New Game sheet folds `games.map(\.gameRecord)` per seat edit; the Library
+  inspector's PGN section re-serializes per body pass while expanded
+  (collapse-gated), and the columns detail is a second such site, ungated.
 
   *Corrected 7 Aug 2026:* the destination folds are **no longer** on this list.
   `Glicko1.histories` and `PlayerStats.index` per render, `LibraryFilter`'s
@@ -689,6 +721,11 @@ are in `git log`.
   scan were all memoized behind `CollectionFoldKey`. The remaining per-render cost
   in both destinations is the key build — two stored scalars per game, no blob
   decode.
+
+  *Corrected 9 Aug 2026:* the Library's per-render sort followed — narrowing
+  and sort sit inside the memo (D78′), so the ECO comparator's `ECOOpening`
+  rehydration runs per recompute rather than per render, and the tag-rule walk
+  with it.
 
 ## Manual checks
 
@@ -725,6 +762,7 @@ are in `git log`.
   Checkmate Type column after the backfill reclassifies an existing archive.
 - **The 7 Aug performance pass** — see its own list below.
 - **The 8 Aug sitting** — see its own list below.
+- **The 9–10 Aug sittings** — see their own list below.
 
 ### The performance pass (7 Aug 2026, boardless except the last)
 
@@ -803,6 +841,39 @@ changed except the speed".
   changes only when Settings does. Motion belongs to the progress bar,
   evaluation and speed beside it.
 
+### The 9–10 August sittings (boardless; engine for the first three)
+
+- **Incremental analysis (D74′).** Analyze an already-analyzed game again: it
+  finishes immediately and the engine never launches (Activity Monitor shows
+  no stockfish). Analyze a game with a gap — a skipped tail, a fresh import:
+  only the gap searches, and the queue's ply label reads "N plies to search"
+  with progress counting the searchable set.
+- **The book skip, visibly.** A freshly analyzed game's Data window reads em
+  dashes over its classified opening plies — unscored, never `0.0` — and the
+  first scored ply after the book carries **no swing** (D77′'s gap rule).
+- **Deepening.** Raise the target depth in Settings and re-analyze one game:
+  it searches again, because the stored depths sit below the new target — and
+  a second run at the same setting is the instant no-op above.
+- **The stamp (D75′).** `category == "players"` logs the heal once, then stays
+  silent across Library visits and relaunches. Settings ▸ Erase Library
+  re-arms it — the one gesture that must, because it deletes what convergence
+  was measured against.
+- **Scoped collection (D76′).** The D60′ standing checks verbatim — a
+  re-spelled seat vanishes from the menus, a rename onto an exact tag relinks
+  and collects — the doors now asking only about the rows the edit displaced.
+- **The swing column (D77′).** Signed percentage points per row, `+0` for a
+  flat step, bold at |Δ| ≥ 15 pp, and empty beside any em-dashed evaluation.
+- **The memo (D78′).** Type in both search fields, re-sort, then export a
+  multi-selection after the re-sort: numbering still follows *screen* order —
+  the memo must change speed and nothing else.
+- **The red ply (D79′).** Get Info game 98 ▸ Move Text: `Qf4+` reads red **on
+  open**, the status line naming it. Type the `x` — red clears, Save enables.
+  Typing at the edge of a red run must not spread the colour past the token.
+- **Companions over full screen (D80′).** Main window full screen: open the
+  graph, the data window, a Get Info, the queue window and ⌘J. Each appears
+  over the board — no Space switch, no companion claiming its own full
+  screen. This is the fix's whole witness; scene modifiers have no unit seam.
+
 ### Needs the board
 
 Launch auto-connect on/off; remembered-board-absent is a silent no-op; mid-game
@@ -840,10 +911,10 @@ the Analysis Data window (D73′).
 Editing White on Details moves *this game*; editing the field on the player tab
 rewrites **every** game that player appears in — same-looking field, blast radius
 of one versus forty, worth seeing once. Result refuses a value the final position
-disproves and accepts anything it cannot. Move Text: an illegal ply disables Save
-and names the first bad one; Revert restores the last *saved* text; Return
-inserts a newline rather than committing. After any edit, export and re-import —
-refused as a duplicate of itself.
+disproves and accepts anything it cannot. Move Text: an illegal ply disables Save,
+names the first bad one and paints it red in the field (D79′); Revert restores
+the last *saved* text; Return inserts a newline rather than committing. After any
+edit, export and re-import — refused as a duplicate of itself.
 
 **Batch analysis.** Queue 3+, drain count, skip mid-pass, delete waiting and
 running, Stop All exits the process, a forced failure persists a warning until
@@ -864,7 +935,8 @@ vertically centred, never on the bar, and the board must not resize as the score
 changes. Flip the board: the fill flips, the label does not. An unanalyzed game
 shows neither. The graph window opens once, does not tab with game windows,
 tracks the ply under the pointer, and blanks the read-out when the pointer
-leaves.
+leaves. Over a full-screen board it appears in place rather than switching
+Spaces, as does every companion (D80′).
 
 **Logging (D63′).** ⌘U's console should carry Swift Testing's output and
 **nothing from the app**. Then set `DGT_LOG=1` in the test scheme and confirm it
