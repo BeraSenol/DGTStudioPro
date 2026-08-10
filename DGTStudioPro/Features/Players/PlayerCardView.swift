@@ -17,11 +17,11 @@ internal struct PlayerMonogram: View {
     internal var body: some View {
         ZStack {
             Circle()
-                .fill(.tint.opacity(0.15))
+                .fill(.tertiary)
             Text(initials)
                 .font(.system(size: diameter * 0.4, weight: .semibold, design: .rounded))
                 .fontWeight(.medium)
-                .foregroundStyle(.tint)
+                .foregroundStyle(.primary)
         }
         .frame(width: diameter, height: diameter)
     }
@@ -129,17 +129,18 @@ internal enum RankMedal: String, CaseIterable, Identifiable, Sendable {
 /// because a second host wanting a *different colour* is the failure this type prevents.
 /// The outer inset stays with the caller: the card needs it, a table cell must not inherit it.
 internal struct RankBadge: View {
-    
+
     internal let rank: Int
-    
+
     internal var body: some View {
         let style = RankMedal.style(forRank: rank)
         Text("#\(rank)")
-            .font(.caption2.weight(.bold).monospacedDigit())
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(style.opacity(0.2)))
-            .foregroundStyle(style)
+            .font(.caption)
+            .padding(5)
+            .foregroundStyle(.primary)
+            .padding(.horizontal, 3)
+            .background(Capsule().fill(style))
+            .offset(x: 6, y: 6)
     }
 }
 

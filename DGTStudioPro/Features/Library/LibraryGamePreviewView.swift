@@ -33,16 +33,10 @@ internal struct LibraryGamePreviewView: View {
         if let game {
             playerHeader(for: game)
         } else {
-            VStack(spacing: 6) {
-                Text("No Game Selected")
-                    .font(.system(size: 22, weight: .semibold, design: .rounded))
-                    .lineLimit(1)
-                
-                Text("Select a game below")
-                    .font(.system(size: 14, weight: .regular, design: .monospaced))
-                    .tracking(1)
-            }
-            .foregroundStyle(.tertiary)
+            Text("No Game Selected")
+                .font(.system(size: 22, weight: .semibold, design: .rounded))
+                .lineLimit(1)
+                .foregroundStyle(.tertiary)
         }
     }
     
