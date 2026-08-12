@@ -51,10 +51,13 @@ six months" is the test.
 
 ## Where things stand
 
-Tree: **`424b4e1`** plus the 12 August sitting, which is being committed as this
-line is written. That sitting is the board cues (D81′), the cue sets (D82′), the
-sandbox entitlement without which the first of them killed the app, and the
-Settings five-tab split.
+Tree: **`34c7043`** — the 12 August sitting, committed: the board cues (D81′),
+the cue sets (D82′), the sandbox entitlement without which the first of them
+killed the app, and the Settings five-tab split. Two paths are dirty and they
+are **not** this sitting's: `RELEASE-AUDIT-2026-08-08.md` and
+`WASTE-AUDIT-2026-08-09.md` are deleted-unstaged, deleted by Bera after
+`424b4e1`, and left alone rather than swept into a commit that had nothing to
+do with them. Named here rather than discovered next time.
 
 **The sentence above was wrong for two commits, and the correction is the point.**
 It read "`2db96e8` plus the 9–10 August close's uncommitted work" — an accurate
@@ -75,8 +78,13 @@ recording (`424b4e1`) — each sitting's ROADMAP entry carries its list.
 | | |
 |---|---|
 | Sources on disk | **257** — 152 app, 105 unit-test, 0 UITest |
-| Tracked (`git ls-files '*.swift'`) | **252** |
+| Tracked (`git ls-files '*.swift'`) | **258** |
 | Accessibility registry | **161** |
+
+The tracked count is one **higher** than the source count for the first time,
+and the reason is stated so the gap is not read as a leftover: `git ls-files`
+counts `Tools/make-cues.swift`, which is in no target. Every other `.swift` on
+disk is now tracked — the two counts have not otherwise agreed since 4 August.
 
 *Re-measured 12 Aug 2026 after D82′.* Five sources arrived across the two
 decisions — `BoardCue`, `BoardSounds`, `BoardSoundSet` and two suites — and the
