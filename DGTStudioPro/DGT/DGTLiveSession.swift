@@ -135,6 +135,12 @@ internal final class DGTLiveSession {
     /// desync entry: never on the manual-result exit, never on recomputation.
     @ObservationIgnored internal var onDesync: (() -> Void)?
 
+    /// Move cue (D81′). Fired from the `.move` settle arm *after* `commit` returns true, so it can
+    /// never sound for a move the game refused — the F5 guard's own argument, applied to audio:
+    /// a cue for a commit that did not happen is a lie you hear before you see.
+    /// Nil in headless tests = silent by construction, like every hook above it.
+    @ObservationIgnored internal var onMoveCommitted: ((BoardCue) -> Void)?
+
     /// Board-resync request (D49′): the field stream is not lossless, and one lost update leaves
     /// `physicalBoard` wrong by one square forever. First `.unresolved` divergence asks for a full
     /// dump instead of entering recovery; nil hook = straight to recovery (pre-D49′, pinned).
@@ -259,6 +265,9 @@ internal final class DGTLiveSession {
                 enterRecovery(game, board: board)
                 return
             }
+            // D81′ — the cue rides the accepted commit, above the diagnostic capture: `currentState`
+            // is now the position the move landed in, which is what the cue describes.
+            onMoveCommitted?(BoardCue.cue(for: move, landing: game.currentState))
             sessionLog?.capture(
                 .info,
                 "settle: committed \(game.sanMoves.last ?? "?") [ply \(game.plyCount)]"

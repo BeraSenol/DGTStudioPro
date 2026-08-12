@@ -124,28 +124,55 @@ internal final class Game {
         )
     }
     
+    // MARK: Cues
+
+    /// Board cue for a **single step** (D81′), wired by `BoardDestination`. Nil — previews, tests,
+    /// any `Game` built outside the destination — is silent by construction, the settable-hook
+    /// invariant applied one layer down from the session.
+    ///
+    /// The step/jump split is expressed by *which methods call this*, not by a flag a caller
+    /// passes: `advance` and `retreat` announce, `jump(to:)`, `toStart()` and `toEnd()` do not.
+    /// A caller cannot get it wrong, because a caller is never asked. The rule it encodes: one
+    /// keypress, one sound — Home over a 90-ply game crossing 90 plies is one position change,
+    /// and 90 clicks for it would be the machine-gun this hook exists to avoid.
+    @ObservationIgnored internal var onStep: ((BoardCue) -> Void)?
+
     // MARK: Navigation
-    
+
     /// Advances one ply. No-op at end of game.
     internal func advance() {
         guard canAdvance else { return }
         currentPly += 1
+        announceCurrentPly()
     }
-    
+
     /// Retreats one ply. No-op at start.
     internal func retreat() {
         guard canRetreat else { return }
         currentPly -= 1
+        announceCurrentPly()
     }
-    
-    /// Jumps to a ply, clamped.
+
+    /// Jumps to a ply, clamped. Silent — see `onStep`.
     internal func jump(to ply: Int) {
         currentPly = max(0, min(ply, moves.count))
     }
-    
-    /// Jumps to the starting position.
+
+    /// Jumps to the starting position. Silent — see `onStep`.
     internal func toStart() { currentPly = 0 }
-    
-    /// Jumps to the final position.
+
+    /// Jumps to the final position. Silent — see `onStep`.
     internal func toEnd() { currentPly = moves.count }
+
+    /// The cue for the move that produced the position now on screen. One expression for both
+    /// directions, deliberately: the cue describes *where you are*, not which way you arrived, so
+    /// retreating onto a check sounds like a check. Silent at ply 0, where no move produced the
+    /// position — the start is not a move played.
+    ///
+    /// The nil-hook guard comes first so an unwired `Game` never pays `BoardCue`'s `legalMoves()`
+    /// in a check position.
+    private func announceCurrentPly() {
+        guard let onStep, currentPly > 0 else { return }
+        onStep(BoardCue.cue(for: moves[currentPly - 1], landing: states[currentPly]))
+    }
 }

@@ -21,7 +21,7 @@ internal enum AppLog {
     internal enum Category: String, Sendable, CaseIterable {
         case analysis, boardload, dgt, eco, engine, game, inspector, library
         case pgnexport, pgnparse, pgnstore, players, power, settings
-        case smarttags, uci
+        case smarttags, sound, uci
     }
 
     // MARK: Policy

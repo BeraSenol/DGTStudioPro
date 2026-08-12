@@ -41,6 +41,20 @@ internal enum StorageKeys {
     // are the documented twin.
     internal static let illegalMoveSoundEnabled = "illegalMoveSoundEnabled"
 
+    // The four board cues (D81′). Absent reads **true** for each. Single read site apiece —
+    // `BoardSounds` owns the values and Settings binds to the properties, so unlike the key above
+    // these have no twin to document. Four keys rather than one because four toggles were asked
+    // for, and a single stored set would make "which cue is off" a decoding question.
+    /// Which sample set the cues come from (D82′). Absent reads `.wood` — the set that shipped
+    /// first, so an existing install hears what it heard yesterday. An unknown stored value falls
+    /// back to the same default rather than failing, which is what makes retiring a set safe.
+    internal static let boardSoundSet = "boardSoundSet"
+
+    internal static let moveSoundEnabled      = "moveSoundEnabled"
+    internal static let captureSoundEnabled   = "captureSoundEnabled"
+    internal static let checkSoundEnabled     = "checkSoundEnabled"
+    internal static let checkmateSoundEnabled = "checkmateSoundEnabled"
+
     // Idle-sleep play gate (D25′). Absent reads **true**. Single read site — `SleepInhibitor` owns
     // the value; Settings binds to the property. The shape the twins above should eventually take.
     internal static let preventSleepDuringPlay = "preventSleepDuringPlay"

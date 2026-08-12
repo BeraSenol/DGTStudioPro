@@ -250,4 +250,7 @@ internal enum Destination: String, CaseIterable, Identifiable, Hashable {
         .environment(DGTSessionLog())
         .frame(width: 800, height: 600)
         .environment(InspectorSectionCollapse.preview)
+        // D81′ — `BoardDestination` reads it, so the canvas traps without it. The `.preview`
+        // instance is inaudible: a canvas that re-renders on every keystroke must not click.
+        .environment(BoardSounds.preview)
 }

@@ -40,6 +40,10 @@ internal struct DGTStudioProApp: App {
     /// gate); no destination reads it.
     @State private var sleepInhibitor: SleepInhibitor
 
+    /// The board cues and their four gates (D81′). Unlike `sleepInhibitor` this goes into **both**
+    /// scenes: Settings binds the toggles, and `BoardDestination` wires each `Game`'s step cue.
+    @State private var boardSounds: BoardSounds
+
     /// Which inspector sections are folded (D45′). Injected into the WindowGroup — every inspector
     /// reads it, shared across tabs: collapsing Opening is a statement about openings, not a window.
     @State private var inspectorCollapse = InspectorSectionCollapse(defaults: .standard)
@@ -84,7 +88,17 @@ internal struct DGTStudioProApp: App {
                 .object(forKey: StorageKeys.illegalMoveSoundEnabled) as? Bool ?? true
             if enabled { NSSound.beep() }
         }
-        
+
+        // D81′ — the live move cue. Note the shape difference from the line above and why it is an
+        // improvement rather than an inconsistency: that closure re-reads `UserDefaults` and states
+        // its own default, which is the twin `StorageKeys` documents; this one asks an owning type,
+        // so the four defaults are stated once, in `BoardSounds.init`, and Settings and playback
+        // cannot disagree about them (D25′).
+        let sounds = BoardSounds()
+        session.onMoveCommitted = { cue in
+            sounds.play(cue)
+        }
+
         // M4 draft persistence: session owns when, store owns the file. Loading here is what turns a
         // relaunch into the Resume / Delete offer.
         let draftStore = LiveGameDraftStore()
@@ -115,6 +129,7 @@ internal struct DGTStudioProApp: App {
         _sessionLog = State(initialValue: log)
         _sleepInhibitor = State(initialValue: inhibitor)
         _analysisQueue = State(initialValue: analysis)
+        _boardSounds = State(initialValue: sounds)
     }
     
     var body: some Scene {
@@ -129,6 +144,7 @@ internal struct DGTStudioProApp: App {
                 .environment(sessionLog)
                 .environment(inspectorCollapse)
                 .environment(viewOptions)
+                .environment(boardSounds)
         }
         .modelContainer(sharedContainer)
         .defaultLaunchBehavior(.presented)
@@ -202,6 +218,7 @@ internal struct DGTStudioProApp: App {
         Settings {
             SettingsView()
                 .environment(sleepInhibitor)
+                .environment(boardSounds)
         }
         .modelContainer(sharedContainer)
     }

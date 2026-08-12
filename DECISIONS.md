@@ -26,7 +26,7 @@ Locked product decisions #1–#8 and their interpretation flags were recorded in
 
 Old milestone and finding tags (M7.2, M-prs.1, F1–F9…) survive in code comments and below as provenance only — they identify where a decision came from; they schedule nothing.
 
-D-numbers are sequential and never reused. Next free number: **D81′**. (D80′ minted 10 Aug 2026 with the companion-window fix, by defect report. D79′ minted 9 Aug 2026 with the red-ply highlight, the game-98 sitting's feature. D74′–D78′ minted 9 Aug 2026, in the waste-audit sitting, *with* the work. D71′–D73′ minted 8 Aug 2026, in the release-audit sitting, *with* the work rather than after it. D69′ and D70′ were minted 8 Aug 2026 for the View Options panel and the memoized collection folds — both recording work that had already shipped into the working tree unnumbered, which is the failure their entries open by naming.) (This line said D47′ until the 3 Aug audit — it had not been advanced since the M6 revision while the header above was; the header is the owner and this line now just repeats it.)
+D-numbers are sequential and never reused. Next free number: **D83′**. (D82′ minted 12 Aug 2026 with the cue sets, by request. D81′ minted 12 Aug 2026 with the board cues, by request. D80′ minted 10 Aug 2026 with the companion-window fix, by defect report. D79′ minted 9 Aug 2026 with the red-ply highlight, the game-98 sitting's feature. D74′–D78′ minted 9 Aug 2026, in the waste-audit sitting, *with* the work. D71′–D73′ minted 8 Aug 2026, in the release-audit sitting, *with* the work rather than after it. D69′ and D70′ were minted 8 Aug 2026 for the View Options panel and the memoized collection folds — both recording work that had already shipped into the working tree unnumbered, which is the failure their entries open by naming.) (This line said D47′ until the 3 Aug audit — it had not been advanced since the M6 revision while the header above was; the header is the owner and this line now just repeats it.)
 
 ### D9′ — Player is a machine-managed @Model
 
@@ -1252,3 +1252,230 @@ By defect report, 10 Aug 2026: with the main window full screen, the evaluation 
 **Witness:** scene modifiers are framework wiring with no unit seam, so the manual check *is* the feature — main window full screen, open the graph and the data window; both must appear over the board rather than switching Spaces, and Get Info, the queue and View Options must do the same.
 
 Rejected: **growing `updateNSView` a body** (the reserved remedy — still after placement, so it ships the same bug with more code); **re-asserting from an earlier AppKit hook** (a race against the framework's own configuration, where a scene modifier is a declaration to it); **keeping the transform test-only beside the modifier** (a door with no surface — D52′'s words — and the transform's whole content is two flags the role now owns).
+
+### D81′ — board cues are one sound per move, classified from typed values, gated four ways
+
+By request, 12 Aug 2026: a sound when a move is played or replayed, and separate sounds for check
+and checkmate. Four bundled samples, one classifier, four toggles — and one rule that is the whole
+of the design: **a move makes exactly one sound, the most specific one that fits.**
+
+**Precedence rather than layering, and the alternative was real.** A capture that gives check could
+plausibly play both samples, and two clips fired at one instant is mush — no listener separates
+them, and the compound tells you less than either alone. So `check` outranks `capture`, `checkmate`
+outranks both, and the losing cue is simply not heard. The consequence, stated rather than
+discovered: **turning Move off does not silence captures**, and a reader who expects the toggles to
+be additive layers will read that as a defect. It is in the Settings footer for that reason, which
+is the one thing in that section not deducible from the labels.
+
+**Classified from `Move` + `GameState`, never from SAN.** The tempting shortcut is free: `san(for:)`
+already appends `+` and `#`, and the stored movetext already carries them, so a cue could be a
+string suffix at both call sites with no chess computed at all. Declined on the project's own
+grounds — D18′ records that this app has exactly two SAN strippers and that they are *meant* to
+differ, and a third string reading with its own opinion about `#` would land straight on the open
+item where `hasSuffix("#")` and `contains("#")` already disagree about `Qd2#!`. Typed values cannot
+be fooled by an annotation. The price is one extra `legalMoves()` per move **in check positions
+only** — `isInCheck` is asked first and is a single attack scan, which is `GameState+SAN`'s own
+optimisation rather than a new one, and `isCheckmate` would pay the scan twice. It joins the
+known-costs census; at one move per several seconds of human play it is not a candidate for M7.
+
+**Stalemate has no cue and falls through to `move`.** The position is drawn and the move was quiet,
+and there is no sample for "the game just ended in a way nobody chose". Worth naming because "no
+legal replies" looks like the end of a game, so a future reader will be tempted to route it to the
+mate sound — `stalemateFallsThroughToMove` is the test that should fail when they try.
+
+**The step/jump split is structural, not a parameter.** `Game.onStep` is fired by `advance()` and
+`retreat()` and by nothing else; `jump(to:)`, `toStart()` and `toEnd()` are silent. Expressing it
+as *which methods call the hook* rather than as a flag callers pass means a caller cannot get it
+wrong, because a caller is never asked — `CollapsibleSection`'s one-argument-used-twice argument
+(D45′) in its cheapest form. The rule it encodes is one keypress, one sound: End over a 90-ply game
+crosses 90 plies and is one position change, and 90 clicks for it is the machine-gun this exists to
+avoid. Retreating sounds too, and with the *landing* position's cue: the cue describes where you
+are, not which way you came, so stepping back onto a check is a check.
+
+**Two hooks, one for each surface, both nil-silent.** Live rides `DGTLiveSession.onMoveCommitted`,
+fired in the `.move` settle arm **after** `commit` returns true — the F5 guard's argument applied to
+audio, since a cue for a commit that did not happen is a lie you hear before you see. It is the
+eighth settable hook and is wired once in `App.init()` beside the other seven; nil in headless tests
+means silent by construction, which is the whole reason that invariant exists. Review rides
+`Game.onStep`, wired by `BoardDestination` at construction rather than inside `Game.init`, because
+the player is an environment value and a model-layer type reaching for one is how a `Game` stops
+being constructible from a preview.
+
+**`BoardSounds` owns the four preferences; D13′'s beep deliberately does not change.** That closure
+re-reads `UserDefaults` and states its own `?? true`, which is the twin `StorageKeys` documents. The
+new gates take D25′'s owned-value shape instead — one type, four defaults stated once in `init`,
+Settings binding to the properties — so playback and the form cannot disagree about them. The two
+also differ *audibly*, which is why they are separate sections rather than one: the illegal-move cue
+is `NSSound.beep()` at the user's **alert** volume because it is an alert about the board
+contradicting the game, and these are samples at app volume because a move landing is feedback.
+Merging the sections was considered and left alone as a mechanical change riding a feature change.
+
+**Silent under the test host, and unlike D63′ there is no escape hatch.** One `@Test` walking a game
+would fire a cue per ply, which is that decision's console-noise finding with a worse failure mode.
+Logging needs `DGT_LOG=1` because a suppressed *diagnostic* can hide a defect; a suppressed *click*
+cannot, so the seam exists for the suite (`audible:`) rather than for a scheme. Both `isAudible(in:)`
+and the four-way gate are pure functions taking their inputs, for D44′'s reason and no other: the
+shipped constants are fixed in any process a test runs in, so without the seams a suite could only
+ever confirm the room it was standing in. The gate is where that pays — four cues over four flags is
+crossable twelve ways, and a `check` reading the capture toggle compiles, renders a correct-looking
+Settings pane, and is caught by ear or not at all.
+
+**The samples are synthesised, and that is a compromise recorded as one.** The intent was lichess's
+set (`lichess-org/files`, CC0 1.0, confirmed at source). It could not be fetched into this tree by
+the hand that wrote the rest — the fetch reaches the file and returns `[binary data]` — so the four
+were generated instead: one wooden knock model driving all four, with check and checkmate adding a
+chime *over* the knock rather than replacing it, so the set reads as one instrument. 16-bit 44.1 kHz
+mono, 80 KB total, and reproducible: `Tools/make-cues.swift` regenerates them from a fixed seed,
+runnable as `swift Tools/make-cues.swift` with Foundation and nothing else.
+
+**The generator is Swift, by request, and the version history is the useful part.** It was first
+written in Python — the fastest way to get four usable samples — and rewritten on the grounds that
+a Swift repo with one Python file in it has a Python toolchain dependency nobody declared. The
+rewrite forced one real change rather than a transliteration: numpy's PRNG cannot be reproduced in
+Foundation, so the noise transient moved to an explicit 64-bit LCG with uniform noise, an algorithm
+both languages express identically, and **the committed samples were re-derived from that algorithm
+before the port** so the script and the files it claims to produce are the same recipe. What is
+*not* claimed is byte-identity across the two implementations: `sin` and `exp` are platform libm,
+so a sample could differ by one 16-bit step in principle. Run it once and diff if that ever matters.
+
+No package, and declining one is the decision: AVFoundation writes a WAV, a synthesis package
+(AudioKit and its relatives) writes it more comfortably, and the project has **zero** third-party
+dependencies. Adding the first one to generate four sixty-millisecond clicks would be the largest
+dependency decision in the repo taken for its smallest asset — a canonical RIFF header is fifteen
+lines, and they are in the file.
+
+The script lives at the repo root rather than beside the samples because `DGTStudioPro/` is a
+**synchronized folder group**, where target membership IS folder contents — anything dropped in
+there ships inside the app bundle. That is the same mechanism that bundles the ECO tables with no
+project-file edit, working against us for once, and it applies to a `.swift` exactly as it would
+have to a `.py`. `BoardCue.resourceName` is the only thing that names the samples, so replacing them
+with lichess's own is four files renamed into `Features/Board/Sounds/` and **no code change** — the
+swap is deliberately that cheap, and the generated set should be treated as a placeholder that works
+rather than as a decision about taste.
+
+**Playing a sound at all needed an entitlement, and the app died finding out.** First launch after
+this shipped: the game opened, an arrow key was pressed, and the process was **killed** —
+`PRECONDITION FAILURE: Process is sandboxed but
+'com.apple.security.exception.mach-lookup.global-name' doesn't contain 'com.apple.audioanalyticsd'`.
+Not a warning, not a silent cue, not a degraded feature: CoreAudio takes the process down the first
+time a sandboxed app initialises playback without a mach-lookup exception for the analytics daemon.
+`DGTStudioPro.entitlements` carries it now, and it is the second grant in that file beside
+`com.apple.security.device.serial`.
+
+**What makes it worth a paragraph rather than a line is which instinct was wrong.** The reflex on
+seeing a CoreAudio crash was to retreat from `AVAudioPlayer` to `NSSound`, on the honest evidence
+that D13′'s `NSSound.beep()` has been playing inside this sandbox for weeks. That would have
+changed nothing: on modern macOS `-[NSSound play]` calls `-[AVAudioPlayer play]` calls
+`AudioQueueStart`, one stack, which Apple's own DTS thread on the macOS 26 `caulk` SIGILL shows
+frame by frame. `beep()` is not a counter-example either — it is the system alert path and
+initialises no playback graph in-process, which is precisely why D13′ never needed this entitlement
+and why its success was misleading evidence about a different API. **There is no lighter framework
+to retreat to; every route to a sample ends in the same AudioQueue.**
+
+Recorded as a decision because the alternative was real and worse: the sandbox could have been
+turned off (`ENABLE_APP_SANDBOX`, already on the table for Syzygy's folder access) to make a click
+work. Widening a temporary-exception array by one service is the proportionate answer, and the
+standing input settles the usual objection — exception entitlements are an App Store review flag,
+and there is no App Store here.
+
+**Bundle presence is a manual check**, and this is the one place the suite is honestly blind: the
+filenames are pinned on literals (`AppLog`'s category reason — nothing in the app would notice a
+drift, because the symptom is silence, which is also what an off toggle looks like). A missing
+resource logs once to `sound` and caches the failure, so a broken bundle does not log per ply — the
+`.DS_Store` lesson, applied before it could bite.
+
+Rejected: **layering the cues** (a capture-check plays both, and it is mush); **classifying off SAN
+suffixes** (free, and it inherits an open item about `#` that the typed form cannot have);
+**`NSSound.beep()` for everything** (zero assets, zero licensing, and every move would sound like a
+notification at alert volume — the wrong organ for feedback); **one toggle for all four** (fewer
+keys, and it makes "quiet moves, loud mates" unrepresentable, which is the arrangement most likely
+to be wanted after a week); **firing the cue from `LiveGame.commit`** (closer to the move, and it
+puts audio in the append-only model and re-wires per game, where the session hook is wired once);
+**a flag on `jump(to:)` for whether it announces** (one method instead of two paths, and it makes
+the machine-gun a caller's mistake to make).
+
+### D82′ — the cue set is a user choice; D81′'s samples become one material among three
+
+By request, 12 Aug 2026, once D81′ was green and audible. `BoardSoundSet` — **felt**, **wood**,
+**marble** — is picked in Settings and holds all four cues; wood is what shipped and stays the
+default. This is **D62′'s shape exactly**, one domain over: that decision turned D11′'s fixed
+ladder into an elected default without overturning its argument, and this turns D81′'s fixed
+samples into an elected default without touching its classifier, its precedence, or its gates.
+
+**A set, not twelve loose files, and the difference is an invariant rather than tidiness.** One
+choice instead of four means a felt move cannot end up beside a marble capture — internal
+consistency is structural, not a thing the reader has to maintain. It also keeps the Settings
+section at five controls instead of thirteen.
+
+**The gesture is constant across sets; only the material varies.** Check is one blip, checkmate is
+a falling fifth, in all three. Felt takes the same interval an *octave down* rather than a
+different interval, so muting the set never changes what a cue **means** — a reader who switches
+material should not have to relearn which sound is a mate. That constraint is why felt is not
+simply "wood, quieter".
+
+**One tuning finding, recorded because the first attempt shipped backwards in reasoning.** Marble
+was given a *longer* decay than wood, on the intuition that stone rings — and measured **duller**
+than wood (spectral centroid 819 Hz against 2236 Hz). A long ring at a low fundamental dominates
+the spectrum and drags the centroid below the contact transient, so "rings longer" and "sounds
+brighter" pull in opposite directions. The fix was the opposite of the instinct: harder material
+means **higher and shorter**, not longer. Marble is now 460 Hz over 45 ms against wood's 190 Hz
+over 55 ms. Worth keeping because the correction was only available by *measuring* — by ear at one
+sitting the first version sounded plausibly like stone, and the description in the Settings footer
+would have been quietly false.
+
+**Picking auditions, and it deliberately ignores the Move toggle.** `soundSet`'s `didSet` persists,
+drops the loaded samples and plays the new set's move cue. A picker over sounds you cannot hear
+while picking is a list of adjectives; and a reader who has switched Move *off* would otherwise
+audition in silence and reasonably conclude the picker was broken — so the audition is gated on
+audibility (a fact about the process) and not on preference (a statement about taste). `.move` is
+the cue it plays, because a set should be chosen on the sound you hear a hundred times an evening
+rather than on its most dramatic one. `init` does not fire `didSet`, which is what keeps every
+launch from clicking at you.
+
+**An unknown stored value falls back to `.wood` rather than failing**, and that is what makes
+retiring a set safe: dropping one would otherwise leave anyone who had chosen it unable to launch,
+with the failure arriving on their machine rather than in the suite. Pinned by
+`unknownSoundSetFallsBack`.
+
+**Naming moved from `BoardCue` to `BoardSoundSet`.** `resourceName(for:)` lives on the set because
+the set is the axis that *grows* — a cue is one of four fixed questions — and a convention belongs
+with the thing that changes. The suite now pins the whole **set × cue product** rather than four
+names: a collision *across* sets, `wood-check` reachable as marble's, is the failure no per-set
+check could see, and the symptom would be one cue playing another's sound with every string still
+spelled correctly.
+
+Rejected: **round-robin takes within each cue** (3 subtly different move clicks in rotation, which
+is the real game-audio answer to a held arrow key — invisible in Settings, so it answers a
+different request than the one made; still available later, and it multiplies the sample count by
+three); **a fourth "digital" set** (offered and declined — the three chosen are all physical
+models, and a synthetic blip is the one that stops sounding like a board); **per-cue set choice**
+(maximum control, and it makes an inconsistent set representable for no use anyone has); **a
+segmented picker** (D48′'s reason: the view-mode control is segmented, and two segmented controls
+read as one broken one); **a separate audition button** (hears all four cues, and adds a control to
+a section that is otherwise a picker and four toggles, to solve a problem selection already solves).
+
+#### Settings grows to five tabs — no D-number, and the omission is the decision
+
+By request, 12 Aug 2026, immediately after D82′. General had accumulated six sections — connection,
+an alert, the board cues, engine options, tablebases, sleep gates — which is a drawer rather than a
+category. It is now **General, Board, Sounds, Engine, Data**: sounds and the illegal-move alert to
+Sounds, engine options and Syzygy to Engine.
+
+**No number because it reverses nothing, mints no vocabulary and changes no behaviour.** Not one
+control, default, storage key or accessibility identifier moved — only which tab draws it. That is
+this file's threshold, the same one the score sheet declined a number under, and holding to it here
+matters more than usual: a reorganisation is exactly the change that *looks* significant while
+being inert, and giving it a number would put a decision anchor where there is no decision to cite.
+
+Two choices inside it are worth a sentence each, so they read as decisions rather than accidents.
+**Energy stays in General** rather than following the engine, because only half of it is
+engine-shaped — one gate is analysis, one is live play, under a single footer that deliberately
+covers both causes at once (D66′), and splitting it to satisfy a tab would mean splitting that
+footer. And **"Live Play" became "Alerts"**, the one non-mechanical edit in the split: that header
+described *when* a sound happens, which was a useful axis beside connection settings and is the
+wrong one beside a section describing *what* a sound is. The new name also puts D81′'s distinction
+on screen — an alert about the board contradicting the game, at system alert volume, against
+feedback that a move landed, at app volume.
+
+The consequence to hold onto, and it is the reason the split was kept mechanical: **anything that
+behaves differently after this is a defect, not a design choice.** The manual check says so too.

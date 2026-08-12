@@ -4,5 +4,14 @@
 <dict>
 	<key>com.apple.security.device.serial</key>
 	<true/>
+	<!-- D81′ — board cues. CoreAudio raises a hard PRECONDITION FAILURE, killing the
+	     process, the first time a sandboxed app initialises audio playback without a
+	     mach-lookup exception for the analytics daemon. Not optional and not a warning:
+	     without this line the first move sound terminates the app. Grows if another
+	     service is ever named; nothing else belongs in this array. -->
+	<key>com.apple.security.exception.mach-lookup.global-name</key>
+	<array>
+		<string>com.apple.audioanalyticsd</string>
+	</array>
 </dict>
 </plist>

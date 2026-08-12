@@ -51,24 +51,46 @@ six months" is the test.
 
 ## Where things stand
 
-Tree: **`2db96e8`** plus the 9–10 August close's uncommitted work: the red-ply
-highlight (D79′) with the editor rework and its pins, the game-98 diagram
-corrections, the companion-window fix (D80′) with its two file deletions, and
-two visual tweaks of Bera's (the monogram's fill, the preview's empty header).
-The committed run beneath it is the comment reduction (`bc92c65`), the
-waste-audit fixes D74′–D78′ (`4d81150`) and the diagrams re-authoring
-(`2db96e8`) — each sitting's ROADMAP entry carries its list.
+Tree: **`424b4e1`** plus the 12 August sitting, which is being committed as this
+line is written. That sitting is the board cues (D81′), the cue sets (D82′), the
+sandbox entitlement without which the first of them killed the app, and the
+Settings five-tab split.
+
+**The sentence above was wrong for two commits, and the correction is the point.**
+It read "`2db96e8` plus the 9–10 August close's uncommitted work" — an accurate
+description of a dirty tree that had been clean since `407c846` and `424b4e1`,
+which are exactly the commits that landed the work it called uncommitted. That is
+the **fourth** recorded instance of this same line decaying, and it decays the
+same way every time: it is written at the moment of committing and never re-read
+afterwards, so it survives as a confident description of a tree that no longer
+exists. It is caught only by `git log` — never by reading it, because it reads
+perfectly. The remedy this file already prescribes is the one used here: write it
+*before* the commit, in a form that is true when read.
+
+The committed run beneath it: the comment reduction (`bc92c65`), the waste-audit
+fixes D74′–D78′ (`4d81150`), the diagrams re-authoring (`2db96e8`), D79′
+(`1ad5975`), two visual tweaks (`42820be`), D80′ (`407c846`) and the 9–10 August
+recording (`424b4e1`) — each sitting's ROADMAP entry carries its list.
 
 | | |
 |---|---|
-| Sources on disk | **252** — 149 app, 103 unit-test, 0 UITest |
-| Tracked (`git ls-files '*.swift'`) | **254** |
-| Accessibility registry | **156** |
+| Sources on disk | **257** — 152 app, 105 unit-test, 0 UITest |
+| Tracked (`git ls-files '*.swift'`) | **252** |
+| Accessibility registry | **161** |
 
-The two source counts disagree by the two files D80′ deleted from disk with
-the deletions not yet staged. All three are dated snapshots; the registry count
-lives in its grep (D42′) and the source counts in `find`/`git ls-files`,
-because a number in prose decays and a number in a command cannot.
+*Re-measured 12 Aug 2026 after D82′.* Five sources arrived across the two
+decisions — `BoardCue`, `BoardSounds`, `BoardSoundSet` and two suites — and the
+registry took four cue toggles plus the set picker. The counts now disagree in
+the **other** direction from the 10 August snapshot: D80′'s two deletions are
+still unstaged and the new files are untracked, so `git ls-files` lags disk. All
+three are dated snapshots; the registry count lives in its grep (D42′) and the
+source counts in `find`/`git ls-files`, because a number in prose decays and a
+number in a command cannot.
+
+The **source** counts deliberately exclude `Tools/`, which is not in any target.
+Not counted at all, because they are not sources: twelve `.wav` samples under
+`Features/Board/Sounds/`, 268 KB — three sets × four cues, the first audio the
+app has shipped and the second data asset after the ECO tables.
 
 **Language mode 6 on all three targets (D43′).** Two warnings in the whole
 project, both `Binding(present:)`, both waived below with a sunset condition.
@@ -77,8 +99,10 @@ unchecked-`Sendable` or the unsafe-`nonisolated` opt-out anywhere in the app
 target. No TODO/FIXME/HACK markers, no commented-out code, no `#if DEBUG`
 regions.
 
-**⌘U:** green as reported by Bera on 10 August 2026, on the tree carrying
-D74′–D80′ — counts not reported that run. The last counted run (8 August,
+**⌘U:** green as reported by Bera on **12 August 2026**, on the tree carrying
+D81′ and D82′ — counts not reported that run, and it predates the Settings
+five-tab split, which is pure relocation and adds no test. Green on 10 August
+before it, on the tree carrying D74′–D80′. The last counted run (8 August,
 against `275f037`) was **1108 tests, 101 suites**; the tree since adds four
 suites (the analysis plan, the heal gate, scoped collection, the display keys)
 and D80′ deleted one with its type, so a run reporting around 104 suites is
@@ -191,9 +215,32 @@ review), which is why the refinement milestones start at M12.
   are deliberately not Mode-derived but Mode-guarded.
 - **Settable hooks are wired exactly once in `App.init()`** — `sessionLog`,
   `draftStore`, `onGameFinished`, `onBoardChanged`, `onDesync`, `boardIdentity`,
-  `requestBoardResync` (D49′), `shouldAutoReconnect`. **Nil hooks mean unit tests
-  run headless by construction.** `recordError` is the one door for
-  must-reach-somewhere errors.
+  `requestBoardResync` (D49′), `shouldAutoReconnect`, `onMoveCommitted` (D81′).
+  **Nil hooks mean unit tests run headless by construction.** `recordError` is
+  the one door for must-reach-somewhere errors.
+- **A move makes exactly one sound (D81′).** `BoardCue.cue(for:landing:)` is the
+  single classifier and its precedence is total — checkmate over check over
+  capture over move — so no surface layers two samples or spells the ordering a
+  second time. Classified from `Move` + `GameState`, never from SAN: a third
+  string reading of `#` would land on the open item where the app's two existing
+  spellings already disagree. Live rides the session hook above; review rides
+  `Game.onStep`, which `advance()` and `retreat()` call and `jump(to:)`,
+  `toStart()` and `toEnd()` deliberately do not — the step/jump split is which
+  methods fire the hook, so no caller can get it wrong.
+- **`BoardSounds` is the only thing that plays a sample**, owns the four gates and
+  the chosen set as observable properties (D25′, not `@AppStorage` twins), and is
+  silent under the test host. D13′'s illegal-move `NSSound.beep()` is deliberately
+  outside it: that is an alert at the user's alert volume, these are feedback at
+  app volume. **Playing anything at all needs the `audioanalyticsd` mach-lookup
+  exception** — without it a sandboxed process is killed on first playback, not
+  warned (D81′).
+- **A cue set is chosen whole (D82′).** `BoardSoundSet` — felt, wood, marble —
+  holds all four cues, so a felt move beside a marble capture is unrepresentable.
+  `resourceName(for:)` lives on the **set**, the axis that grows, and names
+  `<set>-<cue>.wav`; the suite pins the whole product because a collision across
+  sets is one cue playing another's sound with every string spelled correctly. The
+  musical gesture is constant across sets and only the material varies, so
+  switching never changes what a cue means.
 - **Auto-connect decisions are pure; transport is not.**
 - **Idle-sleep inhibition is App-owned and preference-gated**, two causes with
   two gates (D66′). Display sleep is intentionally left alone, structurally, via
@@ -369,6 +416,17 @@ review), which is why the refinement milestones start at M12.
 - **A claim is only checked by a test that could have failed.** The question that
   catches all of these: *what would it take for this to fail, and does that
   situation exist anywhere in the tree?* If nothing does, the check is decorative.
+
+  **A fixture where every input agrees is one of these in disguise** (12 Aug 2026,
+  found by being asked whether the cue toggles persist — they did). D81′'s
+  round-trip test stored `false` under all four keys and asserted all four
+  properties read `false`, which passes unchanged if two properties read each
+  other's key: with identical inputs a crossed wiring produces an identical
+  answer. The fix is to vary *one* input and assert the others are unmoved, which
+  is now `eachCueReadsItsOwnKey` and its write-side mirror. The tell is a test
+  whose expected values are all the same — an N-way mapping needs N distinct
+  expectations, or it is checking that the code does *something*, not that it does
+  the right thing.
 - **Compiling is not the test; being compiled from the side where the claim would
   break is.** A comment stating a rule about *the language* is a hypothesis until
   something exercises it from that side.
@@ -474,6 +532,20 @@ grep -rn '#if DEBUG' --include='*.swift' DGTStudioPro | grep -v ':[0-9]*:///\?\s
 
 ## Build-diagnostic lessons
 
+- **The sandbox is part of the API surface, and it fails as a kill rather than as
+  an error** (D81′). The first sample this app ever played terminated the process:
+  `PRECONDITION FAILURE: Process is sandboxed but
+  '…mach-lookup.global-name' doesn't contain 'com.apple.audioanalyticsd'`. No
+  `throws`, no `nil`, no degraded feature — an entitlement a compiler cannot check
+  and a suite cannot reach, discovered by launching. Anything touching a *daemon*
+  (audio, media, speech, location) is entitlement-shaped, and the check is a run,
+  not a build.
+- **`NSSound` is `AVAudioPlayer` underneath, so it is not the lighter retreat it
+  looks like.** `-[NSSound play]` → `-[AVAudioPlayer play]` → `AudioQueueStart` →
+  CoreAudio, one stack. `NSSound.beep()` is the exception that misleads: it is the
+  system alert path and initialises no playback graph in-process, which is why
+  D13′ has beeped inside this sandbox for weeks while D81′'s first click died. A
+  working `beep()` is **not** evidence that playback works.
 - **`#Preview` compiles in Release**; it is stripped at link time, not excluded at
   compile time. A preview referencing an `#if DEBUG` symbol is a Release-only
   compile error, and ⌘U and ⌘R both build Debug. **No symbol a `#Preview` touches
@@ -624,6 +696,7 @@ not listed individually; a view with **no preview** needs its own entry.
 | `PGNExporter` | AppKit panels + file writes; every byte from the pure serializer | `PGNSerializerTests` + export/re-import check |
 | `LibraryFilter` | model-bearing composition; logic delegates to `TagRule.evaluate` | tag-filter manual checks |
 | Illegal-move audio transport | thin system-alert playback; the decision is the `enterRecovery` edge | `onDesync` spy test + audibility check |
+| `BoardSounds` — **the playback only** | `AVAudioPlayer` over a bundled file, which is transport. Every decision came out pure and is pinned rather than waived: `BoardCue.cue` classifies, `isEnabled(_:moves:captures:checks:checkmates:)` gates, `isAudible(in:)` decides. What is left is loading a URL and restarting a clip (D81′) | `BoardCueTests`, `BoardSoundPreferenceTests`, plus the audible checklist above — which is also the only witness that the four samples are **in the bundle**, since a missing file and an off toggle sound identical |
 | `SleepInhibitor` — **the token only** | a `ProcessInfo` activity handle, which is transport. The *decision* came out as the pure `activityReason(…)` and is pinned rather than waived | `SleepInhibitorPreferenceTests`; `pmset -g assertions` |
 | `SessionPhase` | reads two `@MainActor` app-global observables whose flags are computed, not settable — a suite would have to fabricate a connection to assert an ordering | its two consumers, which must agree, plus the sidebar checklist. **The ordering is the content**, and nothing automated checks it |
 
@@ -727,12 +800,85 @@ are in `git log`.
   rehydration runs per recompute rather than per render, and the tag-rule walk
   with it.
 
+  *Added 12 Aug 2026 (D81′):* `BoardCue.cue` pays a `legalMoves()` **in check
+  positions only** — `isInCheck` is asked first and is a single attack scan, so
+  the generation runs solely where `checkmate` is answerable. Once per committed
+  move, or once per arrow keypress; deliberately not on the jump paths, which is
+  the point of the step/jump split rather than a side effect of it. Named here
+  because it is the one cost this feature adds, not because it is a candidate —
+  at human move cadence it is orders below `parseSAN` above it.
+
 ## Manual checks
 
 ### Owed — not yet run, or run with an unresolved result
 
+- **D81′'s cues, and the first item is the one that already failed once.** Open
+  any game and press → once. **The app must not quit.** As first shipped it did:
+  CoreAudio killed the sandboxed process on the first playback for want of a
+  mach-lookup exception, which is now in `DGTStudioPro.entitlements`. If it dies
+  again, read the last line before the exit — the precondition names the service
+  it wants, and the remedy is that array growing by one string. Nothing about
+  this is checkable without launching.
+- **Then: is there a sound?** A wooden knock on →. If it is *silent* rather than
+  fatal, the samples are not in the bundle — `log stream --predicate 'category ==
+  "sound"'` names the missing file, and the suite deliberately does not test
+  bundle presence, because a missing resource and a disabled toggle sound
+  identical.
+- **The precedence rule, by ear.** Step to a capture (knock plus grit), then to
+  a checking move (knock plus a bright blip), then onto a mate (knock plus a
+  falling two-note figure). Then find a capture that *gives* check and confirm
+  you hear the check, **not** the capture — one sound, never two. That is the
+  rule the Settings footer states and the thing most likely to read as a bug.
+- **Steps sound, jumps do not.** Hold → through a dozen plies: one knock per
+  ply, no pile-up, no lag. Then press End on a long game: the position jumps and
+  **nothing sounds**. Home likewise. Clicking a ply in the move list likewise.
+  A burst of clicks on End means `jump(to:)` acquired the hook.
+- **Retreat sounds with the landing position's cue.** Step ← off a checking move
+  onto a quiet one: you hear the quiet one. The cue describes where you are, not
+  which way you came.
+- **Each toggle governs its own cue.** Settings ▸ Sounds ▸ Board Sounds: turn
+  **Move** off alone and step through a game — quiet moves go silent while
+  captures, checks and mates still sound. That is the crossable wiring the pure
+  gate is tested against, checked here against the actual samples. Then quit and
+  relaunch: the toggles persist.
+- **Settings has five tabs** (12 Aug 2026) — General, Board, Sounds, Engine,
+  Data. Open each and confirm the tab bar is not crowded at the 500 pt frame, and
+  that every control is present exactly once: connection and the two sleep gates
+  under General; the set picker, four cue toggles and the illegal-move alert
+  under Sounds; depth/hash/threads and Syzygy under Engine. The split moved no
+  control, default, key or identifier — **anything that behaves differently after
+  it is a defect, not a design choice.**
+- **The set picker auditions (D82′).** Switch Felt → Wood → Marble and confirm
+  each plays its move cue *as you pick it*, and that the three are obviously
+  different: felt dark and soft, wood the knock, marble higher and snappier.
+  **Then turn Move off and switch sets again — it must still audition**, because
+  you are choosing a set rather than a cue, and silence there would read as a
+  broken picker. Re-picking the set already selected should do nothing at all.
+- **The set survives a relaunch, and every cue follows it.** Choose Marble, quit,
+  relaunch, and step through a capture, a check and a mate: all three must be
+  marble, not one leftover wood sample. That is the cache being dropped on the
+  set change rather than per cue.
+- **Live play, with the board.** Play a move over the DGT and confirm the cue
+  fires when the app *registers* it — roughly 300 ms after the piece lands, on
+  the settle, not on the touch. That delay is the feature rather than lag: it is
+  the app telling you it read the move. A cue that fires for a move the mirror
+  did not commit is the F5 shape and should be reported.
+- **⌘U stays silent.** The player is off under the test host, so a full run must
+  make no sound at all. A suite that clicks its way through `GameTests` means
+  `TestHost` stopped being consulted.
+- **The generator runs.** `swift Tools/make-cues.swift` should print four lines
+  and rewrite the four samples in place. It has never been executed — it was
+  ported from a working Python implementation of the same algorithm by a hand
+  with no Swift toolchain, which makes "it compiles" a claim rather than a
+  result. Worth one run now, while the samples it would overwrite are known
+  good: `git diff --stat` afterwards says whether the port is faithful, and a
+  diff of a few bytes is platform `libm`, not a defect.
+
 - **Syzygy: does the sandbox let the child process read the folder?** Press
-  Settings ▸ Engine ▸ Endgame Tablebases ▸ **Check**. Three readings, and they
+  Settings ▸ Engine ▸ Endgame Tablebases ▸ **Check** (the Engine *tab* since
+  12 Aug 2026; this line read the same when Engine was a section under General,
+  which is a coincidence worth naming so nobody reads it as already updated).
+  Three readings, and they
   mean different things: *"290 WDL · 290 DTZ — engine says: Found 290…"* is
   working, nothing further owed. *"The app sees 290 WDL · 290 DTZ, but the engine
   loaded nothing"* is **the expected failure** — Apple documents child processes
@@ -855,7 +1001,7 @@ changed except the speed".
   it searches again, because the stored depths sit below the new target — and
   a second run at the same setting is the instant no-op above.
 - **The stamp (D75′).** `category == "players"` logs the heal once, then stays
-  silent across Library visits and relaunches. Settings ▸ Erase Library
+  silent across Library visits and relaunches. Settings ▸ Data ▸ Erase Library
   re-arms it — the one gesture that must, because it deletes what convergence
   was measured against.
 - **Scoped collection (D76′).** The D60′ standing checks verbatim — a

@@ -478,6 +478,14 @@ number lives in `DECISIONS.md`, which owns it since M14.
   `$getInfoRequested` fresh on each pass, which SwiftUI cannot dedupe because
   `Binding` is not `Equatable`. Two publishes, one frame, one window.
 
+  **Corroborated by a launch log, 12 Aug 2026** (incidental to D81′'s crash
+  report, which is the only reason anyone was reading one). The warning fires
+  between `Auto-connect at launch` and `ECO table loaded` — *before* the first
+  `Open requested` / `Board load: resolving id` pair, so before any game window
+  exists. That is the single-window, no-game-loaded case the reading predicted
+  and the second candidate cannot explain. Field evidence rather than proof; the
+  remedy is unchanged and still unscheduled.
+
   So a relaunch with a single window is now *expected* to warn, and seeing it
   warn proves nothing. **What is still unsettled is which key**, and that is a
   fact about SwiftUI's dedupe behaviour rather than about this code:
@@ -1051,9 +1059,59 @@ decided.
 
 ## Landed
 
+### The 12 August sitting — the board makes a sound *(recorded 12 August 2026)*
+
+Committed above `424b4e1`, by request across one conversation. **D81′ — board
+cues**: four samples, one classifier, one sound per move on a total precedence
+(checkmate over check over capture over move), so a capture that gives check is
+heard as a check rather than as both. Classified from `Move` + `GameState` and
+never from SAN suffixes, which would have been free and would have inherited the
+standing `hasSuffix("#")` / `contains("#")` disagreement. Live rides a new
+`onMoveCommitted` hook — the eighth wired once in `App.init()`, nil-silent like
+the rest; review rides `Game.onStep`, fired by `advance()` and `retreat()` and by
+nothing else, so steps sound and jumps do not without any caller being asked.
+
+**D82′ — cue sets**: felt, wood, marble, picked in Settings, each holding all
+four cues so an inconsistent set is unrepresentable. Picking auditions, past the
+Move toggle deliberately, because you are choosing a set rather than a cue. One
+tuning finding worth keeping: marble was first given a *longer* decay to sound
+like ringing stone and measured **duller** than wood — a long low ring dominates
+the spectrum and drags the centroid under the contact transient. Harder material
+is higher and *shorter*. Only measuring caught it; by ear the first version was
+plausible, and the Settings footer would have been quietly false.
+
+**The crash between them is the sitting's real finding.** The first sample ever
+played killed the app: CoreAudio raises a hard `PRECONDITION FAILURE` when a
+sandboxed process initialises playback without a mach-lookup exception for
+`com.apple.audioanalyticsd`. Not a throw, not a nil, not a degraded feature. The
+reflex — retreat from `AVAudioPlayer` to `NSSound`, on the evidence that D13′'s
+`beep()` has worked inside this sandbox for weeks — would have changed nothing:
+`-[NSSound play]` calls `-[AVAudioPlayer play]` calls `AudioQueueStart`. `beep()`
+is the system alert path and builds no playback graph in-process, which is why it
+never needed the entitlement and why its success was misleading evidence about a
+different API. Both halves are now build-diagnostic lessons.
+
+Two riders. **Settings grew to five tabs** — General, Board, Sounds, Engine, Data
+— deliberately as pure relocation, no control or key or identifier changed, and
+deliberately without a D-number. And a **test hole closed by being asked a
+question**: "are the choices persistent?" led to a round-trip fixture that stored
+`false` under all four cue keys and asserted all four read `false`, which passes
+unchanged if two properties read each other's key. A fixture where every expected
+value is the same cannot catch a crossed mapping; the agreement now says so.
+
+**Gate evidence: ⌘U reported green by Bera, 12 August**, on D81′ and D82′ — the
+tab split came after and adds no test. Owed and named in PROJECT-INSTRUCTIONS:
+one run of `Tools/make-cues.swift`, which was ported from a working Python
+implementation by a hand with no Swift toolchain, so "it compiles" is a claim;
+and the audible checks, which are the only witness that the twelve samples are in
+the bundle, since a missing file and a disabled toggle sound identical.
+
 ### The 9–10 August close — game 98, the red ply, and the companion windows *(recorded 10 August 2026)*
 
-Uncommitted at this recording, above `2db96e8`. **Game 98's Move Text error
+Committed as `1ad5975`, `42820be` and `407c846`, with the recording itself in
+`424b4e1` — *this entry read "Uncommitted at this recording, above `2db96e8`"
+until 12 August, which is the same decay the instructions' tree line suffers and
+is corrected here for the same reason.* **Game 98's Move Text error
 adjudicated real, not a false positive**: the file writes `Qf4+` at ply 98
 where the position holds a white pawn on f4 (standing since `30. gxf4`), so
 the unique legal queen move to f4 is the *capture* and strict x-iff-capture

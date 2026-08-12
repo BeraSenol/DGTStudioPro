@@ -212,6 +212,14 @@ internal enum AccessibilityID {
     internal static let settingsSyzygyProbeLimitStepper = "settings.syzygy.probeLimitStepper"
     internal static let settingsSyzygy50MoveToggle      = "settings.syzygy.fiftyMoveToggle"
     internal static let settingsPieceAnimationSlider    = "settings.pieceAnimationSlider"
+
+    /// The four board cues (D81′). One identifier per toggle rather than one for the section — a
+    /// section is not a control, and a cue that stops firing is diagnosed by naming *which* toggle.
+    internal static let settingsBoardSoundSetPicker  = "settings.boardSoundSetPicker"
+    internal static let settingsMoveSoundToggle      = "settings.moveSoundToggle"
+    internal static let settingsCaptureSoundToggle   = "settings.captureSoundToggle"
+    internal static let settingsCheckSoundToggle     = "settings.checkSoundToggle"
+    internal static let settingsCheckmateSoundToggle = "settings.checkmateSoundToggle"
     
     // MARK: View Options (7 Aug 2026)
     

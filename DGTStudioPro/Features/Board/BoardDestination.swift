@@ -26,6 +26,7 @@ internal struct BoardDestination: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(DGTConnection.self) private var connection
     @Environment(DGTLiveSession.self) private var session
+    @Environment(BoardSounds.self) private var boardSounds
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
     
     // MARK: View State
@@ -520,6 +521,11 @@ internal struct BoardDestination: View {
         
         do {
             let newGame = try Game(pgn: loadedPGN)
+            // D81′ — the review cue, wired here rather than inside `Game.init` because the player is
+            // an environment value and a model-layer type reaching for one is how a `Game` stops
+            // being constructible from a preview. Strong capture: the App owns `BoardSounds` for the
+            // process, and it holds no reference back.
+            newGame.onStep = { boardSounds.play($0) }
             // The success path *sets* the cache — `clearBoard` is for the four failure exits only.
             tabState.boardPGN = loadedPGN
             tabState.boardGame = newGame

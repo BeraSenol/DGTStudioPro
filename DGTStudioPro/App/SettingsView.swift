@@ -34,6 +34,9 @@ internal struct SettingsView: View {
     
     @Environment(\.modelContext) private var modelContext
     @Environment(SleepInhibitor.self) private var sleepInhibitor
+    /// D81′ — the four cue gates. An owning type, not four more `@AppStorage` twins: playback and
+    /// this form must agree about the defaults, and the way to guarantee that is to have one.
+    @Environment(BoardSounds.self) private var boardSounds
     @Query private var allGames: [PGN]
     
     @State private var showEraseConfirmation = false
@@ -41,6 +44,18 @@ internal struct SettingsView: View {
     @State private var eraseErrorMessage = ""
     
     // MARK: Body
+
+    /// Five tabs, split out of three on 12 Aug 2026 by request. General had grown to six sections
+    /// — connection, an alert, the board cues, engine options, tablebases and the sleep gates —
+    /// which is a drawer rather than a category.
+    ///
+    /// The split is **pure relocation**: not one control, default, storage key or identifier
+    /// changed, only which tab draws it. Kept that way deliberately, per "mechanical changes travel
+    /// alone", so a behaviour regression cannot hide inside a reshuffle.
+    ///
+    /// Order is by how often a setting is touched, not alphabetically: the two that answer "why is
+    /// the app doing that" come first, the two that are set once sit behind them, and Data is last
+    /// because it holds the destructive button.
     internal var body: some View {
         TabView {
             Tab("General", systemImage: "gearshape") {
@@ -49,19 +64,33 @@ internal struct SettingsView: View {
             Tab("Board", systemImage: "checkerboard.rectangle") {
                 boardTab
             }
+            Tab("Sounds", systemImage: "speaker.wave.2") {
+                soundsTab
+            }
+            Tab("Engine", systemImage: "cpu") {
+                engineTab
+            }
             Tab("Data", systemImage: "externaldrive") {
                 dataTab
             }
         }
+        // Unchanged at five tabs: the five labels are short and the bar was not close to full at
+        // three. If a sixth ever crowds it, this is the number to raise.
         .frame(width: 500)
     }
     
     // MARK: General
+
+    /// What is left once sounds and the engine have their own tabs: the board connection and the
+    /// sleep gates. Energy stays here rather than following the engine, because only *half* of it
+    /// is engine-shaped — one gate is about analysis and one about live play, under a single
+    /// footer that deliberately covers both causes at once (D66′). Splitting it to satisfy a tab
+    /// would mean splitting that footer.
     private var generalTab: some View {
         // D25′ — the sleep gates are observable properties on the inhibitor, not `@AppStorage`
         // mirrors: the tracking loop must see the flip mid-game. No twin default to document.
         @Bindable var inhibitor = sleepInhibitor
-        
+
         return Form {
             // M7.3 deliberately has no toggle: standing down reconnection is per-incident ("Stop Trying"),
             // not a preference. The footer states the split.
@@ -76,50 +105,6 @@ internal struct SettingsView: View {
                     + "attached. Mid-game reconnection is always on."
                 )
             }
-            
-            Section {
-                Toggle("Play alert on illegal move", isOn: $illegalMoveSoundEnabled)
-                    .accessibilityIdentifier(AccessibilityID.settingsIllegalMoveSoundToggle)
-            } header: {
-                Text("Live Play")
-            } footer: {
-                Text(
-                    "Plays the system alert sound when the pieces on the "
-                    + "board can't be explained by any legal move."
-                )
-            }
-            
-            // M11.4: this section once had one Stepper labelled "Threads" editing `analysisDepth`.
-            Section {
-                Stepper(value: $analysisDepth, in: EngineConfiguration.depthRange) {
-                    LabeledContent("Search Depth", value: "\(analysisDepth)")
-                }
-                .accessibilityIdentifier(AccessibilityID.settingsEngineDepthStepper)
-                
-                Picker("Hash", selection: $engineHashMB) {
-                    ForEach(EngineConfiguration.hashChoicesMB, id: \.self) { size in
-                        Text("\(size) MB").tag(size)
-                    }
-                }
-                .accessibilityIdentifier(AccessibilityID.settingsEngineHashPicker)
-                
-                Stepper(value: $engineThreads, in: EngineConfiguration.threadsRange) {
-                    LabeledContent("Threads", value: "\(engineThreads)")
-                }
-                .accessibilityIdentifier(AccessibilityID.settingsEngineThreadsStepper)
-            } header: {
-                Text("Engine")
-            } footer: {
-                Text(
-                    "Applies to the next analysis. Depth trades time for "
-                    + "precision; hash and threads take effect when the "
-                    + "engine next launches."
-                )
-            }
-
-            // Syzygy is its own file: unlike the steppers it carries a state machine — a folder re-openable
-            // across launches and a verification that starts an engine.
-            SyzygySettingsSection()
             
             Section {
                 Toggle(
@@ -149,9 +134,124 @@ internal struct SettingsView: View {
         }
         .formStyle(.grouped)
     }
-    
+
+    // MARK: Sounds
+
+    /// Everything the app can make a noise with, in one place for the first time.
+    ///
+    /// Board Sounds leads because it is the section with a choice in it; Alerts follows as the one
+    /// switch. **That section was headed "Live Play" under General and is renamed here**, which is
+    /// the one non-mechanical edit in the whole split and is worth its sentence: "Live Play"
+    /// describes *when* a sound happens, which was a useful label while the section sat beside
+    /// connection settings, and is the wrong axis beside a section describing *what* a sound is.
+    /// "Alerts" also puts D81′'s distinction on screen — an alert about the board contradicting
+    /// the game, at the system alert volume, against feedback that a move landed, at app volume.
+    private var soundsTab: some View {
+        // D81′ — an owning type, not `@AppStorage`: playback and this form must agree about the
+        // four defaults, and the way to guarantee that is to have one owner.
+        @Bindable var sounds = boardSounds
+
+        return Form {
+            Section {
+                // D82′. Picking plays the set's move cue, so the list is auditioned rather than
+                // read — and it plays even with Move switched off, because you are choosing a set,
+                // not a cue. A menu picker rather than segmented, D48′'s reason: the view-mode
+                // control elsewhere is segmented, and two of those read as one broken one.
+                Picker("Sound Set", selection: $sounds.soundSet) {
+                    ForEach(BoardSoundSet.allCases) { set in
+                        Text(set.displayName).tag(set)
+                    }
+                }
+                .accessibilityIdentifier(AccessibilityID.settingsBoardSoundSetPicker)
+
+                Toggle("Move", isOn: $sounds.playsMove)
+                    .accessibilityIdentifier(AccessibilityID.settingsMoveSoundToggle)
+
+                Toggle("Capture", isOn: $sounds.playsCapture)
+                    .accessibilityIdentifier(AccessibilityID.settingsCaptureSoundToggle)
+
+                Toggle("Check", isOn: $sounds.playsCheck)
+                    .accessibilityIdentifier(AccessibilityID.settingsCheckSoundToggle)
+
+                Toggle("Checkmate", isOn: $sounds.playsCheckmate)
+                    .accessibilityIdentifier(AccessibilityID.settingsCheckmateSoundToggle)
+            } header: {
+                Text("Board Sounds")
+            } footer: {
+                // States the precedence rule, because it is the one thing about this section that
+                // is not obvious from the labels and the one that reads as a bug when unexplained:
+                // turning Move off does not silence a capture, and a checking capture is one sound.
+                Text(
+                    "Plays as moves land on the live board and as you step "
+                    + "through a game with the arrow keys. Felt is muted, wood "
+                    + "is the default knock, marble is higher and harder; "
+                    + "choosing one plays it. Each move makes one sound, the "
+                    + "most specific one that fits — a capture that gives check "
+                    + "is a check. Jumping to the start or end of a game is silent."
+                )
+            }
+
+            Section {
+                Toggle("Play alert on illegal move", isOn: $illegalMoveSoundEnabled)
+                    .accessibilityIdentifier(AccessibilityID.settingsIllegalMoveSoundToggle)
+            } header: {
+                Text("Alerts")
+            } footer: {
+                Text(
+                    "Plays the system alert sound when the pieces on the "
+                    + "board can't be explained by any legal move. Unlike the "
+                    + "board sounds above, this one follows your system alert "
+                    + "volume."
+                )
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    // MARK: Engine
+
+    /// The engine's own settings and the tablebases it probes. Syzygy follows the steppers here
+    /// rather than staying in General because it is engine configuration in every sense — it sets
+    /// probe depth and limits, and it verifies by *launching an engine*.
+    private var engineTab: some View {
+        Form {
+            // M11.4: this section once had one Stepper labelled "Threads" editing `analysisDepth`.
+            Section {
+                Stepper(value: $analysisDepth, in: EngineConfiguration.depthRange) {
+                    LabeledContent("Search Depth", value: "\(analysisDepth)")
+                }
+                .accessibilityIdentifier(AccessibilityID.settingsEngineDepthStepper)
+
+                Picker("Hash", selection: $engineHashMB) {
+                    ForEach(EngineConfiguration.hashChoicesMB, id: \.self) { size in
+                        Text("\(size) MB").tag(size)
+                    }
+                }
+                .accessibilityIdentifier(AccessibilityID.settingsEngineHashPicker)
+
+                Stepper(value: $engineThreads, in: EngineConfiguration.threadsRange) {
+                    LabeledContent("Threads", value: "\(engineThreads)")
+                }
+                .accessibilityIdentifier(AccessibilityID.settingsEngineThreadsStepper)
+            } header: {
+                Text("Engine")
+            } footer: {
+                Text(
+                    "Applies to the next analysis. Depth trades time for "
+                    + "precision; hash and threads take effect when the "
+                    + "engine next launches."
+                )
+            }
+
+            // Syzygy is its own file: unlike the steppers it carries a state machine — a folder
+            // re-openable across launches and a verification that starts an engine.
+            SyzygySettingsSection()
+        }
+        .formStyle(.grouped)
+    }
+
     // MARK: Board
-    
+
     /// The Board tab in the grouped-form language of the other tabs. Swatches stay the control — a
     /// visual style is picked visually.
     private var boardTab: some View {
@@ -322,4 +422,5 @@ internal struct SettingsView: View {
     SettingsView()
         .modelContainer(for: PGN.self, inMemory: true)
         .environment(SleepInhibitor.preview)
+        .environment(BoardSounds.preview)
 }
