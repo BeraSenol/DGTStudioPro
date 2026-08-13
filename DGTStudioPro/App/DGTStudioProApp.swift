@@ -148,6 +148,13 @@ internal struct DGTStudioProApp: App {
         }
         .modelContainer(sharedContainer)
         .defaultLaunchBehavior(.presented)
+        // Game tabs are session-only: a relaunch opens one fresh Library window rather than the set
+        // that happened to be open at quit. `.defaultLaunchBehavior(.presented)` above is what still
+        // supplies that one window — the two modifiers answer different questions (what opens at
+        // launch vs. whether the previous set comes back), so disabling restoration alone would
+        // launch to nothing. Reviewing a game is a thing you start, not a thing you resume, and the
+        // draft sidecar already carries the only session state worth surviving a quit.
+        .restorationBehavior(.disabled)
         // M8.1 Game menu (←/→/Home/End) — the scene half of `.focusedSceneValue(\.activeGame, …)`.
         // Diagnostics rides in the same block; commands are app-scoped, not per-tab.
         .commands {
@@ -173,6 +180,12 @@ internal struct DGTStudioProApp: App {
         // D80′ — companions JOIN a full-screen space rather than claiming one. Scene-level, so the
         // role is set BEFORE placement; the AppKit configurator wrote it after, and never could work.
         .windowManagerRole(.associated)
+        // Session-only, and the companions' reason is the stronger one: this window describes a
+        // subject held by a board tab, and those no longer come back. A restored graph would open
+        // beside nothing — worse than the game tabs' case, which at least restored something real.
+        // The three companion groups and the two singleton windows below all take this for the
+        // same reason; it is stated here once rather than five times.
+        .restorationBehavior(.disabled)
 
         // D73′ — analysis as data, per-ply table. Fourth wrapper in the `openWindow(value:)` family.
         // Not floating, unlike the graph.
@@ -182,6 +195,7 @@ internal struct DGTStudioProApp: App {
         .modelContainer(sharedContainer)
         .defaultSize(width: 460, height: 520)
         .windowManagerRole(.associated) // D80′
+        .restorationBehavior(.disabled) // companion — see the graph above
 
         // M10 Get Info — one group for all three subjects, so info windows tab with *each other*, never
         // behind a board. Not floating.
@@ -192,6 +206,7 @@ internal struct DGTStudioProApp: App {
         .modelContainer(sharedContainer)
         .defaultSize(width: 460, height: 520)
         .windowManagerRole(.associated) // D80′
+        .restorationBehavior(.disabled) // companion — see the graph above
 
         // The analysis queue's window — a `Window`, not a `WindowGroup`: exactly one queue, opened by
         // `openWindow(id:)`, so the wrapper-type trap is sidestepped rather than paid.
@@ -201,7 +216,11 @@ internal struct DGTStudioProApp: App {
         }
         .modelContainer(sharedContainer)
         .defaultSize(width: 520, height: 560)
+        // `.suppressed` is not restoration policy, which is the trap worth naming: it says this
+        // window does not open *by default* at launch, and says nothing about one left open at
+        // quit. Both singletons carried it and both came back anyway.
         .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled)
         .windowManagerRole(.associated) // D80′
 
         // View Options (⌘J) — a `Window` for the queue scene's reason: one panel, opened by id.
@@ -211,6 +230,7 @@ internal struct DGTStudioProApp: App {
         }
         .defaultSize(width: 340, height: 300)
         .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled) // see the Analysis window above
         .windowResizability(.contentMinSize)
         .windowLevel(.floating)
         .windowManagerRole(.associated) // D80′
