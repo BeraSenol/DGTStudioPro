@@ -473,7 +473,7 @@ git status                                     # first, always
 
 # Milestone numbers in code but in no document (species 5)
 comm -23 <(grep -rhoE "\bM[0-9]+" --include='*.swift' DGTStudioPro DGTStudioProTests | sort -u) \
-         <(grep -rhoE "\bM[0-9]+" *.md Diagrams/*.md | sort -u)
+         <(grep -rhoE "\bM[0-9]+" *.md | sort -u)
 
 # Declared names referenced nowhere. Comments stripped BEFORE the frequency
 # table — the comment most likely to name a symbol is the one explaining its
