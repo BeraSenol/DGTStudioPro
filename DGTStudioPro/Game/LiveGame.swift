@@ -10,7 +10,7 @@ enum DGTRuleSet: String, CaseIterable, Codable, Sendable {
 }
 
 /// The working model for a live-recorded game — `Game`'s append-only sibling: no takebacks, no
-/// rollback, ever (Decision #1). Legality comes only from the core's `legalMoves()`.
+/// rollback, ever. Legality comes only from the core's `legalMoves()`.
 @Observable
 @MainActor
 final class LiveGame {
@@ -30,13 +30,13 @@ final class LiveGame {
         var white: String
         var black: String
 
-        /// The board identity (D28′), stamped once at game start; survives crash-resume via the draft.
+        /// The board identity, stamped once at game start; survives crash-resume via the draft.
         /// Not exposed by the roster forms — equipment, not a seat.
         var board: String?
 
-        /// One player on both sides? (D61′) A forwarding accessor — `Player.seatsNameOnePlayer` owns
+        /// One player on both sides? A forwarding accessor — `Player.seatsNameOnePlayer` owns
         /// the rule (one recipe, two spellings). Note `Roster` is nonisolated: a global actor does not
-        /// isolate nested types (D44′).
+        /// isolate nested types.
         var seatsNameOnePlayer: Bool {
             Player.seatsNameOnePlayer(white, black)
         }

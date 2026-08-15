@@ -1,4 +1,4 @@
-/// A recognised checkmate pattern, computed at analysis time and stored (D19′; ten cases, D65′).
+/// A recognised checkmate pattern, computed at analysis time and stored (ten cases).
 /// Pure predicates over the final position — no engine, no last move needed. Each case is
 /// defined so it cannot false-positive on an unrelated mate; the `isCheckmate` guard in
 /// `classify` is load-bearing — recognisers only ever run on real mates.
@@ -50,7 +50,7 @@ enum SpecialCheckmate: String, Codable, Sendable, CaseIterable {
         return precedence.first { $0.matches(context) }
     }
 
-    /// Precedence, narrowest motif first (D65′): a mate can honestly fit two shapes and the stored
+    /// Precedence, narrowest motif first: a mate can honestly fit two shapes and the stored
     /// column holds one value, so the order is the decision. Data, not an `if`-chain. A new case
     /// missing from *this list* never classifies, silently — the witness is the completeness pin.
     private static let precedence: [SpecialCheckmate] = [

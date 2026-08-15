@@ -110,7 +110,7 @@ struct AnalysisQueueStatusWindowView: View {
                 // readout spun and read as the setting bouncing.
                 searchFact("Depth", "\(search.targetDepth)")
                 // Through `EvaluationBarReading` — this window, the graph and the bar cannot disagree about
-                // what "+1.3" or "#4" looks like (D33′'s pinned grammar).
+                // what "+1.3" or "#4" looks like (the pinned grammar).
                 searchFact("Evaluation", EvaluationBarReading(search.progress.evaluation).label)
                 searchFact("Speed", speedLabel(search.progress.nodesPerSecond))
             }
@@ -216,7 +216,7 @@ struct AnalysisQueueStatusWindowView: View {
         }
     }
 
-    /// "58 plies to search" — searchable, not total, since D74′: the number the estimate is
+    /// "58 plies to search" — searchable, not total: the number the estimate is
     /// denominated in, so a jumped "about 9 min" is explicable.
     private func plyLabel(for id: PersistentIdentifier) -> String {
         guard let plies = controller.plyCount(for: id) else { return "" }

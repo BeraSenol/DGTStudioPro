@@ -21,7 +21,7 @@ struct PieceGlyph: View {
     }
 }
 
-/// M6 — every piece in one identity-keyed layer above the squares (D47′). Not
+/// M6 — every piece in one identity-keyed layer above the squares. Not
 /// `matchedGeometryEffect`: MGE has no vocabulary for "this change must not animate", which the
 /// board-dump case needs — identity churn expresses it free (a dump re-keys wholesale, so 32
 /// pieces fade rather than fly). Reduce Motion drops the animation, not the layer.

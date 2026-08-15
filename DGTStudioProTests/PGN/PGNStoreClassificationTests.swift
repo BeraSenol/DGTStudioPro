@@ -3,7 +3,7 @@ import Foundation
 import SwiftData
 @testable import DGTStudioPro
 
-/// The M4 store door (D34′): `classify` is the single write site for all four
+/// The M4 store door: `classify` is the single write site for all four
 /// classification columns, `backfillClassifications` heals pre-M4 rows
 /// without an engine, `applyMovetextEdit` **re-derives** rather than clears,
 /// and none of it touches the content hash.
@@ -62,7 +62,7 @@ struct PGNStoreClassificationTests {
         #expect(game.ecoCode == "C60")
         #expect(game.ecoFamily == "Ruy Lopez")
         #expect(game.ecoVariation == nil)
-        // The whole line is book, and the stamp says so — the analysis skip's input (D74′).
+        // The whole line is book, and the stamp says so — the analysis skip's input.
         #expect(game.ecoDepth == 5)
         #expect(game.specialCheckmate == nil)
     }
@@ -178,8 +178,8 @@ struct PGNStoreClassificationTests {
 
     // MARK: Movetext Edits Re-derive
 
-    /// The corrected behaviour: D18′'s doc promised these fields would
-    /// *clear* on a movetext edit. D34′ made classification engine-free, so
+    /// The corrected behaviour: the doc promised these fields would
+    /// *clear* on a movetext edit. Classification is engine-free, so
     /// they are re-derived inside the same transaction instead.
     @Test("A movetext edit re-classifies rather than clearing")
     func movetextEditReclassifies() throws {
@@ -203,7 +203,7 @@ struct PGNStoreClassificationTests {
 
     // MARK: Outside The Hash
 
-    /// The `board` precedent (D28′): derived truth must not identify a game,
+    /// The `board` precedent: derived truth must not identify a game,
     /// or a re-classification would silently fork it from its own twin.
     @Test("Classification is outside the content hash")
     func classificationDoesNotChangeTheHash() throws {

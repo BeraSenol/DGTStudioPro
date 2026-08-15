@@ -236,9 +236,9 @@ struct UCIProtocolTests {
         #expect(flipped.flipped == .centipawns(75))
     }
 
-    // MARK: Known-and-ignored vs unrecognized (D63′)
+    // MARK: Known-and-ignored vs unrecognized
 
-    /// nil means two things, and pre-D63′ both landed on the error channel — ~25 option lines per
+    /// nil means two things, and previously both landed on the error channel — ~25 option lines per
     /// start. This is the part a caller can only classify through.
     @Test(arguments: [
         "option name Hash type spin default 16 min 1 max 33554432",

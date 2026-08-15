@@ -39,7 +39,7 @@ struct PlayersIconsView: View {
                         spacing: options.spacing
                     ) {
                         ForEach(players) { player in
-                            // Rank always rides the card (D48′) — rank is a fact about the player, not the sort.
+                            // Rank always rides the card — rank is a fact about the player, not the sort.
                             PlayerCardView(
                                 stats: player.stats,
                                 isSelected: selectedKeys.contains(player.id),

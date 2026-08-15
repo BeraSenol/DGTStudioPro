@@ -1,7 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The checkmate-type classifier (D19′; ten motifs, D65′). Pure, nonisolated, one FEN per pattern.
+/// The checkmate-type classifier (ten motifs). Pure, nonisolated, one FEN per pattern.
 @Suite("Special Checkmate — Classification")
 struct SpecialCheckmateTests {
 
@@ -42,7 +42,7 @@ struct SpecialCheckmateTests {
         #expect(SpecialCheckmate.hook.displayName      == "Hook")
     }
 
-    /// Raw values ride stored state and rule blobs — a rename is a silent migration (D36′ trap).
+    /// Raw values ride stored state and rule blobs — a rename is a silent migration.
     /// Asserted on literals, rare and correct.
     @Test func rawValuesAreStoredState() {
         #expect(SpecialCheckmate.smothered.rawValue == "smothered")

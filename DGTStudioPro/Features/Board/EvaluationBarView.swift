@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The vertical evaluation bar (D33′). Dumb by design: semantics live in
+/// The vertical evaluation bar. Dumb by design: semantics live in
 /// `EvaluationBarReading`; this view owns only geometry — which end is "near". The reading
 /// stays white-relative; the flip is one boolean of geometry. Label: always visible, never
 /// inside the bar — a thin losing share would swallow it.
@@ -20,7 +20,7 @@ struct EvaluationBarView: View {
     
     // MARK: Derived
     
-    /// The share drawn from the *bottom* — white's under white perspective (D33′'s one flip, geometry only).
+    /// The share drawn from the *bottom* — white's under white perspective (the one flip, geometry only).
     private var bottomFraction: Double {
         perspective == .white ? reading.whiteFraction : 1 - reading.whiteFraction
     }

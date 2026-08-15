@@ -2,7 +2,7 @@ import Testing
 @testable import DGTStudioPro
 
 /// The subtitle grammar, pinned the way `GameHeadline` is: views dumb, grammar held still.
-/// Nonisolated, load-bearing (D44′ — nested types don't inherit isolation).
+/// Nonisolated, load-bearing (nested types don't inherit isolation).
 @Suite("Destination Subtitle")
 struct DestinationSubtitleTests {
 
@@ -48,7 +48,7 @@ struct DestinationSubtitleTests {
 
     /// **Reviewing outranks the session.** A tab reading an archived game must
     /// not report the physical board's troubles — it is not party to them
-    /// (D15′). Asserted against a phase that would otherwise win loudly, so
+    ///. Asserted against a phase that would otherwise win loudly, so
     /// this fails if the branches are ever reordered.
     @Test func aReviewTabIgnoresTheLiveSession() {
         #expect(DestinationSubtitle.board(phase: .recovering(lastSAN: nil), reviewing: .white)

@@ -36,7 +36,7 @@ enum UCIProtocol {
         "option", "copyprotection", "registration"
     ]
 
-    /// Whether nil meant *known and ignored* rather than *unrecognized* (D63′). This distinction
+    /// Whether nil meant *known and ignored* rather than *unrecognized*. This distinction
     /// existed only in prose; ~25 option lines per start made the error channel unreadable.
     static func isDeliberatelyIgnored(_ line: String) -> Bool {
         let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)

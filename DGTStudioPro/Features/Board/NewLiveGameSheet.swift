@@ -27,7 +27,7 @@ func normalized(_ roster: LiveGame.Roster) -> LiveGame.Roster {
 
 // MARK: Roster Form
 
-/// The roster form minus Result (the game tracks it — Decision #4). Shared by the new-game,
+/// The roster form minus Result (the game tracks it). Shared by the new-game,
 /// edit-details and archive-confirmation sheets, so the field set cannot drift.
 struct LiveGameRosterForm: View {
     
@@ -38,7 +38,7 @@ struct LiveGameRosterForm: View {
     /// Identifier prefix for the six fields — the archive sheet passes `archive.form.*`.
     var identifierPrefix = AccessibilityID.liveFormPrefix
     
-    /// Known-player **tag forms** for the seat pickers (D16′/D29′ — the picker inserts
+    /// Known-player **tag forms** for the seat pickers (the picker inserts
     /// `Player.tagName`, never `name`). The menu only fills; picking creates nothing.
     var knownPlayers: [String] = []
     
@@ -104,7 +104,7 @@ struct LiveGameRosterForm: View {
                     )
                 }
 
-                // D61′'s guard: the two seats are one `Roster`, so the check needs no drafts to compare.
+                // The guard: the two seats are one `Roster`, so the check needs no drafts to compare.
                 // A warning line plus a disabled Start — the alert belongs to Get Info's commit model.
                 if roster.seatsNameOnePlayer {
                     Label(
@@ -178,8 +178,8 @@ struct NewLiveGameSheet: View {
     @AppStorage(StorageKeys.defaultSite) private var defaultSite = ""
     @AppStorage(StorageKeys.defaultWhitePlayer) private var defaultWhite = ""
     
-    // MARK: Round Prefill (D16′)
-    /// The picker's source and resolution set. Matching only — the dialog never creates a `Player` (D9′).
+    // MARK: Round Prefill
+    /// The picker's source and resolution set. Matching only — the dialog never creates a `Player`.
     @Query(sort: \Player.name) private var players: [Player]
     
     /// Library games projected for the pairing fold. An unhealed row projects nil seats and simply
@@ -211,7 +211,7 @@ struct NewLiveGameSheet: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding([.horizontal, .top])
             
-            // D29′: tag form into the field, `name` fallback — display form is still a valid tag, just not
+            // Tag form into the field, `name` fallback — display form is still a valid tag, just not
             // the remembered one.
             LiveGameRosterForm(
                 roster: $roster,
@@ -227,8 +227,8 @@ struct NewLiveGameSheet: View {
                 
                 Spacer()
                 
-                // D61′: cannot start with one player on both sides. The form says why; this stops the gesture.
-                // Both read `roster.seatsNameOnePlayer` — one predicate, called twice (D40′'s remedy).
+                // Cannot start with one player on both sides. The form says why; this stops the gesture.
+                // Both read `roster.seatsNameOnePlayer` — one predicate, called twice (the remedy).
                 Button("Start Game", action: startTapped)
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
@@ -265,7 +265,7 @@ struct NewLiveGameSheet: View {
         roster.white = defaultWhite
     }
     
-    /// D16′: both seats resolved → suggest the pairing's next round. The guard confines it to an
+    /// Both seats resolved → suggest the pairing's next round. The guard confines it to an
     /// empty Round or our own suggestion; a typed value survives both directions.
     private func updateRoundPrefill() {
         guard roster.round == nil || roster.round == prefilledRound else { return }
@@ -287,8 +287,8 @@ struct NewLiveGameSheet: View {
         prefilledRound = next
     }
     
-    /// A seat resolves iff its text matches a known player under the D9′ fold, routed through
-    /// `displayForm` first exactly like `resolvePlayer` — the field carries tag form (D29′).
+    /// A seat resolves iff its text matches a known player under the fold, routed through
+    /// `displayForm` first exactly like `resolvePlayer` — the field carries tag form.
     private func resolvedKey(for field: String) -> String? {
         let display = PlayerName.displayForm(of: field)
         guard !display.isEmpty, display != "?" else { return nil }
@@ -407,8 +407,8 @@ struct EditLiveGameDetailsSheet: View {
     )
 }
 
-/// D61′'s seat guard, which nothing else renders. The two seats are spelled differently on
-/// purpose — tag form against display form, one player under D23′ — proving the fold, not `==`.
+/// The seat guard, which nothing else renders. The two seats are spelled differently on
+/// purpose — tag form against display form, one player either way — proving the fold, not `==`.
 #Preview("Roster Form, Seats Collide") {
     @Previewable @State var roster = LiveGame.Roster(
         event: "Club Night",

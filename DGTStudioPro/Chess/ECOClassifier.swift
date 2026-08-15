@@ -1,5 +1,5 @@
 /// One named opening from the bundled table. `init(code:name:)` is the one place lichess's
-/// `Family: Variation` convention is read — split once per row at load, not per surface (D35′).
+/// `Family: Variation` convention is read — split once per row at load, not per surface.
 struct ECOOpening: Sendable, Hashable {
 
     /// The ECO volume code — deliberately not unique: it names a region; `family` identifies the
@@ -46,7 +46,7 @@ struct ECOOpening: Sendable, Hashable {
 
 // MARK: - Classification
 
-/// Longest-prefix ECO classification (D19′). Pure and table-injected — I/O lives in `ECOTable`.
+/// Longest-prefix ECO classification. Pure and table-injected — I/O lives in `ECOTable`.
 /// Longest prefix, not first match: the table deliberately carries duplicate transposition rows.
 struct ECOClassifier: Sendable {
 
@@ -68,7 +68,7 @@ struct ECOClassifier: Sendable {
         deepestLine = entries.map { $0.line.count }.max() ?? 0
     }
 
-    /// The named opening and the matched prefix length in plies, or nil (D74′ — the length is what
+    /// The named opening and the matched prefix length in plies, or nil (the length is what
     /// the analysis book-skip reads). Cost, recorded: quadratic prefix re-join, bounded at 36
     /// plies — revisit only if Instruments says so.
     func match(for moves: [String]) -> (opening: ECOOpening, plies: Int)? {

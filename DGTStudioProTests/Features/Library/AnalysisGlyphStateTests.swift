@@ -193,7 +193,7 @@ struct AnalysisGlyphStateTests {
         #expect(AnalysisGlyph.name(.analyzing) == "gear")
     }
 
-    /// The badge vocabulary (D72′ postscript): plain marks, distinct, and the
+    /// The badge vocabulary: plain marks, distinct, and the
     /// running state is the **same bare gear** as the action vocabulary — one
     /// silhouette for "the engine has this one" everywhere it appears, which
     /// is the sentence that keeps two vocabularies from being two opinions.
@@ -240,7 +240,7 @@ struct AnalysisGlyphStateTests {
         #expect(AnalysisGlyph.statusLabel(.unanalyzed) == LibrarySearchToken.unanalyzed.displayName)
     }
 
-    // MARK: The Projection Overload (D72′)
+    // MARK: The Projection Overload
 
     /// The projection overload is a cache, not a second opinion — both overloads answer identically
     /// across scored/unscored, running or not.

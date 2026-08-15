@@ -271,7 +271,7 @@ struct DGTConnectionTests {
         #expect(connection.isReconnecting == false)
     }
 
-    // MARK: Board Identity Tag (M2, D28′)
+    // MARK: Board Identity Tag (M2)
 
     /// `BoardInfo.identityTag` composes the `[Board "…"]` value the DGT
     /// reference exports carry: "DGT " + long serial ("DGT 3000448278"),

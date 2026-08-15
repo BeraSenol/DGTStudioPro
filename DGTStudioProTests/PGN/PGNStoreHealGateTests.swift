@@ -3,7 +3,7 @@ import Foundation
 import SwiftData
 @testable import DGTStudioPro
 
-/// D75′ — the converged stamp on the two player backfills. The rules worth pinning: a healing
+/// The converged stamp on the two player backfills. The rules worth pinning: a healing
 /// pass never stamps, a clean pass stamps, a stamped store skips the scan entirely — which is
 /// the priced trade, asserted rather than assumed — and clearing the default is the recovery.
 /// Scratch defaults per test, never `.standard`.
@@ -72,7 +72,7 @@ struct PGNStoreHealGateTests {
         let game = try Self.insertUnlinked(context)
         try store.healPlayersIfNeeded(defaults: defaults)
         // The skip is real: a row the scan would have healed stays unhealed. That is the trade
-        // D75′ prices — nothing inside the app inserts around the doors, so the gate only ever
+        // The prices — nothing inside the app inserts around the doors, so the gate only ever
         // skips work that converged.
         #expect(game.whitePlayer == nil)
 

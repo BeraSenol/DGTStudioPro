@@ -11,7 +11,7 @@ extension GameState {
         guard !s.isEmpty else { throw SANParseError.empty }
         
         // Drops all four suffixes; `PGNParser.stripAnnotations` keeps `+`/`#` — the app's two strippers
-        // differ on purpose (D18′ turns on which is which).
+        // differ on purpose (the movetext validator turns on which is which).
         while let last = s.last, "+#!?".contains(last) {
             s.removeLast()
         }

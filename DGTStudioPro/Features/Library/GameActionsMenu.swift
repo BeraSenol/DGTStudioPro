@@ -12,7 +12,7 @@ struct GameActionsMenu: View {
     /// The whole selection when a selected row is right-clicked, else the one under the pointer.
     let games: [PGN]
 
-    /// Every closure takes the set (D56′). Open's old singular rule was well argued and wrong —
+    /// Every closure takes the set. Open's old singular rule was well argued and wrong —
     /// N windows is Finder's answer; the arbitrary pick was the real hazard.
     let onOpen: ([PGN]) -> Void
     let onAnalyze: ([PGN]) -> Void
@@ -25,7 +25,7 @@ struct GameActionsMenu: View {
     // MARK: Body
     var body: some View {
         if !games.isEmpty {
-            // Get Info stays singular — the only item that is (D56′): its window resolves one subject; a
+            // Get Info stays singular — the only item that is: its window resolves one subject; a
             // set has no roster to show.
             if games.count == 1, let game = games.first {
                 GetInfoMenuItem(

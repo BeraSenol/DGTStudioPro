@@ -11,9 +11,9 @@ struct BoardInspectorView: View {
     let style: BoardStyle
     let onMoveTapped: ((Int) -> Void)?
     
-    /// The edit request: presentation and the write belong to `BoardDestination` (D15′ — modals are
+    /// The edit request: presentation and the write belong to `BoardDestination` (modals are
     /// destination furniture); this view only asks, which keeps it canvas-renderable. The Board
-    /// presents no editor at all since D57′.
+    /// presents no editor at all.
 
     var body: some View {
         List {
@@ -28,10 +28,10 @@ struct BoardInspectorView: View {
     }
     
     // MARK: Instance Methods
-    /// The roster under the D20′ headline — the same shape and place as the live inspector's, so
+    /// The roster under the headline — the same shape and place as the live inspector's, so
     /// the two metadata surfaces read as one idea in two states.
     private var metadataSection: some View {
-        // The action slot is empty since D57′ and kept: an empty `@ViewBuilder` slot is the honest
+        // The action slot is empty and kept: an empty `@ViewBuilder` slot is the honest
         // statement that this host has no verb.
         SevenTagRosterSection(
             roster: pgn.map { RosterSummary($0) },
@@ -39,7 +39,7 @@ struct BoardInspectorView: View {
         )
     }
     
-    /// D20′ headline; falls back to a bare noun with no game — "? vs ?" would over-claim.
+    /// The headline; falls back to a bare noun with no game — "? vs ?" would over-claim.
     private var headline: String {
         guard let pgn else { return "Game" }
         return GameHeadline.text(
@@ -79,7 +79,7 @@ struct BoardInspectorView: View {
             .listRowSeparator(.hidden)
         } actions: {
             // No pencil, deliberately and permanently: movetext is read-only on this destination in both
-            // branches (Decision #1 live; the editor is Get Info's for review).
+            // branches (append-only live; the editor is Get Info's for review).
         }
     }
 }

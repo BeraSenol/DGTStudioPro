@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A section header naming the thing the section is about, action trailing (D26′).
+/// A section header naming the thing the section is about, action trailing.
 /// `title` is a `String`, not `LocalizedStringKey` — titles are data (a player's name is not
 /// copy to localize). One line, truncating.
 struct InspectorSectionHeader<Actions: View>: View {
@@ -45,7 +45,7 @@ struct InspectorSectionHeader<Actions: View>: View {
             Spacer(minLength: 8)
             // Chevron **trailing** the actions (reversed 2 Aug 2026): the disclosure sits at one fixed
             // distance from the edge whatever the arity, one column down the inspector. Price: action
-            // glyphs are no longer rightmost — D45′'s original argument, consciously given up.
+            // glyphs are no longer rightmost — the original argument, consciously given up.
             HStack(spacing: 12) {
                 actions()
                 if let section {
@@ -78,7 +78,7 @@ struct InspectorSectionHeader<Actions: View>: View {
         .font(.body)
         .help(label)
         .accessibilityLabel(label)
-        // The registry takes the raw value (String-only rule, D51′); this is the only caller and it
+        // The registry takes the raw value (String-only rule); this is the only caller and it
         // holds the real type.
         .accessibilityIdentifier(AccessibilityID.inspectorSectionDisclosure(section.rawValue))
     }
@@ -164,7 +164,7 @@ extension InspectorSectionHeader where Actions == EmptyView {
             }
         }
         Section {
-            Text("Chevron, pencil, glyph, the Library's PGN header (D54′).")
+            Text("Chevron, pencil, glyph, the Library's PGN header.")
                 .foregroundStyle(.secondary)
         } header: {
             // The one multi-control header. Pencil leads: the edit verb is the section's verb, Copy a
@@ -190,7 +190,7 @@ extension InspectorSectionHeader where Actions == EmptyView {
             Text("A chevron and nothing else.")
                 .foregroundStyle(.secondary)
         } header: {
-            // The arity to look hardest at — D45′'s one claim written from reasoning, not a compiler: with
+            // The arity to look hardest at — the one claim written from reasoning, not a compiler: with
             // no actions the `EmptyView` should flatten out of the builder and contribute no spacing.
             InspectorSectionHeader("Collapsible, No Actions", section: .recentGames)
         }

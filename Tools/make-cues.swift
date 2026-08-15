@@ -1,7 +1,7 @@
 #!/usr/bin/env swift
 
 //  make-cues.swift
-//  Regenerates the board cues as 16-bit mono WAVs — three sets × four cues (D81′, D82′).
+// Regenerates the board cues as 16-bit mono WAVs — three sets × four cues.
 //
 //      swift Tools/make-cues.swift        → DGTStudioPro/Features/Board/Sounds/
 //

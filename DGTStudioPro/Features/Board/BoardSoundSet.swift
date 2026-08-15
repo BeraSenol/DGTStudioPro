@@ -1,4 +1,4 @@
-/// Which material the board cues are made of (D82′). One set holds all four cues,
+/// Which material the board cues are made of. One set holds all four cues,
 /// so switching is one choice rather than four, and a set is internally consistent
 /// by construction — a felt move cannot end up beside a marble capture.
 ///

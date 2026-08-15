@@ -8,7 +8,7 @@ extension LiveGame {
     
     /// Why a draft could not be resumed. Every case means the file does not
     /// describe a game this build's rules can reproduce — the UI's only
-    /// offer for such a draft is deletion (Decision #3: resume or delete,
+    /// offer for such a draft is deletion (resume or delete,
     /// nothing else).
     enum ResumeError: Error, Equatable {
         /// `startFEN` failed to parse into a legal starting state.
@@ -74,7 +74,7 @@ extension LiveGame {
                 round: draft.round,
                 white: draft.white,
                 black: draft.black,
-                board: draft.board   // D28′ — a resumed game keeps its board
+                board: draft.board   // A resumed game keeps its board
             ),
             ruleSet: draft.ruleSet,
             startedAt: draft.startedAt

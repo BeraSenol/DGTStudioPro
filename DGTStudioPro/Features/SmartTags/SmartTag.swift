@@ -21,7 +21,7 @@ enum TagColor: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 }
 
-/// A user-editable smart tag (D12′) — the Apple Music smart-playlist shape; the old built-ins
+/// A user-editable smart tag — the Apple Music smart-playlist shape; the old built-ins
 /// live on as seeded, fully editable defaults.
 @Model
 final class SmartTag: Identifiable {

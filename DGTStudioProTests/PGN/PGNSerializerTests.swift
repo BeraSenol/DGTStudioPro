@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// The D24′ witness: export byte-pinned to the three DGT reference files — real bytes, bundled,
+/// The witness: export byte-pinned to the three DGT reference files — real bytes, bundled,
 /// never a transcription — import → serialize → identical.
 @Suite("PGN Serializer — Reference Bytes")
 struct PGNSerializerTests {
@@ -75,7 +75,7 @@ struct PGNSerializerTests {
     // MARK: Filename
 
     /// `1. Bera vs Reinaud.pgn` — ordinal within the export, then the two
-    /// players' *given* names, White vs Black (D24′; given names are what
+    /// players' *given* names, White vs Black (given names are what
     /// the reference files do — over-the-board opponents are first names).
     @Test func fileNameMatchesTheReferenceShape() {
         #expect(
@@ -102,7 +102,7 @@ struct PGNSerializerTests {
         )
     }
 
-    // MARK: Library Index — The Reader Half (D58′)
+    // MARK: Library Index — The Reader Half
 
     /// The real shape this exists for: the folder on disk numbers every game,
     /// and uses **full display names** where the app's writer uses given names.
@@ -145,7 +145,7 @@ struct PGNSerializerTests {
         #expect(PGNSerializer.libraryIndex(fromFileName: "") == nil)
     }
 
-    /// Index when there is one, batch position otherwise (D58′) — asserting only the first would
+    /// Index when there is one, batch position otherwise — asserting only the first would
     /// pass on an implementation ignoring the index.
     @Test func exportNameUsesTheLibraryIndexWhenThereIsOne() {
         let numbered = PGN(

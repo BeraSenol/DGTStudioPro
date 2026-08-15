@@ -1,6 +1,6 @@
 import Foundation
 
-/// The export seam (D17′/D24′) — the model's side of `PGNSerializer`, kept
+/// The export seam — the model's side of `PGNSerializer`, kept
 /// out of the serializer so that stays a pure function of values with a
 /// fixture-free suite. The `PGN+GameRecord` pattern.
 extension PGN {
@@ -16,7 +16,7 @@ extension PGN {
     }
     
     /// The suggested filename — numbered by **library index** where present, batch position
-    /// otherwise (D58′). This changes bytes D24′ pinned, deliberately: the pin never specified the
+    /// otherwise. This changes pinned bytes, deliberately: the pin never specified the
     /// ordinal's source, and the folder is the stricter reading.
     func exportFileName(index: Int) -> String {
         PGNSerializer.fileName(

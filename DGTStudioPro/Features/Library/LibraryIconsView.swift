@@ -14,11 +14,11 @@ struct LibraryIconsView: View {
 
     // MARK: Stored Properties
     let games: [PGN]
-    /// Which games count as analyzed, off the memoized projection (D72′) — never off the models, so
+    /// Which games count as analyzed, off the memoized projection — never off the models, so
     /// a card render costs no blob decode.
     let analyzedIDs: Set<PGN.ID>
     @Binding var selectedPGNs: Set<PGN.ID>
-    /// Takes the set (D56′) — see `open(_:)` for the rule applied first.
+    /// Takes the set — see `open(_:)` for the rule applied first.
     let onOpen: ([PGN]) -> Void
     let onAnalyze: (PGN) -> Void
     let onExport: (PGN) -> Void
@@ -133,7 +133,7 @@ struct LibraryIconsView: View {
     }
 
     /// Finder's double-click rule, spelled by hand (`LibraryListView` gets it free from
-    /// `primaryAction`, D56′): double-clicking a card in a multi-selection opens the whole
+    /// `primaryAction`): double-clicking a card in a multi-selection opens the whole
     /// selection; anything else opens just it. Ordered off `games` — that is tab order.
     private func open(_ game: PGN) {
         if selectedPGNs.count > 1, selectedPGNs.contains(game.id) {
@@ -211,7 +211,7 @@ private func iconsPreviewGames() -> [PGN] {
 }
 
 /// Seven cards over six columns: a partial second row, so overflow and wrap are exercisable.
-/// First three carry the analyzed badge so both verdicts render (D72′).
+/// First three carry the analyzed badge so both verdicts render.
 #Preview("With Games") {
     @Previewable @State var selection: Set<PGN.ID> = []
 

@@ -4,7 +4,7 @@ import Testing
 /// Coverage for the pure presentation logic on `PGN` that needs no persisted
 /// instance: the `GameResult` raw-value mapping to PGN result notation and the
 /// `nameIsStaleDefault` backfill predicate. The name transform itself left this
-/// file with D23′ — it lives on `PlayerName` now, suited by `PlayerNameTests`.
+/// file — it lives on `PlayerName` now, suited by `PlayerNameTests`.
 /// The `@Model`-bound instance accessors and the import/dedup path are covered
 /// with a real container in `PGNStoreTests`; everything here is instance-free,
 /// so the suite is neither container-dependent nor `@MainActor`.

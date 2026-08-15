@@ -15,12 +15,12 @@ enum InspectorSection: String, CaseIterable, Sendable {
     case lifecycle      = "lifecycle"
     case playerProfile  = "playerProfile"
     case recentGames    = "recentGames"
-    // `rankingProfile` retired by D48′ — one grid, one name. A stored collapse under the old raw
+    // `rankingProfile` retired — one grid, one name. A stored collapse under the old raw
     // value drops on read and evicts on next write, the designed retirement path.
     case ratingTrend    = "ratingTrend"
 }
 
-/// Which sections are collapsed, persisted under one key (D45′). An owning type, not
+/// Which sections are collapsed, persisted under one key. An owning type, not
 /// `@AppStorage` — one question in two places would be the twin-read-site pattern
 /// (`SleepInhibitor` is the precedent, down to injectable defaults). **The stored set is the
 /// collapsed sections**, so "default open" is the representation, not a `?? true`.

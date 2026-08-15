@@ -22,7 +22,7 @@ struct LibraryInspectorView: View {
     
     // MARK: Body
     var body: some View {
-        // D26′ — the empty branch renders *outside* the `List`; inside one it is a top-aligned row with
+        // The empty branch renders *outside* the `List`; inside one it is a top-aligned row with
         // sidebar chrome behind it.
         if let pgn {
             List {
@@ -49,7 +49,7 @@ struct LibraryInspectorView: View {
         )
     }
     
-    /// The counting variant: same D26′ chrome, same symbol as the columns detail pane — two
+    /// The counting variant: same shared chrome, same symbol as the columns detail pane — two
     /// surfaces, one vocabulary for "you selected many".
     private var multiSelectionState: some View {
         InspectorEmptyState(
@@ -75,7 +75,7 @@ private struct LoadedSection: View {
     var body: some View {
         Group {
 
-            // D22′ — the seven tags as one object, under the game's own name (the one thing the rows can't say).
+            // The seven tags as one object, under the game's own name (the one thing the rows can't say).
             SevenTagRosterSection(
                 roster: RosterSummary(pgn),
                 headline: pgn.name
@@ -115,7 +115,7 @@ private struct LoadedSection: View {
     
     // MARK: PGN Section
     
-    /// The game as a file: `PGN.pgnText`, byte-identical to Export (D24′) — an inspector formatting
+    /// The game as a file: `PGN.pgnText`, byte-identical to Export — an inspector formatting
     /// its own tag block would be a third PGN shape, free to drift from the reference bytes.
     private var pgnSection: some View {
         // `CollapsibleSection` gates the rebuild: body re-runs on every progress tick while this game
@@ -123,7 +123,7 @@ private struct LoadedSection: View {
         CollapsibleSection(.pgn, title: "PGN") {
             rawPGNText
         } actions: {
-            // Read-only since D59′ — the movetext door is Get Info's Move Text tab.
+            // Read-only — the movetext door is Get Info's Move Text tab.
             copyPGNButton
         }
     }

@@ -1,7 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The one display rule for player names (D23′). Nonisolated — `PlayerName`
+/// The one display rule for player names. Nonisolated — `PlayerName`
 /// is a pure enum over strings, so no container and no `@MainActor`. The
 /// order and degenerate-input cases moved here verbatim from
 /// `PGNDisplayTests` when the transform left `PGN`; the whitespace-fold and
@@ -51,7 +51,7 @@ struct PlayerNameTests {
         #expect(PlayerName.displayForm(of: "?") == "?")
     }
     
-    // MARK: Whitespace Fold (D23′)
+    // MARK: Whitespace Fold
     
     @Test func collapsesWhitespaceRunsAndNewlines() {
         #expect(PlayerName.displayForm(of: "Magnus   Carlsen") == "Magnus Carlsen")
@@ -77,9 +77,9 @@ struct PlayerNameTests {
         #expect(fromDisplay == "magnus carlsen")
     }
     
-    // MARK: Idempotency (D23′)
+    // MARK: Idempotency
     
-    /// The pre-D23′ rotation bug: a second comma made the output non-comma-
+    /// The old rotation bug: a second comma made the output non-comma-
     /// free, so pass two flipped it again ("Magnus, Jr Carlsen" →
     /// "Jr Carlsen Magnus").
     @Test func foldsANonstandardSecondComma() {

@@ -1,7 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The Analysis Data row fold (D73′). Nonisolated — pure values (D10′).
+/// The Analysis Data row fold. Nonisolated — pure values.
 @Suite("Analysis Data — Rows")
 struct AnalysisDataRowTests {
 
@@ -37,7 +37,7 @@ struct AnalysisDataRowTests {
         #expect(rows.allSatisfy { $0.evaluation == nil })
     }
 
-    // MARK: Swing (D77′)
+    // MARK: Swing
 
     /// The step against the ply before, in percentage points of white's win
     /// probability — the blunder signal, folded from data the app already
@@ -61,7 +61,7 @@ struct AnalysisDataRowTests {
         #expect(rows[3].swingIsMajor)
     }
 
-    /// No fake deltas across gaps: a book hole (D74′ leaves the prefix nil)
+    /// No fake deltas across gaps: a book hole (the analysis plan leaves the prefix nil)
     /// or a dead-engine hole must not produce a swing computed against a
     /// ply nobody scored.
     @Test("No swing across an unscored gap")
@@ -99,7 +99,7 @@ struct AnalysisDataRowTests {
         #expect(rows[1].move == "1… e5")
     }
 
-    /// The evaluation column is the bar's pinned label grammar (D33′),
+    /// The evaluation column is the bar's pinned label grammar,
     /// asserted against `EvaluationBarReading` for scored plies.
     @Test("A scored ply's label is the bar grammar's")
     func scoredLabelsAreTheBarGrammars() {

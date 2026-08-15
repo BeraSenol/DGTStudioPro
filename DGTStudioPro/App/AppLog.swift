@@ -1,7 +1,7 @@
 import Foundation
 import os
 
-/// The one place that decides whether the app logs and what a line looks like (D63′) — the
+/// The one place that decides whether the app logs and what a line looks like — the
 /// subsystem was spelled 25 times, the policy nowhere. Returns `Logger?`: optional chaining
 /// short-circuits, so a suppressed message is never interpolated. Not a wrapping struct —
 /// `OSLogMessage` cannot be forwarded, so a wrapper would flatten every message to `String` and

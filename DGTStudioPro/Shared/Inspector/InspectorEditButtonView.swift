@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// The pencil that edits what a section header names (D26′). Hardcodes the pencil so edit
+/// The pencil that edits what a section header names. Hardcodes the pencil so edit
 /// affordances cannot drift; one `label` feeds both `.help` and `.accessibilityLabel` so
-/// tooltip and spoken label cannot disagree. One production consumer since D57′ (the live
+/// tooltip and spoken label cannot disagree. One production consumer (the live
 /// inspector's Edit Details) — not dead, but "shared" is starting to describe history.
 struct InspectorEditButtonView: View {
     
@@ -48,7 +48,7 @@ struct InspectorEditButtonView: View {
             headline: "Reviewing 7. Magnus Carlsen vs Ian Nepomniachtchi"
         ) {
             InspectorEditButtonView(
-                // **Edit Details is the app's only pencil** — repointed as the others went (D57′, D59′).
+                // **Edit Details is the app's only pencil** — repointed as the others went.
                 label: "Edit Details",
                 identifier: AccessibilityID.liveInspectorEditDetails,
                 action: {}

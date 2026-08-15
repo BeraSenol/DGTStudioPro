@@ -82,10 +82,10 @@ struct PGNStoreArchiveTests {
         #expect(try Self.libraryCount(in: context) == 1)
     }
 
-    // MARK: Board Tag (M2, D28′)
+    // MARK: Board Tag (M2)
 
     /// The archive door threads `Roster.board` to `PGN.board` — and because
-    /// the tag sits outside the content hash (D24′: equipment, not game),
+    /// the tag sits outside the content hash (equipment, not game),
     /// a boarded game still dedupes against its board-less twin, which is
     /// exactly the pre-M2 archive it might meet in the Library.
     @Test func archiveThreadsBoardIdentityOutsideTheHash() throws {
@@ -107,7 +107,7 @@ struct PGNStoreArchiveTests {
         #expect(try Self.libraryCount(in: context) == 1)
     }
 
-    // MARK: Decision #3 — no `*` ever archives
+    // MARK: No `*` ever archives
     
     @Test func archiveRefusesAnOngoingGame() throws {
         let context = try Self.makeContext()
@@ -203,7 +203,7 @@ struct PGNStoreArchiveTests {
         #expect(try Self.libraryCount(in: context) == 1)
     }
 
-    // MARK: The Ordinal (D58′)
+    // MARK: The Ordinal
 
     /// The pin the 7 Aug fix exists for: nil from `highestLibraryIndex()` means "the run starts
     /// here", and the old `flatMap` spelling read it as "no ordinal".
@@ -230,7 +230,7 @@ struct PGNStoreArchiveTests {
     }
 
     /// `max + 1` once a run exists — and deliberately `max`, not `count`. A
-    /// folder's numbering is neither gapless nor dense (D58′), so a Library
+    /// folder's numbering is neither gapless nor dense, so a Library
     /// holding one game at 47 continues at 48 rather than at 2.
     @Test func anArchivedGameContinuesTheHighestRun() throws {
         let context = try Self.makeContext()

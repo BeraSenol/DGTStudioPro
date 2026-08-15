@@ -18,7 +18,7 @@ struct ResolvedPiece: Equatable, Hashable, Sendable, Identifiable {
     var id: Key { key }
 }
 
-/// Resolves every rendered piece's identity (D47′). **Output occupancy is the rendered position
+/// Resolves every rendered piece's identity. **Output occupancy is the rendered position
 /// verbatim, always** — the resolver decides keys, never presence (the mirror invariant as a
 /// pure function, pinned across every fixture). Identity is proven or absent, never guessed:
 /// parity per square, then the reconstructor's own verified move, then anonymous.

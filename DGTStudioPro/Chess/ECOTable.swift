@@ -1,7 +1,7 @@
 import Foundation
 import os
 
-/// The bundled ECO dataset, parsed once (D34′). Deliberately outside the chess core's purity
+/// The bundled ECO dataset, parsed once. Deliberately outside the chess core's purity
 /// contract and filed beside the classifier — the invariant names types, not folders. lichess
 /// data, CC0, bundled as fetched, never transcribed.
 enum ECOTable {

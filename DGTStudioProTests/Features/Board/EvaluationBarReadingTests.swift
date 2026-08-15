@@ -1,7 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The M3 bar mapping (D33′): fraction identical to the graph's projection,
+/// The M3 bar mapping: fraction identical to the graph's projection,
 /// nil folding to `.drawn`, and the label grammar — signed pawns to one
 /// decimal, unsigned zero, `evalTagContent`-spelled mates. Pure value type,
 /// nonisolated.

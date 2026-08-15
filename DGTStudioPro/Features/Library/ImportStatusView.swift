@@ -228,7 +228,7 @@ private struct ImportResultRow: View {
 }
 
 /// The failure rows and the summary counts that partition them.
-/// `.ongoingGame` is Decision #3 arriving as an import result — a `*` game
+/// `.ongoingGame` is the no-ongoing-archives rule arriving as an import result — a `*` game
 /// is refused at the door, not stored and hidden.
 ///
 /// The `.duplicate` row is deliberately absent: its associated

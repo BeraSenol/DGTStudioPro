@@ -13,7 +13,7 @@ struct PlayersListView: View {
     @AppStorage(StorageKeys.playersColumns)
     private var columnCustomization = TableColumnCustomization<RankedPlayer>()
 
-    /// The Library's twin (see its doc for binding-not-state). Replaced the D48′ sort picker —
+    /// The Library's twin (see its doc for binding-not-state). Replaced the sort picker —
     /// the picker's two positions were the Rank and Player columns spelled a second way.
     @Binding var sortOrder: [KeyPathComparator<RankedPlayer>]
 
@@ -22,7 +22,7 @@ struct PlayersListView: View {
               selection: $selectedKeys,
               sortOrder: $sortOrder,
               columnCustomization: $columnCustomization) {
-            // Rank and Player were pinned visible until D51′'s bet came due — unpinned with the Library's
+            // Rank and Player were pinned visible until the bet came due — unpinned with the Library's
             // White column: a live restriction paid for a suite already deleted. Rank arrives computed
             // through `PlayerStats.rankingOrder`, so sorting by badge number reproduces the ladder.
             TableColumn("Rank", value: \.rank) { player in
@@ -38,7 +38,7 @@ struct PlayersListView: View {
             }
             .width(52)
             .customizationID("rank")
-            // `stats.name` is the display form (D23′) — what the cell prints. NOT `stats.key`: sorting the
+            // `stats.name` is the display form — what the cell prints. NOT `stats.key`: sorting the
             // folded identity would put "de Firmian" where no reader scanning capitals looks.
             TableColumn("Player", value: \.stats.name) { player in
                 Text(player.stats.name)

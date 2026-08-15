@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The archive-confirmation sheet (M5): confirms the save, offers one last pass over the
 /// details. Shares `LiveGameRosterForm` (so the three sheets cannot drift) under the
-/// `archive.form.*` prefix. Result shown, not edited (Decision #4). The caller owns the PGN
+/// `archive.form.*` prefix. Result shown, not edited. The caller owns the PGN
 /// write and the `refreshHash` — one hash, two doors.
 struct EditGameInfoSheet: View {
     
@@ -84,8 +84,8 @@ struct EditGameInfoSheet: View {
                 
                 Spacer()
                 
-                // D61′: safe to gate here — the sheet appears *after* archive, so a disabled Save blocks only
-                // the *edit*, never the save. Import stays exempt (D61′'s scope: one door minting them).
+                // Safe to gate here — the sheet appears *after* archive, so a disabled Save blocks only
+                // the *edit*, never the save. Import stays exempt — the guard is scoped to the doors that mint self-play by hand.
                 Button("Save Changes") {
                     onSave(normalized(roster))
                     dismiss()

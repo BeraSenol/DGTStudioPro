@@ -36,7 +36,7 @@ struct PGNStore {
         case missingRequiredTags(Set<String>)
         case malformedPGN(reason: String)
         case fileReadFailed(URL, underlying: Swift.Error)
-        /// `archive(_:)` got a `*` result — Decision #3: no ongoing game reaches the Library.
+        /// `archive(_:)` got a `*` result — no ongoing game reaches the Library.
         case ongoingGame
     }
     
@@ -92,7 +92,7 @@ struct PGNStore {
             throw Error.fileReadFailed(url, underlying: error)
         }
         
-        // The one place the filename is in scope (D58′). `lastPathComponent`: a folder named
+        // The one place the filename is in scope. `lastPathComponent`: a folder named
         // `2024. Tournaments` must not number every game inside it.
         return try importPGN(
             text: text,
@@ -100,7 +100,7 @@ struct PGNStore {
         )
     }
 
-    /// Highest ordinal in the Library, or nil (D58′). Predicated + limit 1, not fetch-and-scan.
+    /// Highest ordinal in the Library, or nil. Predicated + limit 1, not fetch-and-scan.
     func highestLibraryIndex() throws -> Int? {
         var descriptor = FetchDescriptor<PGN>(
             predicate: #Predicate { $0.libraryIndex != nil },
@@ -128,7 +128,7 @@ struct PGNStore {
         }
     }
 
-    /// Whether any game still lacks an ordinal — gates the backfill affordance (D40′). Predicated + limit 1.
+    /// Whether any game still lacks an ordinal — gates the backfill affordance. Predicated + limit 1.
     func hasUnnumberedGames() throws -> Bool {
         var descriptor = FetchDescriptor<PGN>(predicate: #Predicate { $0.libraryIndex == nil })
         descriptor.fetchLimit = 1
@@ -136,7 +136,7 @@ struct PGNStore {
     }
 
     /// Matches PGN files in `folder` to rows by **content hash** (never by filename — the folder uses full
-    /// names, the serializer given names) and stamps each match with the filename's ordinal (D58′).
+    /// names, the serializer given names) and stamps each match with the filename's ordinal.
     /// An existing ordinal is never overwritten; one bad file does not cost the rest.
     func backfillLibraryIndices(from folder: URL) throws -> LibraryIndexBackfill {
         var report = LibraryIndexBackfill()
@@ -176,7 +176,7 @@ struct PGNStore {
         }
 
         // One save outside the loop — N saves leave a half-stamped archive behind a mid-loop failure.
-        // `libraryIndex` is outside the content hash (D58′), so no `refreshHash` needed.
+        // `libraryIndex` is outside the content hash, so no `refreshHash` needed.
         if report.stamped > 0 { try modelContext.save() }
 
         Self.logger?.info(
@@ -207,10 +207,10 @@ struct PGNStore {
             black: game.roster.black,
             moves: game.sanMoves,
             result: game.result,
-            // D28′: board stamped at game start; outside the content hash (D24′) so dedupe is unperturbed.
+            // Board stamped at game start; outside the content hash so dedupe is unperturbed.
             board: game.roster.board
         )
-        // D58′: a played game takes `max + 1` — the number its exported file will carry. Cost: delete the
+        // A played game takes `max + 1` — the number its exported file will carry. Cost: delete the
         // newest game and the number is reused (the folder is the authority). `?? 0` inside the `do`:
         // an empty Library is index 1, but *fetch failed* must not stamp 1 — caught, never thrown;
         // an ordinal must never fail an archive (archive-first, exactly once, never lost).
@@ -251,8 +251,8 @@ struct PGNStore {
     /// One-hash/two-doors made structural: every in-place edit funnels through here, so mutation
     /// and rehash cannot be separated by a forgetful caller. Re-resolves both seats unconditionally.
     func applyEdit(to pgn: PGN, _ edit: (PGN) -> Void) throws {
-        // D76′: the only rows this edit can strand are the two it is about to re-resolve away
-        // from — captured before the edit, checked after (D60′'s rule, scoped).
+        // The only rows this edit can strand are the two it is about to re-resolve away
+        // from — captured before the edit, checked after (the rule, scoped).
         let displaced = [pgn.whitePlayer, pgn.blackPlayer].compactMap { $0 }
         edit(pgn)
         try resolvePlayers(for: pgn)
@@ -260,9 +260,9 @@ struct PGNStore {
         try refreshHash(of: pgn)   // saves — one transaction covers all three
     }
     
-    // MARK: Movetext Edit (M-lib.3, D18′)
+    // MARK: Movetext Edit (M-lib.3)
     
-    /// Applies edited movetext, validated by full replay (`MovetextEdit`, D18′). `.failure` names the
+    /// Applies edited movetext, validated by full replay (`MovetextEdit`). `.failure` names the
     /// first offending ply and nothing mutates; `.success` stores canonical moves, invalidates stored
     /// evaluations, re-classifies, rehashes — one transaction. Seats untouched: movetext cannot edit them.
     /// `throws` is reserved for the SwiftData save.
@@ -277,7 +277,7 @@ struct PGNStore {
             guard accepted.moves != pgn.moves else { return .success(pgn.moves) }
             pgn.moves = accepted.moves
             pgn.evaluations = []
-            pgn.analysisDepths = []    // travels with `evaluations`, always (D74′)
+            pgn.analysisDepths = []    // travels with `evaluations`, always
             classify(pgn)              // re-derived, not cleared — see the note above
             try refreshHash(of: pgn)   // recompute hash + save — one transaction
             Self.logger?.info(
@@ -292,7 +292,7 @@ struct PGNStore {
         try delete([pgn])
     }
 
-    /// Deletes games in one transaction. Players stranded by the deletion go with it (D50′) — computed
+    /// Deletes games in one transaction. Players stranded by the deletion go with it — computed
     /// **before** the first delete: `.nullify` propagation cannot be relied on afterwards.
     func delete(_ pgns: [PGN]) throws {
         guard !pgns.isEmpty else { return }
@@ -321,7 +321,7 @@ struct PGNStore {
     /// The single creation door for `Player`. Tags fold through `PlayerName.displayForm` then match on
     /// `normalizedName`; `"?"` and empty resolve to nil — the *absence* of a player, never a player named "?".
     func resolvePlayer(named rawTag: String) throws -> Player? {
-        // Placeholder rule + identity fold live on `Player.identity(forTag:)` since D61′ — one spelling.
+        // Placeholder rule + identity fold live on `Player.identity(forTag:)` — one spelling.
         guard let key = Player.identity(forTag: rawTag) else { return nil }
         let display = PlayerName.displayForm(of: rawTag)
 
@@ -329,19 +329,19 @@ struct PGNStore {
             return existing
         }
 
-        // D29′: first-seen tag form, whitespace-folded only — comma structure, casing, diacritics verbatim.
+        // First-seen tag form, whitespace-folded only — comma structure, casing, diacritics verbatim.
         let player = Player(name: display, tagName: PlayerName.folded(rawTag))
         modelContext.insert(player)
         Self.logger?.info("Created player '\(display, privacy: .public)'")
         return player
     }
     
-    /// Read-only bridge from `PlayerStats.ID` (= `normalizedName`) to the model — **never creates** (D9′).
+    /// Read-only bridge from `PlayerStats.ID` (= `normalizedName`) to the model — **never creates**.
     func player(withNormalizedKey key: String) throws -> Player? {
         try first(#Predicate { $0.normalizedName == key })
     }
     
-    /// The two player backfills behind the converged stamp (D75′): once one pass heals zero rows
+    /// The two player backfills behind the converged stamp: once one pass heals zero rows
     /// the stamp is set and every later appearance skips the app's most-run full-table scan.
     /// Safe to gate because imports link at the door, so no door can re-create the work; the one
     /// residual risk — a save that failed after an in-memory link — is priced in the anchor, and
@@ -373,7 +373,7 @@ struct PGNStore {
             }
             if changed { relinked += 1 }
         }
-        // D60′'s healing arm for orphans predating the rule — nothing else ever touches them.
+        // The healing arm for orphans predating the rule — nothing else ever touches them.
         // Deliberately **after** the relink loop: before it, this would delete rows the loop is about to link.
         let collected = collectOrphanedPlayers()
         if relinked > 0 || collected > 0 {
@@ -388,7 +388,7 @@ struct PGNStore {
         return relinked
     }
 
-    /// Heals `Player.tagName` on pre-D29′ rows: "first seen" reconstructed as the seat tag of the
+    /// Heals `Player.tagName` on pre-schema rows: "first seen" reconstructed as the seat tag of the
     /// earliest linked game (chronological-order philosophy) — deterministic.
     @discardableResult
     func backfillPlayerTagNames() throws -> Int {
@@ -414,7 +414,7 @@ struct PGNStore {
         return stamped
     }
     
-    // MARK: Classification (D19′, D34′)
+    // MARK: Classification
     /// Stamps derived classification — opening and mate motif — from stored moves. Save-free by
     /// contract (`resolvePlayers` precedent). Both columns stamped together or not at all (`PGN.opening`'s invariant).
     @discardableResult
@@ -426,7 +426,7 @@ struct PGNStore {
         pgn.ecoCode = result.opening?.code
         pgn.ecoFamily = result.opening?.family
         pgn.ecoVariation = result.opening?.variation
-        pgn.ecoDepth = result.openingPlies   // the book skip's input (D74′)
+        pgn.ecoDepth = result.openingPlies   // the book skip's input
         pgn.specialCheckmate = result.specialCheckmate
         return true
     }
@@ -452,10 +452,10 @@ struct PGNStore {
         return classified
     }
 
-    // MARK: Player Retag, Merge and Delete (M5 — D37′, D38′, D39′)
+    // MARK: Player Retag, Merge and Delete
 
     /// One game a retag touches, and which seats. **Both flags on one entry per game**: a player can
-    /// hold both sides, and per-seat entries compute two hashes, neither the row's real future hash (D39′).
+    /// hold both sides, and per-seat entries compute two hashes, neither the row's real future hash.
     private struct Rewrite {
         let game: PGN
         let isWhite: Bool
@@ -475,15 +475,15 @@ struct PGNStore {
 
     /// Pre-flight refusals: nothing has been written when one of these is thrown.
     enum RetagRejection: Swift.Error {
-        /// D39′: the rewrite would hand a game a hash another row already owns.
+        /// The rewrite would hand a game a hash another row already owns.
         case wouldCollide([HashCollision])
         /// A retag to `"?"`/empty is a deletion wearing a rename's clothes — refused.
         case emptyTag
     }
 
     /// Rewrites every game `player` appears in to carry `newTag` in that seat, re-resolves, rehashes —
-    /// the single door through which a stored seat tag changes identity (D37′, D38′). `newTag` is **tag
-    /// form**. Pre-flight and all-or-nothing (D39′): a refusal leaves the archive untouched.
+    /// the single door through which a stored seat tag changes identity. `newTag` is **tag
+    /// form**. Pre-flight and all-or-nothing: a refusal leaves the archive untouched.
     /// Cost, accepted: seat tags are inside the hash, so pre-rename exports no longer dedupe.
     @discardableResult
     func retag(_ player: Player, to newTag: String) throws -> Int {
@@ -502,9 +502,9 @@ struct PGNStore {
             try resolvePlayers(for: rewrite.game)
             rewrite.game.contentHash = Self.contentHash(for: rewrite.game)
         }
-        // D60′: the renamed-from row is the rename's whole residue, collected in the same
-        // transaction — scoped to it since D76′. This is what makes rename the merge replacement
-        // D52′ promised.
+        // The renamed-from row is the rename's whole residue, collected in the same
+        // transaction — scoped to it. This is what makes rename the merge replacement
+        // it was designed to be.
         collectOrphanedPlayers(among: [player])
         try modelContext.save()
         Self.logger?.info(
@@ -530,11 +530,11 @@ struct PGNStore {
         return Array(byGame.values)
     }
 
-    /// Deletes every registry row nothing points at (D60′) — the PGN files are the source of truth.
+    /// Deletes every registry row nothing points at — the PGN files are the source of truth.
     /// Safe because `resolvePlayer`'s two callers both link immediately, so a linkless row is always a
     /// leftover, never in transit (a future create-then-link-later door trips this loudly). Save-free.
     /// Fetch-all-and-scan: `isOrphaned` reads relationships, which `#Predicate` cannot. The
-    /// backfill's arm — the editing doors pass only the rows they displaced (D76′).
+    /// backfill's arm — the editing doors pass only the rows they displaced.
     @discardableResult
     func collectOrphanedPlayers() -> Int {
         guard let players = try? modelContext.fetch(FetchDescriptor<Player>()) else {
@@ -545,7 +545,7 @@ struct PGNStore {
         return collectOrphanedPlayers(among: players)
     }
 
-    /// The scoped core (D76′): the same rule over only `candidates`. A self-play edit passes one
+    /// The scoped core: the same rule over only `candidates`. A self-play edit passes one
     /// row twice — the `isDeleted` guard makes the second visit a no-op, never a double delete.
     @discardableResult
     func collectOrphanedPlayers(among candidates: [Player]) -> Int {
@@ -560,7 +560,7 @@ struct PGNStore {
         return collected
     }
 
-    /// The one spelling of "nothing points at this row" (D40′) — a second spelling is the twin-read-site pattern.
+    /// The one spelling of "nothing points at this row" — a second spelling is the twin-read-site pattern.
     static func isOrphaned(_ player: Player) -> Bool {
         player.whiteGames.isEmpty && player.blackGames.isEmpty
     }
@@ -584,7 +584,7 @@ struct PGNStore {
     }
 
 
-    /// D39′'s pre-flight. Two collision sources, and missing the second is the easy bug: an existing
+    /// The pre-flight. Two collision sources, and missing the second is the easy bug: an existing
     /// Library row, *or* another game in this same batch (not yet stored under its future hash).
     private func refuseCollisions(in rewrites: [Rewrite], becoming newTag: String) throws {
         var collisions: [HashCollision] = []
@@ -660,7 +660,7 @@ struct PGNStore {
     }
     
     // MARK: Static Methods
-    /// Model-typed spelling — a thin forward to the field-typed twin, which exists so D39′ can ask
+    /// Model-typed spelling — a thin forward to the field-typed twin, which exists so the collision pre-flight can ask
     /// "what hash *would* this row carry" without mutate-and-revert or a second copy of the recipe.
     private static func contentHash(for pgn: PGN) -> String {
         contentHash(

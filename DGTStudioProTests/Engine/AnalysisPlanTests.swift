@@ -1,7 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The pass's plan (D74′), pure — the `AnalysisQueue` extraction's shape one layer down: which
+/// The pass's plan, pure — the `AnalysisQueue` extraction's shape one layer down: which
 /// plies get searched is the decision worth pinning without an engine.
 @Suite("Analysis Plan")
 struct AnalysisPlanTests {

@@ -1,14 +1,14 @@
 import Foundation
 
-/// The crash-safety snapshot (Decision #2), written after every committed ply and every
+/// The crash-safety snapshot, written after every committed ply and every
 /// result/roster change. A JSON sidecar, not a SwiftData model: singular, must never surface in
 /// Library fetches, and human-readable when debugging a failed resume.
 struct LiveGameDraft: Equatable, Codable, Sendable {
 
     // MARK: Static Constants
 
-    /// Bump on breaking changes. **Additive optional fields are not breaking** (D28′): synthesized
-    /// Codable reads a missing key as nil — optional fields only (D36′'s limit).
+    /// Bump on breaking changes. **Additive optional fields are not breaking**: synthesized
+    /// Codable reads a missing key as nil — optional fields only (the limit).
     static let currentSchemaVersion = 1
 
     // MARK: Stored Properties
@@ -26,7 +26,7 @@ struct LiveGameDraft: Equatable, Codable, Sendable {
     let round: Int?
     let white: String
     let black: String
-    /// The board's `[Board "…"]` identity (D28′). Optional and additive:
+    /// The board's `[Board "…"]` identity. Optional and additive:
     /// absent in version-1 files written before M2, which decode to nil —
     /// see `currentSchemaVersion` for why that is not a schema break.
     let board: String?

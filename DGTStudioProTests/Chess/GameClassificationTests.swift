@@ -1,7 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The D34′ composition — what only lives here: the two halves are wired together and fail
+/// The composition — what only lives here: the two halves are wired together and fail
 /// independently.
 @Suite("Game Classification")
 struct GameClassificationTests {

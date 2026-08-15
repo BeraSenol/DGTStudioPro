@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Everything the View Options panel sets, owned by one type — D25′ literally: values read by
+/// Everything the View Options panel sets, owned by one type: values read by
 /// grid and card alike go through properties here; defaults stated once, in `init`.
 /// `UserDefaults` injection is load-bearing (scratch suites); clamped on every read-back.
 @MainActor

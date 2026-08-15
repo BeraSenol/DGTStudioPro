@@ -99,7 +99,7 @@ struct EvaluationGraphView: View {
     }
     
     // MARK: Instance Methods
-    /// Horizontal placement comes from `EvaluationGraphGeometry` (D46′) — the same arithmetic
+    /// Horizontal placement comes from `EvaluationGraphGeometry` — the same arithmetic
     /// gained a second consumer pointing the other way.
     private func evaluationPoints(in rect: CGRect) -> [CGPoint] {
         let geometry = EvaluationGraphGeometry(

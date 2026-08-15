@@ -2,8 +2,7 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// The D16′ round-prefill fold. Nonisolated — pure value types, the D10′
-/// suite shape. Keys here are already-normalized identity keys (opaque to
+/// The round-prefill fold. Nonisolated — pure value types, the /// suite shape. Keys here are already-normalized identity keys (opaque to
 /// the fold; resolution is the caller's job and `Player.normalizedKey`'s
 /// suite territory).
 @Suite("Pairing Round")

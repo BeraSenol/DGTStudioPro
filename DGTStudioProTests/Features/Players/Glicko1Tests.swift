@@ -52,7 +52,7 @@ struct Glicko1Tests {
         expectClose(updated.deviation, 151.3989, within: 0.01)
     }
     
-    /// The amateur-convergence property that motivated D11′: one game
+    /// The amateur-convergence property that motivated the wins-first ladder: one game
     /// between fresh players moves both by 162 points, symmetrically.
     @Test func freshEqualGameIsLargeAndSymmetric() {
         let winner = Glicko1.updated(.initial, against: [.init(opponent: .initial, score: 1)])

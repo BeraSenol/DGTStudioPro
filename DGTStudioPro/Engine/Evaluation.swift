@@ -74,7 +74,7 @@ extension Evaluation {
     }
     
     /// Parses a complete `[%eval …]` tag, the exact Lichess/Chess.com shape. Kept as the pinned
-    /// round-trip pair with `evalTag` — D24′ writes no evals.
+    /// round-trip pair with `evalTag` — export writes no evals.
     init?(parsingEvalTag tag: String) {
         let trimmed = tag.trimmingCharacters(in: .whitespaces)
         let prefix = "[%eval "
@@ -99,7 +99,7 @@ extension Evaluation {
         }
     }
     
-    /// The full tag. Unused in production (D24′ writes no evaluations) — the round-tripped pair.
+    /// The full tag. Unused in production (export writes no evaluations) — the round-tripped pair.
     var evalTag: String {
         "[%eval \(evalTagContent)]"
     }

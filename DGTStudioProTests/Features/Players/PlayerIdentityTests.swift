@@ -1,14 +1,14 @@
 import Testing
 @testable import DGTStudioPro
 
-/// `Player.identity(forTag:)` — is there a player in this seat tag, and which (D61′).
+/// `Player.identity(forTag:)` — is there a player in this seat tag, and which.
 @Suite("Player identity from a seat tag")
 struct PlayerIdentityTests {
 
     // MARK: The absence of a player
 
     /// `?` and empty are the absence of a player, never a player named `?`
-    /// (D9′). Whitespace-only counts as empty, and a bare comma folds to
+    ///. Whitespace-only counts as empty, and a bare comma folds to
     /// nothing through the display transform.
     @Test(arguments: ["?", "", "   ", ",", " , "])
     func placeholdersHaveNoIdentity(_ tag: String) {
@@ -17,13 +17,12 @@ struct PlayerIdentityTests {
 
     // MARK: One player, many spellings
 
-    /// Comma order is not identity (D23′'s one-way transform): tag form and display form are one person.
+    /// Comma order is not identity (the one-way transform): tag form and display form are one person.
     @Test func commaOrderDoesNotChangeIdentity() {
         #expect(Player.identity(forTag: "Lopez, Ruy") == Player.identity(forTag: "Ruy Lopez"))
     }
 
-    /// Casing and whitespace runs fold; diacritics deliberately do not (D9′ —
-    /// "Bücher" is not "Bucher").
+    /// Casing and whitespace runs fold; diacritics deliberately do not (    /// "Bücher" is not "Bucher").
     @Test func casingAndWhitespaceFoldButDiacriticsDoNot() {
         #expect(Player.identity(forTag: "Senol, Bera") == Player.identity(forTag: "senol,   BERA"))
         #expect(Player.identity(forTag: "Şenol, Bera") != Player.identity(forTag: "Senol, Bera"))
@@ -35,9 +34,9 @@ struct PlayerIdentityTests {
         #expect(Player.identity(forTag: "Carlsen, Magnus") != Player.identity(forTag: "Nepo"))
     }
 
-    // MARK: The Seat Guard (D61′)
+    // MARK: The Seat Guard
 
-    /// New with M12.2 — their absence was the finding: D61′ shipped the guard with no test of the
+    /// New with M12.2 — their absence was the finding: the guard shipped with no test of the
     /// predicate itself. Different spellings of one player must collide; a raw `!=` passes every
     /// other test in this suite.
     @Test func differentSpellingsOfOnePlayerCollide() {
@@ -50,7 +49,7 @@ struct PlayerIdentityTests {
         #expect(!Player.seatsNameOnePlayer("Şenol, Bera", "Senol, Bera"))
     }
 
-    /// Two absences are not one player (D9′) — the exemption without which the
+    /// Two absences are not one player — the exemption without which the
     /// commonest imported shape, both seats `?`, would refuse every edit to
     /// either seat.
     @Test(arguments: [("?", "?"), ("", ""), ("?", ""), ("   ", "?")])
@@ -67,7 +66,7 @@ struct PlayerIdentityTests {
     }
 
     /// The `Roster` accessor forwards rather than restates — asserted against the predicate, not a
-    /// literal. Nonisolated, load-bearing: `Roster` does not inherit `LiveGame`'s isolation (D44′).
+    /// literal. Nonisolated, load-bearing: `Roster` does not inherit `LiveGame`'s isolation.
     @Test func theRosterAccessorAgreesWithThePredicate() {
         let collides = LiveGame.Roster(white: "Lopez, Ruy", black: "Ruy Lopez")
         let distinct = LiveGame.Roster(white: "Carlsen, Magnus", black: "Nepo")

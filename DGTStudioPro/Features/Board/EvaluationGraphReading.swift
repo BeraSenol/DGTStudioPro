@@ -1,6 +1,6 @@
 import Foundation
 
-/// The graph's one ply↔x mapping — D46′ gave the curve a second consumer pointing the other way
+/// The graph's one ply↔x mapping — the graph window gave the curve a second consumer pointing the other way
 /// (the view places points, the window hit-tests), and open-coded that is one relationship
 /// stated twice. Not a general chart abstraction.
 struct EvaluationGraphGeometry: Equatable, Sendable {

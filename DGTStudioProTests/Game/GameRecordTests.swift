@@ -134,12 +134,12 @@ struct GameRecordProjectionTests {
         #expect(record.isTimed)
         // Was `#expect(record.hasAnalysis, "a non-empty evaluations array
         // means a pass ran")`, against `evaluations = [nil, nil]` — a pin on
-        // the exact sentence D68′ repealed, and its message is the belief
+        // the exact sentence later repealed, and its message is the belief
         // itself written out. A pass that scored nothing did run; what it did
         // not do is produce analysis, which is what this flag is read for.
         #expect(
             record.hasAnalysis == false,
-            "a full-length all-nil array is a pass that scored nothing (D68′)"
+            "a full-length all-nil array is a pass that scored nothing"
         )
     }
 

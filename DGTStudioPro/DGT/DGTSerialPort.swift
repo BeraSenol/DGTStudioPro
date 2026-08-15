@@ -50,7 +50,7 @@ actor DGTSerialPort: DGTPortProviding {
     init() {}
     
     /// Whether the port holds a file descriptor. **The app target's one symbol with no consumer,
-    /// kept by decision** (not D41′'s disposition — no better sibling answers this question).
+    /// kept by decision** (not the disposition — no better sibling answers this question).
     var isOpen: Bool { fileDescriptor >= 0 }
     
     // MARK: Open / Close

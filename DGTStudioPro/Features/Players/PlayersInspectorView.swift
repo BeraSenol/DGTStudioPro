@@ -1,7 +1,7 @@
 import SwiftData
 import SwiftUI
 
-/// The player profile (absorbed the Rankings inspector, D48′): pure-value inputs; only the
+/// The player profile (absorbed the Rankings inspector): pure-value inputs; only the
 /// recent-games list carries models, for the `openWindow` handle. One grid, each fact once.
 struct PlayersInspectorView: View {
 
@@ -16,7 +16,7 @@ struct PlayersInspectorView: View {
 
     // MARK: Body
     var body: some View {
-        // D26′ — empty renders outside the `List`; see `InspectorEmptyState`.
+        // Empty renders outside the `List`; see `InspectorEmptyState`.
         if let ranked {
             List {
                 ProfileSection(
@@ -63,11 +63,11 @@ private struct ProfileSection: View {
     let ranked: RankedPlayer
     let ratedGames: Int
 
-    /// `.playerProfile` — the surviving identity of the D48′ merge; a stored collapse under the
-    /// retired raw value evicts on the next write (D45′'s designed cost).
+    /// `.playerProfile` — the surviving identity of the merge; a stored collapse under the
+    /// retired raw value evicts on the next write (the designed cost).
     var body: some View {
         CollapsibleSection(.playerProfile, title: ranked.stats.name) {
-            // Rank leads (the default sort, D11′); Record absorbs the old separate Wins row.
+            // Rank leads (the default sort); Record absorbs the old separate Wins row.
             LabeledContent("Rank", value: "#\(ranked.rank)")
             LabeledContent("Games", value: "\(ranked.stats.games)")
             LabeledContent("Record", value: "\(ranked.stats.wins)–\(ranked.stats.draws)–\(ranked.stats.losses)")
@@ -87,7 +87,7 @@ private struct ProfileSection: View {
         }
         // Identifier stays on the section: collapsing hides the rows, not this. A future suite should
         // expect the § Zero failures here — header controls unresolvable by identifier, cause unknown
-        // (shadowing disproved; closed unresolved with D51′).
+        // (shadowing disproved; closed unresolved).
         .accessibilityIdentifier(AccessibilityID.playersInspectorProfile)
     }
 }

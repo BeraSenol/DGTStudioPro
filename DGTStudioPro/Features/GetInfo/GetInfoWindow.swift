@@ -4,9 +4,9 @@ import SwiftUI
 
 // MARK: - Window
 
-/// M10 — Get Info over three subjects, and the app's one rename door (D53′).
-/// A window, not a popover or sheet (D46′ taken as settled): it must survive a click elsewhere.
-/// It edits exactly one thing across the player form — the tag; the game form edits per field (D57′);
+/// M10 — Get Info over three subjects, and the app's one rename door.
+/// A window, not a popover or sheet by design: it must survive a click elsewhere.
+/// It edits exactly one thing across the player form — the tag; the game form edits per field;
 /// the live form is read-only. Body re-runs on request/subject change, not on text-field churn.
 struct GetInfoWindow: View {
 
@@ -29,7 +29,7 @@ struct GetInfoWindow: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(DGTLiveSession.self) private var session
 
-    /// Registry for the seat menus (D59′). A `@Query` here where `EditGameInfoSheet` takes strings:
+    /// Registry for the seat menus. A `@Query` here where `EditGameInfoSheet` takes strings:
     /// the sheet is container-free for its previews; this window already carries a container.
     @Query(sort: \Player.name) private var knownPlayers: [Player]
 
@@ -39,10 +39,10 @@ struct GetInfoWindow: View {
     /// a rename rewrites every linked game with an MD5 each, and a binding would run that per keystroke.
     @State private var draftTag = ""
 
-    /// D39′'s refusal, held for the alert; a value means the retag was refused whole, nothing written.
+    /// The refusal, held for the alert; a value means the retag was refused whole, nothing written.
     @State private var refusal: Refusal?
 
-    // MARK: Game Details Drafts (D57′)
+    // MARK: Game Details Drafts
 
     /// The six text-shaped roster tags as drafts, committed one at a time — `commitField(_:on:)` writes
     /// exactly the property its case names, so a stray edit cannot ride another row's Return.
@@ -53,7 +53,7 @@ struct GetInfoWindow: View {
     @State private var draftBlack = ""
     @State private var draftDate: Date?
 
-    /// `Board` and `TimeControl` (D57′ amendment). Optional-backed in the model, so an emptied field
+    /// `Board` and `TimeControl`. Optional-backed in the model, so an emptied field
     /// is a legitimate nil here in a way it is not for Event or Site.
     @State private var draftBoard = ""
     @State private var draftTimeControl = ""
@@ -62,8 +62,8 @@ struct GetInfoWindow: View {
     /// **Focus loss commits here and deliberately not on the player tab** — blast radius: one row vs. every linked game.
     @FocusState private var focusedField: GameField?
 
-    /// A refused field edit, held for its alert: a result the final position disproves (D57′), or a
-    /// seat that would put one player on both sides (D61′).
+    /// A refused field edit, held for its alert: a result the final position disproves, or a
+    /// seat that would put one player on both sides.
     @State private var fieldRefusal: FieldRefusal?
 
     // MARK: Body
@@ -90,7 +90,7 @@ struct GetInfoWindow: View {
             actions: { _ in Button("OK", role: .cancel) {} },
             message: { refusal in Text(Self.refusalMessage(refusal.collisions)) }
         )
-        // D57′. Separate from the rename refusal: two doors refusing different things must each name theirs.
+        // Separate from the rename refusal: two doors refusing different things must each name theirs.
         .alert(
             fieldRefusal?.title ?? "",
             isPresented: Binding(present: $fieldRefusal),
@@ -159,7 +159,7 @@ extension GetInfoWindow {
             subject = .live(live)
 
         case .player(let key):
-            // Predicated: `normalizedName` is D9′'s key, so at most one row matches.
+            // Predicated: `normalizedName` is the key, so at most one row matches.
             var descriptor = FetchDescriptor<Player>(
                 predicate: #Predicate { $0.normalizedName == key }
             )
@@ -168,8 +168,8 @@ extension GetInfoWindow {
                 subject = nil
                 return
             }
-            // Stored **tag** form (`tagName ?? name`, D29′). Seeding from `name` would put a display form in a
-            // field that stores a tag — the first commit writes it into every game's `[White]` (D37′'s trap).
+            // Stored **tag** form (`tagName ?? name`). Seeding from `name` would put a display form in a
+            // field that stores a tag — the first commit writes it into every game's `[White]` (the trap).
             draftTag = player.tagName ?? player.name
             subject = .player(player)
 
@@ -179,7 +179,7 @@ extension GetInfoWindow {
     }
 
     /// Seeds drafts from stored state, beside the fetch. **Tag form in, verbatim**, `?` included —
-    /// these fields edit what export writes byte for byte (D24′). Round is a String draft: the empty
+    /// these fields edit what export writes byte for byte. Round is a String draft: the empty
     /// field must be expressible.
     private func seedGameDrafts(from pgn: PGN) {
         draftEvent = pgn.event
@@ -217,11 +217,11 @@ extension GetInfoWindow {
         }
     }
 
-    /// An archived game (D57′). Three tabs since D59′; **the split is by authorship, not topic**:
+    /// An archived game. Three tabs since **the split is by authorship, not topic**:
     /// Details = the nine exported tags the reader can rewrite, File = what the app derived (read-only),
-    /// Move Text = D18′'s editor — named "Move Text", not "PGN", because it shows half the file.
-    /// Move Text exists on the game form only: a live game has no stored movetext (Decision #1).
-    /// `.tabItem`, not the 2027 `Tab(role:)` spelling — beta (D27′).
+    /// Move Text = the editor — named "Move Text", not "PGN", because it shows half the file.
+    /// Move Text exists on the game form only: a live game has no stored movetext.
+    /// `.tabItem`, not the 2027 `Tab(role:)` spelling — beta.
     private func gameForm(_ pgn: PGN) -> some View {
         TabView {
             detailsTab(pgn)
@@ -237,7 +237,7 @@ extension GetInfoWindow {
         .accessibilityIdentifier(AccessibilityID.getInfoGame)
     }
 
-    /// D18′'s editor, hosted. Commit model differs from Details on purpose: per-field vs.
+    /// The editor, hosted. Commit model differs from Details on purpose: per-field vs.
     /// accept-whole-or-reject-whole. `.id(pgn.persistentModelID)` is load-bearing — the editor seeds in `init`.
     private func moveTextTab(_ pgn: PGN) -> some View {
         MovetextEditorView(pgn: pgn) { proposed in
@@ -247,7 +247,7 @@ extension GetInfoWindow {
         .accessibilityIdentifier(AccessibilityID.getInfoGameMoveText)
     }
 
-    /// D24′'s nine exported tags, editable (D57′). Native controls make invalid states unreachable
+    /// The nine exported tags, editable. Native controls make invalid states unreachable
     /// rather than validated (a `Picker` cannot produce a foreign result, a `DatePicker` 2026-02-31);
     /// the one rule no widget knows — result vs. final position — is checked.
     private func detailsTab(_ pgn: PGN) -> some View {
@@ -276,7 +276,7 @@ extension GetInfoWindow {
                 resultRow(pgn)
             }
 
-            // The other two of D24′'s nine, in exported order. Their own section: `SevenTagRosterSection`
+            // The other two of the nine, in exported order. Their own section: `SevenTagRosterSection`
             // renders from `allCases` precisely so the roster cannot quietly grow to nine.
             Section("Equipment") {
                 TextField("Board", text: $draftBoard)
@@ -300,7 +300,7 @@ extension GetInfoWindow {
     }
 
     /// Date row with its own "no date" arm: a bare `DatePicker` cannot express nil, and nil is real —
-    /// D24′ writes `????.??.??` for it.
+    /// the exporter writes `????.??.??` for it.
     @ViewBuilder
     private func dateRow(_ pgn: PGN) -> some View {
         if let bound = draftDate {
@@ -362,7 +362,7 @@ extension GetInfoWindow {
         .accessibilityIdentifier(AccessibilityID.getInfoGameField(label.lowercased()))
     }
 
-    /// Known-player menu trailing a seat field (D59′) — `LiveGameRosterForm.playerMenu`'s shape,
+    /// Known-player menu trailing a seat field — `LiveGameRosterForm.playerMenu`'s shape,
     /// deliberately not shared: that menu only fills (a sheet has Save); this one must commit on pick
     /// or the choice sits uncommitted with no Save to land it. Picking creates no `Player`.
     @ViewBuilder
@@ -374,7 +374,7 @@ extension GetInfoWindow {
         if !knownPlayers.isEmpty {
             Menu {
                 ForEach(knownPlayers, id: \.persistentModelID) { player in
-                    // D29′ — insert the remembered *tag* form; the label shows the string it inserts.
+                    // Insert the remembered *tag* form; the label shows the string it inserts.
                     let tag = player.tagName ?? player.name
                     Button(tag) {
                         text.wrappedValue = tag
@@ -393,8 +393,8 @@ extension GetInfoWindow {
         }
     }
 
-    /// Result picker, checked against the final position on change (D57′). `*` deliberately not
-    /// offered (Decision #3): an imported `*` can be decided here and never set back — the right asymmetry.
+    /// Result picker, checked against the final position on change. `*` deliberately not
+    /// offered: an imported `*` can be decided here and never set back — the right asymmetry.
     private func resultRow(_ pgn: PGN) -> some View {
         Picker(
             "Result",
@@ -410,12 +410,12 @@ extension GetInfoWindow {
         .accessibilityIdentifier(AccessibilityID.getInfoGameField("result"))
     }
 
-    /// Everything the app derived about the row (D57′) — read-only by the authorship split.
+    /// Everything the app derived about the row — read-only by the authorship split.
     /// Hash and identifier are selectable and monospaced: an MD5 you cannot copy answers nothing.
     private func fileTab(_ pgn: PGN) -> some View {
         Form {
             Section("Library") {
-                // D58′'s ordinal row.
+                // The ordinal row.
                 LabeledContent(
                     "Index",
                     value: pgn.libraryIndex.map(String.init) ?? RosterSummary.displayUnknown
@@ -485,7 +485,7 @@ extension GetInfoWindow {
     }
 
     /// The registry row, its games, and the app's one rename door. Tag form above display form, in
-    /// that order — D23′: names travel tag → display, never back.
+    /// that order — names travel tag → display, never back.
     private func playerForm(_ player: Player) -> some View {
         Form {
             Section("Name") {
@@ -525,7 +525,7 @@ extension GetInfoWindow {
 
 extension GetInfoWindow {
 
-    /// The movetext write door (moved with the affordance, D59′). `.rejected` here means this window's
+    /// The movetext write door (moved with the affordance). `.rejected` here means this window's
     /// Save gate and the store's validator disagreed — impossible, both call `MovetextEdit.validate`;
     /// logged as a breadcrumb. Unlike its Board ancestor it rebuilds no cached `Game`.
     fileprivate func applyMovetext(_ proposed: [String], to pgn: PGN) {
@@ -544,7 +544,7 @@ extension GetInfoWindow {
         }
     }
 
-    /// Commits one roster field through `applyEdit` (D57′). Two guards ahead of the door, both
+    /// Commits one roster field through `applyEdit`. Two guards ahead of the door, both
     /// load-bearing: unchanged returns early ("nothing happened" and "rewritten identically" look the
     /// same from outside); emptied Event/Site reverts — `""` exports as neither a name nor an unknown.
     fileprivate func commitField(_ field: GameField, on pgn: PGN) {
@@ -566,7 +566,7 @@ extension GetInfoWindow {
             case .round:
                 let trimmed = draftRound.trimmingCharacters(in: .whitespaces)
                 // Non-numeric reverts rather than clearing: reading "quarterfinal" as nil would discard what was
-                // typed under the spelling an intentional clear uses (D31′).
+                // typed under the spelling an intentional clear uses.
                 let proposed: Int? = trimmed.isEmpty ? nil : Int(trimmed)
                 guard trimmed.isEmpty || proposed != nil else {
                     draftRound = pgn.round.map(String.init) ?? ""
@@ -643,7 +643,7 @@ extension GetInfoWindow {
         )
     }
 
-    /// Commits a result, refusing what the final position disproves (D57′). Reuses
+    /// Commits a result, refusing what the final position disproves. Reuses
     /// `MovetextEdit.validate` — stored moves are canonical, so replay can only fail on the result
     /// arms. Resignations, agreed draws, wins on time all stay settable.
     fileprivate func commitResult(_ proposed: GameResult, on pgn: PGN) {
@@ -694,7 +694,7 @@ extension GetInfoWindow {
         date.formatted(date: .abbreviated, time: .shortened)
     }
 
-    /// D37′ transport; every consequence belongs to the store door. Two failure sinks: a refusal is a
+    /// The transport; every consequence belongs to the store door. Two failure sinks: a refusal is a
     /// value the reader sees, a save failure is a logged error. Two no-op guards ahead of the door —
     /// empty tag reverts (never reaches `.emptyTag`), unchanged tag skips a full rehash.
     fileprivate func commitRename(for player: Player) {
@@ -715,7 +715,7 @@ extension GetInfoWindow {
         }
     }
 
-    /// `.emptyTag` cannot reach here (`commitRename` guards it), so this is D39′'s collision case
+    /// `.emptyTag` cannot reach here (`commitRename` guards it), so this is the collision case
     /// only; a third rejection arrives as a compile error. The field reverts on refusal.
     private func present(_ rejection: PGNStore.RetagRejection, revertingTo player: Player) {
         switch rejection {
@@ -749,9 +749,9 @@ extension GetInfoWindow {
         .environment(DGTLiveSession())
 }
 
-/// Both game tabs on a fixture rich enough to make the File tab say something (D57′). The fixture
+/// Both game tabs on a fixture rich enough to make the File tab say something. The fixture
 /// sets classification directly — fine in a preview that never runs in the app, and the reason
-/// those fields are absent from `PGN.init` (D34′ keeps `classify` the single door).
+/// those fields are absent from `PGN.init` (`classify` stays the single door).
 #Preview("Game, Details & File") {
     let container = try! ModelContainer(
         for: PGN.self,

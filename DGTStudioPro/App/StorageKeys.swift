@@ -1,7 +1,7 @@
 enum StorageKeys {
     static let boardStyle = "boardStyle"
 
-    // Board coordinates (D21′). Absent reads true; the two read sites (SettingsView, BoardView)
+    // Board coordinates. Absent reads true; the two read sites (SettingsView, BoardView)
     // must agree — documented twin.
     static let showBoardCoordinates = "showBoardCoordinates"
 
@@ -15,7 +15,7 @@ enum StorageKeys {
     // The two `.list` defaults are the documented twin.
     static let collectionViewMode = "collectionViewMode"
 
-    /// D62′ — what rank 1 means. Absent reads `.wins` (D11′). A new key, not the retired
+    /// What rank 1 means. Absent reads `.wins`. A new key, not the retired
     /// `playersSortOrder`: its stale rank/name values would read as an unknown method — a migration
     /// disguised as a coincidence.
     static let playersRanking = "playersRanking"
@@ -25,7 +25,7 @@ enum StorageKeys {
     static let libraryColumns = "libraryColumnCustomization"
     static let playersColumns = "playersColumnCustomization"
 
-    // The converged stamp gating the two player backfills (D75′). Absent reads false — scan until
+    // The converged stamp gating the two player backfills. Absent reads false — scan until
     // one clean pass. Cleared only by Erase Library, which retires the store the stamp described.
     static let playerBackfillsConverged = "playerBackfillsConverged"
 
@@ -37,15 +37,15 @@ enum StorageKeys {
     // Launch auto-connect; absent reads true everywhere.
     static let autoConnectOnLaunch = "autoConnectOnLaunch"
 
-    // Illegal-move sound (D13′). Absent reads true; SettingsView and the App's `onDesync` closure
+    // Illegal-move sound. Absent reads true; SettingsView and the App's `onDesync` closure
     // are the documented twin.
     static let illegalMoveSoundEnabled = "illegalMoveSoundEnabled"
 
-    // The four board cues (D81′). Absent reads **true** for each. Single read site apiece —
+    // The four board cues. Absent reads **true** for each. Single read site apiece —
     // `BoardSounds` owns the values and Settings binds to the properties, so unlike the key above
     // these have no twin to document. Four keys rather than one because four toggles were asked
     // for, and a single stored set would make "which cue is off" a decoding question.
-    /// Which sample set the cues come from (D82′). Absent reads `.wood` — the set that shipped
+    /// Which sample set the cues come from. Absent reads `.wood` — the set that shipped
     /// first, so an existing install hears what it heard yesterday. An unknown stored value falls
     /// back to the same default rather than failing, which is what makes retiring a set safe.
     static let boardSoundSet = "boardSoundSet"
@@ -55,15 +55,15 @@ enum StorageKeys {
     static let checkSoundEnabled     = "checkSoundEnabled"
     static let checkmateSoundEnabled = "checkmateSoundEnabled"
 
-    // Idle-sleep play gate (D25′). Absent reads **true**. Single read site — `SleepInhibitor` owns
+    // Idle-sleep play gate. Absent reads **true**. Single read site — `SleepInhibitor` owns
     // the value; Settings binds to the property. The shape the twins above should eventually take.
     static let preventSleepDuringPlay = "preventSleepDuringPlay"
 
-    // The analysis sleep gate (D66′): same semantics, same single-read-site shape. Two keys because
-    // the causes share nothing; renaming would silently reset the stored choice (the D36′ trap).
+    // The analysis sleep gate: same semantics, same single-read-site shape. Two keys because
+    // the causes share nothing; renaming would silently reset the stored choice.
     static let preventSleepDuringAnalysis = "preventSleepDuringAnalysis"
 
-    // Collapsed inspector sections (D45′): the *collapsed* set is stored, so "default open" is a
+    // Collapsed inspector sections: the *collapsed* set is stored, so "default open" is a
     // property of the representation, not a fourth `?? true`.
     static let collapsedInspectorSections = "collapsedInspectorSections"
 

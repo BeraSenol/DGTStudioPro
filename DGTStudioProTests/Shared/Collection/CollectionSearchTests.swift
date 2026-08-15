@@ -20,7 +20,7 @@ struct SearchMatchTests {
         #expect(SearchMatch.matches(query: "  magnus   carlsen ", fields: ["Magnus  Carlsen"]))
     }
 
-    /// The D30′/D9′ semantics, pinned on purpose: the fold preserves
+    /// The semantics, pinned on purpose: the fold preserves
     /// diacritics, so search agrees with player identity and smart-tag
     /// matching about which strings are the same string.
     @Test func diacriticsArePreservedByTheFold() {

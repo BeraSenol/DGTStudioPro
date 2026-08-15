@@ -34,7 +34,7 @@ final class AnalysisQueueController {
 
     // MARK: Batch Bookkeeping
 
-    /// *Searchable* ply count per queued game (D74′ — book and satisfied plies excluded), captured
+    /// *Searchable* ply count per queued game (book and satisfied plies excluded), captured
     /// at `enqueue` where the models are in hand: the estimate must not resolve waiting ids per tick.
     private var plyCounts: [PersistentIdentifier: Int] = [:]
 
@@ -107,7 +107,7 @@ final class AnalysisQueueController {
         // must not restart the clock.
         let wasIdle = !queue.isActive
         for pgn in pgns {
-            // The estimate is denominated in *searchable* plies (D74′) — the plan the driver will
+            // The estimate is denominated in *searchable* plies — the plan the driver will
             // build — or a skipped book registers as impossible speed and rots the projection.
             // An unclassified game estimates full-length; its pass classifies, and any later
             // enqueue tightens.

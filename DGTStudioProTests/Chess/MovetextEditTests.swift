@@ -1,7 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The D18′ movetext-edit validator: legality by full replay from the start
+/// The movetext-edit validator: legality by full replay from the start
 /// position, canonicalized output, and the position-forced result rules
 /// (checkmate ⇒ mating side wins; a `#` must mate; stalemate ⇒ draw; `*` is
 /// never finished). Pure over `GameState` — nonisolated, no fixtures beyond

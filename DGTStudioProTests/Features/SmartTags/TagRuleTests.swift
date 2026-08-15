@@ -45,7 +45,7 @@ struct TagRuleTests {
         )
     }
 
-    // MARK: Classification Fields (M4, D34′)
+    // MARK: Classification Fields (M4)
 
     private static let winawer = ECOOpening(
         code: "C15", name: "French Defense: Winawer Variation"
@@ -73,7 +73,7 @@ struct TagRuleTests {
         let game = record(opening: nil)
 
         #expect(TagRule(field: .opening, comparison: .contains, text: "French").matches(game) == false)
-        // The D30′ guard: "opening is not X" needs a known opening to be true.
+        // The guard: "opening is not X" needs a known opening to be true.
         #expect(TagRule(field: .opening, comparison: .notEquals, text: "French").matches(game) == false)
     }
 
@@ -269,7 +269,7 @@ struct TagRuleTests {
         #expect(notBera.matches(record(white: nil, black: nil)) == false)
     }
 
-    /// D30′: unknowns never match, negation included, for single subjects — the guard is
+    /// Unknowns never match, negation included, for single subjects — the guard is
     /// `.notEquals`-only.
     @Test func singleSubjectNotEqualsNeverMatchesUnknowns() {
         let notCarlsen = TagRule(field: .white, comparison: .notEquals, text: "carlsen")
@@ -288,7 +288,7 @@ struct TagRuleTests {
         #expect(notBera.matches(record(white: "Christophe", black: nil)))
     }
 
-    /// D30′'s other half: both sides of a string comparison ride
+    /// The other half: both sides of a string comparison ride
     /// `PlayerName.folded` + `lowercased()`, so whitespace runs and
     /// newlines in *either* the tag or the rule text stop mattering.
     @Test func stringComparisonsFoldWhitespaceRunsBothSides() {

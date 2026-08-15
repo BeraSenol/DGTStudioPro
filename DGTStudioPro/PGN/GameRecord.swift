@@ -1,6 +1,6 @@
 import Foundation
 
-/// A Library game projected to the pure value the cores consume (D10′) — `PlayerStats` and
+/// A Library game projected to the pure value the cores consume — `PlayerStats` and
 /// `Glicko1` never touch `@Model`s. Sides are the *resolved* links, never raw tags: `"?"` and
 /// unbackfilled rows are both "no player".
 struct GameRecord: Sendable, Hashable {
@@ -74,7 +74,7 @@ struct GameRecord: Sendable, Hashable {
     
     // MARK: Chronology
     
-    /// The one effective-date rule (D11′): undated games order by when
+    /// The one effective-date rule: undated games order by when
     /// they entered the Library.
     var effectiveDate: Date { date ?? importedAt }
     

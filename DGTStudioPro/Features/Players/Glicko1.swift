@@ -1,11 +1,11 @@
 import Foundation
 
-/// Glicko-1 (D11′): per-player deviation replaces Elo's one-size K. Locked: initial 1500/350,
+/// Glicko-1: per-player deviation replaces Elo's one-size K. Locked: initial 1500/350,
 /// floor 30, cap 350, c = 0 (a pure deterministic fold — no wall-clock input), one game per
 /// period, provisional while RD > 110. Reference values pinned at full double precision.
 enum Glicko1 {
     
-    // MARK: Parameters (D11′)
+    // MARK: Parameters
     
     static let initialMean = 1500.0
     static let initialDeviation = 350.0

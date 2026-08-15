@@ -3,7 +3,7 @@ import Testing
 
 @testable import DGTStudioPro
 
-/// D46′ — the graph's spatial mapping. Nonisolated: pure value types, no
+/// The graph's spatial mapping. Nonisolated: pure value types, no
 /// fixtures, the `EvaluationBarReadingTests` shape.
 ///
 /// The suite exists because this arithmetic now has **two** consumers pointing
@@ -97,7 +97,7 @@ struct EvaluationGraphGeometryTests {
     }
 }
 
-/// D46′ — what the magnifier window says about one ply.
+/// What the magnifier window says about one ply.
 @Suite("Evaluation graph reading")
 struct EvaluationGraphReadingTests {
 

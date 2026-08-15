@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import DGTStudioPro
 
-/// The column sort that replaced D48′'s picker. Nonisolated, load-bearing. Not tested: that
+/// The column sort that replaced the picker. Nonisolated, load-bearing. Not tested: that
 /// `sorted(using:)` sorts — that is the framework's.
 @Suite("Ranked player column sort")
 struct RankedPlayerSortTests {
@@ -33,7 +33,7 @@ struct RankedPlayerSortTests {
             player("ben", wins: 4, losses: 4),   // 4 wins, 50%, loses the key tiebreak
             player("ann", wins: 4, losses: 4)    // 4 wins, 50%, wins it
         ]
-        // Through `PlayerRanking.wins` (D62′): the *default method* is what must reproduce the ladder now.
+        // Through `PlayerRanking.wins`: the *default method* is what must reproduce the ladder now.
         return PlayerRanking.wins.ranked(stats.map { (stats: $0, rating: nil) })
     }
 
@@ -78,7 +78,7 @@ struct RankedPlayerSortTests {
         #expect(sorted.map(\.stats.key) == expected)
     }
 
-    /// The Player column reproduces what D48′'s "By Name" position did —
+    /// The Player column reproduces what the "By Name" position did —
     /// `stats.name` ascending. Pinned because the picker that used to spell
     /// this is gone, so this comparator is now the only place the app says
     /// what alphabetical means here.

@@ -3,7 +3,7 @@ import SwiftData
 @testable import DGTStudioPro
 import Foundation
 
-/// D58′'s folder backfill — driven through a real *directory*, matched by content hash.
+/// The folder backfill — driven through a real *directory*, matched by content hash.
 @Suite("PGN Store — Library Index Backfill")
 @MainActor
 struct PGNStoreLibraryIndexTests {
@@ -50,7 +50,7 @@ struct PGNStoreLibraryIndexTests {
     // MARK: The Job
 
     /// The case the door exists for: a game imported as text carries no
-    /// ordinal (D58′), and the folder scan gives it the one its file names.
+    /// ordinal, and the folder scan gives it the one its file names.
     @Test func aFileStampsTheRowItHashesTo() throws {
         let context = try Self.makeContext()
         let store = PGNStore(modelContext: context)
@@ -116,7 +116,7 @@ struct PGNStoreLibraryIndexTests {
         }
     }
 
-    /// D58′'s guard, one layer up: digits with no period are a year in a title,
+    /// The guard, one layer up: digits with no period are a year in a title,
     /// not an ordinal. Such a file is skipped *before* it is parsed, so this
     /// also pins the ordering choice — the game is a real Library game, and it
     /// still comes back unnumbered.
@@ -172,7 +172,7 @@ struct PGNStoreLibraryIndexTests {
     // MARK: The Affordance's Own Question
 
     /// `hasUnnumberedGames` is what decides whether the toolbar button exists,
-    /// so it needs to be producible **both ways** — the D40′ check, run at
+    /// so it needs to be producible **both ways** — the check, run at
     /// minting rather than at the next sweep.
     @Test func hasUnnumberedGamesAnswersBothWays() throws {
         let context = try Self.makeContext()

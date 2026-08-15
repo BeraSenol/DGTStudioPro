@@ -36,15 +36,15 @@ struct DGTStudioProApp: App {
     @State private var dgtSession: DGTLiveSession
     @State private var sessionLog: DGTSessionLog
     
-    /// Sleep-inhibition token holder (D14′). Injected into **Settings only** (D25′: it owns the user
+    /// Sleep-inhibition token holder. Injected into **Settings only** (it owns the user
     /// gate); no destination reads it.
     @State private var sleepInhibitor: SleepInhibitor
 
-    /// The board cues and their four gates (D81′). Unlike `sleepInhibitor` this goes into **both**
+    /// The board cues and their four gates. Unlike `sleepInhibitor` this goes into **both**
     /// scenes: Settings binds the toggles, and `BoardDestination` wires each `Game`'s step cue.
     @State private var boardSounds: BoardSounds
 
-    /// Which inspector sections are folded (D45′). Injected into the WindowGroup — every inspector
+    /// Which inspector sections are folded. Injected into the WindowGroup — every inspector
     /// reads it, shared across tabs: collapsing Opening is a statement about openings, not a window.
     @State private var inspectorCollapse = InspectorSectionCollapse(defaults: .standard)
 
@@ -65,13 +65,13 @@ struct DGTStudioProApp: App {
             session?.boardChanged(board)
         }
         
-        // D28′ — board identity stamped at game start. Strong capture, deliberately: session → connection
+        // Board identity stamped at game start. Strong capture, deliberately: session → connection
         // is the only strong edge (the connection's hooks capture the session weakly), so no cycle.
         session.boardIdentity = {
             connection.boardInfo.identityTag
         }
 
-        // D49′ — session suspects, connection asks the hardware; recovery only after the dump fails too.
+        // Session suspects, connection asks the hardware; recovery only after the dump fails too.
         session.requestBoardResync = {
             connection.requestBoardResync()
         }
@@ -81,7 +81,7 @@ struct DGTStudioProApp: App {
             session?.liveGame != nil
         }
         
-        // D13′ — the illegal-move cue, fired once per desync entry. `NSSound.beep()` respects the user's
+        // The illegal-move cue, fired once per desync entry. `NSSound.beep` respects the user's
         // alert sound (AppKit — SwiftUI has no sound API). The `?? true` is the Settings twin default.
         session.onDesync = {
             let enabled = UserDefaults.standard
@@ -89,11 +89,11 @@ struct DGTStudioProApp: App {
             if enabled { NSSound.beep() }
         }
 
-        // D81′ — the live move cue. Note the shape difference from the line above and why it is an
+        // The live move cue. Note the shape difference from the line above and why it is an
         // improvement rather than an inconsistency: that closure re-reads `UserDefaults` and states
         // its own default, which is the twin `StorageKeys` documents; this one asks an owning type,
         // so the four defaults are stated once, in `BoardSounds.init`, and Settings and playback
-        // cannot disagree about them (D25′).
+        // cannot disagree about them.
         let sounds = BoardSounds()
         session.onMoveCommitted = { cue in
             sounds.play(cue)
@@ -112,7 +112,7 @@ struct DGTStudioProApp: App {
         
         session.loadPendingDraft()
         
-        // D14′/D66′ — the inhibition observer, wired once: the content closure runs per tab, and two
+        // The inhibition observer, wired once: the content closure runs per tab, and two
         // tabs must not race one token.
         let analysis = AnalysisQueueController()
         let inhibitor = SleepInhibitor()
@@ -166,7 +166,7 @@ struct DGTStudioProApp: App {
             CollectionViewOptionsCommands()
         }
         
-        // D46′ — the evaluation graph. A separate group: macOS only tabs windows from the same group,
+        // The evaluation graph. A separate group: macOS only tabs windows from the same group,
         // which this one must NOT do with the game windows. Keyed on `EvaluationGraphRequest`, not
         // `PersistentIdentifier` — `openWindow(value:)` routes by type, and a second group over the same
         // type makes existing calls unspecified.
@@ -177,7 +177,7 @@ struct DGTStudioProApp: App {
         .defaultSize(width: 720, height: 420)
         // Floating (Bera's call): the graph hovers in front — a popover dismisses on the first board click.
         .windowLevel(.floating)
-        // D80′ — companions JOIN a full-screen space rather than claiming one. Scene-level, so the
+        // Companions JOIN a full-screen space rather than claiming one. Scene-level, so the
         // role is set BEFORE placement; the AppKit configurator wrote it after, and never could work.
         .windowManagerRole(.associated)
         // Session-only, and the companions' reason is the stronger one: this window describes a
@@ -187,15 +187,14 @@ struct DGTStudioProApp: App {
         // same reason; it is stated here once rather than five times.
         .restorationBehavior(.disabled)
 
-        // D73′ — analysis as data, per-ply table. Fourth wrapper in the `openWindow(value:)` family.
+        // Analysis as data, per-ply table. Fourth wrapper in the `openWindow(value:)` family.
         // Not floating, unlike the graph.
         WindowGroup("Analysis Data", for: AnalysisDataRequest.self) { $request in
             AnalysisDataWindow(request: request)
         }
         .modelContainer(sharedContainer)
         .defaultSize(width: 460, height: 520)
-        .windowManagerRole(.associated) // D80′
-        .restorationBehavior(.disabled) // companion — see the graph above
+.windowManagerRole(.associated)        .restorationBehavior(.disabled) // companion — see the graph above
 
         // M10 Get Info — one group for all three subjects, so info windows tab with *each other*, never
         // behind a board. Not floating.
@@ -205,8 +204,7 @@ struct DGTStudioProApp: App {
         }
         .modelContainer(sharedContainer)
         .defaultSize(width: 460, height: 520)
-        .windowManagerRole(.associated) // D80′
-        .restorationBehavior(.disabled) // companion — see the graph above
+.windowManagerRole(.associated)        .restorationBehavior(.disabled) // companion — see the graph above
 
         // The analysis queue's window — a `Window`, not a `WindowGroup`: exactly one queue, opened by
         // `openWindow(id:)`, so the wrapper-type trap is sidestepped rather than paid.
@@ -221,8 +219,7 @@ struct DGTStudioProApp: App {
         // quit. Both singletons carried it and both came back anyway.
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
-        .windowManagerRole(.associated) // D80′
-
+.windowManagerRole(.associated)
         // View Options (⌘J) — a `Window` for the queue scene's reason: one panel, opened by id.
         Window("View Options", id: CollectionViewOptionsWindow.sceneID) {
             CollectionViewOptionsWindow()
@@ -233,8 +230,7 @@ struct DGTStudioProApp: App {
         .restorationBehavior(.disabled) // see the Analysis window above
         .windowResizability(.contentMinSize)
         .windowLevel(.floating)
-        .windowManagerRole(.associated) // D80′
-
+.windowManagerRole(.associated)
         Settings {
             SettingsView()
                 .environment(sleepInhibitor)

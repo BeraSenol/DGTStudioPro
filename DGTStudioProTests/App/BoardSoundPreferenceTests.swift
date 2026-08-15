@@ -3,7 +3,7 @@ import Testing
 
 @testable import DGTStudioPro
 
-/// D81′ — the four cue gates. `SleepInhibitorPreferenceTests`' subject one size up, and the reason
+/// The four cue gates. `SleepInhibitorPreferenceTests`' subject one size up, and the reason
 /// it is pinned rather than waived is the same argument sharpened: two gates over two causes can
 /// be crossed, and **four** toggles over four cues can be crossed in twelve ways. A `check` that
 /// reads the capture flag compiles, renders a correct-looking Settings pane, and is caught only by
@@ -25,7 +25,7 @@ struct BoardSoundPreferenceTests {
         try body(defaults)
     }
 
-    /// Always inaudible: a suite that reached a speaker would be D63′'s console noise with a worse
+    /// Always inaudible: a suite that reached a speaker would be the console noise with a worse
     /// failure mode. The `audible:` seam exists for exactly this.
     ///
     /// Named `makeSounds` rather than `sounds` deliberately — every caller below binds `let sounds
@@ -69,7 +69,7 @@ struct BoardSoundPreferenceTests {
         }
     }
 
-    // MARK: The sound set (D82′)
+    // MARK: The sound set
 
     /// `.wood` is what shipped first, so an install that has never seen the picker must keep
     /// hearing it. A default that drifted would silently re-voice every existing install.
@@ -231,7 +231,7 @@ struct BoardSoundPreferenceTests {
         }
     }
 
-    /// The same loop for the set (D82′), which persists a `String` rather than a `Bool` and so has
+    /// The same loop for the set, which persists a `String` rather than a `Bool` and so has
     /// its own way to go wrong.
     /// The parameter is `chosen`, not `set` — a `set` here would shadow this suite's own
     /// `set(_:to:on:)` helper, which is the shape that already bit `makeSounds`.
@@ -294,7 +294,7 @@ struct BoardSoundPreferenceTests {
 
     /// Both arms, which is the only reason the `in:` seam exists: `BoardSounds.isAudible` is
     /// `false` in every process this suite can run in, so a test asserting the constant would
-    /// confirm nothing but the room it is standing in (D44′).
+    /// confirm nothing but the room it is standing in.
     @Test("A real launch is audible; a test host is not")
     func audibilityFollowsTheTestHost() {
         #expect(BoardSounds.isAudible(in: [:]))

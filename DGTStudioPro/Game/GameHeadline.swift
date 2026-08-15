@@ -1,4 +1,4 @@
-/// The inspector headline: "Reviewing 1. X vs Y" / "Recording …" (D20′). Carries the
+/// The inspector headline: "Reviewing 1. X vs Y" / "Recording …". Carries the
 /// **pairing**, not `PGN.name`; activity raw values are the user-facing verbs; an absent round
 /// omits the number; a blank seat folds to `?`.
 enum GameHeadline {

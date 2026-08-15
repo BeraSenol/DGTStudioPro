@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The sidebar's session surface (D15′) — the single home for connection and session messaging,
+/// The sidebar's session surface — the single home for connection and session messaging,
 /// pinned under every tab's sidebar list. The stage above the board stays clear; only the
 /// recovery *overlays* stay on the board (they are the mirror's, not messaging).
 struct SessionSidebarPanel: View {
@@ -95,7 +95,7 @@ struct SessionSidebarPanel: View {
     
     // MARK: Load Error
     
-    /// The load-error card (re-homed by D15′, identifiers renamed with it). Dismiss clears
+    /// The load-error card (re-homed by identifiers renamed with it). Dismiss clears
     /// `loadedGameID` — the tab becomes an honest live tab.
     private func loadErrorCard(_ message: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {

@@ -27,7 +27,7 @@ struct MovetextScoreSheetTests {
     }
 
     /// A game ending on White's move gets a white-only final line — the shape
-    /// D24′ writes to disk, arrived at here independently because it is what a
+    /// the exporter writes to disk, arrived at here independently because it is what a
     /// score sheet does.
     @Test func oddPlyCountEndsOnAWhiteOnlyLine() {
         let sheet = MovetextEditorView.scoreSheet(["e4", "e5", "Nf3"])
@@ -100,7 +100,7 @@ struct MovetextScoreSheetTests {
         #expect(try MovetextEdit.tokenize(nonsense) == ["e4", "e5", "Nf3", "Nc6"])
     }
 
-    // MARK: Ply ranges (D79′)
+    // MARK: Ply ranges
 
     /// The range finder walks by `tokenize`'s own rules, and this is the pin
     /// that keeps them agreeing: over the real rendered sheet — numbers,

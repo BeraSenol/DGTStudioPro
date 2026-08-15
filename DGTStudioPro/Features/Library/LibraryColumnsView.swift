@@ -8,11 +8,11 @@ struct LibraryColumnsView: View {
 
     // MARK: Stored Properties
     let games: [PGN]
-    /// Row badges' input, off the destination's memoized projection (D72′).
+    /// Row badges' input, off the destination's memoized projection.
     let analyzedIDs: Set<PGN.ID>
     @Binding var selectedPGNs: Set<PGN.ID>
     let boardStyle: BoardStyle
-    /// Takes the set (D56′). Deliberately not adapted with a `forEach` like the others: those fan
+    /// Takes the set. Deliberately not adapted with a `forEach` like the others: those fan
     /// out to per-game doors, while Open's door owns the count threshold.
     let onOpen: ([PGN]) -> Void
     let onAnalyze: (PGN) -> Void
@@ -96,7 +96,7 @@ struct LibraryColumnsView: View {
     }
 
     /// Finder's row: one icon, one name, one line — plus the analysis glyph at the trailing edge
-    /// (D72′): the one fact the detail pane only answers for games you have not clicked yet.
+    ///: the one fact the detail pane only answers for games you have not clicked yet.
     private func row(for game: PGN) -> some View {
         let state = AnalysisGlyph.state(
             of: game,
@@ -142,7 +142,7 @@ struct LibraryColumnsView: View {
 
     /// Raw PGN above, facts below. The preview board is gone — it was the squeeze: a view *asking*
     /// for space rather than taking what is given. `PGN.pgnText` is the inspector's same accessor,
-    /// byte-identical to Export (D24′); one game per render, censused.
+    /// byte-identical to Export; one game per render, censused.
     private func gameDetail(_ game: PGN) -> some View {
         VStack(spacing: 0) {
             ScrollView {
@@ -187,7 +187,7 @@ struct LibraryColumnsView: View {
                 Button {
                     onAnalyze(game)
                 } label: {
-                    // The projection overload (D72′) — the same input the row badges read, so button and badge
+                    // The projection overload — the same input the row badges read, so button and badge
                     // cannot disagree.
                     AnalysisLabel(
                         state: AnalysisGlyph.state(

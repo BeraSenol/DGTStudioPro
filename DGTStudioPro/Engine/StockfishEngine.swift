@@ -423,7 +423,7 @@ actor StockfishEngine {
 
         guard let response = UCIProtocol.parse(line) else {
             // `parse` returns nil for three reasons and only one is news: empty lines are normal, option
-            // advertisements are deliberately ignored (~25 per start — D63′ split them off the error channel).
+            // advertisements are deliberately ignored (~25 per start — split off the error channel deliberately).
             if !UCIProtocol.isDeliberatelyIgnored(line),
                !line.trimmingCharacters(in: .whitespaces).isEmpty {
                 Self.uciLogger?.error("Unrecognized engine line: '\(line, privacy: .public)'")

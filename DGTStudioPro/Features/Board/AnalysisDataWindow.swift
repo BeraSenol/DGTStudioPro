@@ -12,7 +12,7 @@ struct AnalysisDataRequest: Codable, Hashable, Sendable {
     }
 }
 
-/// One ply of the table, as values (suite-testable, D10′). Move grammar is
+/// One ply of the table, as values (suite-testable). Move grammar is
 /// `EvaluationGraphReading`'s; evaluation is `EvaluationBarReading`'s pinned grammar — but
 /// **nil for an unscored ply**, deliberately unlike the display surfaces: this table is stored
 /// truth, and `0.0` for a never-scored ply would be a lie.
@@ -27,10 +27,10 @@ struct AnalysisDataRow: Equatable, Sendable, Identifiable {
     /// "64%" — white's win probability, or nil with `evaluation`.
     let whiteWinPercent: String?
     /// Signed win-probability swing vs. the ply before, in percentage points — "+12" / "-31" —
-    /// or nil when either side of the step is unscored: no fake deltas across book gaps (D77′).
+    /// or nil when either side of the step is unscored: no fake deltas across book gaps.
     /// White-relative, like every number on this surface; the blunder signal is the magnitude.
     let swing: String?
-    /// |swing| ≥ 15 pp — the emphasis threshold, a judgement call documented as one (D77′).
+    /// |swing| ≥ 15 pp — the emphasis threshold, a judgement call documented as one.
     let swingIsMajor: Bool
 
     var id: Int { ply }
@@ -67,7 +67,7 @@ struct AnalysisDataRow: Equatable, Sendable, Identifiable {
     }
 }
 
-/// D73′ — the analysis as data, every ply in its own window. A window (companion surface), its
+/// The analysis as data, every ply in its own window. A window (companion surface), its
 /// own group (data windows tab with each other, never boards); deliberately not floating,
 /// unlike the graph — a table is consulted, not glanced.
 struct AnalysisDataWindow: View {
@@ -84,7 +84,7 @@ struct AnalysisDataWindow: View {
     // MARK: Body
     var body: some View {
         Group {
-            // `hasScoredPly` (D67′): an all-nil array is a table of em dashes wearing the shape of data.
+            // `hasScoredPly`: an all-nil array is a table of em dashes wearing the shape of data.
             // The rows tolerate partial arrays; the gate refuses empty ones.
             if let pgn, pgn.hasScoredPly {
                 table(for: pgn)
@@ -132,7 +132,7 @@ struct AnalysisDataWindow: View {
                     .foregroundStyle(.secondary)
             }
             .width(min: 70, ideal: 90)
-            // D77′ — the blunder signal, from data the app already stored. Emphasis by weight, not
+            // The blunder signal, from data the app already stored. Emphasis by weight, not
             // colour: the sign is white-relative, so red-means-bad would lie for one side.
             TableColumn("Swing") { row in
                 Text(row.swing ?? RosterSummary.displayUnknown)

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Live-search matching for the collection search fields. The fold is D30′'s — the identity
+/// Live-search matching for the collection search fields. The fold is the — the identity
 /// rule the rest of the app already lives by ("Bücher" is found by "bücher", not "bucher").
 enum SearchMatch {
 

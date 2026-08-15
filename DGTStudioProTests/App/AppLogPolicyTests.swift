@@ -1,7 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The logging gate (D63′). Nonisolated; the pure twins exist because the constants are fixed
+/// The logging gate. Nonisolated; the pure twins exist because the constants are fixed
 /// in any given process — only the parameterized forms make the other arm reachable.
 @Suite("App log policy")
 struct AppLogPolicyTests {
@@ -38,7 +38,7 @@ struct AppLogPolicyTests {
         #expect(AppLog.isEnabled(in: [:]))
     }
 
-    /// A test host does not — which is the change D63′ exists to make.
+    /// A test host does not — which is the change the logging policy exists to make.
     @Test(arguments: ["XCTestConfigurationFilePath", "XCTestSessionIdentifier"])
     func aTestHostIsSilent(_ variable: String) {
         #expect(AppLog.isEnabled(in: [variable: "/tmp/whatever"]) == false)

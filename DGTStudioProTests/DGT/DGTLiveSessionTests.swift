@@ -62,7 +62,7 @@ struct DGTLiveSessionTests {
         #expect(session.needsRecovery == false)
     }
 
-    /// D28′ — the one write to `Roster.board`: `startNewGame` stamps the
+    /// The one write to `Roster.board`: `startNewGame` stamps the
     /// hook's answer onto the roster, and a nil hook (headless tests, or a
     /// handshake that never reported a serial) leaves it nil — pre-M2
     /// archive shape, never an invented identity.
@@ -260,7 +260,7 @@ struct DGTLiveSessionTests {
     
     // MARK: Illegal-Move Cue (M-ux.1)
     
-    /// D13′ at the session level: `onDesync` fires once per desync entry; the exit does not re-fire.
+    /// The at the session level: `onDesync` fires once per desync entry; the exit does not re-fire.
     @Test func desyncFiresTheOnDesyncHookOnceAndTheExitDoesNot() async throws {
         let session = DGTLiveSession()
         session.quiescence = .milliseconds(10)
@@ -313,7 +313,7 @@ struct DGTLiveSessionTests {
         #expect(draft?.result == .ongoing)
     }
     
-    /// The core Decision #2 path: a committed ply lands in the file. Polls
+    /// The core draft path: a committed ply lands in the file. Polls
     /// for the commit; the draft save is synchronous within the same settle.
     @Test func committedPlySavesTheDraft() async throws {
         let session = DGTLiveSession()
@@ -365,7 +365,7 @@ struct DGTLiveSessionTests {
         #expect(try store.load()?.white == "Alice")
     }
     
-    /// Decision #3's delete path reaches the disk: a discarded game must not
+    /// The delete path reaches the disk: a discarded game must not
     /// resurrect as a resume offer at the next launch.
     @Test func discardDeletesTheDraft() throws {
         let session = DGTLiveSession()
@@ -565,7 +565,7 @@ struct DGTLiveSessionTests {
         #expect(session.liveGame?.result == .blackWins)
         #expect(session.liveGame?.isFinished == true)
     }
-    // MARK: Board-Dump Resync (D49′)
+    // MARK: Board-Dump Resync
 
     /// The `.unresolved` pre-flight: with the resync hook wired, the first
     /// unexplainable settle asks for a dump and stays in `playing` — no
@@ -640,7 +640,7 @@ struct DGTLiveSessionTests {
 
     /// The additive contract, pinned from the side that would break: with no
     /// hook — headless suites, unwired builds — `.unresolved` enters
-    /// recovery on the first settle, exactly as before D49′. (The recovery
+    /// recovery on the first settle, exactly as before the dump gate. (The recovery
     /// suite above relies on this; here it is the *subject*.)
     @Test func unresolvedWithoutTheHookEntersRecoveryImmediately() async throws {
         let session = DGTLiveSession()

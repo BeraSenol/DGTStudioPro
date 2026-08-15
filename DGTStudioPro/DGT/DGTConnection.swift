@@ -33,7 +33,7 @@ final class DGTConnection {
         var version: String?
         var hardwareVersion: String?
 
-        /// The `[Board "…"]` value (D28′): `"DGT "` + the long serial, matching the reference exports
+        /// The `[Board "…"]` value: `"DGT "` + the long serial, matching the reference exports
         /// byte for byte; short-serial fallback (truthful beats pretty). On the value type — testable
         /// without a port.
         var identityTag: String? {
@@ -65,7 +65,7 @@ final class DGTConnection {
         return false
     }
 
-    /// D49′ — one on-demand full dump for the session's `.unresolved` pre-flight. `sendBoard` doesn't
+    /// One on-demand full dump for the session's `.unresolved` pre-flight. `sendBoard` doesn't
     /// change the board's mode, so the dump rides the existing `.boardDump` handling — free.
     /// Fire-and-forget: a dead port cannot strand the one-shot gate.
     func requestBoardResync() {
@@ -98,7 +98,7 @@ final class DGTConnection {
     @ObservationIgnored var sessionLog: DGTSessionLog?
     
     /// Opt-in board-stream capture for offline replay. Observed — not ignored — because the sleep
-    /// inhibitor's tracking loop reads `isRecording` (D14′), so start/stop must register.
+    /// inhibitor's tracking loop reads `isRecording`, so start/stop must register.
     private var recorder: DGTSessionRecorder?
     
     var isRecording: Bool { recorder != nil }

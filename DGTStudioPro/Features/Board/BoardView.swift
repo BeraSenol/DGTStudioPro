@@ -26,7 +26,7 @@ struct BoardView: View {
     
     // MARK: Preferences
     
-    /// D21′ coordinates — read here (one consumer) rather than threaded like `style`.
+    /// The coordinates — read here (one consumer) rather than threaded like `style`.
     @AppStorage(StorageKeys.showBoardCoordinates) private var showsCoordinates = true
     
     // MARK: Body
@@ -161,7 +161,7 @@ struct BoardView: View {
                             style: style,
                             ghostPiece: (square == ghostSquare) ? ghostPiece : nil
                         )
-                        // "square.e4" — stable algebraic handle, kept per the registry's bet (D51′).
+                        // "square.e4" — stable algebraic handle, kept per the registry's bet.
                         .accessibilityIdentifier(
                             AccessibilityID.boardSquare(square.algebraicNotation)
                         )

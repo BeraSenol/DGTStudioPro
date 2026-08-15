@@ -29,7 +29,7 @@ struct PlayerActionsMenu: View {
                 Label("Show in Library", systemImage: "books.vertical")
             }
             // Inside the optional-closure guard on purpose: a host with no route must not advertise the
-            // key either — a shortcut outliving its affordance is the D40′ shape wearing a key equivalent.
+            // key either — a shortcut outliving its affordance is the shape wearing a key equivalent.
             .keyboardShortcut("l", modifiers: [.command, .shift])
             .accessibilityIdentifier(AccessibilityID.contextShowInLibrary)
         }

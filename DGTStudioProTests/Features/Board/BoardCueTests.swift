@@ -1,7 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// D81′ — which sound a landed move earns. Pure and nonisolated: `BoardCue` is a value question
+/// Which sound a landed move earns. Pure and nonisolated: `BoardCue` is a value question
 /// over `Move` + `GameState`, so the suite matches its subject's isolation rather than the
 /// player's.
 ///
@@ -136,7 +136,7 @@ struct BoardCueTests {
         #expect(BoardSoundSet.marble.rawValue == "marble")
     }
 
-    /// The whole set × cue matrix, which is what actually has to exist on disk (D82′).
+    /// The whole set × cue matrix, which is what actually has to exist on disk.
     ///
     /// Distinctness is the property a rename breaks silently: two entries colliding is one cue
     /// playing another's sound with every string still spelled correctly. Asserted over the full

@@ -15,7 +15,7 @@ enum AnalysisGlyph {
         /// On the engine now. Beats the array, which is mid-write underneath.
         case analyzing
         /// A pass left evaluations, nothing running. Says nothing about *coverage* — the Analysis Data
-        /// window's per-ply rows are where that shows (D73′).
+        /// window's per-ply rows are where that shows.
         case analyzed
     }
     
@@ -37,7 +37,7 @@ enum AnalysisGlyph {
         return !games.isEmpty && games.allSatisfy(isAnalyzed) ? .analyzed : .unanalyzed
     }
     
-    /// Per-row spelling off the memoized projection (D72′) — exists so a row badge cannot cost a
+    /// Per-row spelling off the memoized projection — exists so a row badge cannot cost a
     /// blob decode. A cache, not a second opinion (`hasAnalysis` is the same predicate).
     static func state(
         of game: PGN,
@@ -58,7 +58,7 @@ enum AnalysisGlyph {
         }
     }
     
-    /// Corner-badge symbol — plain verdict marks, no gear (D72′ postscript, by request). The gear is
+    /// Corner-badge symbol — plain verdict marks, no gear (by request). The gear is
     /// shared for `.analyzing`, so "the engine has it" has one silhouette everywhere.
     static func badgeName(_ state: State) -> String {
         switch state {
@@ -171,7 +171,7 @@ struct AnalysisGlyphIcon: View {
 
 // MARK: Badge Icon
 
-/// The plain-mark icon behind both D72′ badge surfaces — one view so the two cannot pick different marks.
+/// The plain-mark icon behind both badge surfaces — one view so the two cannot pick different marks.
 struct AnalysisBadgeIcon: View {
     
     let state: AnalysisGlyph.State

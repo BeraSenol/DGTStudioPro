@@ -67,10 +67,10 @@ struct BoardDestination: View {
                 liveSurface
             }
         }
-        // Load-error surface lives in the sidebar session panel (D15′).
+        // Load-error surface lives in the sidebar session panel.
         .navigationTitle(tabState.boardPGN?.name ?? "Board")
         // Subtitle is *state*; title is identity; the inspector's `GameHeadline` is the pairing.
-        // A tab reviewing a PGN has no business announcing a desync it isn't party to (D15′).
+        // A tab reviewing a PGN has no business announcing a desync it isn't party to.
         .navigationSubtitle(
             DestinationSubtitle.board(
                 phase: .current(session: session, connection: connection),
@@ -83,7 +83,7 @@ struct BoardDestination: View {
         .sheet(isPresented: $showConnectSheet) {
             DGTConnectionView()
         }
-        // The new-game dialog at body level (D15′): the sidebar's New Game button reaches Board with a
+        // The new-game dialog at body level: the sidebar's New Game button reaches Board with a
         // game loaded too. The *auto* offer stays gated to the live branch inside the binding — a tab
         // reviewing a PGN isn't interrupted.
         .sheet(isPresented: isNewGameSheetPresented) {
@@ -99,10 +99,10 @@ struct BoardDestination: View {
                 || session.resumableDraft != nil
             )
         }
-        // D57′ removed the last editing surface here: an archived game's roster is edited in Get Info.
+        // The removed the last editing surface here: an archived game's roster is edited in Get Info.
         .focusedSceneValue(\.activeGame, tabState.boardGame)
         // Get Info trigger published only when this tab has a subject, so the menu item's `disabled(_:)`
-        // reads a condition producible both ways (D40′).
+        // reads a condition producible both ways.
         .focusedSceneValue(
             \.boardGetInfoRequest,
             getInfoSubject == nil ? nil : $getInfoRequested
@@ -146,7 +146,7 @@ struct BoardDestination: View {
     
     // MARK: Board Surface
 
-    /// Gap between bar and board (D33′). The *width* is deliberately not here — `EvaluationBarView.width`,
+    /// Gap between bar and board. The *width* is deliberately not here — `EvaluationBarView.width`,
     /// stated once by the view that draws it (the two disagreed for a month).
     private static let evaluationBarGap: CGFloat = 10
 
@@ -210,7 +210,7 @@ struct BoardDestination: View {
                             // Height only: the bar states its own width — framing it again re-opens the closed twin.
                             .frame(height: side)
 
-                            // D33′'s always-visible label, in the gap, never on the bar — a thin losing share would swallow it.
+                            // The always-visible label, in the gap, never on the bar — a thin losing share would swallow it.
                             Text(evaluation.label)
                                 .font(.caption.monospacedDigit())
                                 .foregroundStyle(.secondary)
@@ -239,7 +239,7 @@ struct BoardDestination: View {
         // PGN-replay path: no ghost. Ghosts only make sense against the live physical board.
         boardSurface(
             position:    game.currentState.position,
-            // Review arm: parity is total, every piece glides under its per-ply tracker identity (D47′).
+            // Review arm: parity is total, every piece glides under its per-ply tracker identity.
             pieces:      PieceIdentity.resolved(
                 position: game.currentState.position,
                 tracker:  game.currentTracker
@@ -272,14 +272,14 @@ struct BoardDestination: View {
     // MARK: Live Surface
     
     /// The live surface: mirror board, live inspector, resume/corrupt forks, archive confirmation.
-    /// All status messaging lives in the sidebar panel (D15′); the stage above the board stays clear.
+    /// All status messaging lives in the sidebar panel; the stage above the board stays clear.
     private var liveSurface: some View {
         mirrorBoard
             .inspector(isPresented: $tabState.boardInspectorPresented) {
                 liveInspector
                     .inspectorColumnWidth(min: 350, ideal: 350, max: 400)
             }
-        // M4.3 resume offer — a modal fork, not a banner: Decision #3 makes this a genuine either/or.
+        // M4.3 resume offer — a modal fork, not a banner: resume-or-delete is a genuine either/or.
             .alert(
                 "Resume unfinished game?",
                 isPresented: isResumeOfferPresented,
@@ -314,7 +314,7 @@ struct BoardDestination: View {
                             applyEditedInfo(roster, to: pgn)
                             session.updateRoster(roster)
                         },
-                        // D29′: tag form into the field, `name` fallback — `NewLiveGameSheet`'s exact expression
+                        // Tag form into the field, `name` fallback — `NewLiveGameSheet`'s exact expression
                         // (a second spelling of "what a seat menu offers" is the twin-read-site pattern).
                         knownPlayers: knownPlayers.map { $0.tagName ?? $0.name }
                     )
@@ -323,7 +323,7 @@ struct BoardDestination: View {
     }
     
     /// Setter deliberately ignores dismissal: the offer is answered by its buttons, never by evasion —
-    /// Decision #3 is a fork, not a suggestion.
+    /// Resume-or-delete is a fork, not a suggestion.
     private var isResumeOfferPresented: Binding<Bool> {
         Binding(
             get: { session.resumableDraft != nil },
@@ -343,7 +343,7 @@ struct BoardDestination: View {
     /// M5 self-heal archive).
     private func resumeOfferMessage(for draft: LiveGameDraft) -> String {
         let plies = draft.sanMoves.count
-        // An alert is a display surface (D23′): the draft stores tag form, so render through the transform.
+        // An alert is a display surface: the draft stores tag form, so render through the transform.
         let pairing = "\(PlayerName.displayForm(of: draft.white)) vs \(PlayerName.displayForm(of: draft.black))"
         var lines = [
             "\(pairing), \(plies) \(plies == 1 ? "move" : "moves").",
@@ -459,7 +459,7 @@ struct BoardDestination: View {
     // MARK: Live Mirror
     
     /// The mirror whenever no game is loaded. The *position* always renders `physicalBoard`
-    /// verbatim; identity comes from `PieceIdentity`'s mirror arm (D47′ — proven moves glide,
+    /// verbatim; identity comes from `PieceIdentity`'s mirror arm (proven moves glide,
     /// everything else fades). Only the *overlays* come from the live game.
     private var mirrorBoard: some View {
         boardSurface(
@@ -521,7 +521,7 @@ struct BoardDestination: View {
         
         do {
             let newGame = try Game(pgn: loadedPGN)
-            // D81′ — the review cue, wired here rather than inside `Game.init` because the player is
+            // The review cue, wired here rather than inside `Game.init` because the player is
             // an environment value and a model-layer type reaching for one is how a `Game` stops
             // being constructible from a preview. Strong capture: the App owns `BoardSounds` for the
             // process, and it holds no reference back.

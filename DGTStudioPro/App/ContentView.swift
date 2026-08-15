@@ -99,7 +99,7 @@ struct ContentView: View {
                 }
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                // D15′: the sidebar owns session info. New Game navigates to Board first — the sheet's
+                // The sidebar owns session info. New Game navigates to Board first — the sheet's
                 // presenter stays `BoardDestination`.
                 SessionSidebarPanel(
                     tabState: tabState,
@@ -219,7 +219,7 @@ enum Destination: String, CaseIterable, Identifiable, Hashable {
     case board
     case library
     case players
-    // `rankings` retired by D48′ — the selection stores the enum, so the deletion is total at
+    // `rankings` retired — the selection stores the enum, so the deletion is total at
     // compile time.
 
     var id: String { rawValue }
@@ -250,7 +250,7 @@ enum Destination: String, CaseIterable, Identifiable, Hashable {
         .environment(DGTSessionLog())
         .frame(width: 800, height: 600)
         .environment(InspectorSectionCollapse.preview)
-        // D81′ — `BoardDestination` reads it, so the canvas traps without it. The `.preview`
+        // `BoardDestination` reads it, so the canvas traps without it. The `.preview`
         // instance is inaudible: a canvas that re-renders on every keystroke must not click.
         .environment(BoardSounds.preview)
 }

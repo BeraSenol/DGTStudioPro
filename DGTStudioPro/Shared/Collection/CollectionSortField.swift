@@ -71,7 +71,7 @@ struct CollectionSort<Field: CollectionSortField>: Equatable, Sendable {
         "\(field.rawValue):\(isReverse ? "reverse" : "forward")"
     }
 
-    /// An unreadable stored value is dropped, not repaired (D45′'s rule): retiring a column costs
+    /// An unreadable stored value is dropped, not repaired (the rule): retiring a column costs
     /// no migration; the next write evicts.
     init?(storedValue: String) {
         let parts = storedValue.split(separator: ":", maxSplits: 1)
@@ -88,7 +88,7 @@ struct CollectionSort<Field: CollectionSortField>: Equatable, Sendable {
 // MARK: - Library
 
 /// The Library table's sortable columns. Raw values are **hand-written persistence contracts**
-/// (`StorageKeys.librarySort`) — the D36′ trap; pinned on literals.
+/// (`StorageKeys.librarySort`) — the trap; pinned on literals.
 enum LibrarySortField: String, CollectionSortField {
     case index         = "index"
     case white         = "white"
@@ -154,7 +154,7 @@ enum LibrarySortField: String, CollectionSortField {
 // MARK: - Players
 
 /// The Players table's columns — same persistence contract. **`rank` is a sort, not the ranking
-/// method** (D62′ decides what rank 1 means; this decides row order).
+/// method** (the ranking method decides what rank 1 means; this decides row order).
 enum PlayersSortField: String, CollectionSortField {
     case rank         = "rank"
     case name         = "name"
@@ -214,7 +214,7 @@ enum PlayersSortField: String, CollectionSortField {
         }
     }
 
-    /// Rank ascending — the D11′ ladder; `defaultSortReproducesTheLadder` pins it.
+    /// Rank ascending — the ladder; `defaultSortReproducesTheLadder` pins it.
     static var defaultField: Self { .rank }
     static var defaultIsReverse: Bool { false }
 }

@@ -1,5 +1,5 @@
 /// What a landed move sounds like. Pure, nonisolated, `GameState`-typed — the classification is
-/// the part worth pinning, and it is a value question with no I/O in it (D10′'s shape, applied to
+/// the part worth pinning, and it is a value question with no I/O in it (the shape, applied to
 /// a presentation concern rather than a fold).
 ///
 /// **One cue per move, most specific wins.** A capture that gives check plays `check`, not both:
@@ -12,7 +12,7 @@ enum BoardCue: String, CaseIterable, Sendable {
     case check
     case checkmate
 
-    /// Naming the sample is `BoardSoundSet.resourceName(for:)`'s job (D82′), not this type's — a
+    /// Naming the sample is `BoardSoundSet.resourceName(for:)`'s job, not this type's — a
     /// cue is one of four fixed questions and a set is a growing list, so the convention lives
     /// with the axis that varies. What stays here is that `rawValue` is half of that filename,
     /// which is why these cases are pinned on literals in the suite: renaming one renames a

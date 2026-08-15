@@ -1,6 +1,6 @@
 import Foundation
 
-/// The bar's pure mapping (D33′): `Evaluation?` in, fraction + tip label out. The fraction is
+/// The bar's pure mapping: `Evaluation?` in, fraction + tip label out. The fraction is
 /// `whiteWinProbability` **verbatim**, so bar and graph can never disagree; nil folds to
 /// `.drawn`. Presence is deliberately not this type's job — the wiring gates on `hasScoredPly`.
 struct EvaluationBarReading: Equatable, Sendable {

@@ -3,7 +3,7 @@ import Foundation
 import SwiftData
 @testable import DGTStudioPro
 
-/// The store side of the D18′ movetext edit: an accepted edit canonicalizes
+/// The store side of the movetext edit: an accepted edit canonicalizes
 /// the moves, invalidates the parallel evaluation array, and refreshes the
 /// content hash in one transaction; a rejected edit leaves the model
 /// untouched; a no-op edit (canonicalizes to the same game) preserves the
@@ -47,7 +47,7 @@ struct PGNStoreMovetextEditTests {
         #expect(outcome == .success(["d4", "d5", "c4"]))
         #expect(game.moves == ["d4", "d5", "c4"])
         #expect(game.evaluations.isEmpty)
-        // Depths travel with the evaluations, always (D74′) — a stale depth over fresh moves
+        // Depths travel with the evaluations, always — a stale depth over fresh moves
         // would let the next pass skip plies it never scored.
         #expect(game.analysisDepths.isEmpty)
         #expect(game.contentHash != hashBefore)
@@ -92,11 +92,11 @@ struct PGNStoreMovetextEditTests {
         #expect(game.evaluations.count == 2)
     }
 
-    /// D18′'s quiet clause, pinned from the side that breaks: the movetext
+    /// The quiet clause, pinned from the side that breaks: the movetext
     /// door deliberately does **not** re-resolve seats — a movetext edit
     /// cannot touch players, so it has no business rewriting relationships.
     /// `applyEdit` re-resolves unconditionally (its own documented contract,
-    /// the one D38′'s merge had to survive); if this door ever grows the
+    /// the one the merge had to survive); if this door ever grows the
     /// same reflex, a drifted tag would re-link or mint a player as a side
     /// effect of editing *moves*. The drifted-tag fixture is exactly the
     /// state a rename-in-flight or hand-edited row can leave behind.

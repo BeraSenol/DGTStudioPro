@@ -3,14 +3,14 @@ import Foundation
 import Observation
 import os
 
-/// Plays the board cues and owns the four preferences that gate them (D81′).
+/// Plays the board cues and owns the four preferences that gate them.
 ///
-/// D25′'s owned-value shape rather than `@AppStorage`: the toggles have two readers — Settings
+/// The owned-value shape rather than `@AppStorage`: the toggles have two readers — Settings
 /// binds them, this type consults them — and a twin default is exactly the arrangement that
-/// agreed perfectly on a value neither side could produce (D40′). Every default is stated once,
+/// agreed perfectly on a value neither side could produce. Every default is stated once,
 /// in `init`; nobody else spells `?? true`.
 ///
-/// Separate from D13′'s illegal-move beep on purpose, and the split is audible rather than
+/// Separate from the illegal-move beep on purpose, and the split is audible rather than
 /// architectural: that one is `NSSound.beep()`, which rides the user's **alert** volume because it
 /// is an alert. These are samples at app volume, because a move landing is feedback, not a warning.
 @MainActor
@@ -24,7 +24,7 @@ final class BoardSounds {
 
     // MARK: Policy
 
-    /// Whether this process makes any sound at all. Silent under the test host, for D63′'s reason
+    /// Whether this process makes any sound at all. Silent under the test host, for the reason
     /// one layer over: a single `@Test` that walks a game would fire a cue per ply, and a suite
     /// that plays audio is a suite nobody runs with headphones on.
     ///
@@ -42,7 +42,7 @@ final class BoardSounds {
 
     // MARK: Preferences
 
-    /// Which material the cues are made of (D82′). Absent reads `.wood`, the set that shipped
+    /// Which material the cues are made of. Absent reads `.wood`, the set that shipped
     /// first, so an existing install hears exactly what it heard yesterday.
     ///
     /// Changing it does three things in one place, which is the argument for `didSet` over a
@@ -62,7 +62,7 @@ final class BoardSounds {
         }
     }
 
-    /// Absent reads **true** for all four — the feature is opt-out, matching D13′'s illegal-move
+    /// Absent reads **true** for all four — the feature is opt-out, matching the illegal-move
     /// cue rather than arriving switched off and needing to be discovered.
     var playsMove: Bool {
         didSet { persist(playsMove, forKey: StorageKeys.moveSoundEnabled, describing: "move") }
@@ -87,7 +87,7 @@ final class BoardSounds {
 
     /// Loaded samples for the **current set**, kept until the set changes. The value is itself
     /// optional so a *failed* load is remembered: without that, a missing resource logs an error
-    /// on every ply, and a channel that is always noisy is a channel being read past (D63′'s UCI
+    /// on every ply, and a channel that is always noisy is a channel being read past (the UCI
     /// finding).
     ///
     /// Keyed on the cue alone rather than on `(set, cue)` because `soundSet`'s `didSet` empties it

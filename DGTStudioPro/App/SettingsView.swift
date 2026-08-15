@@ -13,7 +13,7 @@ struct SettingsView: View {
     /// live at the read site). `StorageKeys` documents the contract.
     @AppStorage(StorageKeys.autoConnectOnLaunch) private var autoConnectOnLaunch = true
     
-    /// Twin default with the App's `onDesync` closure (D13′) — same unavoidable pairing.
+    /// Twin default with the App's `onDesync` closure — same unavoidable pairing.
     @AppStorage(StorageKeys.illegalMoveSoundEnabled) private var illegalMoveSoundEnabled = true
     
     // Engine values bind to the keys `EngineConfiguration.current` reads; initials come from
@@ -24,7 +24,7 @@ struct SettingsView: View {
     = EngineConfiguration.default.hashMB
     @AppStorage(StorageKeys.engineThreads) private var engineThreads
     = EngineConfiguration.default.threads
-    /// Twin default with `BoardView`'s own read (D21′; absent reads true).
+    /// Twin default with `BoardView`'s own read (absent reads true).
     @AppStorage(StorageKeys.showBoardCoordinates) private var showsBoardCoordinates = true
     
     /// Glide duration — initial value and bounds from `BoardPieceLayer`, so the numbers live once;
@@ -34,7 +34,7 @@ struct SettingsView: View {
     
     @Environment(\.modelContext) private var modelContext
     @Environment(SleepInhibitor.self) private var sleepInhibitor
-    /// D81′ — the four cue gates. An owning type, not four more `@AppStorage` twins: playback and
+    /// The four cue gates. An owning type, not four more `@AppStorage` twins: playback and
     /// this form must agree about the defaults, and the way to guarantee that is to have one.
     @Environment(BoardSounds.self) private var boardSounds
     @Query private var allGames: [PGN]
@@ -84,10 +84,10 @@ struct SettingsView: View {
     /// What is left once sounds and the engine have their own tabs: the board connection and the
     /// sleep gates. Energy stays here rather than following the engine, because only *half* of it
     /// is engine-shaped — one gate is about analysis and one about live play, under a single
-    /// footer that deliberately covers both causes at once (D66′). Splitting it to satisfy a tab
+    /// footer that deliberately covers both causes at once. Splitting it to satisfy a tab
     /// would mean splitting that footer.
     private var generalTab: some View {
-        // D25′ — the sleep gates are observable properties on the inhibitor, not `@AppStorage`
+        // The sleep gates are observable properties on the inhibitor, not `@AppStorage`
         // mirrors: the tracking loop must see the flip mid-game. No twin default to document.
         @Bindable var inhibitor = sleepInhibitor
 
@@ -122,7 +122,7 @@ struct SettingsView: View {
                 Text("Energy")
             } footer: {
                 // One footer for two toggles, naming each cause's own consequence; the display sentence is last
-                // because it is true of both (D14′'s non-goal, still structural).
+                // because it is true of both (the non-goal, still structural).
                 Text(
                     "During play, keeps the Mac from sleeping and dropping the "
                     + "board connection mid-think. During analysis, keeps a "
@@ -144,18 +144,18 @@ struct SettingsView: View {
     /// the one non-mechanical edit in the whole split and is worth its sentence: "Live Play"
     /// describes *when* a sound happens, which was a useful label while the section sat beside
     /// connection settings, and is the wrong axis beside a section describing *what* a sound is.
-    /// "Alerts" also puts D81′'s distinction on screen — an alert about the board contradicting
+    /// "Alerts" also puts the distinction on screen — an alert about the board contradicting
     /// the game, at the system alert volume, against feedback that a move landed, at app volume.
     private var soundsTab: some View {
-        // D81′ — an owning type, not `@AppStorage`: playback and this form must agree about the
+        // An owning type, not `@AppStorage`: playback and this form must agree about the
         // four defaults, and the way to guarantee that is to have one owner.
         @Bindable var sounds = boardSounds
 
         return Form {
             Section {
-                // D82′. Picking plays the set's move cue, so the list is auditioned rather than
+                // Picking plays the set's move cue, so the list is auditioned rather than
                 // read — and it plays even with Move switched off, because you are choosing a set,
-                // not a cue. A menu picker rather than segmented, D48′'s reason: the view-mode
+                // not a cue. A menu picker rather than segmented, the reason: the view-mode
                 // control elsewhere is segmented, and two of those read as one broken one.
                 Picker("Sound Set", selection: $sounds.soundSet) {
                     ForEach(BoardSoundSet.allCases) { set in
@@ -405,7 +405,7 @@ struct SettingsView: View {
             // orphan cascade — a bulk `delete(model:)` never materializes rows, which is its point.
             try modelContext.delete(model: Player.self)
             try modelContext.save()
-            // The converged stamp described the store this just emptied (D75′) — a fresh library
+            // The converged stamp described the store this just emptied — a fresh library
             // earns its own clean pass.
             UserDefaults.standard.set(false, forKey: StorageKeys.playerBackfillsConverged)
             Self.logger?.info("Library and player registry erased via Settings")

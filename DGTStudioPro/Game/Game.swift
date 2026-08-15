@@ -126,7 +126,7 @@ final class Game {
     
     // MARK: Cues
 
-    /// Board cue for a **single step** (D81′), wired by `BoardDestination`. Nil — previews, tests,
+    /// Board cue for a **single step**, wired by `BoardDestination`. Nil — previews, tests,
     /// any `Game` built outside the destination — is silent by construction, the settable-hook
     /// invariant applied one layer down from the session.
     ///

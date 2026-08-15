@@ -1,7 +1,7 @@
-/// Validates a proposed movetext by full replay (D18′) — the chess core already is the legality
+/// Validates a proposed movetext by full replay — the chess core already is the legality
 /// algorithm. Accepted iff every ply is legal and the result is consistent where claimable:
 /// a trailing `#` must actually mate; checkmate forces the winner; stalemate forces a draw;
-/// `*` is never a finished result (Decision #3). Accept whole or reject whole.
+/// `*` is never a finished result. Accept whole or reject whole.
 enum MovetextEdit {
     
     /// A validated edit. Produced only by `validate` — this type existing *is* the "persisted
@@ -24,7 +24,7 @@ enum MovetextEdit {
         case checkmateResultMismatch(expected: GameResult, claimed: GameResult)
         /// The final position is stalemate; the result must be a draw.
         case stalemateRequiresDraw(claimed: GameResult)
-        /// An archived game can't be `*` (Decision #3).
+        /// An archived game can't be `*`.
         case resultRequiresDecision
         /// A result token *before the end* — two concatenated games (they would validate as one
         /// whenever the second game's plies replay legally). A *trailing* token stays legal: paste
@@ -63,7 +63,7 @@ enum MovetextEdit {
             return .failure(.claimsCheckmateButPositionIsNot(san: last))
         }
         
-        // Decision #3 first: a `*` on a real mate must be reported as "*", not as a checkmate-result
+        // The asterisk rule first: a `*` on a real mate must be reported as "*", not as a checkmate-result
         // mismatch — true, but not the sentence the user needs.
         guard claimedResult != .ongoing else {
             return .failure(.resultRequiresDecision)
@@ -119,7 +119,7 @@ extension MovetextEdit {
     /// The character range of ply `index`'s SAN inside `movetext` — the token `tokenize` would
     /// emit at that position, minus any move-number prefix — or nil when no such ply exists.
     /// Character offsets, so a display layer can mark the offending move without re-tokenizing
-    /// (D79′). Walks by `tokenize`'s own rules — same splitter, same prefix stripper, same
+    ///. Walks by `tokenize`'s own rules — same splitter, same prefix stripper, same
     /// result-token skip — so the two cannot disagree about which token is ply N.
     static func characterRange(ofPly index: Int, in movetext: String) -> Range<Int>? {
         guard index >= 0 else { return nil }

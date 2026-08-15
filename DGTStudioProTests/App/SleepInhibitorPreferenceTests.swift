@@ -3,12 +3,12 @@ import Testing
 
 @testable import DGTStudioPro
 
-/// D25′ — the preference half of `SleepInhibitor` is no longer waived: the
+/// The preference half of `SleepInhibitor` is no longer waived: the
 /// "absent reads as true" default and the write-through are the contract
 /// that used to be duplicated across an `@AppStorage` initial and a `??`
 /// fallback, so it is pinned here rather than trusted.
 ///
-/// **D66′ moved the predicate onto this list too.** The token stays waived —
+/// **The two-gate revision moved the predicate onto this list too.** The token stays waived —
 /// it is `ProcessInfo` transport and the hardware checklist is its witness —
 /// but the *decision* stopped being bare when a second gate arrived, because
 /// two gates over two causes can be crossed. `activityReason` is pure, so the
@@ -47,7 +47,7 @@ struct SleepInhibitorPreferenceTests {
         }
     }
 
-    /// **The two gates are independent**, which is the whole of D66′ and the
+    /// **The two gates are independent**, which is the whole point and the
     /// one thing a shared-key implementation would pass every other test
     /// while getting wrong. Each arm sets one key and asserts the *other*
     /// preference is untouched — the assertion that fails if the second
@@ -89,7 +89,7 @@ struct SleepInhibitorPreferenceTests {
         }
     }
 
-    // MARK: The predicate (D66′)
+    // MARK: The predicate
 
     /// Neither cause running is the resting state, and it must stay `nil`
     /// whatever the gates say — a preference is permission, not a request.
@@ -147,7 +147,7 @@ struct SleepInhibitorPreferenceTests {
     }
 
     /// Both gates shut is off, whatever is running — the opt-out still opts
-    /// out, which is D25′'s contract inherited rather than re-decided.
+    /// out, which is the contract inherited rather than re-decided.
     @Test("Both gates shut holds nothing")
     func bothGatesShutHoldsNothing() {
         #expect(SleepInhibitor.activityReason(

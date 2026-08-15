@@ -1,7 +1,7 @@
 import Foundation
 
 /// Shared Players preview fixtures. Records, not memberwise stats: stats and ladder are
-/// *derived* (D10′), so previews build through the same folds. **Not `#if DEBUG`** — previews
+/// *derived*, so previews build through the same folds. **Not `#if DEBUG`** — previews
 /// are stripped at link time, and the guard once broke six canvases in release schemes.
 enum PreviewFixtures {
     

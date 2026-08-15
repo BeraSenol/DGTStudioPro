@@ -3,7 +3,7 @@ import Testing
 
 @testable import DGTStudioPro
 
-/// D45′ — the collapse store's contract: the default and the persistence are the whole promise.
+/// The collapse store's contract: the default and the persistence are the whole promise.
 @MainActor
 @Suite("Inspector section collapse")
 struct InspectorSectionCollapseTests {

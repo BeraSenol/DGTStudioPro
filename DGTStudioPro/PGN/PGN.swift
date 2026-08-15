@@ -31,7 +31,7 @@ final class PGN: Identifiable {
     var result: GameResult
     var timeControl: String?
     
-    /// The `Board` tag (D28′) — "DGT 3000448278". Deliberately **outside the content hash** (like
+    /// The `Board` tag — "DGT 3000448278". Deliberately **outside the content hash** (like
     /// `timeControl`): equipment, not game — folding it in would rot every stored hash.
     var board: String?
     
@@ -41,26 +41,26 @@ final class PGN: Identifiable {
     /// `moves[i]` (the `[%eval]` convention). Invariant: empty, or exactly `moves.count` long.
     var evaluations: [Evaluation?] = []
 
-    /// The search depth each evaluation was produced at, parallel to `evaluations` (D74′): empty,
+    /// The search depth each evaluation was produced at, parallel to `evaluations`: empty,
     /// or exactly `moves.count` long. What makes the book skip and incremental deepening provable
     /// rather than guessed — a ply scored at ≥ the target depth is kept, never re-searched.
     var analysisDepths: [Int?] = []
     
-    // MARK: Classification (D19′, D34′, D35′)
+    // MARK: Classification
 
     /// ECO code — `"C60"` — or nil (unnamed line, or unbackfilled pre-M4 row). All four
     /// classification fields are derived truth: outside the content hash, absent from `init`
-    /// (`PGNStore.classify` is the single write door, D34′), never exported (D24′).
+    /// (`PGNStore.classify` is the single write door), never exported.
     var ecoCode: String?
 
-    /// The opening family — the short form the Library column shows (D35′).
+    /// The opening family — the short form the Library column shows.
     var ecoFamily: String?
 
     /// Everything after the family, or nil for a bare family line. Spelled `ecoFamily`/`ecoVariation`
     /// so the model and `ECOOpening` cannot drift about which half is which.
     var ecoVariation: String?
 
-    /// The matched book prefix in plies (D74′), stamped with the rest of the classification —
+    /// The matched book prefix in plies, stamped with the rest of the classification —
     /// nil exactly when the opening is. The analysis pass starts searching here.
     var ecoDepth: Int?
 
@@ -71,14 +71,14 @@ final class PGN: Identifiable {
     var importedAt: Date
     var contentHash: String
 
-    /// The ordinal the file carries on disk — the `47` in `47. … .pgn` (D58′). **The weaker of two
+    /// The ordinal the file carries on disk — the `47` in `47. ….pgn`. **The weaker of two
     /// identities**: `contentHash` decides what is the same game; this is filing. Outside the hash,
     /// necessarily — two copies under different numbers still dedupe. Nil is a real answer: nothing
     /// to backfill it from.
     var libraryIndex: Int?
     
     /// Resolved player links, maintained exclusively by `PGNStore` — absent from `init` (a link
-    /// assigned outside the store bypasses D9′'s one creation door).
+    /// assigned outside the store bypasses the one creation door).
     var whitePlayer: Player?
     var blackPlayer: Player?
     

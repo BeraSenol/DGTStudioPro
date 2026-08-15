@@ -71,7 +71,7 @@ struct LiveGameResumeTests {
         #expect(snapshot.startedAt == game.startedAt)
     }
 
-    /// D28′ — the board identity survives the snapshot → resume round trip,
+    /// The board identity survives the snapshot → resume round trip,
     /// so a crash-resumed game archives with the board that actually played
     /// it (the reason the field lives on the roster at all).
     @Test func boardIdentitySurvivesSnapshotAndResume() throws {

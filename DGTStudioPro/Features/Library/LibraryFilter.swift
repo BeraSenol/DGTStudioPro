@@ -20,7 +20,7 @@ enum LibraryFilter {
         }
     }
 
-    /// The narrowing identity as a value (D78′): everything `matches` reads that can move without
+    /// The narrowing identity as a value: everything `matches` reads that can move without
     /// the games' content moving — a tag's rules are editable on the live model, and a rule edit
     /// must invalidate the narrow memo. A missed input here is stale rows on screen.
     struct Signature: Equatable {

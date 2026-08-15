@@ -75,7 +75,7 @@ final class DGTLiveSession {
     /// gentle prompt, not the recovery flow. Transient settle-overlay like the ghost.
     private(set) var correctionHint: CorrectionHint?
     
-    /// A draft found at launch, awaiting Resume / Delete — the only two options (Decision #3).
+    /// A draft found at launch, awaiting Resume / Delete — the only two options.
     /// `.corrupt` means the file can't be trusted; delete-only, file kept on disk as diagnostics.
     enum PendingDraft: Equatable {
         case resumable(LiveGameDraft)
@@ -131,26 +131,26 @@ final class DGTLiveSession {
     /// Optional archive door, keeping all Library I/O in `PGNStore`; nil means the draft stays the safety net.
     @ObservationIgnored var onGameFinished: ((LiveGame) throws -> PGNStore.ArchiveResult)?
     
-    /// Illegal-move cue (D13′). Fired only by `enterRecovery` — the one door — so exactly once per
+    /// Illegal-move cue. Fired only by `enterRecovery` — the one door — so exactly once per
     /// desync entry: never on the manual-result exit, never on recomputation.
     @ObservationIgnored var onDesync: (() -> Void)?
 
-    /// Move cue (D81′). Fired from the `.move` settle arm *after* `commit` returns true, so it can
+    /// Move cue. Fired from the `.move` settle arm *after* `commit` returns true, so it can
     /// never sound for a move the game refused — the F5 guard's own argument, applied to audio:
     /// a cue for a commit that did not happen is a lie you hear before you see.
     /// Nil in headless tests = silent by construction, like every hook above it.
     @ObservationIgnored var onMoveCommitted: ((BoardCue) -> Void)?
 
-    /// Board-resync request (D49′): the field stream is not lossless, and one lost update leaves
+    /// Board-resync request: the field stream is not lossless, and one lost update leaves
     /// `physicalBoard` wrong by one square forever. First `.unresolved` divergence asks for a full
-    /// dump instead of entering recovery; nil hook = straight to recovery (pre-D49′, pinned).
+    /// dump instead of entering recovery; nil hook = straight to recovery (pre-pinned).
     @ObservationIgnored var requestBoardResync: (() -> Void)?
 
     /// One shot per divergence; cleared by any explained settle and the lifecycle exits.
     /// Deliberately NOT cleared in `clearPlayingOverlays()` — that runs every settle and would re-arm forever.
     @ObservationIgnored private var resyncAttempted = false
 
-    /// Board identity for `[Board "…"]` (D28′); consulted once per game in `startNewGame`.
+    /// Board identity for `[Board "…"]`; consulted once per game in `startNewGame`.
     /// Capture-at-start survives cable pulls and crash-resume. Nil in headless tests.
     @ObservationIgnored var boardIdentity: (() -> String?)?
 
@@ -228,7 +228,7 @@ final class DGTLiveSession {
 
         let outcome = DGTReconstructor.reconstruct(from: game.currentState, physical: board)
 
-        // Any explained outcome retires the one-shot resync debt (D49′).
+        // Any explained outcome retires the one-shot resync debt.
         if case .unresolved = outcome {} else { resyncAttempted = false }
 
         switch outcome {
@@ -265,7 +265,7 @@ final class DGTLiveSession {
                 enterRecovery(game, board: board)
                 return
             }
-            // D81′ — the cue rides the accepted commit, above the diagnostic capture: `currentState`
+            // The cue rides the accepted commit, above the diagnostic capture: `currentState`
             // is now the position the move landed in, which is what the cue describes.
             onMoveCommitted?(BoardCue.cue(for: move, landing: game.currentState))
             sessionLog?.capture(
@@ -278,18 +278,18 @@ final class DGTLiveSession {
                 // Archive-first (M5): fires on the `isFinished` transition itself, before any UI reacts.
                 archiveFinishedGame(game)
             } else {
-                // Decision #2: the draft never trails the game by more than one event.
+                // The draft never trails the game by more than one event.
                 saveDraft()
             }
             
         case .unresolved:
-            // D49′: confirm against ground truth once before recovery. The F5 guard deliberately does NOT
+            // Confirm against ground truth once before recovery. The F5 guard deliberately does NOT
             // route here — a logic divergence is not a lost-update symptom.
             escalateOrResync(game, board: board)
         }
     }
 
-    /// The `.unresolved` gate (D49′): first divergence requests a dump and stays in `playing`;
+    /// The `.unresolved` gate: first divergence requests a dump and stays in `playing`;
     /// a board the dump still can't explain escalates for real. No hook: straight to recovery.
     private func escalateOrResync(_ game: LiveGame, board: Position) {
         guard let requestBoardResync else {
@@ -314,7 +314,7 @@ final class DGTLiveSession {
     /// full-context desync when wired; terse Console breadcrumb when not.
     private func enterRecovery(_ game: LiveGame, board: Position) {
         mode = .recovering(game)
-        // D13′: the cue rides the mode transition, so it can never drift from the derived flags.
+        // The cue rides the mode transition, so it can never drift from the derived flags.
         onDesync?()
         if let sessionLog {
             sessionLog.recordDesync(
@@ -364,7 +364,7 @@ final class DGTLiveSession {
             return
         }
         
-        // D28′: stamp board identity at game start — the one write to `Roster.board`, unconditional.
+        // Stamp board identity at game start — the one write to `Roster.board`, unconditional.
         var roster = roster
         roster.board = boardIdentity?()
 
@@ -373,7 +373,7 @@ final class DGTLiveSession {
         archivedPGN = nil
         shouldOfferNewGame = false
         offeredNewGameForCurrentStart = true
-        resyncAttempted = false   // a fresh game owes no dump debt (D49′)
+        resyncAttempted = false   // a fresh game owes no dump debt
         clearPlayingOverlays()
         
         let alreadySetUp = beginTracking(game)
@@ -403,12 +403,12 @@ final class DGTLiveSession {
     func discardGame() {
         mode = .idle
         clearPlayingOverlays()
-        resyncAttempted = false   // the debt dies with the game (D49′)
+        resyncAttempted = false   // the debt dies with the game
         offeredNewGameForCurrentStart = false
         // Explicit-Discard exit from a failed archive: the player chose to lose the game.
         archiveOutcome = nil
         archivedPGN = nil
-        // A discarded game must not resurrect as a resume offer — Decision #3's delete path ends on disk too.
+        // A discarded game must not resurrect as a resume offer — the delete path ends on disk too.
         pendingDraft = nil
         draftStore?.delete()
         sessionLog?.capture(.info, "Live game discarded")
@@ -461,7 +461,7 @@ final class DGTLiveSession {
             .info,
             "Roster updated: \(roster.white) vs \(roster.black)"
         )
-        // Draft-worthy (Decision #2) — but once archived the draft is gone and edits flow through the
+        // Draft-worthy — but once archived the draft is gone and edits flow through the
         // PGN door; resurrecting one here would re-offer an archived game at next launch.
         if archivedPGN == nil {
             saveDraft()
@@ -473,7 +473,7 @@ final class DGTLiveSession {
     /// The archive-first choke point: every `isFinished` transition plus the resume self-heal.
     /// No hook: the draft stays current as the safety net.
     private func archiveFinishedGame(_ game: LiveGame) {
-        // Decision #3: no `*` result ever archives — structural, not just implied by `isFinished`.
+        // No `*` result ever archives — structural, not just implied by `isFinished`.
         guard game.isFinished, game.result != .ongoing else { return }
         // Already archived (stray repeat call) — nothing to do.
         guard archivedPGN == nil else { return }

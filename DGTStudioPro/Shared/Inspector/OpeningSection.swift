@@ -17,7 +17,7 @@ struct OpeningSection: View {
 
     // MARK: Body
 
-    /// Collapses as `.opening` (D45′) — one section rendered twice, not two that look alike.
+    /// Collapses as `.opening` — one section rendered twice, not two that look alike.
     var body: some View {
         CollapsibleSection(.opening, title: "Opening") {
             if let opening {

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The one "nothing selected" surface (D26′) — nothing forces hosts to agree on an empty
+/// The one "nothing selected" surface — nothing forces hosts to agree on an empty
 /// state's shape, so one type does. **Render outside the `List`** — inside, it is a top-aligned
 /// row with sidebar chrome. The contract is about layout, so non-inspector hosts (the graph
 /// window) qualify.
@@ -55,7 +55,7 @@ struct InspectorEmptyState: View {
             identifier: AccessibilityID.playersInspectorEmpty
         )
         Divider()
-        // The fourth column was the Rankings inspector's until D48′ merged
+        // The fourth column was the Rankings inspector's until the merge folded
         // it into Players; the graph window's empty state keeps the preview
         // at its stated four-abreast width.
         InspectorEmptyState(

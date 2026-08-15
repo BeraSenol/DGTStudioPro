@@ -3,8 +3,8 @@ import os
 import SwiftData
 
 /// Drives a full-game engine pass: walks each ply, asks Stockfish for an evaluation at the
-/// requested depth, records **one** evaluation per ply, saves **once per exit** — never per ply (D71′).
-/// Since D74′ the pass is a *plan*, not the whole game: the classified book prefix is skipped and
+/// requested depth, records **one** evaluation per ply, saves **once per exit** — never per ply.
+/// The pass is a *plan*, not the whole game: the classified book prefix is skipped and
 /// a ply already scored at ≥ the target depth is kept — re-analysis deepens instead of restarting.
 @Observable
 @MainActor
@@ -128,7 +128,7 @@ final class GameAnalysisDriver {
         // after any of them describes an engine that has moved on.
         defer { search = nil }
 
-        // Classification now precedes the engine (D74′): the plan below reads the freshly stamped
+        // Classification now precedes the engine: the plan below reads the freshly stamped
         // book depth, and a fully satisfied game never spawns a subprocess. `warmed()` — this
         // method is async and must not block on the table parse.
         PGNStore(modelContext: modelContext)
@@ -144,7 +144,7 @@ final class GameAnalysisDriver {
         )
 
         guard !plan.searchable.isEmpty else {
-            // Book-only, or already at depth (D74′). The save still runs — classify may have stamped.
+            // Book-only, or already at depth. The save still runs — classify may have stamped.
             Self.logger?.info(
                 "Analysis satisfied without searching: pgn='\(pgn.name, privacy: .public)'"
             )
@@ -168,7 +168,7 @@ final class GameAnalysisDriver {
             return
         }
 
-        // Storage rebuilds only when the arrays don't fit — D74′ narrows M1 9a's blanket reset:
+        // Storage rebuilds only when the arrays don't fit — narrower than the old blanket reset:
         // a fitting pass keeps every evaluation the plan is about to skip. Still after a
         // successful start, so a broken binary costs nothing stored.
         if plan.resetsStorage {
@@ -209,7 +209,7 @@ final class GameAnalysisDriver {
             }
             state = state.applying(move)
 
-            // Book prefix and already-satisfied plies replay for position and are never searched (D74′).
+            // Book prefix and already-satisfied plies replay for position and are never searched.
             guard searchable.contains(index) else { continue }
             let fen = FEN(state)
 
@@ -232,10 +232,10 @@ final class GameAnalysisDriver {
             if Task.isCancelled { break }
 
             // Nil only when the stream yielded nothing — engine died mid-ply; leaving the slot nil keeps
-            // "this ply was never scored" readable (the Analysis Data window's em-dash rows, D73′).
+            // "this ply was never scored" readable (the Analysis Data window's em-dash rows).
             if let deepest {
                 pgn.evaluations[index] = deepest
-                pgn.analysisDepths[index] = depth   // what makes the next pass incremental (D74′)
+                pgn.analysisDepths[index] = depth   // what makes the next pass incremental
             }
 
             // A dead engine finishes every remaining stream instantly — the old loop raced to `.done` with
@@ -244,7 +244,7 @@ final class GameAnalysisDriver {
                 Self.logger?.error(
                     "Engine died mid-pass at ply \(index + 1)/\(total) for pgn='\(pgn.name, privacy: .public)'"
                 )
-                // Save before the claim (D71′).
+                // Save before the claim.
                 let saved = persist(modelContext, of: pgn)
                 status = .failed(
                     message: "The engine quit at \(Self.moveLabel(plyIndex: index, san: san)) "
@@ -256,13 +256,13 @@ final class GameAnalysisDriver {
             }
 
             searched += 1
-            // Denominated in *searchable* plies (D74′) — over the full count, a skipped book would
+            // Denominated in *searchable* plies — over the full count, a skipped book would
             // freeze the fraction below 1 forever.
             status = .analyzing(
                 progress: Double(searched) / Double(max(plan.searchable.count, 1))
             )
 
-            // **No save here, and the absence is the decision (D71′)**: a per-ply save invalidated every
+            // **No save here, and the absence is the decision**: a per-ply save invalidated every
             // `@Query` in every open window — the app's last per-ply fan-out.
         }
 
@@ -290,7 +290,7 @@ final class GameAnalysisDriver {
         }
     }
 
-    /// The one save (D71′): everything the pass wrote, one transaction at an exit. Returns whether
+    /// The one save: everything the pass wrote, one transaction at an exit. Returns whether
     /// it landed; the caller owns the message, which differs per exit.
     private func persist(_ modelContext: ModelContext, of pgn: PGN) -> Bool {
         do {

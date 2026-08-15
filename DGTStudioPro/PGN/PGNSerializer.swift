@@ -1,6 +1,6 @@
 import Foundation
 
-/// Writes the DGT reference shape (D24′), byte for byte — pinned to the three reference files,
+/// Writes the DGT reference shape, byte for byte — pinned to the three reference files,
 /// not the standard: LF endings; nine tags in fixed order (roster, `Board`, `TimeControl`); one
 /// blank line; one full move per line with a white-only final line; result alone on the last
 /// line; single trailing `\n`; no wrapping; evaluations and classification never written.
@@ -23,7 +23,7 @@ enum PGNSerializer {
     ) -> String {
         var out = ""
         // The seven from the enum that owns the order — an eighth roster tag is a compile error, not a
-        // line that quietly stops being written. Board and TimeControl follow (D24′).
+        // line that quietly stops being written. Board and TimeControl follow.
         for tag in SevenTagRoster.allCases {
             out += self.tag(tag.rawValue, roster.tagValue(for: tag))
         }
@@ -60,7 +60,7 @@ enum PGNSerializer {
         "\(index). \(givenName(white)) vs \(givenName(black)).pgn"
     }
 
-    /// The reader half of `fileName` (D58′) — here because the type that owns a convention owns
+    /// The reader half of `fileName` — here because the type that owns a convention owns
     /// both directions. **Reads the ordinal and nothing else**: the folder uses full names where
     /// the writer uses given names, so verifying seats would reject exactly the files this reads.
     /// Requiring the period is the guard — `1961 Candidates.pgn` is a year, not game 1961.

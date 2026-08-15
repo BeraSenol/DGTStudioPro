@@ -7,7 +7,7 @@ struct LibraryGalleryView: View {
     let analyzedIDs: Set<PGN.ID>
     @Binding var selectedPGNs: Set<PGN.ID>
     let boardStyle: BoardStyle
-    /// Takes the set (D56′) — degenerate here: a gallery selection is single by construction.
+    /// Takes the set — degenerate here: a gallery selection is single by construction.
     let onOpen: ([PGN]) -> Void
     let onAnalyze: (PGN) -> Void
     let onExport: (PGN) -> Void

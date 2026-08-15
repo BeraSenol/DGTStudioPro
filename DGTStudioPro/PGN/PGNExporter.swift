@@ -2,7 +2,7 @@ import AppKit
 import UniformTypeIdentifiers
 import os
 
-/// The export door's transport half (D24′): panels and writes — waived under the save-panel
+/// The export door's transport half: panels and writes — waived under the save-panel
 /// family; every byte comes from the pure serializer. Batch = one numbered file per game.
 @MainActor
 enum PGNExporter {
@@ -45,7 +45,7 @@ enum PGNExporter {
         panel.canCreateDirectories = true
         guard panel.runModal() == .OK, let folder = panel.url else { return }
 
-        // D32′ — same-named files overwrite silently: re-exporting into last time's folder should
+        // Same-named files overwrite silently: re-exporting into last time's folder should
         // refresh (the export is a pure function of the rows).
         for (offset, game) in games.enumerated() {
             write(game, to: folder.appending(path: game.exportFileName(index: offset + 1)))

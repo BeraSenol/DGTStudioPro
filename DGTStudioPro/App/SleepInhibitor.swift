@@ -10,7 +10,7 @@ private final class ActivityToken {
 
     fileprivate init(reason: String) {
         // `.userInitiated` = idle system sleep + auto/sudden termination disabled. Deliberately NOT
-        // `.idleDisplaySleepDisabled` — "let the panel dim" is preserved by construction (D14′).
+        // `.idleDisplaySleepDisabled` — "let the panel dim" is preserved by construction.
         token = ProcessInfo.processInfo.beginActivity(
             options: .userInitiated,
             reason: reason
@@ -20,12 +20,12 @@ private final class ActivityToken {
     deinit { ProcessInfo.processInfo.endActivity(token) }
 }
 
-/// Holds one `ProcessInfo` activity while user-started work runs (D14′, gated by D25′, widened
-/// by D66′). Two causes, two independent gates: a live game/recording needs the serial link; a
+/// Holds one `ProcessInfo` activity while user-started work runs (preference-gated).
+/// Two causes, two independent gates: a live game/recording needs the serial link; a
 /// batch needs the engine — see `activityReason`, the one testable part.
 /// Non-goals: display sleep is never inhibited (structural — it would take naming a second
 /// option); logout/shutdown is not vetoed (draft sidecar + archive-first make it safe).
-/// D25′: a preference is an observable property here, not `@AppStorage` — the gate must
+/// A preference is an observable property here, not `@AppStorage` — the gate must
 /// participate in the tracking loop so flipping it mid-run releases the token on that edge.
 @MainActor
 @Observable
@@ -57,7 +57,7 @@ final class SleepInhibitor {
         }
     }
 
-    /// The analysis gate (D66′). Same shape, separate value — overnight batches and instant sleep
+    /// The analysis gate. Same shape, separate value — overnight batches and instant sleep
     /// are the same person on different evenings.
     var preventsSleepDuringAnalysis: Bool {
         didSet {

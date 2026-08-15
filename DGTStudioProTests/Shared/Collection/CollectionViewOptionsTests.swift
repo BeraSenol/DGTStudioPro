@@ -152,7 +152,7 @@ struct CollectionViewOptionsTests {
     }
 
     /// A stored spelling this build no longer understands is dropped, and the
-    /// destination opens on its default — D45′'s retired-raw-value rule, so
+    /// destination opens on its default — the retired-raw-value rule, so
     /// removing a column costs no migration.
     @Test(arguments: ["", "garbage", "event", "event:sideways", ":forward", "notAField:forward"])
     func anUnreadableStoredSortFallsBackToTheDefault(_ stored: String) {

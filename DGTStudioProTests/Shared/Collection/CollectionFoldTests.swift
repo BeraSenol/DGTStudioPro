@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-// `MemberImportVisibility` is on (D43′), so the container the link test builds
+// `MemberImportVisibility` is on, so the container the link test builds
 // needs this here — a transitive import through `@testable` does not carry
 // members. The value-level suite below still touches no SwiftData type.
 import SwiftData
@@ -29,7 +29,7 @@ struct CollectionFoldKeyTests {
     }
 
     /// `ECOOpening`'s rehydrating initializer takes `variation` without a
-    /// default — deliberately, since D35′ makes nil the one spelling of "no
+    /// default — deliberately: nil is the one spelling of "no
     /// variation" and a default would let a caller mean it by omission.
     private static func opening(
         _ code: String,
@@ -99,7 +99,7 @@ struct CollectionFoldKeyTests {
     }
 
     /// `PGN.name` is outside the hash by design and `backfillEmptyNames()`
-    /// rewrites it; `timeControl` is outside by D24′ and Get Info's Equipment
+    /// rewrites it; `timeControl` is outside the hash and Get Info's Equipment
     /// section edits it without moving the hash. `TagRule.name` and
     /// `TagRule.timed` read both.
     @Test("Name and clock move the key with no hash change")
@@ -202,7 +202,7 @@ struct CollectionFoldCacheTests {
     }
 
     /// `PGN.name` is outside the hash and `backfillEmptyNames()` rewrites it;
-    /// `timeControl` is outside by D24′ and Get Info's Equipment section edits
+    /// `timeControl` is outside the hash and Get Info's Equipment section edits
     /// it. `TagRule.name` and `TagRule.timed` read both off the record.
     @Test("Name and clock move the key, over models")
     func nameAndClockMoveTheKeyOverModels() {

@@ -3,10 +3,10 @@ import Foundation
 import SwiftData
 @testable import DGTStudioPro
 
-/// D76′ — orphan collection is scoped at the editing doors: an edit checks only the rows it
+/// Orphan collection is scoped at the editing doors: an edit checks only the rows it
 /// displaced, a rename only its source, and the pre-existing backlog stays the backfill's.
 /// The half that must not change rides alongside: the displaced row still goes, in the same
-/// transaction, which is what keeps rename the merge replacement D52′ promised.
+/// transaction, which is what keeps rename an honest merge replacement.
 @MainActor
 @Suite("PGN Store — Scoped Orphan Collection")
 struct PGNStoreScopedCollectionTests {

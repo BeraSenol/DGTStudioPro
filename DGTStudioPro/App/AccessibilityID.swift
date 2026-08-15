@@ -1,10 +1,10 @@
-//  TARGET MEMBERSHIP: app only since D51′ — the UITest suite that made identifiers a tested contract is gone.
+// TARGET MEMBERSHIP: app only — the UITest suite that made identifiers a tested contract is gone.
 //  Kept as a stated bet: what a future suite or AX audit needs on day one; discipline is the sweep's grep alone.
 //  Signatures stay String-only — re-typing them buys type safety nothing checks; callers hold the real type.
 //  An identifier is not surfaced to VoiceOver; that is `accessibilityLabel`, set at the control.
 
 /// The accessibility-identifier registry. Dotted lowercase throughout. Renames break nothing at
-/// compile time since D51′ — treat entries as the stable contract they were.
+/// compile time — treat entries as the stable contract they were.
 enum AccessibilityID {
     
     // MARK: Shell
@@ -23,7 +23,7 @@ enum AccessibilityID {
     
     static let sidebarTagsAdd = "sidebar.tags.add"
     
-    /// Session panel (D15′); `sidebar.loaderror` family is the former `board.loaderror` — a deliberate breaking rename.
+    /// Session panel; `sidebar.loaderror` family is the former `board.loaderror` — a deliberate breaking rename.
     static let sessionPanel            = "sidebar.session"
     static let sidebarLoadError        = "sidebar.loaderror"
     static let sidebarLoadErrorDismiss = "sidebar.loaderror.dismiss"
@@ -40,20 +40,20 @@ enum AccessibilityID {
     static let board                = "board"
     static let boardFlipButton      = "board.flipButton"
     static let boardInspectorToggle = "board.inspectorToggle"
-    /// M3 evaluation bar (D33′) — present only on the review surface over an analysed game.
+    /// M3 evaluation bar — present only on the review surface over an analysed game.
     static let boardEvaluationBar   = "board.evaluationBar"
     
-    // MARK: Evaluation Magnifier (M8, D46′)
+    // MARK: Evaluation Magnifier (M8)
     
-    /// One identifier for the magnifier across both inspectors — one verb, one window (D46′).
+    /// One identifier for the magnifier across both inspectors — one verb, one window.
     static let evaluationMagnifier     = "evaluation.magnifier"
     static let evaluationWindowGraph   = "evaluation.window.graph"
     static let evaluationWindowReadout = "evaluation.window.readout"
     static let evaluationWindowEmpty   = "evaluation.window.empty"
     
-    // MARK: Analysis Data (D73′, 8 Aug 2026)
+    // MARK: Analysis Data (8 Aug 2026)
     
-    /// Analysis Data glyph and window (D73′); one identifier, `evaluationMagnifier`'s reasoning.
+    /// Analysis Data glyph and window; one identifier, `evaluationMagnifier`'s reasoning.
     static let analysisDataButton      = "analysisData.button"
     static let analysisDataWindowTable = "analysisData.window.table"
     static let analysisDataWindowEmpty = "analysisData.window.empty"
@@ -65,7 +65,7 @@ enum AccessibilityID {
         "square.\(algebraic)"
     }
     
-    // MARK: Movetext Editor (M-lib.3, D18′)
+    // MARK: Movetext Editor (M-lib.3)
     
     /// The movetext editor's five controls — they name the editor's *contents*, the same from
     /// whichever door hosts it (today Get Info's Move Text tab).
@@ -81,11 +81,11 @@ enum AccessibilityID {
     /// check that found one where it expected another should fail.
     static let getInfoGame          = "getinfo.game"
     static let getInfoGameDetails   = "getinfo.game.details"
-    /// Third tab (D59′); its contents keep the `movetext.editor.*` identifiers — new host, not new surface.
+    /// Third tab; its contents keep the `movetext.editor.*` identifiers — new host, not new surface.
     static let getInfoGameMoveText  = "getinfo.game.movetext"
     static let getInfoGameFile      = "getinfo.game.file"
     
-    /// Seat menus on the Details tab (D59′); raw seat string per the String-only rule.
+    /// Seat menus on the Details tab; raw seat string per the String-only rule.
     static func getInfoSeatPicker(_ seat: String) -> String {
         "getinfo.game.seatPicker.\(seat)"
     }
@@ -95,7 +95,7 @@ enum AccessibilityID {
     static let getInfoEmpty            = "getinfo.empty"
     static let getInfoBoardMenuItem    = "getinfo.menuitem.board"
     
-    /// One editable roster row on Details (D57′), keyed by lowercased tag name. Not `SevenTagRoster`:
+    /// One editable roster row on Details, keyed by lowercased tag name. Not `SevenTagRoster`:
     /// Result and Date are rows here but not text fields — a case that can never be focused.
     static func getInfoGameField(_ tag: String) -> String {
         "getinfo.game.field.\(tag)"
@@ -126,7 +126,7 @@ enum AccessibilityID {
     static let liveInspectorDraw        = "live.inspector.draw"
     static let liveInspectorDiscard     = "live.inspector.discard"
     
-    /// The live inspector's two empty states (D26′); closed set, so constants.
+    /// The live inspector's two empty states; closed set, so constants.
     static let liveInspectorNoGame      = "live.inspector.nogame"
     static let liveInspectorNoBoard     = "live.inspector.noboard"
     
@@ -162,10 +162,10 @@ enum AccessibilityID {
     static func formSite(_ prefix: String)  -> String { "\(prefix).site" }
     static func formDate(_ prefix: String)  -> String { "\(prefix).date" }
     static func formRound(_ prefix: String) -> String { "\(prefix).round" }
-    /// Seat-picker menus (D16′) — present only when the host supplies known players.
+    /// Seat-picker menus — present only when the host supplies known players.
     static func formWhitePicker(_ prefix: String) -> String { "\(prefix).white.picker" }
     static func formBlackPicker(_ prefix: String) -> String { "\(prefix).black.picker" }
-    /// Seat-collision warning (D61′) — the only evidence the guard fired on these sheets: a line of
+    /// Seat-collision warning — the only evidence the guard fired on these sheets: a line of
     /// text plus a disabled button.
     static func formSeatConflict(_ prefix: String) -> String { "\(prefix).seatConflict" }
     
@@ -198,7 +198,7 @@ enum AccessibilityID {
     static let settingsEngineHashPicker       = "settings.engineHashPicker"
     static let settingsEngineThreadsStepper   = "settings.engineThreadsStepper"
     
-    /// The Energy section's two gates (D66′).
+    /// The Energy section's two gates.
     static let settingsPreventSleepDuringPlayToggle
     = "settings.preventSleepDuringPlayToggle"
     static let settingsPreventSleepDuringAnalysisToggle
@@ -213,7 +213,7 @@ enum AccessibilityID {
     static let settingsSyzygy50MoveToggle      = "settings.syzygy.fiftyMoveToggle"
     static let settingsPieceAnimationSlider    = "settings.pieceAnimationSlider"
 
-    /// The four board cues (D81′). One identifier per toggle rather than one for the section — a
+    /// The four board cues. One identifier per toggle rather than one for the section — a
     /// section is not a control, and a cue that stops firing is diagnosed by naming *which* toggle.
     static let settingsBoardSoundSetPicker  = "settings.boardSoundSetPicker"
     static let settingsMoveSoundToggle      = "settings.moveSoundToggle"
@@ -245,7 +245,7 @@ enum AccessibilityID {
     static let libraryImportButton    = "library.importButton"
     static let libraryGamesTable      = "library.gamesTable"
     static let libraryInspectorToggle = "library.inspectorToggle"
-    /// Shared `InspectorEmptyState` (D26′); distinct from `libraryEmptyState`, the content area with no games.
+    /// Shared `InspectorEmptyState`; distinct from `libraryEmptyState`, the content area with no games.
     static let libraryInspectorEmpty  = "library.inspector.empty"
     /// Multi-selection variant: 2+ selected, the inspector names the count.
     static let libraryInspectorMulti  = "library.inspector.multi"
@@ -282,7 +282,7 @@ enum AccessibilityID {
     static let libraryFilterChip      = "library.filterChip"
     static let libraryFilterChipClear = "library.filterChip.clear"
     
-    /// Present only while some game lacks an ordinal (D40′: an affordance that cannot act is not on screen).
+    /// Present only while some game lacks an ordinal (an affordance that cannot act is not on screen).
     static let libraryBackfillButton = "library.backfill.button"
     static let libraryExport       = "library.export"
     
@@ -313,11 +313,11 @@ enum AccessibilityID {
     /// Multi-selection variant: 2+ selected, the inspector names the count.
     static let playersInspectorMulti   = "players.inspector.multi"
     
-    // MARK: Player Editing (M5 — D37′; the orphan sweep is D40′)
+    // MARK: Player Editing
     
-    /// The profile header's rename pencil — since D52′ the header's only verb.
+    /// The profile header's rename pencil — the header's only verb.
     
-    /// D62′ ranking method — not a sort control: it changes the rank badge; column headers change the row order.
+    /// The ranking method — not a sort control: it changes the rank badge; column headers change the row order.
     static let playersRankingPicker = "players.rankingPicker"
     
     /// `playerRow.Anish Giri`, … — keyed by display name.

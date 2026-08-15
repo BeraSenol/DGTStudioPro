@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A `Section` whose header carries the D45′ chevron and whose body obeys it. **Exists to make
+/// A `Section` whose header carries the chevron and whose body obeys it. **Exists to make
 /// one defect unrepresentable**: header-toggles-X-while-body-checks-Y compiles and renders —
 /// one argument, used twice, by a type the host cannot route around.
 struct CollapsibleSection<Content: View, Actions: View>: View {

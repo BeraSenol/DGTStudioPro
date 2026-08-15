@@ -1,7 +1,7 @@
 import Foundation
 
-/// The one rendering of a player name (D23′): PGN carries "Last, First", surfaces show
-/// "First Last". Storage untouched — the hash covers tags and D24′ round-trips them. No
+/// The one rendering of a player name: PGN carries "Last, First", surfaces show
+/// "First Last". Storage untouched — the hash covers tags and export round-trips them. No
 /// inverse exists: names travel tag → display only.
 enum PlayerName {
     

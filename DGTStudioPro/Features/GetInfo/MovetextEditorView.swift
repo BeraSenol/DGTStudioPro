@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Edits an archived game's movetext (D18′). Every keystroke re-validates purely
+/// Edits an archived game's movetext. Every keystroke re-validates purely
 /// (`MovetextEdit.validate`); Save is gated on a legal, result-consistent line and hands the
 /// tokens to the caller — this view never touches SwiftData.
 struct MovetextEditorView: View {
@@ -15,7 +15,7 @@ struct MovetextEditorView: View {
     
     // MARK: View State
 
-    /// `AttributedString` since D79′ — the macOS 26 `TextEditor` binding — so the offending ply
+    /// `AttributedString` — the macOS 26 `TextEditor` binding — so the offending ply
     /// can render red *in the field*. Characters are the data; colour is derived, never typed.
     @State private var text: AttributedString
 
@@ -27,7 +27,7 @@ struct MovetextEditorView: View {
     /// attribute-only write in `restyle()` from re-entering `onChange` forever.
     @State private var styledPlain: String
 
-    /// One replay per text change, not one per pull (D78′'s box, at editor scale): the status
+    /// One replay per text change, not one per pull (the box, at editor scale): the status
     /// line, the Save gate and the highlight all read this validation for the same characters.
     @State private var checkCache =
         CollectionFoldCache<String, (tokens: [String], validation: Validation)>()
@@ -70,7 +70,7 @@ struct MovetextEditorView: View {
             let white = moves[index]
             
             guard index + 1 < moves.count else {
-                // A game ending on White's move gets a white-only final line — D24′'s shape, arrived at
+                // A game ending on White's move gets a white-only final line — the shape, arrived at
                 // independently: it is simply what a score sheet does.
                 return gutter + label + "  " + white
             }
@@ -111,7 +111,7 @@ struct MovetextEditorView: View {
         return false
     }
 
-    // MARK: Highlight (D79′)
+    // MARK: Highlight
 
     /// Colours cleared, then the offending ply — and only it — painted red. Attribute-only: the
     /// characters are never touched, so the caret stays put. Colour is the *pointer*; the words
@@ -165,7 +165,7 @@ struct MovetextEditorView: View {
 
             HStack {
                 // **Revert, not Cancel** — a tab cannot close, so the button means "put the text back".
-                // Disabled state is producible (open the tab, touch nothing) — the D40′ check.
+                // Disabled state is producible (open the tab, touch nothing) — the check.
                 Button("Revert") { text = AttributedString(seed) }
                     .disabled(plain == seed)
                     .accessibilityIdentifier(AccessibilityID.movetextEditorCancel)
@@ -270,7 +270,7 @@ struct MovetextEditorView: View {
     .frame(width: 460, height: 420)
 }
 
-/// D79′'s witness, and the game-98 shape: stored moves that never replayed show their offending
+/// The witness, and the game-98 shape: stored moves that never replayed show their offending
 /// ply red **on open**. The defect this guards is visual — the wrong token painted, or the paint
 /// surviving a fix — which only a canvas can see.
 #Preview("Illegal Ply") {

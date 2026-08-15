@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The live-play status card (M3.1; re-homed into the sidebar's
-/// `SessionSidebarPanel` by D15′) — the answer to "what is the app doing
+/// `SessionSidebarPanel`) — the answer to "what is the app doing
 /// with my board right now?", shown whenever a board is connected or
 /// being chased (`reconnecting`). Plain disconnected has no card at all:
 /// the message carried no action, so it lives in the live inspector's
@@ -15,7 +15,7 @@ struct LiveGameHUDView: View {
 
     /// Everything the banner can say. Derivation (including priority between
     /// overlapping session flags) lives in `SessionSidebarPanel.hudPhase` —
-    /// moved there with the card itself by D15′.
+    /// moved there with the card itself.
     enum Phase: Equatable {
         case reconnecting
         /// Connected, no game running: invite setup or a manual New Game.

@@ -3,11 +3,11 @@ import SwiftUI
 
 struct LibraryListView: View {
     let games: [PGN]
-    /// The Analysis column's input (D72′), off the memoized projection — the per-row blob decode
+    /// The Analysis column's input, off the memoized projection — the per-row blob decode
     /// this replaced was the last one standing, on the mode most on screen during a batch.
     let analyzedIDs: Set<PGN.ID>
     @Binding var selectedPGNs: Set<PGN.ID>
-    /// Takes the set (D56′), like every action here.
+    /// Takes the set, like every action here.
     let onOpen: ([PGN]) -> Void
     let onAnalyzeIDs: (Set<PGN.ID>) -> Void
     let onExportIDs: (Set<PGN.ID>) -> Void
@@ -22,8 +22,8 @@ struct LibraryListView: View {
     /// Ambient — the Analysis column tells "analyzed" from "on the engine now".
     @Environment(\.analysisRunningGameID) private var runningAnalysisID
 
-    /// Header sort. **A binding, not `@State`**: display order feeds D24′ export numbering, queue
-    /// order and D56′ tab order through `gamesInDisplayOrder`, so the sort must live where
+    /// Header sort. **A binding, not `@State`**: display order feeds export numbering, queue
+    /// order and bulk-open tab order through `gamesInDisplayOrder`, so the sort must live where
     /// `filteredGames` applies it. Not persisted, unlike column customization.
     @Binding var sortOrder: [KeyPathComparator<PGN>]
 
@@ -32,7 +32,7 @@ struct LibraryListView: View {
               selection: $selectedPGNs,
               sortOrder: $sortOrder,
               columnCustomization: $columnCustomization) {
-            // D58′ — the file's ordinal, leading because that is where a filing number reads. Em dash for
+            // The file's ordinal, leading because that is where a filing number reads. Em dash for
             // nil (ECO's blank is the documented exception).
             TableColumn("#", sortUsing: KeyPathComparator(\PGN.libraryIndex)) { game in
                 Text(game.libraryIndex.map(String.init) ?? RosterSummary.displayUnknown)
@@ -42,7 +42,7 @@ struct LibraryListView: View {
             .width(min: 34, ideal: 44, max: 64)
             .customizationID("index")
 
-            // Carries `gameRow(name)` and is hideable anyway (D51′ — no cell is a guaranteed address).
+            // Carries `gameRow(name)` and is hideable anyway (no cell is a guaranteed address).
             // Sorted on the **display** form: the stored tag would order by a surname the cell doesn't print.
             TableColumn("White", value: \.whiteDisplayName) { game in
                 Text(game.whiteDisplayName)
@@ -84,13 +84,13 @@ struct LibraryListView: View {
             .customizationID("result")
             // Code only (the family truncates at column width; the inspector has all three rows). Nothing
             // rather than an em dash — a column of dashes is noise. Read and sorted through `opening`,
-            // never `ecoCode` — rehydrates per sort recompute (memoized since D78′), censused.
+            // never `ecoCode` — rehydrates per sort recompute (memoized), censused.
             TableColumn("ECO", sortUsing: KeyPathComparator(\PGN.opening?.code)) { game in
                 Text(game.opening?.code ?? "").foregroundStyle(.secondary)
             }
             .width(min: 44, ideal: 52)
             .customizationID("eco")
-            // D34′'s other half — classified, stamped and cleared together, so showing only the opening was
+            // The other half — classified, stamped and cleared together, so showing only the opening was
             // an asymmetry. Sorted on the stored rawValue (1:1 with display).
             TableColumn("Checkmate Type", sortUsing: KeyPathComparator(\PGN.specialCheckmate?.rawValue)) { game in
                 Text(game.specialCheckmate?.displayName ?? RosterSummary.displayUnknown)
@@ -101,7 +101,7 @@ struct LibraryListView: View {
             .customizationID("mate")
             TableColumn("Event", value: \.event) { Text($0.event).lineLimit(1) }
                 .customizationID("event")
-            // `effectiveDate` (date ?? importedAt) — the app's one ordering rule (D10′), so this column
+            // `effectiveDate` (date ?? importedAt) — the app's one ordering rule, so this column
             // agrees with every pure fold. Display and sort diverge for an undated game on purpose.
             TableColumn("Date", value: \.effectiveDate) { game in
                 Text(game.displayDate).foregroundStyle(.secondary)
@@ -126,7 +126,7 @@ struct LibraryListView: View {
                 onDelete: { onDeleteIDs(Set($0.map(\.id))) }
             )
         } primaryAction: { ids in
-            // Fires on double-click and Return. **Opens the whole set (D56′)** — this read `ids.first`
+            // Fires on double-click and Return. **Opens the whole set** — this read `ids.first`
             // once: "some row, in `Set` order", a game wearing another's face.
             onOpen(games.filter { ids.contains($0.id) })
         }

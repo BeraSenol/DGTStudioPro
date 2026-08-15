@@ -64,7 +64,7 @@ struct LiveGameDraftTests {
         #expect(decoded.board == nil)
     }
 
-    /// D28′'s schema stance, pinned: a version-1 file written *before* the
+    /// The schema stance, pinned: a version-1 file written *before* the
     /// `board` field existed — no `board` key at all — still decodes, with
     /// nil. If adding a field ever breaks this, `currentSchemaVersion` owes
     /// a bump and this test the update.

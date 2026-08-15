@@ -93,7 +93,7 @@ struct LiveGameInspectorView: View {
         game.sanMoves.isEmpty ? nil : game.sanMoves.count - 1
     }
     
-    /// D20′ — "Recording 101. Magnus Carlsen vs Ian Nepomniachtchi", the
+    /// "Recording 101. Magnus Carlsen vs Ian Nepomniachtchi", the
     /// live twin of the review headline. Same formatter, so the two
     /// inspectors can't drift apart on the grammar.
     private var headline: String {

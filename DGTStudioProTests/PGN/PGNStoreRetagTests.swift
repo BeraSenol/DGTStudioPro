@@ -3,7 +3,7 @@ import Foundation
 import SwiftData
 @testable import DGTStudioPro
 
-/// M5's store door: rename and delete over `Player` (D37′, D39′) — refusal before writing,
+/// M5's store door: rename and delete over `Player` — refusal before writing,
 /// both-seat rewrites, and the orphan cascade.
 @MainActor
 @Suite("PGN Store — Player Retag and Delete")
@@ -56,8 +56,8 @@ struct PGNStoreRetagTests {
         try context.fetch(FetchDescriptor<Player>()).filter(PGNStore.isOrphaned)
     }
 
-    /// Mints a linkless row — **since D60′ the only way to produce one**. Through `resolvePlayer`,
-    /// not `context.insert`: D9′'s single door, or the collector is pinned against a shape the app
+    /// Mints a linkless row — **now the only way to produce one**. Through `resolvePlayer`,
+    /// not `context.insert`: the single door, or the collector is pinned against a shape the app
     /// cannot produce.
     private static func orphanedRow(
         _ store: PGNStore,
@@ -81,7 +81,7 @@ struct PGNStoreRetagTests {
         Player.normalizedKey(for: PlayerName.displayForm(of: tag))
     }
 
-    // MARK: Library Index — D58′
+    // MARK: Library Index
 
     /// The index is filing, not identity: two ordinals, one game, second import refused. Asserted
     /// through the door, not the digest — the field most likely to be folded into the hash by a
@@ -113,7 +113,7 @@ struct PGNStoreRetagTests {
         #expect(game.libraryIndex == nil)
     }
 
-    // MARK: Rename — D37′
+    // MARK: Rename
 
     /// The decision itself: a rename reaches the stored seat tag, not just the
     /// registry row. If this ever regresses to touching `Player.name` alone,
@@ -128,7 +128,7 @@ struct PGNStoreRetagTests {
 
         #expect(count == 1)
         #expect(game.white == "Şenol, Bera")
-        // The registry row follows, through the one transform D23′ allows.
+        // The registry row follows, through the one direction names travel.
         #expect(game.whitePlayer?.name == "Bera Şenol")
     }
 
@@ -194,7 +194,7 @@ struct PGNStoreRetagTests {
         #expect(game.white == "Senol, Bera")
     }
 
-    // MARK: Collision refusal — D39′
+    // MARK: Collision refusal
 
     /// The Library-side collision: the rewrite would land on a row that
     /// already exists. Refused, and — the load-bearing half — refused with
@@ -279,7 +279,7 @@ struct PGNStoreRetagTests {
         #expect(game.white == "Senol, Bera")
     }
 
-    // MARK: Orphan collection (D60′ — automatic, unasked)
+    // MARK: Orphan collection (automatic, unasked)
 
     /// A linked player is never collected: `.nullify` leaves tags intact and the next backfill
     /// would resurrect the row anyway.
@@ -293,7 +293,7 @@ struct PGNStoreRetagTests {
         #expect(try store.player(withNormalizedKey: Self.key(forTag: "Senol, Bera")) != nil)
     }
 
-    /// A linkless row goes, without anyone asking. The whole of D60′.
+    /// A linkless row goes, without anyone asking. The whole of automatic collection.
     @Test("An unlinked registry row is collected unasked")
     func unlinkedRowIsCollected() throws {
         let (store, context) = try Self.storeAndContext()
@@ -305,7 +305,7 @@ struct PGNStoreRetagTests {
         #expect(try store.player(withNormalizedKey: Self.key(forTag: "Ghost, Casper")) == nil)
     }
 
-    /// **The generator D60′ was minted for**: re-spelling a seat — `applyEdit` re-resolves,
+    /// **The generator collection exists for**: re-spelling a seat — `applyEdit` re-resolves,
     /// `resolvePlayer` creates, and the old spelling's row lingered forever.
     @Test("Correcting a seat collects the row the old spelling minted")
     func reSpellingASeatCollectsTheStrandedRow() throws {
@@ -322,7 +322,7 @@ struct PGNStoreRetagTests {
     }
 
     /// A rename collects the row it renamed *from*, in the same transaction —
-    /// which is what makes `retag` the merge replacement D52′ said it was:
+    /// which is what makes `retag` an honest merge replacement:
     /// retag onto an existing name and the loser does not linger as a duplicate
     /// spelling in every seat picker.
     @Test("A rename collects the row it renamed from")

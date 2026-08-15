@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import DGTStudioPro
 
-/// The roster's display contract (D22′ as revised by D55′). Four pins asserted the pre-D55′
+/// The roster's display contract, as revised. Four pins asserted the old
 /// contract until ⌘U caught them — correct pins on a repealed rule, in a file the pass had not
 /// opened; the lesson: grep the suite for the old rule's *words*.
 @Suite("Roster Summary — Seven Tag Display")
@@ -75,7 +75,7 @@ struct RosterSummaryTests {
     }
 
     /// Decided results render in PGN notation; `*` on an *archived* game is an
-    /// unknown like any other and takes the glyph (D55′).
+    /// unknown like any other and takes the glyph.
     @Test func resultRendersInPGNNotation() {
         #expect(summary(result: .whiteWins)[.result] == "1-0")
         #expect(summary(result: .draw)[.result] == "1/2-1/2")
@@ -93,7 +93,7 @@ struct RosterSummaryTests {
         #expect(summary(result: .ongoing)[.result] == RosterSummary.displayUnknown)
     }
 
-    /// **Display folds; export does not** — the em dash must never reach `tagValue(for:)` (D24′).
+    /// **Display folds; export does not** — the em dash must never reach `tagValue(for:)`.
     /// This pins the *separation* a future reader tidying two switches would collapse.
     @Test func exportVocabularyIsUntouchedByTheDisplayFold() {
         let roster = summary(event: "?", date: nil, round: nil, result: .ongoing)
@@ -103,7 +103,7 @@ struct RosterSummaryTests {
         #expect(roster.tagValue(for: .result) == "*")
     }
 
-    /// The D44′ pin: building a `Roster` in a nonisolated suite compiles only while the projection
+    /// The pin: building a `Roster` in a nonisolated suite compiles only while the projection
     /// stays off the main actor — a *compile* failure, the correct severity for an isolation fact.
     @Test func theLiveProjectionIsReachableOffTheMainActor() {
         let roster = LiveGame.Roster(

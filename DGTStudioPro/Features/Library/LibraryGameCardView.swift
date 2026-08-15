@@ -11,7 +11,7 @@ struct LibraryGameCardView: View {
     /// pass nothing render as before.
     var glyphWidth: CGFloat = 60
     
-    /// The analysis badge's subject (D72′), bottom-trailing on the sheet in every host. Both
+    /// The analysis badge's subject, bottom-trailing on the sheet in every host. Both
     /// production hosts pass state, never the model — no blob decode per card.
     var analysisState: AnalysisGlyph.State = .unanalyzed
     
@@ -114,7 +114,7 @@ struct LibraryGameCardView: View {
             .foregroundStyle(isSelected ? Color.white : .primary)
     }
     
-    /// The file's ordinal, written on the sheet (D58′). The em dash renders a state that is meant
+    /// The file's ordinal, written on the sheet. The em dash renders a state that is meant
     /// to be unreachable — not a fourth vocabulary. The `#` prefix and the result went 7 Aug 2026
     /// by request; the result still lives in the list's cell.
     private var displayIndex: String {

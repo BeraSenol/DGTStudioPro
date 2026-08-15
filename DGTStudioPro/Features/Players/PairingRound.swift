@@ -1,6 +1,6 @@
 import Foundation
 
-/// The New Game round prefill (D16′): latest round among games pairing these two, plus one.
+/// The New Game round prefill: latest round among games pairing these two, plus one.
 /// The pair matches as a *set*; "latest" is the numeric maximum — a late-imported old game
 /// can't wind the rivalry counter backwards; unknowns never inform.
 enum PairingRound {

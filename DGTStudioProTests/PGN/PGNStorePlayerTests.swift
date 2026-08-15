@@ -3,8 +3,8 @@ import Foundation
 import SwiftData
 @testable import DGTStudioPro
 
-/// The player-resolution contract (D9′): one creation door, folded display-form identity,
-/// diacritics preserved, `"?"`/empty resolve to nobody, first-seen casing wins; since D60′
+/// The player-resolution contract: one creation door, folded display-form identity,
+/// diacritics preserved, `"?"`/empty resolve to nobody, first-seen casing wins;
 /// re-resolution collects the row it strands.
 @MainActor
 @Suite("PGN Store — Player Resolution")
@@ -105,7 +105,7 @@ struct PGNStorePlayerTests {
         #expect(second?.name == "ruy lopez")
     }
     
-    // MARK: Tag Form (D29′)
+    // MARK: Tag Form
 
     /// The resolver remembers the first-seen tag form — whitespace-folded,
     /// comma structure and casing verbatim — beside the display form.
@@ -151,7 +151,7 @@ struct PGNStorePlayerTests {
         #expect(try store.backfillPlayerTagNames() == 0)
     }
 
-    /// A linkless row stays nil and never re-reports as work. Unaffected by D60′ deliberately —
+    /// A linkless row stays nil and never re-reports as work. Unaffected by collection deliberately —
     /// this exercises the reader, not the collector.
     @Test func backfillSkipsLinklessPlayers() throws {
         let context = try Self.makeContext()
@@ -248,7 +248,7 @@ struct PGNStorePlayerTests {
     // MARK: Edit Re-Resolution
     
     /// The relationship sibling of the one-hash rule: the funnel relinks — and collects the player
-    /// it displaced (D60′).
+    /// it displaced.
     @Test func applyEditRelinksAndCollectsTheDisplacedPlayer() throws {
         let context = try Self.makeContext()
         let store = PGNStore(modelContext: context)
@@ -266,7 +266,7 @@ struct PGNStorePlayerTests {
     
     // MARK: Relationship Semantics
     
-    /// Deleting a game takes stranded players with it (asserted the opposite until D50′; D60′
+    /// Deleting a game takes stranded players with it (asserted the opposite until the cascade
     /// repealed both halves). The surviving player's inverse array is deliberately not asserted —
     /// propagation timing is SwiftData's business.
     @Test func deletingGameCollectsThePlayersItStrands() throws {
@@ -284,7 +284,7 @@ struct PGNStorePlayerTests {
     
     /// The M-prs.6 bridge is read-only by contract: it finds the row the
     /// resolver created, keyed exactly like the resolver keys it, and a
-    /// miss creates nothing — the single door (D9′) is about creation,
+    /// miss creates nothing — the single door is about creation,
     /// and the lookup must never become a second one by accident.
     @Test func playerLookupByKeyFindsWithoutCreating() throws {
         let context = try Self.makeContext()

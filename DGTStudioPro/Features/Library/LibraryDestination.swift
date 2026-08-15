@@ -10,7 +10,7 @@ struct LibraryDestination: View {
     // MARK: Static Constants
     private static let logger = AppLog.logger(.library)
 
-    /// Above this many, Open asks first (D56′) — the one bulk action that confirms on count, not consequence.
+    /// Above this many, Open asks first — the one bulk action that confirms on count, not consequence.
     private static let openConfirmationThreshold = 10
     
     // MARK: Stored Properties
@@ -44,14 +44,14 @@ struct LibraryDestination: View {
     @State private var pendingDirtyDeletion: PGN?
     @State private var pendingBatchDeletion: [PGN]?
 
-    /// D56′'s speed bump, held between offer and confirmation.
+    /// The speed bump, held between offer and confirmation.
     @State private var pendingBatchOpen: [PGN]?
     @State private var selectedPGNs: Set<PGN.ID> = []
     @State private var importProgress: ImportProgress?
 
     /// Memo key for the `GameRecord` projection: content plus an analysis signal.
     /// The signal is the queue's counters, never the `evaluations` array — an array read would defeat the memo.
-    /// Internal (not private) so the D78′ key-completeness suite can construct one.
+    /// Internal (not private) so the key-completeness suite can construct one.
     struct FoldKey: Equatable {
         let content: CollectionFoldKey
         let running: PersistentIdentifier?
@@ -62,7 +62,7 @@ struct LibraryDestination: View {
     /// The Library's `GameRecord` projection, memoized — rebuilt only when `FoldKey` moves.
     @State private var foldCache = CollectionFoldCache<FoldKey, [GameRecord]>()
 
-    /// The narrowing inputs as one value (D78′): the projection's key plus everything filter,
+    /// The narrowing inputs as one value: the projection's key plus everything filter,
     /// search and sort read. A missed input here is stale rows on screen — the suite pins the
     /// field list, which is the only defence a memo key has.
     struct NarrowKey: Equatable {
@@ -82,7 +82,7 @@ struct LibraryDestination: View {
 
     @State private var narrowCache = CollectionFoldCache<NarrowKey, NarrowResult>()
 
-    /// D58′ backfill result for the report alert; failure is separate state — it means the folder itself was unreadable.
+    /// The backfill result for the report alert; failure is separate state — it means the folder itself was unreadable.
     @State private var backfillReport: PGNStore.LibraryIndexBackfill?
     @State private var backfillFailure: String?
     
@@ -91,7 +91,7 @@ struct LibraryDestination: View {
     /// Non-text facets as chips inside the search field; the Filter menu stays the discoverable entry point.
     @State private var searchTokens: [LibrarySearchToken] = []
 
-    /// List-mode column sort. Defaults to `#` descending (D58′). One comparator, so clicking `#` twice
+    /// List-mode column sort. Defaults to `#` descending. One comparator, so clicking `#` twice
     /// reproduces the launch order; ties are unordered (`sorted(using:)` is not stable). Display only.
     private var sortOrder: Binding<[KeyPathComparator<PGN>]> {
         Binding(
@@ -140,7 +140,7 @@ struct LibraryDestination: View {
         return zip(games, records).map { pair in (game: pair.0, record: pair.1) }
     }
 
-    /// Sidebar filter → search → chips → sort, memoized as one unit (D78′): the walk and the sort
+    /// Sidebar filter → search → chips → sort, memoized as one unit: the walk and the sort
     /// re-run only when a `NarrowKey` input moves, not per render.
     private var narrowed: NarrowResult {
         narrowCache.value(
@@ -212,7 +212,7 @@ struct LibraryDestination: View {
         return games.first(where: { $0.id == id })
     }
     
-    /// Selection → models in display order. Load-bearing twice: queue order, and D24′ export numbers filenames from it.
+    /// Selection → models in display order. Load-bearing twice: queue order, and export numbers filenames from it.
     private func gamesInDisplayOrder(_ ids: Set<PGN.ID>) -> [PGN] {
         filteredGames.filter { ids.contains($0.id) }
     }
@@ -320,7 +320,7 @@ struct LibraryDestination: View {
         let narrowed = narrowedPairs
         let games = narrowed.map { $0.game }.sorted(using: sortOrder.wrappedValue)
         let unanalyzedCount = narrowed.count { !$0.record.hasAnalysis }
-        // Row badges (D72′): membership built once per render off the same records — one spelling of "analyzed?".
+        // Row badges: membership built once per render off the same records — one spelling of "analyzed?".
         let analyzedIDs = Set(
             narrowed.lazy.filter { $0.record.hasAnalysis }.map { $0.game.id }
         )
@@ -336,7 +336,7 @@ struct LibraryDestination: View {
             Group {
                 if games.isEmpty {
                     // Two vocabularies: an empty library invites importing; an empty result set names the narrowing.
-                    // Identifier stays on the true empty state (D51′).
+                    // Identifier stays on the true empty state.
                     if isNarrowedBySearchOrFilters {
                         ContentUnavailableView(
                             "No Matches",
@@ -358,7 +358,7 @@ struct LibraryDestination: View {
                 #selector(NSStandardKeyBindingResponding.selectAll(_:)),
                 perform: selectAllAction
             )
-            // D56′'s threshold. Not `role: .destructive` — opening destroys nothing; the dialog is about volume.
+            // The threshold. Not `role:.destructive` — opening destroys nothing; the dialog is about volume.
             .alert(
                 "Open \(pendingBatchOpen?.count ?? 0) Games?",
                 isPresented: Binding(present: $pendingBatchOpen),
@@ -503,7 +503,7 @@ struct LibraryDestination: View {
         }
     }
     
-    /// One resolution point for "open these in windows" (D56′). macOS dedups and tabs, which makes the plural
+    /// One resolution point for "open these in windows". macOS dedups and tabs, which makes the plural
     /// safe; arrives and stays in display order — visible here as tab order.
     private func openGames(_ pgns: [PGN]) {
         guard !pgns.isEmpty else { return }
@@ -621,7 +621,7 @@ struct LibraryDestination: View {
     }
     
     /// File doors: in, out, and — only while some game lacks an ordinal — reconcile. No spacer: adjacent
-    /// items share a capsule. The third item vanishes at zero rather than sitting disabled (D40′).
+    /// items share a capsule. The third item vanishes at zero rather than sitting disabled.
     @ToolbarContentBuilder
     private var transferToolbarItems: some ToolbarContent {
         ToolbarItem {
@@ -669,7 +669,7 @@ struct LibraryDestination: View {
         if analysisQueue.queue.isActive || analysisQueue.queue.hasFailures {
             ToolbarItem {
                 Button {
-                    // Window, not popover; `openWindow(id:)` — one queue, singleton scene, nothing to route (no D46′ wrapper).
+                    // Window, not popover; `openWindow(id:)` — one queue, singleton scene, nothing to route (no request wrapper).
                     openWindow(id: AnalysisQueueStatusWindowView.sceneID)
                 } label: {
                     queueStatusLabel
@@ -691,7 +691,7 @@ struct LibraryDestination: View {
             } label: {
                 Label("Inspector", systemImage: "sidebar.trailing")
             }
-            // Disabled, not hidden — vanishing on a mode switch reads as a glitch; the guard is producible (D40′).
+            // Disabled, not hidden — vanishing on a mode switch reads as a glitch; the guard is producible.
             .disabled(viewMode.ownsDetailPane)
             .help(viewMode.ownsDetailPane
                   ? "Columns view shows details in its own pane"
@@ -744,7 +744,7 @@ struct LibraryDestination: View {
         }
     }
 
-    /// D58′ backfill: point at the folder; the content hash decides which row each file is.
+    /// The backfill: point at the folder; the content hash decides which row each file is.
     /// Stamps one `Int?` per match — never resolves players, classifies or rehashes.
     private func presentBackfillPanel() {
         let panel = NSOpenPanel()
@@ -940,7 +940,7 @@ struct LibraryDestination: View {
     }
     
     /// Store-owned and idempotent; both collection destinations call it on appear. Behind the
-    /// converged stamp since D75′ — the healed steady state skips the scan. This is the Library's error sink.
+    /// converged stamp — the healed steady state skips the scan. This is the Library's error sink.
     private func backfillPlayerLinks() {
         do {
             try PGNStore(modelContext: modelContext).healPlayersIfNeeded()
@@ -949,7 +949,7 @@ struct LibraryDestination: View {
         }
     }
     
-    /// D34′'s eager half: heals pre-M4 rows on appearance so an opening name never costs a depth-18 re-run.
+    /// The eager half: heals pre-M4 rows on appearance so an opening name never costs a depth-18 re-run.
     private func backfillClassifications() async {
         let table = await ECOTable.warmed()
         do {
@@ -959,7 +959,7 @@ struct LibraryDestination: View {
         }
     }
     
-    // MARK: Export (D24′)
+    // MARK: Export
     
     /// Single-game entry: a save panel — the user names the file.
     private func requestExport(_ pgn: PGN) {
@@ -967,7 +967,7 @@ struct LibraryDestination: View {
         PGNExporter.export([pgn])
     }
     
-    /// Multi-game entry; resolves against `filteredGames` — the order numbers the filenames (D24′).
+    /// Multi-game entry; resolves against `filteredGames` — the order numbers the filenames.
     private func requestExport(ids: Set<PGN.ID>) {
         let ordered = gamesInDisplayOrder(ids)
         guard !ordered.isEmpty else { return }
@@ -982,7 +982,7 @@ extension Binding where Value == Bool {
     /// Presentation flag over optional state: true while present; dismissal clears the source.
     /// `BoardDestination`'s offer bindings look identical and are deliberately not folded in — they ignore dismissal.
     /// Waived warning ×2: non-Sendable `Binding` captured in `@Sendable` closures; expires by deletion when
-    /// `.alert(item:)` ships (D43′ — the register's one compiler-warning waiver).
+    /// `.alert(item:)` ships (the register's one compiler-warning waiver).
     init<T>(present source: Binding<T?>) {
         self.init(
             get: { source.wrappedValue != nil },

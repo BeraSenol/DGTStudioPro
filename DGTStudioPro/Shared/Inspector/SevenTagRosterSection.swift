@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The Seven Tag Roster as one section (D22′), shared by all three inspectors. Rows driven by
+/// The Seven Tag Roster as one section, shared by all three inspectors. Rows driven by
 /// `SevenTagRoster.allCases`, so a host cannot render six tags or invent an order; labels are
 /// the standard's identifiers, unlocalized. The action renders in the header, trailing.
 struct SevenTagRosterSection<Actions: View>: View {
@@ -18,7 +18,7 @@ struct SevenTagRosterSection<Actions: View>: View {
     
     // MARK: Body
     
-    /// Collapses as `.roster` (D45′) — one section shown three times, not three that resemble each other.
+    /// Collapses as `.roster` — one section shown three times, not three that resemble each other.
     var body: some View {
         CollapsibleSection(.roster, title: headline) {
             ForEach(SevenTagRoster.allCases, id: \.self) { tag in
@@ -47,7 +47,7 @@ extension SevenTagRosterSection where Actions == EmptyView {
 
 // MARK: Previews
 
-/// Tag form in, display form out — `subscript(_:)`'s boundary (D23′), visible only here.
+/// Tag form in, display form out — `subscript(_:)`'s boundary, visible only here.
 #Preview("Full Roster") {
     List {
         SevenTagRosterSection(

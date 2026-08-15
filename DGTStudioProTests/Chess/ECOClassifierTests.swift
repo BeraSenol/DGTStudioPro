@@ -1,7 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The D34′ opening classifier. Two halves, deliberately separated: the pure
+/// The opening classifier. Two halves, deliberately separated: the pure
 /// walk over a five-row fixture (no bundle, nonisolated, the `Glicko1` /
 /// `TagRule` shape), and a handful of spot checks against the real bundled
 /// table guarded against vacuity — a missing resource must fail loudly here
@@ -34,7 +34,7 @@ struct ECOClassifierTests {
         #expect(ruy?.code == "C60")
     }
 
-    @Test("The match carries the book depth in plies (D74′)")
+    @Test("The match carries the book depth in plies")
     func matchCarriesTheMatchedLength() {
         let match = Self.fixture.match(
             for: ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6"]
@@ -117,7 +117,7 @@ struct ECOClassifierTests {
     }
 
     /// SAN is case-significant, so the fold must not reach for `lowercased()`
-    /// the way the D30′ string fold does. This is the tripwire for that.
+    /// the way the string fold does. This is the tripwire for that.
     @Test("Case is not folded — a bishop move and a b-pawn move stay distinct")
     func caseIsNotFolded() {
         let classifier = ECOClassifier([

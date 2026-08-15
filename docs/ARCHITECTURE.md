@@ -83,7 +83,7 @@ UI automation was tried and deliberately retired: at one-person scale its flaky 
 
 ## Conventions
 
-Code is truth: documentation follows code, and a correction lands in both homes in the same pass. Every non-obvious decision gets a sequential D-number in the append-only [decision log](internal/DECISIONS.md), argued with its rejected alternatives — source comments cite the numbers rather than restating the arguments. Doc comments carry the *why*; enumerated caller lists and asserted guarantees are treated as anti-patterns, because they read as settled and decay silently.
+Code is truth: documentation follows code, and a correction lands in both homes in the same pass. Every non-obvious decision is a numbered, argued entry in the append-only [decision log](internal/DECISIONS.md), recorded with the alternatives it rejected. Doc comments carry the *why*; enumerated caller lists and asserted guarantees are treated as anti-patterns, because they read as settled and decay silently.
 
 ## Where to look first
 

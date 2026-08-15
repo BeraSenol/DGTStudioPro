@@ -13,7 +13,7 @@ struct EvaluationGraphRequest: Codable, Hashable, Sendable {
     }
 }
 
-/// The evaluation graph at full size with a pointer read-out (D46′). A window, not a popover or
+/// The evaluation graph at full size with a pointer read-out. A window, not a popover or
 /// sheet — field-tested, not argued: the popover was built and reverted in one day (dismisses on
 /// the first board click, killing the companion-while-scrubbing use). Hover read-outs are what
 /// 100 pt in a sidebar cannot afford — bigger makes a different question askable.
@@ -166,8 +166,8 @@ private struct EvaluationGraphContent: View {
 
 // MARK: Magnifier
 
-/// The header control that opens the window, both Evaluation sections. (Spent part of 4 Aug as
-/// a popover; reverted — the D46′ anchor holds the round trip.) Not an `InspectorEditButtonView`
+/// The header control that opens the window, both Evaluation sections. (Tried as a popover
+/// for a day; reverted.) Not an `InspectorEditButtonView`
 /// — that hardcodes the pencil on purpose; shares only `.font(.body)` + one label for both
 /// `.help` and `.accessibilityLabel`.
 struct EvaluationMagnifierButton: View {

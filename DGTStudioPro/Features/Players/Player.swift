@@ -1,10 +1,10 @@
 import Foundation
 import SwiftData
 
-/// A player identity materialized from seat tags (D9′). **Machine-managed**: created only by
+/// A player identity materialized from seat tags. **Machine-managed**: created only by
 /// `PGNStore.resolvePlayer(named:)`. Identity = display form lowercased, whitespace collapsed;
 /// diacritics preserved ("Bücher" ≠ "Bucher"); first-seen casing wins. Orphans are collected by
-/// every door that can strand one (D60′).
+/// every door that can strand one.
 @Model
 final class Player: Identifiable {
     
@@ -16,7 +16,7 @@ final class Player: Identifiable {
     /// The identity key; written only alongside `name` in `init`.
     var normalizedName: String
 
-    /// First-seen **tag form** (D29′ — D23′'s "no inverse, remember instead"). The seat pickers
+    /// First-seen **tag form** (the "no inverse, remember instead"). The seat pickers
     /// insert this, never `name`; deriving tag form from display form is the forbidden inverse.
     var tagName: String?
 
@@ -50,15 +50,15 @@ final class Player: Identifiable {
         PlayerName.folded(displayName).lowercased()
     }
 
-    /// The identity a raw **seat tag** resolves to, or nil for the absence of a player (`"?"`/empty
-    /// — D9′). Extracted when D61′'s guard needed the answer without creating a row — one spelling.
+    /// The identity a raw **seat tag** resolves to, or nil for the absence of a player (`"?"`/empty).
+    /// Extracted when the guard needed the answer without creating a row — one spelling.
     static func identity(forTag rawTag: String) -> String? {
         let display = PlayerName.displayForm(of: rawTag)
         guard !display.isEmpty, display != RosterSummary.unknownTag else { return nil }
         return normalizedKey(for: display)
     }
 
-    /// Whether two seat tags name one player — the app's one spelling of "seats collide" (D61′).
+    /// Whether two seat tags name one player — the app's one spelling of "seats collide".
     /// Identities, not strings ("Lopez, Ruy" == "Ruy Lopez"); nil never collides (two unknowns are
     /// two absences, or every all-unknown import would refuse every edit).
     static func seatsNameOnePlayer(_ one: String, _ other: String) -> Bool {

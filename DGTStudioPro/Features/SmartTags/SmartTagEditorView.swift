@@ -32,7 +32,7 @@ struct TagDraft: Identifiable {
     }
 }
 
-/// The Apple Music smart-playlist shape (D12′). Deliberately absent: Limit-to, checked-only,
+/// The Apple Music smart-playlist shape. Deliberately absent: Limit-to, checked-only,
 /// live-updating (computed at render — live by construction).
 struct SmartTagEditorView: View {
     
@@ -228,7 +228,7 @@ private struct TagRuleRow: View {
             DatePicker("Value", selection: $rule.date, displayedComponents: .date)
                 .labelsHidden()
         case .result:
-            // Three cases, not `allCases`: Decision #3 keeps `*` out of the
+            // Three cases, not `allCases`: the archive rule keeps `*` out of the
             // Library entirely, so a "result is *" rule could only ever match
             // nothing. Offering it would be offering a dead rule.
             Picker("Result", selection: $rule.gameResult) {
@@ -243,7 +243,7 @@ private struct TagRuleRow: View {
             Spacer()
         case .checkmateType:
             // `allCases`, unlike `.result`: every motif the classifier can produce is one a game can carry
-            // — an unchecked claim until D65′ pinned completeness.
+            // — an unchecked claim until a test pinned completeness.
             Picker("Checkmate Type", selection: $rule.specialCheckmate) {
                 ForEach(SpecialCheckmate.allCases, id: \.self) { pattern in
                     Text(pattern.displayName).tag(pattern)

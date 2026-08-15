@@ -9,7 +9,7 @@ enum DGTEvent: Equatable, Sendable {
     case boardDump(Position)
     /// A single field changed (`DGT_MSG_FIELD_UPDATE`, `0x8E`). A physical move
     /// produces two of these (lift then place) — pairing them into a move is
-    /// D4's reconstruction concern, not the decoder's.
+    /// the reconstructor's concern, not the decoder's.
     case fieldUpdate(square: Square, piece: Piece)
     /// Board serial number (`DGT_MSG_SERIALNR`, `0x91`).
     case serialNumber(String)

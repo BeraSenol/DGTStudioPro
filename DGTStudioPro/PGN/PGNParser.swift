@@ -137,7 +137,7 @@ enum PGNParser {
         return dateFormatter.string(from: date)
     }
     
-    /// **Integer rounds only (D31′)**: `Int(_)` refuses multipart rounds, so `1.3` imports as nil
+    /// **Integer rounds only**: `Int(_)` refuses multipart rounds, so `1.3` imports as nil
     /// and exports as `?` — lossy, and deliberate. Pinned by `roundParsesIntegersOnly`.
     static func parseRound(_ round: String?) -> Int? {
         guard let round else { return nil }
@@ -352,7 +352,7 @@ enum PGNParser {
     }
     
     /// Strips trailing `!`/`?` and **preserves** `+`/`#` — mate must survive import
-    /// (`endedInMate`, D24′ round trips). The app's other stripper (`parseSAN`'s) drops them,
+    /// (`endedInMate` round trips). The app's other stripper (`parseSAN`'s) drops them,
     /// correctly there. These are the only two.
     private static func stripAnnotations(_ san: String) -> String {
         var result = san

@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import DGTStudioPro
 
-/// The three ranking methods (D62′). Nonisolated, matching a pure value type.
+/// The three ranking methods. Nonisolated, matching a pure value type.
 @Suite("Player ranking methods")
 struct PlayerRankingTests {
 
@@ -63,11 +63,11 @@ struct PlayerRankingTests {
         #expect(Set(leaders.compactMap { $0 }).count == 3)
     }
 
-    // MARK: `.wins` is D11′, not a copy of it
+    // MARK: `.wins` is not a copy of it
 
     /// Asserted against `PlayerStats.rankingOrder` itself rather than a
     /// hand-written expected order — the `EvaluationGraphReading` rule. A
-    /// literal would keep passing if D11′'s chain changed and this case did
+    /// literal would keep passing if the chain changed and this case did
     /// not, which is the divergence delegation exists to prevent.
     @Test func winsReproducesTheD11Ladder() {
         let entries = disagreeingField()
@@ -106,7 +106,7 @@ struct PlayerRankingTests {
         #expect(PlayerRanking.rating.ranked(entries).map(\.stats.key) == ["alpha", "bravo"])
     }
 
-    // MARK: Totality — D10′'s rule
+    // MARK: Totality — the rule
 
     /// Every method bottoms out in a tiebreak that cannot tie — reproducible across launches.
     @Test(arguments: PlayerRanking.allCases)

@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The square-by-square restore checklist under the status card while recovering. Pure
 /// presentation over `RecoveryGuidance`; a checklist, not a dialog — restoring the position is
-/// the only resolution (Decision #1).
+/// the only resolution.
 struct RecoveryGuidanceView: View {
     
     // MARK: Stored Properties

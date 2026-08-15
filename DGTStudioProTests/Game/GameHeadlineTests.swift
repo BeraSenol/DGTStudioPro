@@ -1,7 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The inspector headline's grammar (D20′). Nonisolated: `GameHeadline` is a
+/// The inspector headline's grammar. Nonisolated: `GameHeadline` is a
 /// pure formatter over value inputs.
 struct GameHeadlineTests {
     

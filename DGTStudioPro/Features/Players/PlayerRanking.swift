@@ -1,12 +1,12 @@
 import Foundation
 
-/// What rank **1** means (D62′) — D11′ becomes the default rather than the only answer; its
+/// What rank **1** means — the wins ladder is the default rather than the only answer; its
 /// case delegates to `PlayerStats.rankingOrder` rather than restating the chain.
 enum PlayerRanking: String, CaseIterable, Identifiable, Sendable {
 
-    /// D11′'s comparator, unchanged and undisplaced.
+    /// The comparator, unchanged and undisplaced.
     case wins    = "wins"
-    /// The reading D11′ rejected as the *default* and never called worthless — a small-sample
+    /// The reading rejected as the *default* and never called worthless — a small-sample
     /// player tops it, which is the point of asking deliberately.
     case winRate = "winRate"
     /// Glicko-1 mean — the one method reading a number the other two cannot see.
@@ -49,7 +49,7 @@ enum PlayerRanking: String, CaseIterable, Identifiable, Sendable {
             if lhs.stats.winRate != rhs.stats.winRate {
                 return lhs.stats.winRate > rhs.stats.winRate
             }
-            // Wins second among equal percentages — D11′'s instinct, applied where it no longer decides
+            // Wins second among equal percentages — the instinct, applied where it no longer decides
             // the headline.
             if lhs.stats.wins != rhs.stats.wins {
                 return lhs.stats.wins > rhs.stats.wins
