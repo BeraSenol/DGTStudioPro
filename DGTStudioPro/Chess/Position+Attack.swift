@@ -2,7 +2,7 @@ extension Position {
     
     /// Whether any offset, stepped once and wrap-guarded, holds `piece`. `maxFileDistance` is NOT
     /// derivable from the offsets — a knight legitimately changes file by 2.
-    internal func hasPiece(
+    func hasPiece(
         _ piece: Piece,
         steppingFrom square: Square,
         offsets: [Int],
@@ -17,7 +17,7 @@ extension Position {
     }
     
     /// Whether `square` is attacked by any piece of the given `attacker` color.
-    internal func isSquareAttacked(_ square: Square, by attacker: PieceColor) -> Bool {
+    func isSquareAttacked(_ square: Square, by attacker: PieceColor) -> Bool {
         // Pawn attacks: an enemy pawn one rank "in front of" us (from the attacker's
         // perspective) on either adjacent file would be attacking this square.
         let pawnFromOffsets: [Int] = attacker == .white ? [-7, -9] : [7, 9]
@@ -64,7 +64,7 @@ extension Position {
     
     /// Walks a ray; true iff the first occupied square holds a matching enemy slider. Internal —
     /// `SpecialCheckmate` reads it.
-    internal func rayHitsSlider(
+    func rayHitsSlider(
         from square: Square,
         direction: Int,
         slider1: PieceType,

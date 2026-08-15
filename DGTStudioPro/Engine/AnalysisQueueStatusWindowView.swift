@@ -3,13 +3,13 @@ import SwiftUI
 
 /// The analysis queue in full: the live search, both clocks, everything in line, everything
 /// done with its outcome — the room the popover never had.
-internal struct AnalysisQueueStatusWindowView: View {
+struct AnalysisQueueStatusWindowView: View {
 
     // MARK: Static Constants
 
     /// The scene id, once: `openWindow(id:)` takes a bare `String`, and a typo fails at *runtime*
     /// with a console warning and no window.
-    internal static let sceneID = "analysis.queue"
+    static let sceneID = "analysis.queue"
 
     // MARK: Stored Properties
 
@@ -17,7 +17,7 @@ internal struct AnalysisQueueStatusWindowView: View {
 
     // MARK: Body
 
-    internal var body: some View {
+    var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 header

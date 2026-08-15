@@ -4,7 +4,7 @@ import os
 /// The transport seam `DGTConnection` drives (F9): real port below, scripted fakes in tests.
 /// **The event stream finishing is the single "port is gone" signal** — teardown cancels it, an
 /// unplug does not.
-internal protocol DGTPortProviding: Actor {
+protocol DGTPortProviding: Actor {
     /// Opens the device and returns the decoded event stream; the stream finishes when the port
     /// closes — explicitly, or because the device went away (F1).
     func open(path: String) throws -> AsyncStream<DGTEvent>
@@ -18,7 +18,7 @@ internal protocol DGTPortProviding: Actor {
 /// analogue. Raw bytes never escape un-decoded: framing (`DGTFramer`) and semantics
 /// (`DGTDecoder`) live here, so the @MainActor connection only sees events. Chunk order is
 /// preserved end to end — two swapped chunks would desync the framer (F2).
-internal actor DGTSerialPort: DGTPortProviding {
+actor DGTSerialPort: DGTPortProviding {
     
     // MARK: Logging
     
@@ -26,7 +26,7 @@ internal actor DGTSerialPort: DGTPortProviding {
     
     // MARK: Errors
     
-    internal enum PortError: Error, Equatable {
+    enum PortError: Error, Equatable {
         case openFailed(errno: Int32)
         case configureFailed(errno: Int32)
         case alreadyOpen
@@ -47,17 +47,17 @@ internal actor DGTSerialPort: DGTPortProviding {
     /// The single actor-isolated consumer; `readSourceEnded()` decides whether an end was deliberate.
     private var readLoopTask: Task<Void, Never>?
     
-    internal init() {}
+    init() {}
     
     /// Whether the port holds a file descriptor. **The app target's one symbol with no consumer,
     /// kept by decision** (not D41′'s disposition — no better sibling answers this question).
-    internal var isOpen: Bool { fileDescriptor >= 0 }
+    var isOpen: Bool { fileDescriptor >= 0 }
     
     // MARK: Open / Close
     
     /// Opens, configures, starts the ordered pipeline, returns decoded events (stream finishes when
     /// the port closes — F1).
-    internal func open(path: String) throws -> AsyncStream<DGTEvent> {
+    func open(path: String) throws -> AsyncStream<DGTEvent> {
         guard fileDescriptor < 0 else {
             Self.logger?.error("Serial open ignored, port already open")
             throw PortError.alreadyOpen
@@ -123,7 +123,7 @@ internal actor DGTSerialPort: DGTPortProviding {
     }
     
     /// Closes, finishes the event stream, resets. No-op when not open.
-    internal func close() {
+    func close() {
         guard fileDescriptor >= 0 else { return }
         Self.logger?.info("Closing serial port fd=\(self.fileDescriptor)")
         
@@ -154,7 +154,7 @@ internal actor DGTSerialPort: DGTPortProviding {
     // MARK: Write
     
     /// Sends a single-byte command to the board.
-    internal func send(_ command: DGTCommand) throws {
+    func send(_ command: DGTCommand) throws {
         guard fileDescriptor >= 0 else {
             Self.logger?.error("Serial send refused, port not open: command=\(command.rawValue, privacy: .public)")
             throw PortError.notOpen

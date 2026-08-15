@@ -3,11 +3,11 @@ import SwiftUI
 /// The icons grids' selection grammar — arrow stepping and band rectangles — extracted when
 /// Players' grid became the second host: this is the half that must not fork. A filmstrip is a
 /// one-row grid (`columnCount == count`); pinned.
-internal enum IconGridSelection {
+enum IconGridSelection {
 
     /// Finder's arrow grammar as index math (no frames): left/right wrap in reading order; up holds
     /// on the top row; down from a card with a hole beneath it lands on the last card.
-    internal static func destination(
+    static func destination(
         from index: Int,
         direction: MoveCommandDirection,
         columnCount: Int,
@@ -32,7 +32,7 @@ internal enum IconGridSelection {
     }
 
     /// A drag's rectangle regardless of sweep direction — normalized.
-    internal static func selectionRect(from origin: CGPoint, to point: CGPoint) -> CGRect {
+    static func selectionRect(from origin: CGPoint, to point: CGPoint) -> CGRect {
         CGRect(
             x: min(origin.x, point.x),
             y: min(origin.y, point.y),
@@ -45,7 +45,7 @@ internal enum IconGridSelection {
     /// between duplicate values" correction: `.integral` put flip boundaries exactly on the
     /// integers layout rests on, *amplifying* sub-point wobble. Quantize to the half-point grid
     /// (.25/.75), where layout never lands. (The fifth correction gates the observation on the sweep.)
-    internal static func stableFrame(_ rect: CGRect) -> CGRect {
+    static func stableFrame(_ rect: CGRect) -> CGRect {
         func quantized(_ value: CGFloat) -> CGFloat {
             (value * 2).rounded() / 2
         }
@@ -61,7 +61,7 @@ internal enum IconGridSelection {
 /// Card-frame storage the geometry actions write and only the drag reads — a plain reference
 /// box, NOT observed state: nothing renders from these frames, so a write must never invalidate
 /// the view.
-internal final class IconGridFrameStore<ID: Hashable> {
-    internal var frames: [ID: CGRect] = [:]
-    internal init() {}
+final class IconGridFrameStore<ID: Hashable> {
+    var frames: [ID: CGRect] = [:]
+    init() {}
 }

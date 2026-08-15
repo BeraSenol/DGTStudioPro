@@ -1,9 +1,9 @@
-internal struct Position: Codable, Equatable, Sendable {
+struct Position: Codable, Equatable, Sendable {
     
     // MARK: Static Constants
-    internal static let empty: Position = .init()
+    static let empty: Position = .init()
     
-    internal static let starting: Position = {
+    static let starting: Position = {
         var position = Position()
         let backRank: [PieceType] = [.rook, .knight, .bishop, .queen, .king, .bishop, .knight, .rook]
         
@@ -28,13 +28,13 @@ internal struct Position: Codable, Equatable, Sendable {
     }
     
     // MARK: Subscripts
-    internal subscript(square: Square) -> Piece {
+    subscript(square: Square) -> Piece {
         get { squares[square] }
         set { squares[square] = newValue }
     }
     
     // MARK: Instance Methods
-    internal func applying(_ move: Move) -> Position {
+    func applying(_ move: Move) -> Position {
         var result = self
         
         // En passant captures a square other than `move.to`
@@ -57,7 +57,7 @@ internal struct Position: Codable, Equatable, Sendable {
     /// which is per node in perft. `firstIndex(of:)` is the same complexity
     /// but hands the search to the stdlib rather than a Swift loop over an
     /// index range.
-    internal func kingSquare(for color: PieceColor) -> Square? {
+    func kingSquare(for color: PieceColor) -> Square? {
         squares.firstIndex(of: Piece(color, .king))
     }
 }

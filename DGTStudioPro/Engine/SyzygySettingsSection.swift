@@ -5,12 +5,12 @@ import SwiftUI
 /// **verify the engine can read it**. Sandbox inheritance covers only static entitlements, so
 /// `SyzygyPath` can point somewhere real while Stockfish loads nothing; the check starts an
 /// engine and quotes what it says.
-internal struct SyzygySettingsSection: View {
+struct SyzygySettingsSection: View {
 
     // MARK: Verification State
 
     /// The last check's finding. `Equatable` so the reading below is derived, not stored twice.
-    internal enum Verification: Equatable {
+    enum Verification: Equatable {
         case idle
         case running
         case checked(census: SyzygyLocation.Census, engineReport: String?)
@@ -33,7 +33,7 @@ internal struct SyzygySettingsSection: View {
 
     // MARK: Body
 
-    internal var body: some View {
+    var body: some View {
         Section {
             LabeledContent("Folder") {
                 HStack(spacing: 8) {

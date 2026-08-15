@@ -2,13 +2,13 @@ import SwiftUI
 
 /// Which collection surface the panel is describing — both halves, because the destination
 /// decides which sort fields exist and the mode whether the grid section renders.
-internal struct CollectionViewOptionsSubject: Equatable, Sendable {
+struct CollectionViewOptionsSubject: Equatable, Sendable {
 
-    internal enum Collection: String, Sendable {
+    enum Collection: String, Sendable {
         case library
         case players
 
-        internal var displayName: String {
+        var displayName: String {
             switch self {
             case .library: "Library"
             case .players: "Players"
@@ -16,11 +16,11 @@ internal struct CollectionViewOptionsSubject: Equatable, Sendable {
         }
     }
 
-    internal var collection: Collection
-    internal var mode: CollectionViewMode
+    var collection: Collection
+    var mode: CollectionViewMode
 
     /// Only the icons grid packs columns; list and columns are tables, the gallery is a strip.
-    internal var hasSizableGrid: Bool { mode == .icons }
+    var hasSizableGrid: Bool { mode == .icons }
 }
 
 private struct CollectionViewOptionsSubjectKey: FocusedValueKey {
@@ -30,7 +30,7 @@ private struct CollectionViewOptionsSubjectKey: FocusedValueKey {
 extension FocusedValues {
     /// Published by both collection destinations, read by the panel and the View menu item.
     /// `focusedSceneValue` resolves per window, so the panel follows the front browser.
-    internal var collectionViewOptionsSubject: CollectionViewOptionsSubject? {
+    var collectionViewOptionsSubject: CollectionViewOptionsSubject? {
         get { self[CollectionViewOptionsSubjectKey.self] }
         set { self[CollectionViewOptionsSubjectKey.self] = newValue }
     }
@@ -38,9 +38,9 @@ extension FocusedValues {
 
 /// Finder's ⌘J. A singleton `Window` — one panel, opened by id, no wrapper type to mint.
 /// One panel, not one per destination: sizes are preferences about browsing, not destinations.
-internal struct CollectionViewOptionsWindow: View {
+struct CollectionViewOptionsWindow: View {
 
-    internal static let sceneID = "collectionViewOptions"
+    static let sceneID = "collectionViewOptions"
 
     @Environment(CollectionViewOptions.self) private var options
 
@@ -48,7 +48,7 @@ internal struct CollectionViewOptionsWindow: View {
     /// so by first render the focused value is already nil. The destinations latch into `options`.
     private var subject: CollectionViewOptionsSubject? { options.activeSubject }
 
-    internal var body: some View {
+    var body: some View {
         @Bindable var options = options
 
         Group {
@@ -219,11 +219,11 @@ internal struct CollectionViewOptionsWindow: View {
 
 /// The View menu's half of ⌘J — a `Commands` scene has no `openWindow`, so the shared button
 /// carries the action and this scene just hosts it.
-internal struct CollectionViewOptionsCommands: Commands {
+struct CollectionViewOptionsCommands: Commands {
 
     @FocusedValue(\.collectionViewOptionsSubject) private var subject
 
-    internal var body: some Commands {
+    var body: some Commands {
         CommandGroup(after: .toolbar) {
             // ⌘J applied here and nowhere else: the shortcut lived on the shared button with five hosts, so
             // icons mode registered ⌘J twice — live and ambiguous, the exact class flagged for ⌘R/⌘E.
@@ -237,11 +237,11 @@ internal struct CollectionViewOptionsCommands: Commands {
 /// The shared button for the menu and the four grid backgrounds — the *wording* must not fork.
 /// Carries label and action, deliberately not the shortcut: a key equivalent is a claim to own
 /// the verb globally, and only the menu may make it.
-internal struct ShowViewOptionsButton: View {
+struct ShowViewOptionsButton: View {
 
     @Environment(\.openWindow) private var openWindow
 
-    internal var body: some View {
+    var body: some View {
         Button("Show View Options") {
             openWindow(id: CollectionViewOptionsWindow.sceneID)
         }

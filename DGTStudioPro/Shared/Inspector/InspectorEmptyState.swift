@@ -4,16 +4,16 @@ import SwiftUI
 /// state's shape, so one type does. **Render outside the `List`** — inside, it is a top-aligned
 /// row with sidebar chrome. The contract is about layout, so non-inspector hosts (the graph
 /// window) qualify.
-internal struct InspectorEmptyState: View {
+struct InspectorEmptyState: View {
     
     // MARK: Stored Properties
-    internal let title: LocalizedStringKey
-    internal let systemImage: String
-    internal let message: LocalizedStringKey
-    internal let identifier: String
+    let title: LocalizedStringKey
+    let systemImage: String
+    let message: LocalizedStringKey
+    let identifier: String
     
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         ContentUnavailableView(
             title,
             systemImage: systemImage,

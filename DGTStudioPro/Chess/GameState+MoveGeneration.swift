@@ -1,7 +1,7 @@
 extension GameState {
     
     // MARK: Entry Point
-    internal func pseudoLegalMoves() -> [Move] {
+    func pseudoLegalMoves() -> [Move] {
         var moves: [Move] = []
         moves.reserveCapacity(48)
         
@@ -53,7 +53,7 @@ extension GameState {
     
     /// Pseudo-legal filtered so no move leaves the mover's king attacked. A kingless side (hand-
     /// edited state) returns an empty array rather than trapping.
-    internal func legalMoves() -> [Move] {
+    func legalMoves() -> [Move] {
         guard let currentKingSquare = position.kingSquare(for: activeColor) else {
             return []
         }
@@ -61,18 +61,18 @@ extension GameState {
     }
     
     /// Whether the moving side's king is currently attacked.
-    internal var isInCheck: Bool {
+    var isInCheck: Bool {
         guard let kingSq = position.kingSquare(for: activeColor) else { return false }
         return position.isSquareAttacked(kingSq, by: activeColor.opponent)
     }
     
     /// In check with no legal moves.
-    internal var isCheckmate: Bool {
+    var isCheckmate: Bool {
         isInCheck && legalMoves().isEmpty
     }
     
     /// Not in check, but no legal moves.
-    internal var isStalemate: Bool {
+    var isStalemate: Bool {
         !isInCheck && legalMoves().isEmpty
     }
     

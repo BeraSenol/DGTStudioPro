@@ -5,10 +5,10 @@ import Testing
 /// Renders a `Position` to PNG for attachments: a failing board assertion hands you two
 /// rendered boards, not 64 sorted squares.
 @MainActor
-internal enum BoardAttachmentSupport {
+enum BoardAttachmentSupport {
 
     /// White on the bottom, a1 lower-left — the mirror's orientation.
-    internal static func pngData(for position: Position) -> Data? {
+    static func pngData(for position: Position) -> Data? {
         let side: CGFloat = 44
         let size = NSSize(width: side * 8, height: side * 8)
         let image = NSImage(size: size, flipped: false) { _ in
@@ -51,7 +51,7 @@ internal enum BoardAttachmentSupport {
 
     /// Records a rendered board as a PNG attachment. Call on the failure
     /// path only — a green run should attach nothing.
-    internal static func attach(_ position: Position, named name: String) {
+    static func attach(_ position: Position, named name: String) {
         guard let png = pngData(for: position) else { return }
         Attachment.record(png, named: name)
     }

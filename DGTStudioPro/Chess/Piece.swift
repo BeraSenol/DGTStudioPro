@@ -1,14 +1,14 @@
-internal enum PieceColor: UInt8, CaseIterable, Codable, Sendable {
+enum PieceColor: UInt8, CaseIterable, Codable, Sendable {
     case white = 0
     case black = 1
     
     // MARK: Computed Properties
-    internal var opponent: PieceColor {
+    var opponent: PieceColor {
         self == .white ? .black : .white
     }
 }
 
-internal enum PieceType: UInt8, CaseIterable, Codable, Sendable {
+enum PieceType: UInt8, CaseIterable, Codable, Sendable {
     case pawn   = 1
     case knight = 2
     case bishop = 3
@@ -30,9 +30,9 @@ internal enum PieceType: UInt8, CaseIterable, Codable, Sendable {
     /// The four pieces a pawn may become, in SAN's conventional order — which
     /// is also the order `appendPromotions` emits, and therefore the order the
     /// perft counts were taken against.
-    internal static let promotionTypes: [PieceType] = [.queen, .rook, .bishop, .knight]
+    static let promotionTypes: [PieceType] = [.queen, .rook, .bishop, .knight]
     
-    internal var notation: String {
+    var notation: String {
         switch self {
         case .pawn:   ""
         case .knight: "N"
@@ -43,37 +43,37 @@ internal enum PieceType: UInt8, CaseIterable, Codable, Sendable {
         }
     }
     
-    internal var fenByte: UInt8 {
+    var fenByte: UInt8 {
         // Uppercase FEN byte for this piece type (e.g. 80 for 'P').
         Self.fenBytes[Int(rawValue)]
     }
     
     // MARK: Instance Methods
-    internal func fenCharacter(for color: PieceColor) -> Character {
+    func fenCharacter(for color: PieceColor) -> Character {
         // Adding 32 (0x20) converts uppercase ASCII to lowercase.
         let byte = fenByte + (color.rawValue * 32)
         return Character(UnicodeScalar(byte))
     }
 }
 
-internal struct Piece: Codable, Equatable, Hashable, Sendable {
+struct Piece: Codable, Equatable, Hashable, Sendable {
     
     // MARK: Static Constants
-    internal static let empty = Piece(rawValue: 0)
+    static let empty = Piece(rawValue: 0)
     
-    internal static let whitePawn   = Piece(.white, .pawn)
-    internal static let whiteKnight = Piece(.white, .knight)
-    internal static let whiteBishop = Piece(.white, .bishop)
-    internal static let whiteRook   = Piece(.white, .rook)
-    internal static let whiteQueen  = Piece(.white, .queen)
-    internal static let whiteKing   = Piece(.white, .king)
+    static let whitePawn   = Piece(.white, .pawn)
+    static let whiteKnight = Piece(.white, .knight)
+    static let whiteBishop = Piece(.white, .bishop)
+    static let whiteRook   = Piece(.white, .rook)
+    static let whiteQueen  = Piece(.white, .queen)
+    static let whiteKing   = Piece(.white, .king)
     
-    internal static let blackPawn   = Piece(.black, .pawn)
-    internal static let blackKnight = Piece(.black, .knight)
-    internal static let blackBishop = Piece(.black, .bishop)
-    internal static let blackRook   = Piece(.black, .rook)
-    internal static let blackQueen  = Piece(.black, .queen)
-    internal static let blackKing   = Piece(.black, .king)
+    static let blackPawn   = Piece(.black, .pawn)
+    static let blackKnight = Piece(.black, .knight)
+    static let blackBishop = Piece(.black, .bishop)
+    static let blackRook   = Piece(.black, .rook)
+    static let blackQueen  = Piece(.black, .queen)
+    static let blackKing   = Piece(.black, .king)
     
     private static let imageNames: [String?] = {
         let typeNames = ["", "Pawn", "Knight", "Bishop", "Rook", "Queen", "King"]
@@ -88,41 +88,41 @@ internal struct Piece: Codable, Equatable, Hashable, Sendable {
     }()
     
     // MARK: Stored Properties
-    internal let rawValue: UInt8
+    let rawValue: UInt8
     
     // MARK: Computed Properties
-    internal var isOccupied: Bool { rawValue != 0 }
+    var isOccupied: Bool { rawValue != 0 }
     
-    internal var color: PieceColor? {
+    var color: PieceColor? {
         guard isOccupied else { return nil }
         return PieceColor(rawValue: (rawValue >> 3) & 1)
     }
     
-    internal var type: PieceType? {
+    var type: PieceType? {
         guard isOccupied else { return nil }
         return PieceType(rawValue: rawValue & 0b111)
     }
     
-    internal var fenCharacter: Character {
+    var fenCharacter: Character {
         guard let type, let color else { return "." }
         return type.fenCharacter(for: color)
     }
     
-    internal var imageName: String? {
+    var imageName: String? {
         Self.imageNames[Int(rawValue)]
     }
     
     // MARK: Initializers
-    internal init(_ color: PieceColor, _ type: PieceType) {
+    init(_ color: PieceColor, _ type: PieceType) {
         self.rawValue = (color.rawValue << 3) | type.rawValue
     }
     
-    internal init(rawValue: UInt8) {
+    init(rawValue: UInt8) {
         self.rawValue = rawValue
     }
     
     // MARK: Instance Methods
-    internal func isColor(_ color: PieceColor) -> Bool {
+    func isColor(_ color: PieceColor) -> Bool {
         self.color == color
     }
 }

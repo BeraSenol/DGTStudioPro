@@ -5,7 +5,7 @@ import os
 /// caches per-ply `GameState`s, and scrubs. Not persisted — rebuilt cheaply per open.
 @Observable
 @MainActor
-internal final class Game {
+final class Game {
     
     // MARK: Static Constants
     
@@ -13,56 +13,56 @@ internal final class Game {
     
     // MARK: Errors
     
-    internal enum BuildError: Error, Equatable {
+    enum BuildError: Error, Equatable {
         /// A SAN failed to parse; index, SAN and parser error carried for "move 14 ('Bxd5'): …" diagnostics.
         case invalidMove(index: Int, san: String, underlying: SANParseError)
     }
     
     // MARK: Source Material
     
-    internal let pgn: PGN
+    let pgn: PGN
     
     // MARK: Cached State Walk
     
     /// `states[0]` is the start; `states[i]` follows `moves[i-1]`. Always `moves.count + 1` long.
-    internal let states: [GameState]
+    let states: [GameState]
     
     /// Mirror of `states` for piece-identity tracking — stable animation identity across promotions
     /// and castling.
-    internal let trackers: [PieceTracker]
+    let trackers: [PieceTracker]
     
     /// Parsed moves; `moves[i]` sits between `states[i]` and `states[i+1]`.
-    internal let moves: [Move]
+    let moves: [Move]
     
     // MARK: Scrub State
     
     /// Current ply in `0...moves.count`; 0 = before any move, end = default.
-    internal private(set) var currentPly: Int
+    private(set) var currentPly: Int
     
     // MARK: Computed Properties
     
-    internal var currentState: GameState { states[currentPly] }
-    internal var currentTracker: PieceTracker { trackers[currentPly] }
+    var currentState: GameState { states[currentPly] }
+    var currentTracker: PieceTracker { trackers[currentPly] }
 
     /// The last move reaching `currentState`, or nil at ply 0 — the last-move highlight.
-    internal var lastMove: LastMove? {
+    var lastMove: LastMove? {
         guard currentPly > 0 else { return nil }
         let move = moves[currentPly - 1]
         return LastMove(from: move.from, to: move.to)
     }
     
     /// The side-to-move king's square when in check — the check highlight.
-    internal var checkSquare: Square? {
+    var checkSquare: Square? {
         guard currentState.isInCheck else { return nil }
         return currentState.position.kingSquare(for: currentState.activeColor)
     }
     
-    internal var canAdvance: Bool { currentPly < moves.count }
-    internal var canRetreat: Bool { currentPly > 0 }
+    var canAdvance: Bool { currentPly < moves.count }
+    var canRetreat: Bool { currentPly > 0 }
     
     /// Evaluation at `currentPly`, or nil. The off-by-one is the contract: `evaluations[i]` scores
     /// the position *after* `moves[i]`, so this reads `currentPly - 1`.
-    internal var currentEvaluation: Evaluation? {
+    var currentEvaluation: Evaluation? {
         guard currentPly > 0 else { return nil }
         return pgn.evaluation(atPly: currentPly - 1)
     }
@@ -71,7 +71,7 @@ internal final class Game {
     
     /// Walks the move list, caching every state; throws on the first unparseable SAN — the stored
     /// row diverged from the core's rules.
-    internal init(pgn: PGN) throws(BuildError) {
+    init(pgn: PGN) throws(BuildError) {
         self.pgn = pgn
         
         var states: [GameState] = [.starting]
@@ -135,34 +135,34 @@ internal final class Game {
     /// A caller cannot get it wrong, because a caller is never asked. The rule it encodes: one
     /// keypress, one sound — Home over a 90-ply game crossing 90 plies is one position change,
     /// and 90 clicks for it would be the machine-gun this hook exists to avoid.
-    @ObservationIgnored internal var onStep: ((BoardCue) -> Void)?
+    @ObservationIgnored var onStep: ((BoardCue) -> Void)?
 
     // MARK: Navigation
 
     /// Advances one ply. No-op at end of game.
-    internal func advance() {
+    func advance() {
         guard canAdvance else { return }
         currentPly += 1
         announceCurrentPly()
     }
 
     /// Retreats one ply. No-op at start.
-    internal func retreat() {
+    func retreat() {
         guard canRetreat else { return }
         currentPly -= 1
         announceCurrentPly()
     }
 
     /// Jumps to a ply, clamped. Silent — see `onStep`.
-    internal func jump(to ply: Int) {
+    func jump(to ply: Int) {
         currentPly = max(0, min(ply, moves.count))
     }
 
     /// Jumps to the starting position. Silent — see `onStep`.
-    internal func toStart() { currentPly = 0 }
+    func toStart() { currentPly = 0 }
 
     /// Jumps to the final position. Silent — see `onStep`.
-    internal func toEnd() { currentPly = moves.count }
+    func toEnd() { currentPly = moves.count }
 
     /// The cue for the move that produced the position now on screen. One expression for both
     /// directions, deliberately: the cue describes *where you are*, not which way you arrived, so

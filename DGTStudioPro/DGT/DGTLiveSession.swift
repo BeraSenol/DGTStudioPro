@@ -7,7 +7,7 @@ import os
 /// derived, so they cannot contradict each other. Archive-first: a finished game is never lost.
 @Observable
 @MainActor
-internal final class DGTLiveSession {
+final class DGTLiveSession {
     
     // MARK: Static Constants
     
@@ -26,13 +26,13 @@ internal final class DGTLiveSession {
     }
     
     /// A recognized move plus the physical correction that completes it (surfaced during `playing`).
-    internal struct CorrectionHint: Equatable {
+    struct CorrectionHint: Equatable {
         /// The legal move that commits once the board is corrected.
-        internal let move: Move
+        let move: Move
         /// Square(s) the player must clear (the un-lifted captured piece).
-        internal let squares: [Square]
+        let squares: [Square]
         /// A ready-to-display instruction (e.g. "Remove the captured pawn on e5…").
-        internal let message: String
+        let message: String
     }
     
     // MARK: Observable State
@@ -41,7 +41,7 @@ internal final class DGTLiveSession {
     private var mode: Mode = .idle
     
     /// The running game, or nil when idle. Derived from `mode`.
-    internal var liveGame: LiveGame? {
+    var liveGame: LiveGame? {
         switch mode {
         case .idle: nil
         case .awaitingSetup(let game), .playing(let game), .recovering(let game): game
@@ -50,48 +50,48 @@ internal final class DGTLiveSession {
     
     /// True after `startNewGame` while the physical board doesn't yet match the start position —
     /// reconstruction suppressed until the player sets up. Clears when a settled board matches.
-    internal var awaitingPhysicalSetup: Bool {
+    var awaitingPhysicalSetup: Bool {
         if case .awaitingSetup = mode { true } else { false }
     }
     
     /// True once a settled board matches no legal move and isn't a move in progress; recovery (D6)
     /// owns the UI. Clears when the board is restored, a new game starts, or the game is discarded.
-    internal var needsRecovery: Bool {
+    var needsRecovery: Bool {
         if case .recovering = mode { true } else { false }
     }
     
     /// Start position seen with no game running — the Board offers a new game. Its own flag, not a
     /// `Mode` case: it can only ever be an idle-time overlay.
-    private(set) internal var shouldOfferNewGame = false
+    private(set) var shouldOfferNewGame = false
     
     /// Mid-castle: the un-placed rook's destination, rendered 50%-transparent. Set/cleared with
     /// `castlingGhostPiece` as a pair; non-nil iff a castle is mid-flight.
-    private(set) internal var castlingGhostSquare: Square?
+    private(set) var castlingGhostSquare: Square?
     
     /// The ghost piece — kept whole so `SquareView` stays ignorant of castling semantics.
-    private(set) internal var castlingGhostPiece: Piece?
+    private(set) var castlingGhostPiece: Piece?
     
     /// A recognized move awaiting one simple physical fix (e.g. un-lifted en-passant pawn) — a
     /// gentle prompt, not the recovery flow. Transient settle-overlay like the ghost.
-    private(set) internal var correctionHint: CorrectionHint?
+    private(set) var correctionHint: CorrectionHint?
     
     /// A draft found at launch, awaiting Resume / Delete — the only two options (Decision #3).
     /// `.corrupt` means the file can't be trusted; delete-only, file kept on disk as diagnostics.
-    internal enum PendingDraft: Equatable {
+    enum PendingDraft: Equatable {
         case resumable(LiveGameDraft)
         case corrupt
     }
     
     /// Non-nil while the Resume / Delete offer is on screen.
-    private(set) internal var pendingDraft: PendingDraft?
+    private(set) var pendingDraft: PendingDraft?
     
     /// The decoded draft when `.resumable`, for the offer UI. Nil otherwise.
-    internal var resumableDraft: LiveGameDraft? {
+    var resumableDraft: LiveGameDraft? {
         if case .resumable(let draft) = pendingDraft { draft } else { nil }
     }
     
     /// True when a draft exists but can't be loaded — the delete-only offer variant.
-    internal var pendingDraftIsCorrupt: Bool {
+    var pendingDraftIsCorrupt: Bool {
         pendingDraft == .corrupt
     }
     
@@ -99,9 +99,9 @@ internal final class DGTLiveSession {
     
     /// How the Library save went. Success (incl. dedup) drives the confirmation sheet; `failed`
     /// keeps the draft and suppresses new-game entry until retry succeeds or the player discards.
-    private(set) internal var archiveOutcome: ArchiveOutcome?
+    private(set) var archiveOutcome: ArchiveOutcome?
     
-    internal enum ArchiveOutcome: Equatable {
+    enum ArchiveOutcome: Equatable {
         /// Inserted fresh into the Library.
         case archived
         /// An identical game was already there — counts as success.
@@ -112,7 +112,7 @@ internal final class DGTLiveSession {
     
     /// The Library row the finished game landed on; survives `acknowledgeArchive()` so post-archive
     /// edits keep flowing until the next game replaces it.
-    private(set) internal var archivedPGN: PGN?
+    private(set) var archivedPGN: PGN?
     
     /// True while the last archive attempt failed — the new-game suppression flag.
     private var archiveFailed: Bool {
@@ -122,29 +122,29 @@ internal final class DGTLiveSession {
     // MARK: Diagnostics
     
     /// Optional exportable diagnostic timeline; nil falls back to Console logging only.
-    @ObservationIgnored internal var sessionLog: DGTSessionLog?
+    @ObservationIgnored var sessionLog: DGTSessionLog?
     
     /// Optional draft persistence; nil (headless tests) makes every save/load/delete a no-op.
     /// The session owns *when* drafts are written; the store owns the file.
-    @ObservationIgnored internal var draftStore: LiveGameDraftStore?
+    @ObservationIgnored var draftStore: LiveGameDraftStore?
     
     /// Optional archive door, keeping all Library I/O in `PGNStore`; nil means the draft stays the safety net.
-    @ObservationIgnored internal var onGameFinished: ((LiveGame) throws -> PGNStore.ArchiveResult)?
+    @ObservationIgnored var onGameFinished: ((LiveGame) throws -> PGNStore.ArchiveResult)?
     
     /// Illegal-move cue (D13′). Fired only by `enterRecovery` — the one door — so exactly once per
     /// desync entry: never on the manual-result exit, never on recomputation.
-    @ObservationIgnored internal var onDesync: (() -> Void)?
+    @ObservationIgnored var onDesync: (() -> Void)?
 
     /// Move cue (D81′). Fired from the `.move` settle arm *after* `commit` returns true, so it can
     /// never sound for a move the game refused — the F5 guard's own argument, applied to audio:
     /// a cue for a commit that did not happen is a lie you hear before you see.
     /// Nil in headless tests = silent by construction, like every hook above it.
-    @ObservationIgnored internal var onMoveCommitted: ((BoardCue) -> Void)?
+    @ObservationIgnored var onMoveCommitted: ((BoardCue) -> Void)?
 
     /// Board-resync request (D49′): the field stream is not lossless, and one lost update leaves
     /// `physicalBoard` wrong by one square forever. First `.unresolved` divergence asks for a full
     /// dump instead of entering recovery; nil hook = straight to recovery (pre-D49′, pinned).
-    @ObservationIgnored internal var requestBoardResync: (() -> Void)?
+    @ObservationIgnored var requestBoardResync: (() -> Void)?
 
     /// One shot per divergence; cleared by any explained settle and the lifecycle exits.
     /// Deliberately NOT cleared in `clearPlayingOverlays()` — that runs every settle and would re-arm forever.
@@ -152,7 +152,7 @@ internal final class DGTLiveSession {
 
     /// Board identity for `[Board "…"]` (D28′); consulted once per game in `startNewGame`.
     /// Capture-at-start survives cable pulls and crash-resume. Nil in headless tests.
-    @ObservationIgnored internal var boardIdentity: (() -> String?)?
+    @ObservationIgnored var boardIdentity: (() -> String?)?
 
     // MARK: Private State
     
@@ -162,18 +162,18 @@ internal final class DGTLiveSession {
     
     /// Stillness window before reconstruction; 300 ms in production. Internal-settable for tests
     /// (F7); production code must never write it.
-    @ObservationIgnored internal var quiescence: Duration = .milliseconds(300)
+    @ObservationIgnored var quiescence: Duration = .milliseconds(300)
     /// Guards re-offering every quiescence while the board sits at the start.
     @ObservationIgnored private var offeredNewGameForCurrentStart = false
     /// Last observed physical board; `startNewGame` uses it to decide whether setup is needed.
     @ObservationIgnored private var lastObservedBoard: Position?
     
-    internal init() {}
+    init() {}
     
     // MARK: Board Feed
     
     /// Fed by `DGTConnection` on every change; restarts the quiescence window.
-    internal func boardChanged(_ board: Position) {
+    func boardChanged(_ board: Position) {
         lastObservedBoard = board
         quiescenceTask?.cancel()
         quiescenceTask = Task { [weak self] in
@@ -354,7 +354,7 @@ internal final class DGTLiveSession {
     
     /// Begins a new live game (only one unfinished game exists at a time). Skips the setup gate
     /// when the physical board already matches the start.
-    internal func startNewGame(roster: LiveGame.Roster) {
+    func startNewGame(roster: LiveGame.Roster) {
         // A failed archive suppresses new-game entry structurally: starting fresh would overwrite the
         // finished game's only safety net.
         guard !archiveFailed else {
@@ -394,13 +394,13 @@ internal final class DGTLiveSession {
     }
     
     /// Dismisses the offer (no re-prompt until the board leaves and returns to the start).
-    internal func dismissNewGameOffer() {
+    func dismissNewGameOffer() {
         shouldOfferNewGame = false
         sessionLog?.capture(.debug, "New-game offer dismissed")
     }
     
     /// Discards the current live game and returns to idle.
-    internal func discardGame() {
+    func discardGame() {
         mode = .idle
         clearPlayingOverlays()
         resyncAttempted = false   // the debt dies with the game (D49′)
@@ -416,7 +416,7 @@ internal final class DGTLiveSession {
     
     // MARK: Manual Result Passthrough
     
-    internal func resign(_ color: PieceColor) {
+    func resign(_ color: PieceColor) {
         guard let game = liveGame, !game.isFinished else { return }
         game.resign(color)
         sessionLog?.capture(.info, "Manual result: \(color) resigned")
@@ -424,7 +424,7 @@ internal final class DGTLiveSession {
         archiveFinishedGame(game)   // archive-first on the finish transition (M5)
     }
     
-    internal func agreeDraw() {
+    func agreeDraw() {
         guard let game = liveGame, !game.isFinished else { return }
         game.agreeDraw()
         sessionLog?.capture(.info, "Manual result: draw agreed")
@@ -454,7 +454,7 @@ internal final class DGTLiveSession {
     
     /// Replaces the roster wholesale. Routed through the session so the timeline gets a breadcrumb
     /// and draft persistence has one choke point. No-op while idle.
-    internal func updateRoster(_ roster: LiveGame.Roster) {
+    func updateRoster(_ roster: LiveGame.Roster) {
         guard let liveGame else { return }
         liveGame.roster = roster
         sessionLog?.record(
@@ -508,7 +508,7 @@ internal final class DGTLiveSession {
     }
     
     /// Retries a failed archive (the HUD's Retry). No-op unless the last attempt failed.
-    internal func retryArchive() {
+    func retryArchive() {
         guard case .failed = archiveOutcome,
               let game = liveGame, game.isFinished else { return }
         sessionLog?.record(.info, "Retrying archive…")
@@ -517,7 +517,7 @@ internal final class DGTLiveSession {
     
     /// Dismisses the confirmation. Clears a *success* only — a failure clears exclusively by a
     /// successful retry or explicit discard, never by evasion. `archivedPGN` survives for edits.
-    internal func acknowledgeArchive() {
+    func acknowledgeArchive() {
         switch archiveOutcome {
         case .archived, .deduplicated:
             archiveOutcome = nil
@@ -530,7 +530,7 @@ internal final class DGTLiveSession {
     
     /// Loads any leftover draft into `pendingDraft` (once, from `App.init()`). A file that exists
     /// but can't load surfaces as `.corrupt` — the player decides; the file stays as diagnostics.
-    internal func loadPendingDraft() {
+    func loadPendingDraft() {
         guard let draftStore else { return }
         do {
             guard let draft = try draftStore.load() else { return }
@@ -548,7 +548,7 @@ internal final class DGTLiveSession {
     
     /// Replays the draft's SAN through `LiveGame(resuming:)`; then the same setup gate as a fresh
     /// game, against the game's *current* position. Replay failure → `.corrupt`.
-    internal func resumePendingDraft() {
+    func resumePendingDraft() {
         guard case .resumable(let draft) = pendingDraft else { return }
         do {
             let game = try LiveGame(resuming: draft)
@@ -583,7 +583,7 @@ internal final class DGTLiveSession {
     
     /// Deletes the draft (declined or corrupt); if the board sits at the start, the ordinary
     /// new-game offer takes over on the spot.
-    internal func deletePendingDraft() {
+    func deletePendingDraft() {
         guard pendingDraft != nil else { return }
         pendingDraft = nil
         draftStore?.delete()

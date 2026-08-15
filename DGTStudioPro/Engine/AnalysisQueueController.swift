@@ -9,7 +9,7 @@ import SwiftData
 /// released at drain; the next batch pays one fresh handshake.
 @Observable
 @MainActor
-internal final class AnalysisQueueController {
+final class AnalysisQueueController {
     
     // MARK: Static Constants
     
@@ -18,11 +18,11 @@ internal final class AnalysisQueueController {
     // MARK: Queue State
     
     /// The pure decision core; views read it, every mutation routes through this controller.
-    internal private(set) var queue = AnalysisQueue<PersistentIdentifier>()
+    private(set) var queue = AnalysisQueue<PersistentIdentifier>()
     
     /// Running game's display name, resolved once at dequeue — a deleted-mid-pass model keeps its
     /// last known name instead of a lookup placeholder.
-    internal private(set) var currentGameName: String?
+    private(set) var currentGameName: String?
     
     // MARK: Engine Transport
     
@@ -40,13 +40,13 @@ internal final class AnalysisQueueController {
 
     /// Batch start, or nil. The window's `TimelineView` derives elapsed from this — a controller
     /// publishing a per-second tick would re-render every observer.
-    internal private(set) var batchStartedAt: Date?
+    private(set) var batchStartedAt: Date?
 
     // MARK: Progress
 
     /// Plies finished, counting the running game's fraction. `Double`: rounding the numerator would
     /// make a long first game report zero rate for minutes.
-    internal var pliesCompleted: Double {
+    var pliesCompleted: Double {
         let finished = queue.finished.reduce(into: 0.0) { total, record in
             total += Double(plyCounts[record.id] ?? 0)
         }
@@ -55,7 +55,7 @@ internal final class AnalysisQueueController {
     }
 
     /// Plies still to search: waiting plus the running game's remainder.
-    internal var pliesRemaining: Int {
+    var pliesRemaining: Int {
         let waiting = queue.waiting.reduce(into: 0) { total, id in
             total += plyCounts[id] ?? 0
         }
@@ -66,16 +66,16 @@ internal final class AnalysisQueueController {
 
     /// Ply count for a queued id, or nil. Read-only by design — only `enqueue` writes, or the
     /// estimate would be denominated in two different things.
-    internal func plyCount(for id: PersistentIdentifier) -> Int? {
+    func plyCount(for id: PersistentIdentifier) -> Int? {
         plyCounts[id]
     }
 
     /// The current search, forwarded — the driver is `private` precisely so the transport has one
     /// door; a window holding it could call `stop()` behind the queue's back.
-    internal var currentSearch: GameAnalysisDriver.Search? { driver.search }
+    var currentSearch: GameAnalysisDriver.Search? { driver.search }
 
     /// Seconds remaining, or nil before a rate exists; arithmetic lives in `BatchProgressEstimate`.
-    internal var secondsRemaining: TimeInterval? {
+    var secondsRemaining: TimeInterval? {
         guard let batchStartedAt else { return nil }
         return BatchProgressEstimate.secondsRemaining(
             pliesCompleted: pliesCompleted,
@@ -87,7 +87,7 @@ internal final class AnalysisQueueController {
     // MARK: View Conveniences
     
     /// Per-ply progress of the running game, `0...1`; observable, so views re-render as the walk advances.
-    internal var currentProgress: Double {
+    var currentProgress: Double {
         if case .analyzing(let progress) = driver.status { return progress }
         return 0
     }
@@ -95,13 +95,13 @@ internal final class AnalysisQueueController {
     /// The game on the engine now — the currency `AnalysisGlyph.state` takes, published through
     /// `analysisRunningGameID`. Deliberately not observing progress: leaves asking *whether* must
     /// not re-render on *how far*.
-    internal var runningID: PersistentIdentifier? { queue.current }
+    var runningID: PersistentIdentifier? { queue.current }
     
     // MARK: Enqueueing
     
     /// Enqueue in the order given (callers pass display order); dedupe is the pure queue's. A single
     /// game is a batch of one.
-    internal func enqueue(_ pgns: [PGN], modelContext: ModelContext) {
+    func enqueue(_ pgns: [PGN], modelContext: ModelContext) {
         self.modelContext = modelContext
         // Before the enqueue: `wasIdle` distinguishes a fresh batch from an extension, and extending
         // must not restart the clock.
@@ -132,23 +132,23 @@ internal final class AnalysisQueueController {
     // MARK: Controls
     
     /// Stops the running game's pass (recorded `.cancelled`, evaluations kept); the run advances.
-    internal func skipCurrent() {
+    func skipCurrent() {
         driver.stop()
     }
     
     /// Removes a waiting game; the running one is `skipCurrent()`'s job.
-    internal func removeWaiting(_ id: PersistentIdentifier) {
+    func removeWaiting(_ id: PersistentIdentifier) {
         queue.removeWaiting(id)
     }
     
     /// Empties the line and stops the pass; the loop drains and releases the engine (decision 4).
-    internal func stopAll() {
+    func stopAll() {
         queue.clearWaiting()
         driver.stop()
     }
     
     /// Clears the finished log (the window's Dismiss) and the batch bookkeeping with it.
-    internal func clearFinished() {
+    func clearFinished() {
         queue.clearFinished()
         plyCounts.removeAll()
         batchStartedAt = nil
@@ -156,7 +156,7 @@ internal final class AnalysisQueueController {
     
     /// Library deletion hook — call **before** the store delete: `driver.stop()` sets the walk's
     /// cancellation flag synchronously, so the model is never written after the delete.
-    internal func gameWasDeleted(_ id: PersistentIdentifier) {
+    func gameWasDeleted(_ id: PersistentIdentifier) {
         queue.removeWaiting(id)
         // `status(of:)` answers `.running` by this same comparison.
         if queue.current == id {
@@ -166,7 +166,7 @@ internal final class AnalysisQueueController {
     
     /// Stand everything down and release the subprocess; re-entrant. **Test-only by decision** —
     /// teardown, not a feature door: suites must never leave Stockfish running.
-    internal func shutdown() async {
+    func shutdown() async {
         queue.clearWaiting()
         runTask?.cancel()
         await driver.shutdown()
@@ -175,14 +175,14 @@ internal final class AnalysisQueueController {
     // MARK: Status
     
     /// The queue's view of one game — what the inspector's control row switches on.
-    internal func status(
+    func status(
         of id: PersistentIdentifier
     ) -> AnalysisQueue<PersistentIdentifier>.ItemStatus {
         queue.status(of: id)
     }
     
     /// Display name for the popover; em dash for anything no longer resolvable.
-    internal func displayName(for id: PersistentIdentifier) -> String {
+    func displayName(for id: PersistentIdentifier) -> String {
         guard let modelContext,
               let pgn = modelContext.model(for: id) as? PGN,
               !pgn.isDeleted

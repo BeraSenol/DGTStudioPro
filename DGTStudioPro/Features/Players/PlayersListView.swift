@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-internal struct PlayersListView: View {
+struct PlayersListView: View {
 
     let players: [RankedPlayer]
     /// A set (the Library's selection model): `Table` gives ⌘/⇧-click for free.

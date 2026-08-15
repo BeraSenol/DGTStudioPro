@@ -1,7 +1,7 @@
 import Foundation
 
 /// One engine evaluation, normalized to **white's perspective** (the `[%eval]` convention).
-internal enum Evaluation: Equatable, Sendable, Codable {
+enum Evaluation: Equatable, Sendable, Codable {
     
     // MARK: Cases
     
@@ -16,14 +16,14 @@ internal enum Evaluation: Equatable, Sendable, Codable {
     
     /// Dead equal: the sigmoid's fixed point (probability exactly 0.5), its own mirror under
     /// `flipped`. The bar folds a nil per-ply evaluation to this.
-    internal static let drawn = Evaluation.centipawns(0)
+    static let drawn = Evaluation.centipawns(0)
     
     // MARK: Computed Properties
     
     /// White's win probability in [0, 1]: **base-e** logistic at k=400 — +100 cp ≈ 56%, gentler
     /// than the base-10 reading of "k=400" (≈ 64%), which a test literal once assumed and ⌘U
     /// corrected. Mates clamp to 1/0. Every consumer (bar, graph, swing) shares this one curve.
-    internal var whiteWinProbability: Double {
+    var whiteWinProbability: Double {
         switch self {
         case .centipawns(let cp):
             return 1.0 / (1.0 + exp(-Double(cp) / 400.0))
@@ -34,7 +34,7 @@ internal enum Evaluation: Equatable, Sendable, Codable {
     }
     
     /// Sign flipped — the UCI parser normalizes side-to-move output to white-relative storage.
-    internal var flipped: Evaluation {
+    var flipped: Evaluation {
         switch self {
         case .centipawns(let cp): return .centipawns(-cp)
         case .mate(let n):        return .mate(-n)
@@ -51,7 +51,7 @@ extension Evaluation {
     private static let centipawnLimit: Double = 1_000_000
     
     /// Parses the *content* of `[%eval …]` (wrapping syntax already stripped).
-    internal init?(parsingEvalTagContent content: String) {
+    init?(parsingEvalTagContent content: String) {
         let trimmed = content.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return nil }
         
@@ -75,7 +75,7 @@ extension Evaluation {
     
     /// Parses a complete `[%eval …]` tag, the exact Lichess/Chess.com shape. Kept as the pinned
     /// round-trip pair with `evalTag` — D24′ writes no evals.
-    internal init?(parsingEvalTag tag: String) {
+    init?(parsingEvalTag tag: String) {
         let trimmed = tag.trimmingCharacters(in: .whitespaces)
         let prefix = "[%eval "
         let suffix = "]"
@@ -89,7 +89,7 @@ extension Evaluation {
     }
     
     /// Content in the Lichess convention: centipawns as pawns to two places, mates as `#N`.
-    internal var evalTagContent: String {
+    var evalTagContent: String {
         switch self {
         case .centipawns(let cp):
             let pawns = Double(cp) / 100.0
@@ -100,7 +100,7 @@ extension Evaluation {
     }
     
     /// The full tag. Unused in production (D24′ writes no evaluations) — the round-tripped pair.
-    internal var evalTag: String {
+    var evalTag: String {
         "[%eval \(evalTagContent)]"
     }
 }

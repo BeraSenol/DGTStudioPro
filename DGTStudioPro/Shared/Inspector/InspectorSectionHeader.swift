@@ -3,7 +3,7 @@ import SwiftUI
 /// A section header naming the thing the section is about, action trailing (D26′).
 /// `title` is a `String`, not `LocalizedStringKey` — titles are data (a player's name is not
 /// copy to localize). One line, truncating.
-internal struct InspectorSectionHeader<Actions: View>: View {
+struct InspectorSectionHeader<Actions: View>: View {
     
     // MARK: Type Properties
     
@@ -11,21 +11,21 @@ internal struct InspectorSectionHeader<Actions: View>: View {
     /// it passes into the slot — as a padding on the pencil it insetted the edge AND widened the hit
     /// target, which coincide only while the pencil is last (three distances from one edge resulted).
     /// Computed, not stored: generic types cannot have stored static properties.
-    internal static var actionsInset: CGFloat { 12 }
+    static var actionsInset: CGFloat { 12 }
     
     // MARK: Stored Properties
-    internal let title: String
+    let title: String
     
     /// The section's identity, or nil for a non-collapsing header. Optional so a plain header does
     /// not have to mint an `InspectorSection` case to render.
-    internal let section: InspectorSection?
+    let section: InspectorSection?
     
-    @ViewBuilder internal let actions: () -> Actions
+    @ViewBuilder let actions: () -> Actions
     
     @Environment(InspectorSectionCollapse.self) private var collapse
     
     // MARK: Initializers
-    internal init(
+    init(
         _ title: String,
         section: InspectorSection? = nil,
         @ViewBuilder actions: @escaping () -> Actions
@@ -36,7 +36,7 @@ internal struct InspectorSectionHeader<Actions: View>: View {
     }
     
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         HStack(spacing: 0) {
             Text(title)
             // A `List` section header uppercases by default on some styles; a name is not to be shouted.
@@ -90,7 +90,7 @@ extension InspectorSectionHeader where Actions == EmptyView {
     
     /// A header with nothing to act on. It may still collapse — a chevron is not an action on the
     /// section's subject.
-    internal init(_ title: String, section: InspectorSection? = nil) {
+    init(_ title: String, section: InspectorSection? = nil) {
         self.init(title, section: section, actions: { EmptyView() })
     }
 }

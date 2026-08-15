@@ -15,7 +15,7 @@ import Testing
 /// truth table is cheap and the crossed wiring is reachable from a test.
 @MainActor
 @Suite("Sleep inhibition preference")
-internal struct SleepInhibitorPreferenceTests {
+struct SleepInhibitorPreferenceTests {
 
     /// A throwaway suite per test — `.standard` would edit the developer's
     /// own settings, and a fixed suite name would race under parallel
@@ -28,7 +28,7 @@ internal struct SleepInhibitorPreferenceTests {
     }
 
     @Test("An untouched preference reads as enabled")
-    internal func absentKeyReadsAsEnabled() throws {
+    func absentKeyReadsAsEnabled() throws {
         try withScratchDefaults { defaults in
             let inhibitor = SleepInhibitor(defaults: defaults)
             #expect(inhibitor.preventsSleepDuringPlay)
@@ -37,7 +37,7 @@ internal struct SleepInhibitorPreferenceTests {
     }
 
     @Test("A stored false is honoured")
-    internal func storedFalseIsHonoured() throws {
+    func storedFalseIsHonoured() throws {
         try withScratchDefaults { defaults in
             defaults.set(false, forKey: StorageKeys.preventSleepDuringPlay)
             defaults.set(false, forKey: StorageKeys.preventSleepDuringAnalysis)
@@ -53,7 +53,7 @@ internal struct SleepInhibitorPreferenceTests {
     /// preference is untouched — the assertion that fails if the second
     /// property ever quietly reads the first one's key.
     @Test("Each gate reads its own key")
-    internal func gatesAreIndependent() throws {
+    func gatesAreIndependent() throws {
         try withScratchDefaults { defaults in
             defaults.set(false, forKey: StorageKeys.preventSleepDuringPlay)
             let playOff = SleepInhibitor(defaults: defaults)
@@ -69,7 +69,7 @@ internal struct SleepInhibitorPreferenceTests {
     }
 
     @Test("Reading the defaults does not write them back")
-    internal func readingDoesNotPersist() throws {
+    func readingDoesNotPersist() throws {
         try withScratchDefaults { defaults in
             _ = SleepInhibitor(defaults: defaults)
             #expect(defaults.object(forKey: StorageKeys.preventSleepDuringPlay) == nil)
@@ -78,7 +78,7 @@ internal struct SleepInhibitorPreferenceTests {
     }
 
     @Test("Flipping a preference survives a relaunch")
-    internal func flippingPersists() throws {
+    func flippingPersists() throws {
         try withScratchDefaults { defaults in
             let inhibitor = SleepInhibitor(defaults: defaults)
             inhibitor.preventsSleepDuringPlay = false
@@ -94,7 +94,7 @@ internal struct SleepInhibitorPreferenceTests {
     /// Neither cause running is the resting state, and it must stay `nil`
     /// whatever the gates say — a preference is permission, not a request.
     @Test("Nothing running holds nothing")
-    internal func idleHoldsNothing() {
+    func idleHoldsNothing() {
         #expect(SleepInhibitor.activityReason(
             playing: false, analyzing: false, allowsPlay: true, allowsAnalysis: true
         ) == nil)
@@ -105,7 +105,7 @@ internal struct SleepInhibitorPreferenceTests {
     /// paired `allowsAnalysis` with playing — which compiles and reads fine —
     /// returns a reason here instead of nil.
     @Test("A gate only permits its own cause")
-    internal func gatesDoNotCross() {
+    func gatesDoNotCross() {
         #expect(SleepInhibitor.activityReason(
             playing: true, analyzing: false, allowsPlay: false, allowsAnalysis: true
         ) == nil)
@@ -119,7 +119,7 @@ internal struct SleepInhibitorPreferenceTests {
     /// diagnostic that may be reworded, while *which cause is named* is the
     /// contract.
     @Test("Each cause names itself")
-    internal func eachCauseNamesItself() throws {
+    func eachCauseNamesItself() throws {
         let play = try #require(SleepInhibitor.activityReason(
             playing: true, analyzing: false, allowsPlay: true, allowsAnalysis: true
         ))
@@ -138,7 +138,7 @@ internal struct SleepInhibitorPreferenceTests {
     /// and it would only ever appear while analyzing during a live game —
     /// which is exactly the session nobody is watching Console for.
     @Test("Two causes name both")
-    internal func bothCausesAreNamed() throws {
+    func bothCausesAreNamed() throws {
         let both = try #require(SleepInhibitor.activityReason(
             playing: true, analyzing: true, allowsPlay: true, allowsAnalysis: true
         ))
@@ -149,7 +149,7 @@ internal struct SleepInhibitorPreferenceTests {
     /// Both gates shut is off, whatever is running — the opt-out still opts
     /// out, which is D25′'s contract inherited rather than re-decided.
     @Test("Both gates shut holds nothing")
-    internal func bothGatesShutHoldsNothing() {
+    func bothGatesShutHoldsNothing() {
         #expect(SleepInhibitor.activityReason(
             playing: true, analyzing: true, allowsPlay: false, allowsAnalysis: false
         ) == nil)

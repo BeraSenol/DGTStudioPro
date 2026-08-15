@@ -2,14 +2,14 @@ import SwiftUI
 
 /// One piece, drawn — glyph, aspect fit, 6% breathing room, stated once. Shared by the layer
 /// and the mid-castle ghost, which must be pixel-identical to the piece it foreshadows.
-internal struct PieceGlyph: View {
+struct PieceGlyph: View {
 
     // MARK: Stored Properties
-    internal let piece: Piece
-    internal let squareSize: CGFloat
+    let piece: Piece
+    let squareSize: CGFloat
 
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         if let imageName = piece.imageName {
             Image(imageName)
                 .resizable()
@@ -25,29 +25,29 @@ internal struct PieceGlyph: View {
 /// `matchedGeometryEffect`: MGE has no vocabulary for "this change must not animate", which the
 /// board-dump case needs — identity churn expresses it free (a dump re-keys wholesale, so 32
 /// pieces fade rather than fly). Reduce Motion drops the animation, not the layer.
-internal struct BoardPieceLayer: View {
+struct BoardPieceLayer: View {
 
     // MARK: Static Constants
 
     /// Glide guardrails and default (user preference). 0.22 s is the shipped feel; the range
     /// deliberately passes the 300 ms quiescence — above it a glide can still be in flight at the
     /// settle. Visual only: the animation retargets mid-flight, nothing about commit timing reads it.
-    internal nonisolated static let durationRange: ClosedRange<Double> = 0.1...1.0
-    internal nonisolated static let defaultDuration: Double = 0.22
+    nonisolated static let durationRange: ClosedRange<Double> = 0.1...1.0
+    nonisolated static let defaultDuration: Double = 0.22
 
-    internal nonisolated static func clampedDuration(_ raw: Double) -> Double {
+    nonisolated static func clampedDuration(_ raw: Double) -> Double {
         min(max(raw, durationRange.lowerBound), durationRange.upperBound)
     }
 
     /// The glide at an already-clamped duration — `.snappy` stays the curve.
-    internal static func glide(duration: Double) -> Animation {
+    static func glide(duration: Double) -> Animation {
         .snappy(duration: duration)
     }
 
     // MARK: Stored Properties
-    internal let pieces: [ResolvedPiece]
-    internal let squareSize: CGFloat
-    internal let perspective: PieceColor
+    let pieces: [ResolvedPiece]
+    let squareSize: CGFloat
+    let perspective: PieceColor
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -57,7 +57,7 @@ internal struct BoardPieceLayer: View {
     private var animationDuration = BoardPieceLayer.defaultDuration
 
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         ZStack {
             ForEach(pieces) { resolved in
                 PieceGlyph(piece: resolved.piece, squareSize: squareSize)

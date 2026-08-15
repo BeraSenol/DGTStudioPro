@@ -6,7 +6,7 @@ import os
 /// One app-wide `@Observable`, injected everywhere (the `ModelContainer` pattern).
 @Observable
 @MainActor
-internal final class DGTConnection {
+final class DGTConnection {
     
     // MARK: Logging
     
@@ -14,7 +14,7 @@ internal final class DGTConnection {
     
     // MARK: Status
     
-    internal enum Status: Equatable {
+    enum Status: Equatable {
         case disconnected
         case searching
         case connecting(DGTSerialDevice)
@@ -26,17 +26,17 @@ internal final class DGTConnection {
     }
     
     /// Identifying strings the board reports during the init handshake.
-    internal struct BoardInfo: Equatable, Sendable {
-        internal var serialNumber: String?
-        internal var longSerialNumber: String?
-        internal var trademark: String?
-        internal var version: String?
-        internal var hardwareVersion: String?
+    struct BoardInfo: Equatable, Sendable {
+        var serialNumber: String?
+        var longSerialNumber: String?
+        var trademark: String?
+        var version: String?
+        var hardwareVersion: String?
 
         /// The `[Board "…"]` value (D28′): `"DGT "` + the long serial, matching the reference exports
         /// byte for byte; short-serial fallback (truthful beats pretty). On the value type — testable
         /// without a port.
-        internal var identityTag: String? {
+        var identityTag: String? {
             guard let serial = longSerialNumber ?? serialNumber else { return nil }
             return "DGT \(serial)"
         }
@@ -47,20 +47,20 @@ internal final class DGTConnection {
     /// The one board this app will ever open (user decree): the literal callout path, matched
     /// exactly. Enumeration-number drift is an accepted failure mode — if macOS renames the port,
     /// Connect shows the error until the board is back on this path.
-    nonisolated internal static let onlyBoardPath = "/dev/cu.usbmodem01"
+    nonisolated static let onlyBoardPath = "/dev/cu.usbmodem01"
 
-    private(set) internal var status: Status = .disconnected
+    private(set) var status: Status = .disconnected
 
     /// The board, if the last enumeration found it — nil otherwise. Was the whole enumeration array
     /// until the picker retired; a board or nothing is the only distinction the panels draw.
-    private(set) internal var attachedBoard: DGTSerialDevice?
-    private(set) internal var boardInfo = BoardInfo()
+    private(set) var attachedBoard: DGTSerialDevice?
+    private(set) var boardInfo = BoardInfo()
     
     /// Live snapshot of detected pieces, app coordinates. Dumps replace wholesale; field updates
     /// patch one square. This is what the mirror renders.
-    private(set) internal var physicalBoard: Position = .empty
+    private(set) var physicalBoard: Position = .empty
     
-    internal var isConnected: Bool {
+    var isConnected: Bool {
         if case .connected = status { return true }
         return false
     }
@@ -68,7 +68,7 @@ internal final class DGTConnection {
     /// D49′ — one on-demand full dump for the session's `.unresolved` pre-flight. `sendBoard` doesn't
     /// change the board's mode, so the dump rides the existing `.boardDump` handling — free.
     /// Fire-and-forget: a dead port cannot strand the one-shot gate.
-    internal func requestBoardResync() {
+    func requestBoardResync() {
         guard isConnected else {
             Self.logger?.info("Board resync requested while disconnected, ignored")
             return
@@ -87,7 +87,7 @@ internal final class DGTConnection {
     
     /// True while the reconnect loop runs — the session panel says "reconnecting…", and the connect
     /// dialog avoids tearing the loop down on open.
-    internal var isReconnecting: Bool {
+    var isReconnecting: Bool {
         if case .reconnecting = status { return true }
         return false
     }
@@ -95,13 +95,13 @@ internal final class DGTConnection {
     // MARK: Diagnostics
     
     /// Optional diagnostic timeline, shared with `DGTLiveSession`; nil-safe.
-    @ObservationIgnored internal var sessionLog: DGTSessionLog?
+    @ObservationIgnored var sessionLog: DGTSessionLog?
     
     /// Opt-in board-stream capture for offline replay. Observed — not ignored — because the sleep
     /// inhibitor's tracking loop reads `isRecording` (D14′), so start/stop must register.
     private var recorder: DGTSessionRecorder?
     
-    internal var isRecording: Bool { recorder != nil }
+    var isRecording: Bool { recorder != nil }
     
     // MARK: Private State
     
@@ -111,19 +111,19 @@ internal final class DGTConnection {
     
     /// Called after every board change with the new board; drives the session's quiescence timer.
     /// A wiring hook, not UI state.
-    @ObservationIgnored internal var onBoardChanged: ((Position) -> Void)?
+    @ObservationIgnored var onBoardChanged: ((Position) -> Void)?
     
     /// M7.3 — is a vanished board worth auto-reconnecting to? Asked at stream end and on every lap
     /// (so the loop stands down when the game goes away). Nil (headless tests) means never.
-    @ObservationIgnored internal var shouldAutoReconnect: (() -> Bool)?
+    @ObservationIgnored var shouldAutoReconnect: (() -> Bool)?
     
     /// Device-enumeration seam (F9): real IOKit walk by default, scripted list in tests.
-    @ObservationIgnored internal var enumerateDevices: () -> [DGTSerialDevice] = {
+    @ObservationIgnored var enumerateDevices: () -> [DGTSerialDevice] = {
         DGTDeviceDiscovery.availableDevices()
     }
     
     /// UserDefaults seam (F9): tests inject a throwaway suite so ⌘U never reads real preferences.
-    @ObservationIgnored internal var defaults: UserDefaults = .standard
+    @ObservationIgnored var defaults: UserDefaults = .standard
     
     @ObservationIgnored private var readTask: Task<Void, Never>?
     @ObservationIgnored private var errorClearTask: Task<Void, Never>?
@@ -136,17 +136,17 @@ internal final class DGTConnection {
     @ObservationIgnored private var lastReconnectFailureLogged: String?
     
     /// Init-command spacing so a shallow input buffer isn't overrun; tests zero it (F9).
-    @ObservationIgnored internal var initCommandStagger: Duration = .milliseconds(75)
+    @ObservationIgnored var initCommandStagger: Duration = .milliseconds(75)
     
     /// How long a `.failed` status lingers before auto-clearing to
     /// `.disconnected`.
     @ObservationIgnored private let errorLingerDuration: Duration = .seconds(5)
     
     /// M7.3 lap spacing. Timed retry over IOKit arrival notifications is a deliberate v1 simplification.
-    @ObservationIgnored internal var reconnectRetryInterval: Duration = .seconds(3)
+    @ObservationIgnored var reconnectRetryInterval: Duration = .seconds(3)
     
     /// Production takes the default (real serial port); tests pass a fake (F9).
-    internal init(port: any DGTPortProviding = DGTSerialPort()) {
+    init(port: any DGTPortProviding = DGTSerialPort()) {
         self.port = port
     }
     
@@ -154,7 +154,7 @@ internal final class DGTConnection {
     
     /// Enumerates for the connect dialog; synchronous and cheap. Precondition: not connected —
     /// `search()` demotes status without tearing the port down.
-    internal func search() {
+    func search() {
         assert(!isConnected, "search() while connected strands status in .searching")
         cancelReconnect()
         cancelErrorClear()
@@ -178,14 +178,14 @@ internal final class DGTConnection {
     // MARK: Connect / Disconnect
     
     /// Opens `device`, consumes events, runs init. `.connected` once the first dump arrives.
-    internal func connect(to device: DGTSerialDevice) async {
+    func connect(to device: DGTSerialDevice) async {
         await connect(to: device, failureStyle: .announced)
     }
     
     /// Launch path (M7.2, one-board form): if enabled and `onlyBoardPath` is attached, connect
     /// silently. Failures are `.quiet` — no red linger for a board that isn't plugged in.
     /// Does not set `attachedBoard`: it enumerates for the decision only.
-    internal func autoConnectAtLaunch() async {
+    func autoConnectAtLaunch() async {
         // Absent reads as true — matches the `@AppStorage` default in Settings (documented twin).
         let enabled = defaults.object(forKey: StorageKeys.autoConnectOnLaunch) as? Bool ?? true
 
@@ -225,7 +225,7 @@ internal final class DGTConnection {
     }
     
     /// Disconnects and resets to `.disconnected`.
-    internal func disconnect() async {
+    func disconnect() async {
         Self.logger?.info("Disconnecting")
         sessionLog?.capture(.info, "Disconnecting")
         cancelReconnect()
@@ -453,7 +453,7 @@ internal final class DGTConnection {
     }
     
     /// "Stop Trying". Ends `.disconnected`, never `.failed` — being asked to stop is not an error.
-    internal func stopReconnecting() async {
+    func stopReconnecting() async {
         guard case .reconnecting = status else { return }
         Self.logger?.info("Auto-reconnect cancelled by user")
         sessionLog?.capture(.info, "Auto-reconnect cancelled by user")
@@ -470,7 +470,7 @@ internal final class DGTConnection {
     // MARK: Session Recording
     
     /// Begins capturing board changes for offline replay; replaces any in-progress recording.
-    internal func startRecording() {
+    func startRecording() {
         let recorder = DGTSessionRecorder()
         recorder.record(physicalBoard)
         self.recorder = recorder
@@ -480,7 +480,7 @@ internal final class DGTConnection {
     
     /// Stops and returns the recording, stamped with the board identity; nil if none active.
     @discardableResult
-    internal func stopRecording() -> DGTSessionRecording? {
+    func stopRecording() -> DGTSessionRecording? {
         guard let recorder else { return nil }
         recorder.identity = .init(
             serialNumber: boardInfo.serialNumber,

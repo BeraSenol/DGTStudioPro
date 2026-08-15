@@ -1,21 +1,21 @@
 import SwiftUI
 import SwiftData
 
-internal struct BoardInspectorView: View {
+struct BoardInspectorView: View {
     
     // MARK: Stored Properties
-    internal let pgn: PGN?
-    internal let evaluations: [Double]
-    internal let moves: [String]
-    internal let currentMoveIndex: Int?
-    internal let style: BoardStyle
-    internal let onMoveTapped: ((Int) -> Void)?
+    let pgn: PGN?
+    let evaluations: [Double]
+    let moves: [String]
+    let currentMoveIndex: Int?
+    let style: BoardStyle
+    let onMoveTapped: ((Int) -> Void)?
     
     /// The edit request: presentation and the write belong to `BoardDestination` (D15′ — modals are
     /// destination furniture); this view only asks, which keeps it canvas-renderable. The Board
     /// presents no editor at all since D57′.
 
-    internal var body: some View {
+    var body: some View {
         List {
             metadataSection
             OpeningSection(opening: pgn?.opening)

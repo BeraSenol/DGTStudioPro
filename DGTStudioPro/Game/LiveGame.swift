@@ -3,17 +3,17 @@ import os
 
 /// The rule set; FIDE only in v1. Illegal-move handling follows FIDE 7.5.1 — recovery's
 /// "return to the last legal position".
-internal enum DGTRuleSet: String, CaseIterable, Codable, Sendable {
+enum DGTRuleSet: String, CaseIterable, Codable, Sendable {
     case fide = "FIDE"
     
-    internal var displayName: String { rawValue }
+    var displayName: String { rawValue }
 }
 
 /// The working model for a live-recorded game — `Game`'s append-only sibling: no takebacks, no
 /// rollback, ever (Decision #1). Legality comes only from the core's `legalMoves()`.
 @Observable
 @MainActor
-internal final class LiveGame {
+final class LiveGame {
     
     // MARK: Static Constants
     
@@ -22,26 +22,26 @@ internal final class LiveGame {
     // MARK: Roster
     
     /// The mutable seven-tag metadata minus result (the game tracks it). Maps onto `PGN` for archive.
-    internal struct Roster: Equatable, Sendable {
-        internal var event: String
-        internal var site: String
-        internal var date: Date?
-        internal var round: Int?
-        internal var white: String
-        internal var black: String
+    struct Roster: Equatable, Sendable {
+        var event: String
+        var site: String
+        var date: Date?
+        var round: Int?
+        var white: String
+        var black: String
 
         /// The board identity (D28′), stamped once at game start; survives crash-resume via the draft.
         /// Not exposed by the roster forms — equipment, not a seat.
-        internal var board: String?
+        var board: String?
 
         /// One player on both sides? (D61′) A forwarding accessor — `Player.seatsNameOnePlayer` owns
         /// the rule (one recipe, two spellings). Note `Roster` is nonisolated: a global actor does not
         /// isolate nested types (D44′).
-        internal var seatsNameOnePlayer: Bool {
+        var seatsNameOnePlayer: Bool {
             Player.seatsNameOnePlayer(white, black)
         }
 
-        internal init(
+        init(
             event: String = "?",
             site: String = "?",
             date: Date? = .now,
@@ -62,46 +62,46 @@ internal final class LiveGame {
     
     // MARK: Stored Properties
     
-    internal let ruleSet: DGTRuleSet
-    internal var roster: Roster
+    let ruleSet: DGTRuleSet
+    var roster: Roster
     
     /// Carried into the draft and across resume — a resumed game keeps its original start time.
-    internal let startedAt: Date
+    let startedAt: Date
     
     /// State at each ply boundary; always `moves.count + 1` long.
-    private(set) internal var states: [GameState]
+    private(set) var states: [GameState]
     
     /// Piece-identity mirror of `states`, for animation parity with `Game`.
-    private(set) internal var trackers: [PieceTracker]
+    private(set) var trackers: [PieceTracker]
     
     /// The committed moves, oldest first.
-    private(set) internal var moves: [Move]
+    private(set) var moves: [Move]
     
     /// SAN parallel to `moves`, computed against the state *before* each move — the archived transcript.
-    private(set) internal var sanMoves: [String]
+    private(set) var sanMoves: [String]
     
     /// `.ongoing` until detected or set manually.
-    private(set) internal var result: GameResult
+    private(set) var result: GameResult
     
     // MARK: Computed Properties
     
     // Force-unwrapped deliberately: seeded in `init`, append-only, non-empty by construction —
     // `last!` states that; `[count - 1]` hides it.
-    internal var currentState: GameState { states.last! }
-    internal var currentTracker: PieceTracker { trackers.last! }
-    internal var position: Position { currentState.position }
+    var currentState: GameState { states.last! }
+    var currentTracker: PieceTracker { trackers.last! }
+    var position: Position { currentState.position }
 
-    internal var isFinished: Bool { result != .ongoing }
-    internal var plyCount: Int { moves.count }
+    var isFinished: Bool { result != .ongoing }
+    var plyCount: Int { moves.count }
     
     /// The last move, for the board's highlight.
-    internal var lastMove: LastMove? {
+    var lastMove: LastMove? {
         guard let move = moves.last else { return nil }
         return LastMove(from: move.from, to: move.to)
     }
     
     /// The side-to-move king's square when in check; nil otherwise.
-    internal var checkSquare: Square? {
+    var checkSquare: Square? {
         let state = currentState
         guard state.isInCheck else { return nil }
         return state.position.kingSquare(for: state.activeColor)
@@ -111,7 +111,7 @@ internal final class LiveGame {
     
     /// Starts from `start` (standard by default). A custom start gets an empty tracker — identities
     /// can't be inferred from a bare position.
-    internal init(
+    init(
         start: GameState = .starting,
         roster: Roster,
         ruleSet: DGTRuleSet = .fide,
@@ -136,7 +136,7 @@ internal final class LiveGame {
     /// Records a reconstructed move; `false` (nothing changed) if finished or illegal — the
     /// resolver never hands over an illegal move, so a rejection is an upstream logic error.
     @discardableResult
-    internal func commit(_ move: Move) -> Bool {
+    func commit(_ move: Move) -> Bool {
         guard !isFinished else {
             Self.logger?.debug("Commit ignored, game already finished")
             return false
@@ -168,14 +168,14 @@ internal final class LiveGame {
     // MARK: Manual Result
     
     /// Resignation by `color`; no-op if already decided.
-    internal func resign(_ color: PieceColor) {
+    func resign(_ color: PieceColor) {
         guard !isFinished else { return }
         result = (color == .white) ? .blackWins : .whiteWins
         Self.logger?.info("\(color == .white ? "White" : "Black", privacy: .public) resigned")
     }
     
     /// Records an agreed draw. No-op if the game is already decided.
-    internal func agreeDraw() {
+    func agreeDraw() {
         guard !isFinished else { return }
         result = .draw
         Self.logger?.info("Draw agreed")

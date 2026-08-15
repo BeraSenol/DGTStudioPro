@@ -1,7 +1,7 @@
 import SwiftData
 import SwiftUI
 
-internal struct LibraryGalleryView: View {
+struct LibraryGalleryView: View {
     let games: [PGN]
     /// The badge's input, off the memoized projection (see `LibraryIconsView.analyzedIDs`).
     let analyzedIDs: Set<PGN.ID>

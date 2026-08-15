@@ -4,19 +4,19 @@ import SwiftUI
 /// `EvaluationBarReading`; this view owns only geometry — which end is "near". The reading
 /// stays white-relative; the flip is one boolean of geometry. Label: always visible, never
 /// inside the bar — a thin losing share would swallow it.
-internal struct EvaluationBarView: View {
+struct EvaluationBarView: View {
     
     // MARK: Static Constants
     
     /// The bar's fixed width, the **one** place it is stated — it was 20 here and 16 in the caller
     /// for a month (the twin-read-site pattern); the caller owns only the *gap*.
-    internal static let width: CGFloat = 22
+    static let width: CGFloat = 22
     
     // MARK: Stored Properties
     
-    internal let reading: EvaluationBarReading
-    internal let perspective: PieceColor
-    internal let style: BoardStyle
+    let reading: EvaluationBarReading
+    let perspective: PieceColor
+    let style: BoardStyle
     
     // MARK: Derived
     
@@ -36,7 +36,7 @@ internal struct EvaluationBarView: View {
     
     // MARK: Body
     
-    internal var body: some View {
+    var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .bottom) {
                 Rectangle()

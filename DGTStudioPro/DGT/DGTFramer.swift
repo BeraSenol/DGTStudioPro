@@ -1,16 +1,16 @@
 /// One received DGT message. The framer is semantics-free — it carries the raw message byte
 /// (even unrecognized ones), which is what makes it resumable and testable.
-internal struct DGTFrame: Equatable, Sendable {
+struct DGTFrame: Equatable, Sendable {
     /// The response byte that opened the frame (MSB set, e.g. `0x86`).
-    internal let message: UInt8
+    let message: UInt8
     /// The payload bytes (frame length minus the 3 header bytes). May be empty.
-    internal let data: [UInt8]
+    let data: [UInt8]
 }
 
 /// Incremental receiver state machine per the DGT protocol pseudocode: byte 0 is the message
 /// byte (MSB set), then two 7-bit length bytes; MSB-based resync skips junk between frames.
 /// Holds partial progress across calls — chunk boundaries land anywhere.
-internal struct DGTFramer {
+struct DGTFramer {
     
     // MARK: Configuration
     
@@ -35,13 +35,13 @@ internal struct DGTFramer {
     
     // MARK: Initializers
     
-    internal init() {}
+    init() {}
     
     // MARK: Ingestion
     
     /// Feeds a chunk through the machine, returning frames completed within it; a partial frame is
     /// retained for the next call.
-    internal mutating func ingest(_ bytes: some Sequence<UInt8>) -> [DGTFrame] {
+    mutating func ingest(_ bytes: some Sequence<UInt8>) -> [DGTFrame] {
         var frames: [DGTFrame] = []
         for byte in bytes {
             if let frame = ingest(byte) {
@@ -52,7 +52,7 @@ internal struct DGTFramer {
     }
     
     /// Feeds a single byte, returning a frame iff that byte completed one.
-    internal mutating func ingest(_ byte: UInt8) -> DGTFrame? {
+    mutating func ingest(_ byte: UInt8) -> DGTFrame? {
         switch state {
         case .awaitingMessage:
             // Skip stray bytes until a response byte (MSB set) appears.

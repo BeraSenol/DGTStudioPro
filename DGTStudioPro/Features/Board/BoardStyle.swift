@@ -1,17 +1,17 @@
 import SwiftUI
 
-internal enum BoardStyle: String, CaseIterable, Codable, Sendable {
+enum BoardStyle: String, CaseIterable, Codable, Sendable {
     case leather
     case rosewood
     case walnut
     case wenge
     
     // MARK: Computed Properties
-    internal var displayName: String {
+    var displayName: String {
         self.rawValue.capitalized
     }
     
-    internal var light: Color {
+    var light: Color {
         switch self {
         case .leather:  .leatherLight
         case .rosewood: .rosewoodLight
@@ -20,7 +20,7 @@ internal enum BoardStyle: String, CaseIterable, Codable, Sendable {
         }
     }
     
-    internal var dark: Color {
+    var dark: Color {
         switch self {
         case .leather:  .leatherDark
         case .rosewood: .rosewoodDark

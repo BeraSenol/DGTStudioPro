@@ -8,7 +8,7 @@ import SwiftUI
 /// A window, not a popover or sheet (D46′ taken as settled): it must survive a click elsewhere.
 /// It edits exactly one thing across the player form — the tag; the game form edits per field (D57′);
 /// the live form is read-only. Body re-runs on request/subject change, not on text-field churn.
-internal struct GetInfoWindow: View {
+struct GetInfoWindow: View {
 
     // MARK: Static Constants
 
@@ -23,7 +23,7 @@ internal struct GetInfoWindow: View {
 
     /// Optional because `WindowGroup(for:)` binds an optional — a restored window with a gone subject
     /// arrives nil, and the unavailable state is the honest answer.
-    internal let request: GetInfoRequest?
+    let request: GetInfoRequest?
 
     // MARK: Private Properties
     @Environment(\.modelContext) private var modelContext
@@ -67,7 +67,7 @@ internal struct GetInfoWindow: View {
     @State private var fieldRefusal: FieldRefusal?
 
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         Group {
             if let subject {
                 content(for: subject)

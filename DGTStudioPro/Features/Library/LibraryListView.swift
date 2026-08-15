@@ -1,7 +1,7 @@
 import SwiftData
 import SwiftUI
 
-internal struct LibraryListView: View {
+struct LibraryListView: View {
     let games: [PGN]
     /// The Analysis column's input (D72′), off the memoized projection — the per-row blob decode
     /// this replaced was the last one standing, on the mode most on screen during a batch.

@@ -4,11 +4,11 @@ import Foundation
 /// as an array blob on `SmartTag` (D12′). Flat value storage — dead slots cost bytes, enum
 /// bindings cost friction. Rules of record (D30′): both sides fold through
 /// `PlayerName.folded` + lowercase; unknowns never match, negation included; zero rules match nothing.
-internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
+struct TagRule: Sendable, Hashable, Codable, Identifiable {
     
     // MARK: Field
     
-    internal enum Field: String, Codable, CaseIterable, Identifiable, Sendable {
+    enum Field: String, Codable, CaseIterable, Identifiable, Sendable {
         case white, black, player, event, site, name
         /// D34′: a string field over the *full* opening name, so a rule can reach a variation —
         /// `is` matches variation-less lines only, `begins with` is family-level, `contains` is what
@@ -23,11 +23,11 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
         /// and following the Swift name would silently drop the rule from every tag using it.
         case checkmateType = "matePattern"
 
-        internal enum Kind { case string, result, number, date, boolean, checkmateType }
+        enum Kind { case string, result, number, date, boolean, checkmateType }
 
-        internal var id: String { rawValue }
+        var id: String { rawValue }
 
-        internal var kind: Kind {
+        var kind: Kind {
             switch self {
             case .white, .black, .player, .event, .site, .name, .opening: return .string
             case .result: return .result
@@ -38,7 +38,7 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
             }
         }
 
-        internal var displayName: String {
+        var displayName: String {
             switch self {
             case .player:      return "Player (either)"
             case .moves:       return "Moves (plies)"
@@ -48,7 +48,7 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
         }
 
         /// The comparisons this field's kind admits; the first is the editor's default.
-        internal var comparisons: [Comparison] {
+        var comparisons: [Comparison] {
             switch kind {
             case .string:           return [.contains, .equals, .notEquals, .beginsWith]
             case .result:           return [.equals, .notEquals]
@@ -62,7 +62,7 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
     
     // MARK: Comparison
     
-    internal enum Comparison: String, Codable, CaseIterable, Identifiable, Sendable {
+    enum Comparison: String, Codable, CaseIterable, Identifiable, Sendable {
         case contains = "contains"
         case equals = "is"
         case notEquals = "is not"
@@ -74,24 +74,24 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
         case isTrue = "is true"
         case isFalse = "is false"
         
-        internal var id: String { rawValue }
-        internal var displayName: String { rawValue }
+        var id: String { rawValue }
+        var displayName: String { rawValue }
     }
     
     // MARK: Stored Properties
     
-    internal var id: UUID
-    internal var field: Field
-    internal var comparison: Comparison
-    internal var text: String
-    internal var number: Int
-    internal var date: Date
-    internal var gameResult: GameResult
-    internal var specialCheckmate: SpecialCheckmate
+    var id: UUID
+    var field: Field
+    var comparison: Comparison
+    var text: String
+    var number: Int
+    var date: Date
+    var gameResult: GameResult
+    var specialCheckmate: SpecialCheckmate
 
     // MARK: Initializers
 
-    internal init(
+    init(
         id: UUID = UUID(),
         field: Field = .white,
         comparison: Comparison = .contains,
@@ -120,7 +120,7 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
         case id, field, comparison, text, number, date, gameResult, specialCheckmate
     }
 
-    internal init(from decoder: any Decoder) throws {
+    init(from decoder: any Decoder) throws {
         let fallback = TagRule()
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? fallback.id
@@ -139,7 +139,7 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
     
     // MARK: Matching
     
-    internal func matches(_ record: GameRecord) -> Bool {
+    func matches(_ record: GameRecord) -> Bool {
         switch field.kind {
         case .string:
             let needle = fold(text)
@@ -196,7 +196,7 @@ internal struct TagRule: Sendable, Hashable, Codable, Identifiable {
     
     /// The combinator: `matchAll` picks all/any; **zero rules matches nothing** (a fresh tag is
     /// inert, never select-all).
-    internal static func evaluate(
+    static func evaluate(
         _ rules: [TagRule],
         matchAll: Bool,
         against record: GameRecord

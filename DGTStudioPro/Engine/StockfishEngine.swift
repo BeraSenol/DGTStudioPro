@@ -6,7 +6,7 @@ import os
 /// Inbound pipeline (F2): stdout chunks flow through one ordered stream; buffering as `Data` and
 /// splitting on `\n` is load-bearing — a `String` round trip drops chunks that split a codepoint.
 /// F4: no exit path may strand a waiter.
-internal actor StockfishEngine {
+actor StockfishEngine {
     
     // MARK: Static Constants
     
@@ -16,7 +16,7 @@ internal actor StockfishEngine {
     
     // MARK: Errors
     
-    internal enum EngineError: Error, Equatable {
+    enum EngineError: Error, Equatable {
         case startupFailed(String)
         case alreadyStarted
         case notStarted
@@ -50,7 +50,7 @@ internal actor StockfishEngine {
 
     /// Stockfish's own tablebase sentence, verbatim. Raw rather than parsed into a count: the wording
     /// varies across versions, and a report that quotes cannot go stale or be subtly wrong.
-    internal private(set) var tablebaseReport: String?
+    private(set) var tablebaseReport: String?
     private var currentSideToMove: PieceColor = .white
     private var currentAnalysisID: UUID?
 
@@ -66,17 +66,17 @@ internal actor StockfishEngine {
     
     // MARK: Initialization
     
-    internal init(binaryURL: URL) {
+    init(binaryURL: URL) {
         self.binaryURL = binaryURL
     }
     
     /// The bundled binary, or nil (Engine_README.md steps not run, or a test bundle without it).
-    internal static var defaultBinaryURL: URL? {
+    static var defaultBinaryURL: URL? {
         Bundle.main.url(forResource: "stockfish", withExtension: nil)
     }
     
     /// Whether the subprocess is running.
-    internal var isRunning: Bool {
+    var isRunning: Bool {
         process?.isRunning ?? false
     }
     
@@ -84,7 +84,7 @@ internal actor StockfishEngine {
     
     /// Spawns the subprocess and runs the UCI handshake: `uci` → `uciok`, options, `isready` →
     /// `readyok`. Options must be sent inside that window — this loop once sat outside it.
-    internal func start(
+    func start(
         handshakeTimeout: Duration = .seconds(5),
         readyTimeout: Duration = .seconds(30)
     ) async throws {
@@ -195,7 +195,7 @@ internal actor StockfishEngine {
     
     /// Shutdown: end any analysis, `quit`, brief grace, then force-terminate. Safe when not started
     /// and after a failed `start()`.
-    internal func shutdown() async {
+    func shutdown() async {
         guard let proc = process else { return }
         
         Self.logger?.info("Shutting down engine")
@@ -312,7 +312,7 @@ internal actor StockfishEngine {
     
     /// Analysis of `fen` to `depth`, yielding progressively deeper evaluations, completing on
     /// `bestmove`. One analysis at a time; a new call replaces a live search (stop → position → go).
-    nonisolated internal func analyze(
+    nonisolated func analyze(
         fen: FEN,
         depth: Int
     ) -> AsyncStream<EngineProgress> {
@@ -403,7 +403,7 @@ internal actor StockfishEngine {
     /// Dispatches one complete stdout line.
     /// Stockfish's tablebase sentence, or nil. Matched on "Found" + "tablebase", not the full
     /// sentence — the wording varies across versions.
-    nonisolated internal static func tablebaseReport(in line: String) -> String? {
+    nonisolated static func tablebaseReport(in line: String) -> String? {
         let prefix = "info string "
         guard line.hasPrefix(prefix) else { return nil }
         let body = String(line.dropFirst(prefix.count))

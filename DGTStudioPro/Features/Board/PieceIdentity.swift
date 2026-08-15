@@ -1,32 +1,32 @@
 /// One rendered piece: what, where, and the identity it animates under (M6's currency).
 /// The layer keys its `ForEach` on `key` — a persisting key glides, a churned key fades; there
 /// is no third behaviour, because an unproven piece never gets a key that can persist.
-internal struct ResolvedPiece: Equatable, Hashable, Sendable, Identifiable {
+struct ResolvedPiece: Equatable, Hashable, Sendable, Identifiable {
 
     /// A proven tracker identity or a square-bound anonymous one. `anonymous` carries the `Piece`
     /// too: a replaced occupant must produce a fresh key (a fade, never a morph — morphing is
     /// promotion's grammar alone).
-    internal enum Key: Equatable, Hashable, Sendable {
+    enum Key: Equatable, Hashable, Sendable {
         case tracked(PieceID)
         case anonymous(Square, Piece)
     }
 
-    internal let key: Key
-    internal let piece: Piece
-    internal let square: Square
+    let key: Key
+    let piece: Piece
+    let square: Square
 
-    internal var id: Key { key }
+    var id: Key { key }
 }
 
 /// Resolves every rendered piece's identity (D47′). **Output occupancy is the rendered position
 /// verbatim, always** — the resolver decides keys, never presence (the mirror invariant as a
 /// pure function, pinned across every fixture). Identity is proven or absent, never guessed:
 /// parity per square, then the reconstructor's own verified move, then anonymous.
-internal enum PieceIdentity {
+enum PieceIdentity {
 
     /// The review arm: parity is total, the per-ply tracker vouches for every square. An `.empty`
     /// tracker degrades to all-anonymous (what style previews pass).
-    internal static func resolved(
+    static func resolved(
         position: Position,
         tracker: PieceTracker
     ) -> [ResolvedPiece] {
@@ -41,7 +41,7 @@ internal enum PieceIdentity {
     }
 
     /// The mirror arm; nil game/tracker means all anonymous, nothing glides — the pre-M6 mirror exactly.
-    internal static func resolved(
+    static func resolved(
         physical: Position,
         game: GameState?,
         tracker: PieceTracker?
@@ -75,9 +75,9 @@ internal enum PieceIdentity {
 
     /// A square the reconstructor proved an arrival on; the origin carries the identity.
     private struct Placement {
-        internal let square: Square
-        internal let piece: Piece
-        internal let origin: Square
+        let square: Square
+        let piece: Piece
+        let origin: Square
     }
 
     /// The landing squares a recognized move explains. `.move` and `.correctable` prove theirs;

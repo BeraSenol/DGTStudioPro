@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The Players icons grid — the Library grid's two Finder gestures; the shared grammar lives in
 /// `IconGridSelection` (the half that must not fork).
-internal struct PlayersIconsView: View {
+struct PlayersIconsView: View {
 
     // MARK: Static Constants
 

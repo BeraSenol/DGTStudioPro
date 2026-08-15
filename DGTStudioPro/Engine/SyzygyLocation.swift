@@ -5,7 +5,7 @@ import os
 /// answer is not obvious under the sandbox: the *engine subprocess* does the reading, and
 /// inheritance covers only static entitlements — so the type reports **two numbers** (what the
 /// app sees, what Stockfish says it loaded) rather than assuming they agree.
-internal enum SyzygyLocation {
+enum SyzygyLocation {
 
     // MARK: Static Constants
 
@@ -24,13 +24,13 @@ internal enum SyzygyLocation {
 
     /// Holds a security-scoped resource open for its lifetime — the `ActivityToken` shape: balance
     /// as a fact about object lifetime. The engine holds one per run.
-    internal final class Access {
+    final class Access {
         private let url: URL
         private let didStart: Bool
 
-        internal var path: String { url.path(percentEncoded: false) }
+        var path: String { url.path(percentEncoded: false) }
 
-        internal init?(resolving bookmark: Data) {
+        init?(resolving bookmark: Data) {
             var stale = false
             guard let url = try? URL(
                 resolvingBookmarkData: bookmark,
@@ -60,7 +60,7 @@ internal enum SyzygyLocation {
     /// Stores the folder as a security-scoped bookmark (nil clears). Returns whether it stuck —
     /// swallowing a failed bookmark leaves Settings showing a path the next launch cannot open.
     @discardableResult
-    internal static func store(
+    static func store(
         _ url: URL?,
         in defaults: UserDefaults = .standard
     ) -> Bool {
@@ -89,13 +89,13 @@ internal enum SyzygyLocation {
     }
 
     /// Display path, or nil. Never use as the `SyzygyPath` value — see `access(in:)`.
-    internal static func displayPath(in defaults: UserDefaults = .standard) -> String? {
+    static func displayPath(in defaults: UserDefaults = .standard) -> String? {
         defaults.string(forKey: StorageKeys.syzygyDisplayPath)
     }
 
     /// Opens the configured folder, or nil. **Hold the token for the length of the run** —
     /// releasing it closes the resource under a subprocess still probing.
-    internal static func access(in defaults: UserDefaults = .standard) -> Access? {
+    static func access(in defaults: UserDefaults = .standard) -> Access? {
         guard let bookmark = defaults.data(forKey: StorageKeys.syzygyBookmark) else { return nil }
         return Access(resolving: bookmark)
     }
@@ -104,21 +104,21 @@ internal enum SyzygyLocation {
 
     /// What the **app** can see — the diagnostic's first number. Counted per extension; shallow,
     /// like `SyzygyPath` itself.
-    internal struct Census: Equatable, Sendable {
-        internal let wdl: Int
-        internal let dtz: Int
+    struct Census: Equatable, Sendable {
+        let wdl: Int
+        let dtz: Int
 
-        internal var isEmpty: Bool { wdl == 0 && dtz == 0 }
+        var isEmpty: Bool { wdl == 0 && dtz == 0 }
 
         /// "290 WDL · 290 DTZ", or a named absence — kept beside the count so the two cannot drift.
-        internal var summary: String {
+        var summary: String {
             isEmpty ? "No tablebase files found" : "\(wdl) WDL · \(dtz) DTZ"
         }
     }
 
     /// Requires a live token: without one the listing itself fails under the sandbox — zero for the
     /// wrong reason.
-    internal static func census(at access: Access) -> Census {
+    static func census(at access: Access) -> Census {
         guard let names = try? FileManager.default.contentsOfDirectory(atPath: access.path) else {
             logger?.error("Syzygy folder could not be listed at '\(access.path, privacy: .public)'")
             return Census(wdl: 0, dtz: 0)

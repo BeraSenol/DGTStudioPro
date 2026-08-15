@@ -6,7 +6,7 @@
 /// two samples fired at one instant is mush, and the more informative fact is the one worth
 /// hearing. Stated here because "capture+check plays capture" is the equally defensible rule and
 /// a future reader will wonder which was chosen.
-internal enum BoardCue: String, CaseIterable, Sendable {
+enum BoardCue: String, CaseIterable, Sendable {
     case move
     case capture
     case check
@@ -29,7 +29,7 @@ internal enum BoardCue: String, CaseIterable, Sendable {
     /// Stalemate deliberately has no cue and falls through to `move`/`capture`: the position is
     /// drawn, the *move* was ordinary, and there is no sample for it. Named so the omission reads
     /// as a decision.
-    internal static func cue(for move: Move, landing: GameState) -> BoardCue {
+    static func cue(for move: Move, landing: GameState) -> BoardCue {
         if landing.isInCheck {
             return landing.legalMoves().isEmpty ? .checkmate : .check
         }

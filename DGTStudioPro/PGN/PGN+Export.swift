@@ -6,7 +6,7 @@ import Foundation
 extension PGN {
     
     /// This game in the DGT reference shape, ready to write.
-    internal var pgnText: String {
+    var pgnText: String {
         PGNSerializer.text(
             roster: RosterSummary(self),
             board: board,
@@ -18,7 +18,7 @@ extension PGN {
     /// The suggested filename — numbered by **library index** where present, batch position
     /// otherwise (D58′). This changes bytes D24′ pinned, deliberately: the pin never specified the
     /// ordinal's source, and the folder is the stricter reading.
-    internal func exportFileName(index: Int) -> String {
+    func exportFileName(index: Int) -> String {
         PGNSerializer.fileName(
             white: white,
             black: black,

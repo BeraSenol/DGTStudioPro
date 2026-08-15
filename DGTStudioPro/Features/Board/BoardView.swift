@@ -1,28 +1,28 @@
 import SwiftUI
 
-internal struct BoardView: View {
+struct BoardView: View {
     
     // MARK: Stored Properties
-    internal let position: Position
+    let position: Position
     /// What the piece layer animates under — resolved by the caller through `PieceIdentity`,
     /// because only the caller knows which arm applies.
-    internal let pieces: [ResolvedPiece]
-    internal let style: BoardStyle
-    internal let perspective: PieceColor
-    internal let lastMove: LastMove?
-    internal let checkSquare: Square?
+    let pieces: [ResolvedPiece]
+    let style: BoardStyle
+    let perspective: PieceColor
+    let lastMove: LastMove?
+    let checkSquare: Square?
     /// Reserved: nothing selects a square today (the physical board is the input). Defaulted, not
     /// removed — the highlight machinery is built; a click-to-move surface only passes a value.
-    internal var selectedSquare: Square? = nil
+    var selectedSquare: Square? = nil
     /// The mid-castle ghost square; both ghost fields must be non-nil to render.
-    internal var ghostSquare: Square? = nil
+    var ghostSquare: Square? = nil
     /// The ghost piece — drawn only when the square is actually empty, so a mid-fumble real piece
     /// hides the ghost rather than overlapping it.
-    internal var ghostPiece: Piece? = nil
+    var ghostPiece: Piece? = nil
     /// Recovery highlights: `.attention` ("shouldn't be here") and `.target` ("belongs here").
     /// The board knows styles, not recovery.
-    internal var attentionSquares: Set<Square> = []
-    internal var targetSquares: Set<Square> = []
+    var attentionSquares: Set<Square> = []
+    var targetSquares: Set<Square> = []
     
     // MARK: Preferences
     
@@ -30,7 +30,7 @@ internal struct BoardView: View {
     @AppStorage(StorageKeys.showBoardCoordinates) private var showsCoordinates = true
     
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         GeometryReader { geometry in
             let totalSide = min(geometry.size.width, geometry.size.height)
             let layout = layout(for: totalSide)

@@ -5,7 +5,7 @@ import os
 /// leaves the previous draft, never a torn file. Directory injectable for tests. The store is
 /// dumb on purpose — the session owns *when*.
 @MainActor
-internal final class LiveGameDraftStore {
+final class LiveGameDraftStore {
 
     // MARK: Static Constants
 
@@ -15,7 +15,7 @@ internal final class LiveGameDraftStore {
 
     // MARK: Errors
 
-    internal enum StoreError: Error, Equatable {
+    enum StoreError: Error, Equatable {
         /// The file decoded, but its `schemaVersion` isn't one this build
         /// understands. Treated as corrupt by callers — never guessed at.
         case unsupportedSchema(found: Int)
@@ -24,7 +24,7 @@ internal final class LiveGameDraftStore {
     // MARK: Stored Properties
 
     /// Full path of the draft file. Exposed for tests and diagnostics.
-    internal let fileURL: URL
+    let fileURL: URL
 
     private let directory: URL
 
@@ -32,7 +32,7 @@ internal final class LiveGameDraftStore {
 
     /// - Parameter directory: where the draft file lives. Defaults to the
     ///   app's Application Support directory; tests inject a temp directory.
-    internal init(directory: URL = .applicationSupportDirectory) {
+    init(directory: URL = .applicationSupportDirectory) {
         self.directory = directory
         self.fileURL = directory.appending(path: Self.fileName)
     }
@@ -43,7 +43,7 @@ internal final class LiveGameDraftStore {
     /// wins — there is only ever one draft). Creates the directory on first
     /// use. Throws on encoding or filesystem failure; the caller decides how
     /// loudly to react.
-    internal func save(_ draft: LiveGameDraft) throws {
+    func save(_ draft: LiveGameDraft) throws {
         try FileManager.default.createDirectory(
             at: directory,
             withIntermediateDirectories: true
@@ -57,7 +57,7 @@ internal final class LiveGameDraftStore {
     /// Throws when a file exists but can't be read, doesn't decode, or
     /// carries an unknown schema version — "absent" and "corrupt" are
     /// different answers, and the session surfaces them differently.
-    internal func load() throws -> LiveGameDraft? {
+    func load() throws -> LiveGameDraft? {
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
             return nil
         }
@@ -71,7 +71,7 @@ internal final class LiveGameDraftStore {
 
     /// Removes the draft file. Idempotent — deleting an absent draft is not
     /// an error (discard and archive paths both call this unconditionally).
-    internal func delete() {
+    func delete() {
         do {
             try FileManager.default.removeItem(at: fileURL)
             Self.logger?.debug("Draft deleted")

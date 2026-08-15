@@ -9,14 +9,14 @@ import SwiftUI
 /// container owns outer spacing. The `live.hud.*` identifiers are
 /// unchanged — their witness stays the hardware checklist, so the
 /// re-home is not a contract break.
-internal struct LiveGameHUDView: View {
+struct LiveGameHUDView: View {
 
     // MARK: Phase
 
     /// Everything the banner can say. Derivation (including priority between
     /// overlapping session flags) lives in `SessionSidebarPanel.hudPhase` —
     /// moved there with the card itself by D15′.
-    internal enum Phase: Equatable {
+    enum Phase: Equatable {
         case reconnecting
         /// Connected, no game running: invite setup or a manual New Game.
         case idle
@@ -44,21 +44,21 @@ internal struct LiveGameHUDView: View {
 
     // MARK: Stored Properties
 
-    internal let phase: Phase
+    let phase: Phase
 
     /// Invoked by the "New Game…" button (shown while `idle` / `finished`).
     /// Presenting the dialog is the destination's job.
-    internal let onNewGame: () -> Void
+    let onNewGame: () -> Void
 
     /// Invoked by the "Retry" button (shown while `archiveFailed`). The
     /// matching Discard lives in the inspector behind its existing
     /// destructive confirmation, so the HUD stays state-free. Defaulted so
     /// existing call sites and previews stay valid.
-    internal var onRetryArchive: () -> Void = {}
+    var onRetryArchive: () -> Void = {}
 
     // MARK: Body
 
-    internal var body: some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack {
                 Text(title)

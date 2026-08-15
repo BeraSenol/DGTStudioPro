@@ -3,11 +3,11 @@ import SwiftUI
 
 /// The data button's request — the fourth `openWindow(value:)` wrapper, for the standing
 /// reason: the call routes by type.
-internal struct AnalysisDataRequest: Codable, Hashable, Sendable {
+struct AnalysisDataRequest: Codable, Hashable, Sendable {
 
-    internal let gameID: PersistentIdentifier
+    let gameID: PersistentIdentifier
 
-    internal init(gameID: PersistentIdentifier) {
+    init(gameID: PersistentIdentifier) {
         self.gameID = gameID
     }
 }
@@ -16,28 +16,28 @@ internal struct AnalysisDataRequest: Codable, Hashable, Sendable {
 /// `EvaluationGraphReading`'s; evaluation is `EvaluationBarReading`'s pinned grammar — but
 /// **nil for an unscored ply**, deliberately unlike the display surfaces: this table is stored
 /// truth, and `0.0` for a never-scored ply would be a lie.
-internal struct AnalysisDataRow: Equatable, Sendable, Identifiable {
+struct AnalysisDataRow: Equatable, Sendable, Identifiable {
 
     /// 0-based ply — the array position, unique by construction.
-    internal let ply: Int
+    let ply: Int
     /// "12. Nf3" / "12… Nf6".
-    internal let move: String
+    let move: String
     /// The bar-grammar label ("+1.3", "0.0", "#4"), or nil for an unscored ply.
-    internal let evaluation: String?
+    let evaluation: String?
     /// "64%" — white's win probability, or nil with `evaluation`.
-    internal let whiteWinPercent: String?
+    let whiteWinPercent: String?
     /// Signed win-probability swing vs. the ply before, in percentage points — "+12" / "-31" —
     /// or nil when either side of the step is unscored: no fake deltas across book gaps (D77′).
     /// White-relative, like every number on this surface; the blunder signal is the magnitude.
-    internal let swing: String?
+    let swing: String?
     /// |swing| ≥ 15 pp — the emphasis threshold, a judgement call documented as one (D77′).
-    internal let swingIsMajor: Bool
+    let swingIsMajor: Bool
 
-    internal var id: Int { ply }
+    var id: Int { ply }
 
     /// The whole table; tolerates both invariant shapes of `evaluations` — an index past the end is
     /// an unscored ply, not a crash.
-    internal static func rows(
+    static func rows(
         moves: [String],
         evaluations: [Evaluation?]
     ) -> [AnalysisDataRow] {
@@ -70,10 +70,10 @@ internal struct AnalysisDataRow: Equatable, Sendable, Identifiable {
 /// D73′ — the analysis as data, every ply in its own window. A window (companion surface), its
 /// own group (data windows tab with each other, never boards); deliberately not floating,
 /// unlike the graph — a table is consulted, not glanced.
-internal struct AnalysisDataWindow: View {
+struct AnalysisDataWindow: View {
 
     // MARK: Stored Properties
-    internal let request: AnalysisDataRequest?
+    let request: AnalysisDataRequest?
 
     // MARK: Private Properties
     @Environment(\.modelContext) private var modelContext
@@ -82,7 +82,7 @@ internal struct AnalysisDataWindow: View {
     @State private var pgn: PGN?
 
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         Group {
             // `hasScoredPly` (D67′): an all-nil array is a table of em dashes wearing the shape of data.
             // The rows tolerate partial arrays; the gate refuses empty ones.
@@ -160,16 +160,16 @@ internal struct AnalysisDataWindow: View {
 
 /// The magnifier's sibling in the Evaluation header — fourth open-coded glyph button; shares
 /// only the pair that must not drift (`.font(.body)`, one label for `.help` + AX).
-internal struct AnalysisDataButton: View {
+struct AnalysisDataButton: View {
 
     // MARK: Stored Properties
-    internal let gameID: PersistentIdentifier
+    let gameID: PersistentIdentifier
 
     // MARK: Private Properties
     @Environment(\.openWindow) private var openWindow
 
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         Button {
             openWindow(value: AnalysisDataRequest(gameID: gameID))
         } label: {

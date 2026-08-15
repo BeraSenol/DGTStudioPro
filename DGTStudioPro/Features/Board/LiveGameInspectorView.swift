@@ -2,15 +2,15 @@ import SwiftUI
 
 /// The Board inspector's live variant: roster (with Edit Details), SAN history, result
 /// controls — `BoardInspectorView`'s sidebar-list shape.
-internal struct LiveGameInspectorView: View {
+struct LiveGameInspectorView: View {
     
     // MARK: Stored Properties
     
-    internal let game: LiveGame
-    internal let onUpdateRoster: (LiveGame.Roster) -> Void
-    internal let onResign: (PieceColor) -> Void
-    internal let onAgreeDraw: () -> Void
-    internal let onDiscard: () -> Void
+    let game: LiveGame
+    let onUpdateRoster: (LiveGame.Roster) -> Void
+    let onResign: (PieceColor) -> Void
+    let onAgreeDraw: () -> Void
+    let onDiscard: () -> Void
     
     // MARK: View State
     
@@ -21,7 +21,7 @@ internal struct LiveGameInspectorView: View {
     
     // MARK: Body
     
-    internal var body: some View {
+    var body: some View {
         List {
             rosterSection
             movesSection

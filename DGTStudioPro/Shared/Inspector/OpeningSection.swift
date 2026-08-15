@@ -2,7 +2,7 @@ import SwiftUI
 
 /// A game's classified opening as one section, shared by the Board review and Library
 /// inspectors. The live inspector deliberately doesn't render it.
-internal struct OpeningSection: View {
+struct OpeningSection: View {
 
     // MARK: Static Constants
 
@@ -13,12 +13,12 @@ internal struct OpeningSection: View {
 
     // MARK: Stored Properties
 
-    internal let opening: ECOOpening?
+    let opening: ECOOpening?
 
     // MARK: Body
 
     /// Collapses as `.opening` (D45′) — one section rendered twice, not two that look alike.
-    internal var body: some View {
+    var body: some View {
         CollapsibleSection(.opening, title: "Opening") {
             if let opening {
                 LabeledContent("ECO", value: opening.code)

@@ -15,7 +15,7 @@ import os
 /// is an alert. These are samples at app volume, because a move landing is feedback, not a warning.
 @MainActor
 @Observable
-internal final class BoardSounds {
+final class BoardSounds {
 
     // MARK: Static Constants
 
@@ -31,12 +31,12 @@ internal final class BoardSounds {
     /// No `DGT_LOG` twin — logging needs an escape hatch because a suppressed *diagnostic* can
     /// hide a defect, and a suppressed *click* cannot. Re-armable by constructing with
     /// `audible: true`, which is what the previews do.
-    internal static let isAudible: Bool = isAudible(in: ProcessInfo.processInfo.environment)
+    static let isAudible: Bool = isAudible(in: ProcessInfo.processInfo.environment)
 
     /// The policy as a pure function of an environment — `AppLog.isEnabled(in:)`'s reason, which
     /// is the only one that matters here: the constant above is `false` in every process a test
     /// runs in, so the arm a real launch takes is unreachable from a suite without this seam.
-    internal static func isAudible(in environment: [String: String]) -> Bool {
+    static func isAudible(in environment: [String: String]) -> Bool {
         TestHost.isActive(in: environment) == false
     }
 
@@ -49,7 +49,7 @@ internal final class BoardSounds {
     /// view's `onChange`: it persists, it drops the loaded samples (they belong to the old set),
     /// and it **auditions**. A picker over sounds that you cannot hear while picking is a list of
     /// adjectives.
-    internal var soundSet: BoardSoundSet {
+    var soundSet: BoardSoundSet {
         didSet {
             // SwiftUI may re-assign an unchanged selection; without this a re-render would clear
             // the cache and click at the reader.
@@ -64,19 +64,19 @@ internal final class BoardSounds {
 
     /// Absent reads **true** for all four — the feature is opt-out, matching D13′'s illegal-move
     /// cue rather than arriving switched off and needing to be discovered.
-    internal var playsMove: Bool {
+    var playsMove: Bool {
         didSet { persist(playsMove, forKey: StorageKeys.moveSoundEnabled, describing: "move") }
     }
 
-    internal var playsCapture: Bool {
+    var playsCapture: Bool {
         didSet { persist(playsCapture, forKey: StorageKeys.captureSoundEnabled, describing: "capture") }
     }
 
-    internal var playsCheck: Bool {
+    var playsCheck: Bool {
         didSet { persist(playsCheck, forKey: StorageKeys.checkSoundEnabled, describing: "check") }
     }
 
-    internal var playsCheckmate: Bool {
+    var playsCheckmate: Bool {
         didSet { persist(playsCheckmate, forKey: StorageKeys.checkmateSoundEnabled, describing: "checkmate") }
     }
 
@@ -99,7 +99,7 @@ internal final class BoardSounds {
 
     /// Both seams injectable for the same reason: the production values are fixed in any given
     /// process, so a suite standing in that process can only ever confirm the arm it is standing in.
-    internal init(defaults: UserDefaults = .standard, audible: Bool = BoardSounds.isAudible) {
+    init(defaults: UserDefaults = .standard, audible: Bool = BoardSounds.isAudible) {
         self.defaults = defaults
         self.audible = audible
         // Assignment in `init` does not fire `didSet`, so a first launch reads without writing
@@ -118,7 +118,7 @@ internal final class BoardSounds {
     /// Which toggle governs which cue, as a pure function — `SleepInhibitor.activityReason`'s
     /// shape and its argument, sharpened: four cues over four flags is a crossable wiring, and a
     /// `check` that reads the capture toggle compiles, renders, and is caught only by ear.
-    internal static func isEnabled(
+    static func isEnabled(
         _ cue: BoardCue,
         moves: Bool,
         captures: Bool,
@@ -134,7 +134,7 @@ internal final class BoardSounds {
     }
 
     /// The instance's own answer, so no caller re-spells the mapping.
-    internal func isEnabled(_ cue: BoardCue) -> Bool {
+    func isEnabled(_ cue: BoardCue) -> Bool {
         Self.isEnabled(
             cue,
             moves: playsMove,
@@ -152,7 +152,7 @@ internal final class BoardSounds {
     ///
     /// `ignoringPreference` exists for the audition and nothing else — see `audition()`. Audibility
     /// is **not** overridable by it: that flag is about the process, not about the reader's taste.
-    internal func play(_ cue: BoardCue, ignoringPreference: Bool = false) {
+    func play(_ cue: BoardCue, ignoringPreference: Bool = false) {
         guard audible else { return }
         guard ignoringPreference || isEnabled(cue) else { return }
         guard let player = player(for: cue) else { return }
@@ -223,7 +223,7 @@ extension BoardSounds {
     /// The instance previews inject. Scratch defaults for `SleepInhibitor.preview`'s reason (a
     /// canvas reading the developer's real toggles leaks last state, S4), and **inaudible**: a
     /// preview that re-renders on every keystroke would click at the canvas.
-    internal static var preview: BoardSounds {
+    static var preview: BoardSounds {
         let name = "preview"
         let defaults = UserDefaults(suiteName: name)!
         defaults.removePersistentDomain(forName: name)

@@ -5,7 +5,7 @@ import os
 /// The export door's transport half (D24′): panels and writes — waived under the save-panel
 /// family; every byte comes from the pure serializer. Batch = one numbered file per game.
 @MainActor
-internal enum PGNExporter {
+enum PGNExporter {
     
     private static let logger = AppLog.logger(.pgnexport)
     
@@ -17,7 +17,7 @@ internal enum PGNExporter {
     
     /// `games` must arrive in **display order** — the filenames are numbered,
     /// so a `Set`'s arbitrary order would number them arbitrarily.
-    internal static func export(_ games: [PGN]) {
+    static func export(_ games: [PGN]) {
         guard !games.isEmpty else { return }
         if games.count == 1 {
             exportSingle(games[0])

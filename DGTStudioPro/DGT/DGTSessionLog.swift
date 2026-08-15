@@ -8,7 +8,7 @@ import UniformTypeIdentifiers
 /// Console-log); `recordDesync` is the full-context capture. Ring-bounded.
 @Observable
 @MainActor
-internal final class DGTSessionLog {
+final class DGTSessionLog {
     
     // MARK: Logging
     
@@ -16,33 +16,33 @@ internal final class DGTSessionLog {
     
     // MARK: Entry
     
-    internal enum Level: String, Sendable {
+    enum Level: String, Sendable {
         case debug, info, error
     }
     
-    internal struct Entry: Identifiable, Sendable {
-        internal let id = UUID()
-        internal let timestamp: Date
-        internal let level: Level
-        internal let message: String
+    struct Entry: Identifiable, Sendable {
+        let id = UUID()
+        let timestamp: Date
+        let level: Level
+        let message: String
     }
     
     // MARK: Observable State
     
     /// Ordered timeline, oldest first. Bounded — see `maxEntries`.
-    private(set) internal var entries: [Entry] = []
+    private(set) var entries: [Entry] = []
     
     // MARK: Configuration
     
     /// Hard cap; a full game is well under it. Oldest dropped first.
     @ObservationIgnored private let maxEntries = 2000
     
-    internal init() {}
+    init() {}
     
     // MARK: Recording
     
     /// Buffers *and* mirrors to Console — for events the caller doesn't otherwise log.
-    internal func record(_ level: Level, _ message: String) {
+    func record(_ level: Level, _ message: String) {
         append(level: level, message: message)
         switch level {
         case .debug: Self.logger?.debug("\(message, privacy: .public)")
@@ -52,13 +52,13 @@ internal final class DGTSessionLog {
     }
     
     /// Buffers only — for milestones whose caller already Console-logs (no duplicate lines).
-    internal func capture(_ level: Level, _ message: String) {
+    func capture(_ level: Level, _ message: String) {
         append(level: level, message: message)
     }
     
     /// The headline: everything about an unreconcilable board — last legal FEN, physical board,
     /// exact diff, recent moves — enough to replay the failure by hand.
-    internal func recordDesync(
+    func recordDesync(
         before: GameState,
         physical: Position,
         recentSAN: [String],
@@ -80,7 +80,7 @@ internal final class DGTSessionLog {
     // MARK: Export
     
     /// The timeline as plain text, newest last, timestamped; multi-line entries preserved.
-    internal func exportText() -> String {
+    func exportText() -> String {
         let stamp = Self.timestampFormatter
         var lines: [String] = [
             "DGT Studio Pro Live Session Log",
@@ -99,13 +99,13 @@ internal final class DGTSessionLog {
     }
     
     /// Writes the timeline to `url`. Throws on write failure.
-    internal func write(to url: URL) throws {
+    func write(to url: URL) throws {
         try exportText().write(to: url, atomically: true, encoding: .utf8)
     }
     
     /// Save panel + write. Non-throwing, failure Console-logged — a throw across the panel's
     /// completion would surface on a later, luckier export.
-    internal func exportViaSavePanel() {
+    func exportViaSavePanel() {
         let panel = NSSavePanel()
         panel.title = "Export Live Session Log"
         panel.nameFieldStringValue = "DGTLiveSession-\(Self.fileStampFormatter.string(from: .now)).log"
@@ -121,7 +121,7 @@ internal final class DGTSessionLog {
     
     /// No production caller — ring-bounded, nothing resets per game; exists so the suite can assert
     /// the bound and the append path independently.
-    internal func clear() {
+    func clear() {
         entries.removeAll()
     }
     
@@ -153,10 +153,10 @@ internal final class DGTSessionLog {
 
 /// Side-effect-free renderers of the pure DGT/chess values — reads only, which is what lets the
 /// pure types stay logger-free.
-internal enum DGTDebugFormat {
+enum DGTDebugFormat {
     
     /// FEN rank notation via a neutral FEN wrap — no new chess-core code.
-    internal static func placement(_ position: Position) -> String {
+    static func placement(_ position: Position) -> String {
         FEN(
             position: position,
             activeColor: .white,
@@ -168,7 +168,7 @@ internal enum DGTDebugFormat {
     }
     
     /// `vacated[e2=P,…] placed[e4=P,…]`, ordered by square index for stable output.
-    internal static func diff(_ diff: DGTBoardDiff) -> String {
+    static func diff(_ diff: DGTBoardDiff) -> String {
         "vacated[\(squares(diff.vacated))] placed[\(squares(diff.placed))]"
     }
     

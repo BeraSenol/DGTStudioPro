@@ -9,26 +9,26 @@
 ///
 /// Mirrors how a real board reports a move as several discrete field updates;
 /// the per-move-class update orderings live in the tests that use it.
-internal struct DGTBoardSimulator {
+struct DGTBoardSimulator {
 
     /// One field update: the square that changed and what now occupies it.
-    internal typealias Update = (square: Square, piece: Piece)
+    typealias Update = (square: Square, piece: Piece)
 
     /// The running physical board.
-    private(set) internal var board: Position
+    private(set) var board: Position
 
-    internal init(_ start: Position) {
+    init(_ start: Position) {
         board = start
     }
 
     /// Applies a single field update.
-    internal mutating func apply(_ update: Update) {
+    mutating func apply(_ update: Update) {
         board[update.square] = update.piece
     }
 
     /// Folds `updates` onto `start`, returning the board after each step (the
     /// stream a reconstructor would see). Does not include `start` itself.
-    internal static func boards(
+    static func boards(
         from start: Position,
         updates: [Update]
     ) -> [Position] {
@@ -40,7 +40,7 @@ internal struct DGTBoardSimulator {
     }
 
     /// Convenience: the final board after applying all `updates` to `start`.
-    internal static func finalBoard(
+    static func finalBoard(
         from start: Position,
         updates: [Update]
     ) -> Position {

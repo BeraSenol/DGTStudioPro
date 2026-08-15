@@ -1,11 +1,11 @@
 /// Pure decisions behind connection QoL, extracted so the choices are testable without hardware.
-internal enum DGTAutoConnectPolicy {
+enum DGTAutoConnectPolicy {
 
     // MARK: The Rule (3 Aug 2026)
 
     /// Which of `devices` is the board — the one spelling. Matched on `path`, never `name`: exactly
     /// one criterion in the codebase for what counts as the board.
-    internal static func board(
+    static func board(
         at boardPath: String,
         among devices: [DGTSerialDevice]
     ) -> DGTSerialDevice? {
@@ -17,7 +17,7 @@ internal enum DGTAutoConnectPolicy {
     /// The launch decision: connect silently iff enabled and **the** board is attached
     /// (`onlyBoardPath` at every production call site). A likely-looking stranger on another path
     /// never wins — there is no heuristic left to win with.
-    internal static func launchTarget(
+    static func launchTarget(
         enabled: Bool,
         boardPath: String,
         among devices: [DGTSerialDevice]
@@ -29,7 +29,7 @@ internal enum DGTAutoConnectPolicy {
     // MARK: Reconnect Lap (M7.3)
     
     /// The three things one lap of the mid-game reconnect loop can decide.
-    internal enum ReconnectLap: Equatable {
+    enum ReconnectLap: Equatable {
         /// The game ended or was discarded — stand down quietly.
         case stop
         /// Still worth reconnecting, but the device isn't back — sleep.
@@ -40,7 +40,7 @@ internal enum DGTAutoConnectPolicy {
     
     /// Decides a lap. `gameActive` re-asked every lap; `stop` outranks `attempt` — a discarded game
     /// ends the loop even in the lap the device came back.
-    internal static func reconnectLap(
+    static func reconnectLap(
         gameActive: Bool,
         targetPath: String,
         among devices: [DGTSerialDevice]

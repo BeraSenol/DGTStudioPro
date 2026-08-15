@@ -5,22 +5,22 @@ import Foundation
 /// Immutable `Codable` recording of a live board session: timestamped physical-board snapshots
 /// plus the board identity. Captured from hardware, replayed deterministically for regression —
 /// pure; reads the chess/reconstruction types, never the session.
-internal struct DGTSessionRecording: Codable, Equatable {
+struct DGTSessionRecording: Codable, Equatable {
     
     /// One captured physical-board snapshot.
-    internal struct Entry: Codable, Equatable {
+    struct Entry: Codable, Equatable {
         /// Milliseconds since the first recorded snapshot.
-        internal let offsetMillis: Int
-        internal let board: Position
+        let offsetMillis: Int
+        let board: Position
     }
     
     /// The board's reported identity, for fixture provenance.
-    internal struct Identity: Codable, Equatable {
-        internal var serialNumber: String?
-        internal var version: String?
-        internal var trademark: String?
+    struct Identity: Codable, Equatable {
+        var serialNumber: String?
+        var version: String?
+        var trademark: String?
         
-        internal init(
+        init(
             serialNumber: String? = nil,
             version: String? = nil,
             trademark: String? = nil
@@ -31,11 +31,11 @@ internal struct DGTSessionRecording: Codable, Equatable {
         }
     }
     
-    internal var identity: Identity
-    internal var recordedAt: Date
-    internal var entries: [Entry]
+    var identity: Identity
+    var recordedAt: Date
+    var entries: [Entry]
     
-    internal init(
+    init(
         identity: Identity = .init(),
         recordedAt: Date = .now,
         entries: [Entry] = []
@@ -52,7 +52,7 @@ extension DGTSessionRecording {
     
     /// The snapshots the live session would have *settled* on — reproduces the 300 ms debounce from
     /// recorded timestamps, deterministically.
-    internal func settledBoards(quiescence: Duration = .milliseconds(300)) -> [Position] {
+    func settledBoards(quiescence: Duration = .milliseconds(300)) -> [Position] {
         let gap = quiescence.inMilliseconds
         var settled: [Position] = []
         for (index, entry) in entries.enumerated() {
@@ -65,15 +65,15 @@ extension DGTSessionRecording {
     }
     
     /// One settled snapshot and what the reconstructor concluded for it.
-    internal struct Step: Equatable {
-        internal let board: Position
-        internal let outcome: DGTReconstruction
+    struct Step: Equatable {
+        let board: Position
+        let outcome: DGTReconstruction
     }
     
     /// Walks the settled snapshots through the pure reconstructor from `initialState`, advancing
     /// only on committed `.move` — the field-desync replay ("would this recording trip a false
     /// desync?").
-    internal func reconstructions(
+    func reconstructions(
         from initialState: GameState,
         quiescence: Duration = .milliseconds(300)
     ) -> [Step] {
@@ -94,14 +94,14 @@ extension DGTSessionRecording {
 
 extension DGTSessionRecording {
     
-    internal func jsonData() throws -> Data {
+    func jsonData() throws -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
         return try encoder.encode(self)
     }
     
-    internal static func decoded(from data: Data) throws -> DGTSessionRecording {
+    static func decoded(from data: Data) throws -> DGTSessionRecording {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try decoder.decode(DGTSessionRecording.self, from: data)
@@ -112,17 +112,17 @@ extension DGTSessionRecording {
 
 /// Accumulates a recording from live changes; MainActor — driven from the connection.
 @MainActor
-internal final class DGTSessionRecorder {
+final class DGTSessionRecorder {
     
     private let clock = ContinuousClock()
     private let start: ContinuousClock.Instant
     private let recordedAt = Date.now
-    private(set) internal var entries: [DGTSessionRecording.Entry] = []
+    private(set) var entries: [DGTSessionRecording.Entry] = []
     
     /// Stamped when recording stops — identity arrives during the handshake, possibly late.
-    internal var identity = DGTSessionRecording.Identity()
+    var identity = DGTSessionRecording.Identity()
     
-    internal init() {
+    init() {
         start = clock.now
     }
     
@@ -130,14 +130,14 @@ internal final class DGTSessionRecorder {
     /// marathon recording stays under a megabyte; replay reads gaps between retained neighbours.
     private let maxEntries = 10_000
     
-    internal func record(_ board: Position) {
+    func record(_ board: Position) {
         entries.append(.init(offsetMillis: (clock.now - start).inMilliseconds, board: board))
         if entries.count > maxEntries {
             entries.removeFirst(entries.count - maxEntries)
         }
     }
     
-    internal func finish() -> DGTSessionRecording {
+    func finish() -> DGTSessionRecording {
         DGTSessionRecording(identity: identity, recordedAt: recordedAt, entries: entries)
     }
 }
@@ -164,7 +164,7 @@ extension DGTSessionRecording {
     /// failure.
     @MainActor
     @discardableResult
-    internal func exportViaSavePanel() throws -> URL? {
+    func exportViaSavePanel() throws -> URL? {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.json]
         panel.canCreateDirectories = true

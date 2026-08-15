@@ -6,7 +6,7 @@ import os
 /// collapse. **Identity is what a section shows, not which inspector shows it** (fold Opening
 /// on the Board, it folds in the Library). Titles cannot supply it: two sections called "Game",
 /// neither the game — hence an enum with hand-written raw values.
-internal enum InspectorSection: String, CaseIterable, Sendable {
+enum InspectorSection: String, CaseIterable, Sendable {
     case roster         = "roster"
     case opening        = "opening"
     case evaluation     = "evaluation"
@@ -26,7 +26,7 @@ internal enum InspectorSection: String, CaseIterable, Sendable {
 /// collapsed sections**, so "default open" is the representation, not a `?? true`.
 @MainActor
 @Observable
-internal final class InspectorSectionCollapse {
+final class InspectorSectionCollapse {
 
     // MARK: Type Properties
     @ObservationIgnored
@@ -45,18 +45,18 @@ internal final class InspectorSectionCollapse {
 
     /// Injectable for the suite and for `preview`. (The third reason — the UI seed's wiped suite —
     /// retired with the suite; `.defaultAppStorage` never reached a hand-constructed instance anyway.)
-    internal init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         self.collapsed = Self.read(from: defaults)
     }
 
     // MARK: Internal Methods
 
-    internal func isCollapsed(_ section: InspectorSection) -> Bool {
+    func isCollapsed(_ section: InspectorSection) -> Bool {
         collapsed.contains(section)
     }
 
-    internal func toggle(_ section: InspectorSection) {
+    func toggle(_ section: InspectorSection) {
         if collapsed.contains(section) {
             collapsed.remove(section)
         } else {
@@ -97,7 +97,7 @@ extension InspectorSectionCollapse {
 
     /// The instance every inspector preview injects — a non-optional `@Environment` traps when
     /// missing. Computed, not stored, so each canvas starts clean; the wipe is what makes that true.
-    internal static var preview: InspectorSectionCollapse {
+    static var preview: InspectorSectionCollapse {
         let name = "preview"
         // `!` over `?? .standard`: the fallback's failure mode is worse than the crash — a canvas
         // silently editing the developer's defaults. A crash points at itself; a leak points at nothing.

@@ -4,18 +4,18 @@
 ///
 /// Ordered soft → hard, which is the order a picker should offer them in: the list
 /// reads as a scale rather than as three unrelated names.
-internal enum BoardSoundSet: String, CaseIterable, Identifiable, Sendable {
+enum BoardSoundSet: String, CaseIterable, Identifiable, Sendable {
     case felt
     case wood
     case marble
 
-    internal var id: Self { self }
+    var id: Self { self }
 
     /// Written out rather than derived from `rawValue.capitalized`. It would work
     /// today for all three, which is exactly why it is worth pinning: the first set
     /// whose name is two words or carries an accent would break silently, and
     /// `SpecialCheckmate.displayName` records that same tripwire.
-    internal var displayName: String {
+    var displayName: String {
         switch self {
         case .felt:   "Felt"
         case .wood:   "Wood"
@@ -30,7 +30,7 @@ internal enum BoardSoundSet: String, CaseIterable, Identifiable, Sendable {
     /// the naming convention should live with the thing that grows. Spelled off
     /// both `rawValue`s, so renaming either case is a **bundle** rename and the two
     /// cannot drift apart in silence.
-    internal func resourceName(for cue: BoardCue) -> String {
+    func resourceName(for cue: BoardCue) -> String {
         "\(rawValue)-\(cue.rawValue)"
     }
 }

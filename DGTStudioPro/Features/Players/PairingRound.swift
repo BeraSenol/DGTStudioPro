@@ -3,12 +3,12 @@ import Foundation
 /// The New Game round prefill (D16′): latest round among games pairing these two, plus one.
 /// The pair matches as a *set*; "latest" is the numeric maximum — a late-imported old game
 /// can't wind the rivalry counter backwards; unknowns never inform.
-internal enum PairingRound {
+enum PairingRound {
     
     /// The suggested Round for a new game between `first` and `second`
     /// (both `Player.normalizedName` keys): latest pairing round + 1, or
     /// nil when the pairing has no numbered history.
-    internal static func nextRound(
+    static func nextRound(
         between first: String,
         and second: String,
         in records: [GameRecord]

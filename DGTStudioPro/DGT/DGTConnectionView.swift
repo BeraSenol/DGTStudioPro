@@ -3,7 +3,7 @@ import SwiftUI
 /// The board connection window — a confirmation/error surface since the device picker was
 /// deleted (the app connects to `onlyBoardPath`, never anything else). A thin view over the
 /// app-global `DGTConnection`; never opens a port itself.
-internal struct DGTConnectionView: View {
+struct DGTConnectionView: View {
 
     @Environment(DGTConnection.self) private var connection
     @Environment(\.dismiss) private var dismiss
@@ -21,7 +21,7 @@ internal struct DGTConnectionView: View {
         static let infoTableWidth: CGFloat = 260
     }
 
-    internal var body: some View {
+    var body: some View {
         VStack(spacing: 0) {
             header
             Divider()

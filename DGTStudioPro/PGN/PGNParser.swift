@@ -2,12 +2,12 @@ import Foundation
 import os
 
 // MARK: PGN Parser
-internal enum PGNParser {
+enum PGNParser {
     
     // MARK: Static Constants
     private static let logger = AppLog.logger(.pgnparse)
     
-    internal static let requiredTags: Set<String> = Set(
+    static let requiredTags: Set<String> = Set(
         SevenTagRoster.allCases.map(\.rawValue)
     )
     
@@ -27,7 +27,7 @@ internal enum PGNParser {
     }()
     
     // MARK: Errors
-    internal enum Error: Swift.Error, Equatable {
+    enum Error: Swift.Error, Equatable {
         case missingRequiredTags(Set<String>)
         case unbalancedBraces
         case unbalancedParentheses
@@ -37,7 +37,7 @@ internal enum PGNParser {
     }
     
     // MARK: Entry Point
-    internal static func parse(_ text: String) throws(Error) -> PGN {
+    static func parse(_ text: String) throws(Error) -> PGN {
         let (tagSection, movetextSection) = splitSections(normalizeLineEndings(text))
         
         let tags = parseTags(from: tagSection)
@@ -89,11 +89,11 @@ internal enum PGNParser {
     }
     
     // MARK: Tag Parsing
-    internal static func missingTags(in tags: [String: String]) -> Set<String> {
+    static func missingTags(in tags: [String: String]) -> Set<String> {
         requiredTags.subtracting(tags.keys)
     }
     
-    internal static func parseTags(from text: String) -> [String: String] {
+    static func parseTags(from text: String) -> [String: String] {
         var tags: [String: String] = [:]
         
         for line in text.components(separatedBy: .newlines) {
@@ -107,7 +107,7 @@ internal enum PGNParser {
         return tags
     }
     
-    internal static func parseTag(_ line: String) -> (key: String, value: String)? {
+    static func parseTag(_ line: String) -> (key: String, value: String)? {
         guard line.hasPrefix("["), line.hasSuffix("]") else { return nil }
         
         let inner = line.dropFirst().dropLast()
@@ -125,33 +125,33 @@ internal enum PGNParser {
         return (key, value)
     }
     
-    internal static func parseDate(_ date: String?) -> Date? {
+    static func parseDate(_ date: String?) -> Date? {
         guard let date, !date.contains("?") else { return nil }
         return dateFormatter.date(from: date)
     }
     
     /// The writer's half of `parseDate` — same formatter, so parse and serialize cannot drift.
     /// Lives here, not on `PGNSerializer`, precisely so there is one formatter.
-    internal static func pgnDateString(_ date: Date?) -> String {
+    static func pgnDateString(_ date: Date?) -> String {
         guard let date else { return RosterSummary.unknownDate }
         return dateFormatter.string(from: date)
     }
     
     /// **Integer rounds only (D31′)**: `Int(_)` refuses multipart rounds, so `1.3` imports as nil
     /// and exports as `?` — lossy, and deliberate. Pinned by `roundParsesIntegersOnly`.
-    internal static func parseRound(_ round: String?) -> Int? {
+    static func parseRound(_ round: String?) -> Int? {
         guard let round else { return nil }
         return Int(round)
     }
     
-    internal static func parseResult(_ string: String?) -> GameResult {
+    static func parseResult(_ string: String?) -> GameResult {
         guard let string, let result = GameResult(rawValue: string) else {
             return .ongoing
         }
         return result
     }
     
-    internal static func parseTimeControl(_ value: String?) -> String? {
+    static func parseTimeControl(_ value: String?) -> String? {
         guard let value, !value.isEmpty, value != "-" else { return nil }
         return value
     }
@@ -160,7 +160,7 @@ internal enum PGNParser {
     
     /// Single-pass scanner producing moves plus parallel evaluations from `{[%eval …]}` comments —
     /// `evaluations[i]` follows `moves[i]`, the Lichess convention.
-    internal static func parseMovesAndEvaluations(
+    static func parseMovesAndEvaluations(
         from movetext: String
     ) throws(Error) -> (moves: [String], evaluations: [Evaluation?]) {
         let chars = Array(movetext)

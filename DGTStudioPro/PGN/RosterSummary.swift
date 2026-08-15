@@ -3,28 +3,28 @@ import Foundation
 /// One game's Seven Tag Roster as a value (D22′) — the *set* is the point: every surface shows
 /// all seven, standard order, formatted identically. Values stored in **tag form**; display
 /// happens once, in the subscript.
-internal struct RosterSummary: Equatable, Sendable {
+struct RosterSummary: Equatable, Sendable {
     
     // MARK: Placeholders
     
     /// An unset tag, in PGN's own vocabulary — export's word, not display's.
-    internal static let unknownTag = "?"
-    internal static let unknownDate = "????.??.??"
+    static let unknownTag = "?"
+    static let unknownDate = "????.??.??"
     
     // MARK: Stored Properties
     
-    internal let event: String
-    internal let site: String
-    internal let date: Date?
-    internal let round: Int?
-    internal let white: String
-    internal let black: String
-    internal let result: GameResult
+    let event: String
+    let site: String
+    let date: Date?
+    let round: Int?
+    let white: String
+    let black: String
+    let result: GameResult
 
     /// True only for the live projection (`init(_:result:)` sets it; the `PGN` one never does).
     /// One display rule: `*` is *true* on a live game and an import-door unknown on a stored one —
     /// same token, two meanings, and only the constructor knows which (D55′).
-    internal var isRecording: Bool = false
+    var isRecording: Bool = false
 
 
     // MARK: Display
@@ -32,7 +32,7 @@ internal struct RosterSummary: Equatable, Sendable {
     /// Every display unknown is this one em dash (D55′): `?`, `????.??.??` and an archived `*` all
     /// fold to it — four spellings on one panel read as four kinds of problem. **Display only:**
     /// `tagValue(for:)` is untouched and must stay so — D24′ pins export to reference bytes.
-    internal static let displayUnknown = "—"
+    static let displayUnknown = "—"
 
     /// A stored value as *shown* — PGN's unknown folded to the glyph, everything else verbatim.
     private static func shown(_ raw: String) -> String {
@@ -42,7 +42,7 @@ internal struct RosterSummary: Equatable, Sendable {
 
     /// Display value per tag, reached through `SevenTagRoster.allCases` — a new case is a compile
     /// error here, so the roster cannot quietly lose a tag.
-    internal subscript(tag: SevenTagRoster) -> String {
+    subscript(tag: SevenTagRoster) -> String {
         switch tag {
         case .event:  Self.shown(event)
         case .site:   Self.shown(site)
@@ -58,7 +58,7 @@ internal struct RosterSummary: Equatable, Sendable {
     
     /// The **stored** value — tag form, untransformed: export needs "Senol, Bera". The
     /// display/export split is structural, not a comment (pinned).
-    internal func tagValue(for tag: SevenTagRoster) -> String {
+    func tagValue(for tag: SevenTagRoster) -> String {
         switch tag {
         case .event:  event
         case .site:   site
@@ -71,13 +71,13 @@ internal struct RosterSummary: Equatable, Sendable {
     }
     
     /// The app's one short-date rendering — five identical copies collapsed here.
-    internal static func displayDate(_ date: Date?) -> String {
+    static func displayDate(_ date: Date?) -> String {
         // `????.??.??` stays the *export* vocabulary; this is display, so the one glyph.
         guard let date else { return displayUnknown }
         return date.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits))
     }
 
-    internal static func displayRound(_ round: Int?) -> String {
+    static func displayRound(_ round: Int?) -> String {
         guard let round else { return displayUnknown }
         return String(round)
     }
@@ -88,7 +88,7 @@ internal struct RosterSummary: Equatable, Sendable {
 extension RosterSummary {
     
     /// The archived-game projection; kept here — six lines, imports nothing, purity holds.
-    internal init(_ pgn: PGN) {
+    init(_ pgn: PGN) {
         self.init(
             event:  pgn.event,
             site:   pgn.site,
@@ -103,7 +103,7 @@ extension RosterSummary {
     /// The live projection; `Roster` carries six of seven (the result lives on the game).
     /// Deliberately **not** @MainActor (D44′): a global actor isolates a type's members, never
     /// nested types — pinned from the nonisolated side, where the claim would break.
-    internal init(_ roster: LiveGame.Roster, result: GameResult) {
+    init(_ roster: LiveGame.Roster, result: GameResult) {
         self.init(
             event:  roster.event,
             site:   roster.site,

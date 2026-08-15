@@ -5,7 +5,7 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
-internal struct LibraryDestination: View {
+struct LibraryDestination: View {
     
     // MARK: Static Constants
     private static let logger = AppLog.logger(.library)
@@ -14,13 +14,13 @@ internal struct LibraryDestination: View {
     private static let openConfirmationThreshold = 10
     
     // MARK: Stored Properties
-    internal let filter: LibraryFilter?
+    let filter: LibraryFilter?
     
     /// Clears the active filter; owned by `ContentView` because a filter is a sidebar selection. Nil when unfiltered.
-    internal let onClearFilter: (() -> Void)?
+    let onClearFilter: (() -> Void)?
     
     // MARK: Tab State (lives on enclosing `ContentView`)
-    @Bindable internal var tabState: TabState
+    @Bindable var tabState: TabState
     
     // MARK: Private Properties
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
@@ -52,7 +52,7 @@ internal struct LibraryDestination: View {
     /// Memo key for the `GameRecord` projection: content plus an analysis signal.
     /// The signal is the queue's counters, never the `evaluations` array — an array read would defeat the memo.
     /// Internal (not private) so the D78′ key-completeness suite can construct one.
-    internal struct FoldKey: Equatable {
+    struct FoldKey: Equatable {
         let content: CollectionFoldKey
         let running: PersistentIdentifier?
         let completed: Int
@@ -65,7 +65,7 @@ internal struct LibraryDestination: View {
     /// The narrowing inputs as one value (D78′): the projection's key plus everything filter,
     /// search and sort read. A missed input here is stale rows on screen — the suite pins the
     /// field list, which is the only defence a memo key has.
-    internal struct NarrowKey: Equatable {
+    struct NarrowKey: Equatable {
         let fold: FoldKey
         let filter: LibraryFilter.Signature?
         let query: String
@@ -75,7 +75,7 @@ internal struct LibraryDestination: View {
 
     /// Narrowed pairs and their sorted projection, cached as one unit — the sort was the last
     /// unconditional per-render O(n log n) (the ECO comparator rehydrates per comparison, censused).
-    internal struct NarrowResult {
+    struct NarrowResult {
         let pairs: [(game: PGN, record: GameRecord)]
         let sorted: [PGN]
     }
@@ -104,12 +104,12 @@ internal struct LibraryDestination: View {
     }
 
     /// Launch order, stated once. `nonisolated`: `View` conformance would infer @MainActor and lock out previews.
-    internal nonisolated static var defaultSortOrder: [KeyPathComparator<PGN>] {
+    nonisolated static var defaultSortOrder: [KeyPathComparator<PGN>] {
         [KeyPathComparator(\PGN.libraryIndex, order: .reverse)]
     }
     
     // MARK: Initializers
-    internal init(
+    init(
         filter: LibraryFilter? = nil,
         tabState: TabState,
         onClearFilter: (() -> Void)? = nil
@@ -225,7 +225,7 @@ internal struct LibraryDestination: View {
 
 
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         coreContent
             .alert(
                 "Delete Game?",
@@ -983,7 +983,7 @@ extension Binding where Value == Bool {
     /// `BoardDestination`'s offer bindings look identical and are deliberately not folded in — they ignore dismissal.
     /// Waived warning ×2: non-Sendable `Binding` captured in `@Sendable` closures; expires by deletion when
     /// `.alert(item:)` ships (D43′ — the register's one compiler-warning waiver).
-    internal init<T>(present source: Binding<T?>) {
+    init<T>(present source: Binding<T?>) {
         self.init(
             get: { source.wrappedValue != nil },
             set: { if !$0 { source.wrappedValue = nil } }

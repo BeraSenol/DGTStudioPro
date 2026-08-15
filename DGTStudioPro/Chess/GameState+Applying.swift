@@ -4,7 +4,7 @@ extension GameState {
     
     /// Applies `move`, returning a new state with all six fields updated. Every path to a next
     /// state goes through here; hand-built states are the caller's problem.
-    internal func applying(_ move: Move) -> GameState {
+    func applying(_ move: Move) -> GameState {
         GameState(
             position: position.applying(move),
             activeColor: activeColor.opponent,

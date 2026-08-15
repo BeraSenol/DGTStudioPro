@@ -8,7 +8,7 @@ import SwiftData
 /// All Library persistence — import, archive, delete, one-hash/two-doors `refreshHash`.
 /// `@MainActor` as a whole: every method fronts the app's main-context `ModelContext`.
 @MainActor
-internal struct PGNStore {
+struct PGNStore {
     
     // MARK: Static Constants
     private static let logger = AppLog.logger(.pgnstore)
@@ -23,13 +23,13 @@ internal struct PGNStore {
     /// **Persistence contract**: every stored `contentHash` was computed against this exact
     /// "yyyy.MM.dd"-in-UTC rendering — it must stay byte-identical forever or dedupe rots.
     /// Internal (not private) so the pin can reach it.
-    internal static func hashDateString(from date: Date) -> String {
+    static func hashDateString(from date: Date) -> String {
         let parts = hashCalendar.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d.%02d.%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
     
     // MARK: Errors
-    internal enum Error: Swift.Error {
+    enum Error: Swift.Error {
         /// Hash matches an existing game. Carries id + name, never the model — `Swift.Error`
         /// refines `Sendable`, and a live `@Model` never is.
         case duplicate(existingID: PersistentIdentifier, existingName: String)
@@ -41,18 +41,18 @@ internal struct PGNStore {
     }
     
     /// Archive outcome: a hash match here is *success* (game is in the Library), not the error import throws.
-    internal struct ArchiveResult {
+    struct ArchiveResult {
         /// The Library row the game landed on — fresh or pre-existing.
-        internal let pgn: PGN
+        let pgn: PGN
         /// True when an identical game was already stored.
-        internal let deduplicated: Bool
+        let deduplicated: Bool
     }
     
     // MARK: Stored Properties
     private let modelContext: ModelContext
     
     // MARK: Initializers
-    internal init(modelContext: ModelContext) {
+    init(modelContext: ModelContext) {
         self.modelContext = modelContext
     }
     
@@ -60,7 +60,7 @@ internal struct PGNStore {
     /// The text import door: parse, dedupe by content hash, insert.
     /// **Throws `Error.duplicate` naming the existing game — it does not return it.**
     @discardableResult
-    internal func importPGN(text: String, libraryIndex: Int? = nil) throws -> PGN {
+    func importPGN(text: String, libraryIndex: Int? = nil) throws -> PGN {
         let pgn = try parse(text)
         pgn.libraryIndex = libraryIndex
         let hash = Self.contentHash(for: pgn)
@@ -82,7 +82,7 @@ internal struct PGNStore {
     }
     
     @discardableResult
-    internal func importPGN(from url: URL) throws -> PGN {
+    func importPGN(from url: URL) throws -> PGN {
         let text: String
         
         do {
@@ -101,7 +101,7 @@ internal struct PGNStore {
     }
 
     /// Highest ordinal in the Library, or nil (D58′). Predicated + limit 1, not fetch-and-scan.
-    internal func highestLibraryIndex() throws -> Int? {
+    func highestLibraryIndex() throws -> Int? {
         var descriptor = FetchDescriptor<PGN>(
             predicate: #Predicate { $0.libraryIndex != nil },
             sortBy: [SortDescriptor(\.libraryIndex, order: .reverse)]
@@ -111,25 +111,25 @@ internal struct PGNStore {
     }
     
     /// Folder-scan report (counts and filenames only — no models cross this boundary, the `HashCollision` rule).
-    internal struct LibraryIndexBackfill: Sendable, Equatable {
+    struct LibraryIndexBackfill: Sendable, Equatable {
         /// Rows that had no ordinal and now carry the one their file named.
-        internal var stamped: Int = 0
+        var stamped: Int = 0
         /// Matched a row that already had an ordinal — left alone, see below.
-        internal var alreadyNumbered: Int = 0
+        var alreadyNumbered: Int = 0
         /// Parsed cleanly, matched no row — a finding, not an error: the folder holds a game the Library does not.
-        internal var unmatched: [String] = []
+        var unmatched: [String] = []
         /// No `<digits>.` ordinal in the filename; skipped before parsing.
-        internal var unnumbered: [String] = []
+        var unnumbered: [String] = []
         /// Unreadable or unparseable — separate from `unmatched` because the remedies differ.
-        internal var skipped: [String] = []
+        var skipped: [String] = []
 
-        internal var scanned: Int {
+        var scanned: Int {
             stamped + alreadyNumbered + unmatched.count + unnumbered.count + skipped.count
         }
     }
 
     /// Whether any game still lacks an ordinal — gates the backfill affordance (D40′). Predicated + limit 1.
-    internal func hasUnnumberedGames() throws -> Bool {
+    func hasUnnumberedGames() throws -> Bool {
         var descriptor = FetchDescriptor<PGN>(predicate: #Predicate { $0.libraryIndex == nil })
         descriptor.fetchLimit = 1
         return try !modelContext.fetch(descriptor).isEmpty
@@ -138,7 +138,7 @@ internal struct PGNStore {
     /// Matches PGN files in `folder` to rows by **content hash** (never by filename — the folder uses full
     /// names, the serializer given names) and stamps each match with the filename's ordinal (D58′).
     /// An existing ordinal is never overwritten; one bad file does not cost the rest.
-    internal func backfillLibraryIndices(from folder: URL) throws -> LibraryIndexBackfill {
+    func backfillLibraryIndices(from folder: URL) throws -> LibraryIndexBackfill {
         var report = LibraryIndexBackfill()
 
         let names = try FileManager.default
@@ -193,7 +193,7 @@ internal struct PGNStore {
     /// The second door (M5): archives a finished live game. Shares `contentHash` with import —
     /// one hash, two doors — so a game imported and archived deduplicates.
     @discardableResult
-    internal func archive(_ game: LiveGame) throws -> ArchiveResult {
+    func archive(_ game: LiveGame) throws -> ArchiveResult {
         guard game.isFinished, game.result != .ongoing else {
             throw Error.ongoingGame
         }
@@ -242,7 +242,7 @@ internal struct PGNStore {
     
     /// Recomputes and persists `contentHash` after an in-place edit — skipping it lets dedupe rot
     /// against stale hashes ("any in-place edit must call `refreshHash`").
-    internal func refreshHash(of pgn: PGN) throws {
+    func refreshHash(of pgn: PGN) throws {
         pgn.contentHash = Self.contentHash(for: pgn)
         try modelContext.save()
         Self.logger?.info("Refreshed content hash for '\(pgn.name, privacy: .public)'")
@@ -250,7 +250,7 @@ internal struct PGNStore {
     
     /// One-hash/two-doors made structural: every in-place edit funnels through here, so mutation
     /// and rehash cannot be separated by a forgetful caller. Re-resolves both seats unconditionally.
-    internal func applyEdit(to pgn: PGN, _ edit: (PGN) -> Void) throws {
+    func applyEdit(to pgn: PGN, _ edit: (PGN) -> Void) throws {
         // D76′: the only rows this edit can strand are the two it is about to re-resolve away
         // from — captured before the edit, checked after (D60′'s rule, scoped).
         let displaced = [pgn.whitePlayer, pgn.blackPlayer].compactMap { $0 }
@@ -266,7 +266,7 @@ internal struct PGNStore {
     /// first offending ply and nothing mutates; `.success` stores canonical moves, invalidates stored
     /// evaluations, re-classifies, rehashes — one transaction. Seats untouched: movetext cannot edit them.
     /// `throws` is reserved for the SwiftData save.
-    internal func applyMovetextEdit(
+    func applyMovetextEdit(
         to pgn: PGN,
         proposed: [String]
     ) throws -> Result<[String], MovetextEdit.Rejection> {
@@ -288,13 +288,13 @@ internal struct PGNStore {
     }
     
     /// Forwards to the batch door — the orphan cascade and transaction shape have exactly one implementation.
-    internal func delete(_ pgn: PGN) throws {
+    func delete(_ pgn: PGN) throws {
         try delete([pgn])
     }
 
     /// Deletes games in one transaction. Players stranded by the deletion go with it (D50′) — computed
     /// **before** the first delete: `.nullify` propagation cannot be relied on afterwards.
-    internal func delete(_ pgns: [PGN]) throws {
+    func delete(_ pgns: [PGN]) throws {
         guard !pgns.isEmpty else { return }
         let stranded = Self.playersOrphaned(byDeleting: pgns)
         let subject = pgns.count == 1 ? "'\(pgns[0].name)'" : "\(pgns.count) games"
@@ -313,14 +313,14 @@ internal struct PGNStore {
     
     // MARK: Player Resolution (M-prs.1)
     /// Links both seats to `Player` identities. Save-free by contract: every caller ends in its own save.
-    internal func resolvePlayers(for pgn: PGN) throws {
+    func resolvePlayers(for pgn: PGN) throws {
         pgn.whitePlayer = try resolvePlayer(named: pgn.white)
         pgn.blackPlayer = try resolvePlayer(named: pgn.black)
     }
     
     /// The single creation door for `Player`. Tags fold through `PlayerName.displayForm` then match on
     /// `normalizedName`; `"?"` and empty resolve to nil — the *absence* of a player, never a player named "?".
-    internal func resolvePlayer(named rawTag: String) throws -> Player? {
+    func resolvePlayer(named rawTag: String) throws -> Player? {
         // Placeholder rule + identity fold live on `Player.identity(forTag:)` since D61′ — one spelling.
         guard let key = Player.identity(forTag: rawTag) else { return nil }
         let display = PlayerName.displayForm(of: rawTag)
@@ -337,7 +337,7 @@ internal struct PGNStore {
     }
     
     /// Read-only bridge from `PlayerStats.ID` (= `normalizedName`) to the model — **never creates** (D9′).
-    internal func player(withNormalizedKey key: String) throws -> Player? {
+    func player(withNormalizedKey key: String) throws -> Player? {
         try first(#Predicate { $0.normalizedName == key })
     }
     
@@ -346,7 +346,7 @@ internal struct PGNStore {
     /// Safe to gate because imports link at the door, so no door can re-create the work; the one
     /// residual risk — a save that failed after an in-memory link — is priced in the anchor, and
     /// the recovery is deleting the default. `defaults` injectable for the suite.
-    internal func healPlayersIfNeeded(defaults: UserDefaults = .standard) throws {
+    func healPlayersIfNeeded(defaults: UserDefaults = .standard) throws {
         guard !defaults.bool(forKey: StorageKeys.playerBackfillsConverged) else { return }
         let healed = try backfillPlayerLinks() + backfillPlayerTagNames()
         if healed == 0 {
@@ -358,7 +358,7 @@ internal struct PGNStore {
     /// Links rows predating the M-prs.1 schema. Idempotent, called through `healPlayersIfNeeded`.
     /// Fetch-all-and-scan deliberately: a nil `whitePlayer` on a `"?"` row is *correct*, not missing.
     @discardableResult
-    internal func backfillPlayerLinks() throws -> Int {
+    func backfillPlayerLinks() throws -> Int {
         let games = try modelContext.fetch(FetchDescriptor<PGN>())
         var relinked = 0
         for game in games {
@@ -391,7 +391,7 @@ internal struct PGNStore {
     /// Heals `Player.tagName` on pre-D29′ rows: "first seen" reconstructed as the seat tag of the
     /// earliest linked game (chronological-order philosophy) — deterministic.
     @discardableResult
-    internal func backfillPlayerTagNames() throws -> Int {
+    func backfillPlayerTagNames() throws -> Int {
         let players = try modelContext.fetch(FetchDescriptor<Player>())
         var stamped = 0
         for player in players where player.tagName == nil {
@@ -418,7 +418,7 @@ internal struct PGNStore {
     /// Stamps derived classification — opening and mate motif — from stored moves. Save-free by
     /// contract (`resolvePlayers` precedent). Both columns stamped together or not at all (`PGN.opening`'s invariant).
     @discardableResult
-    internal func classify(_ pgn: PGN, using table: ECOClassifier = ECOTable.bundled) -> Bool {
+    func classify(_ pgn: PGN, using table: ECOClassifier = ECOTable.bundled) -> Bool {
         let result = GameClassification.classify(moves: pgn.moves, using: table)
         guard result.opening != pgn.opening
                 || result.openingPlies != pgn.ecoDepth
@@ -435,7 +435,7 @@ internal struct PGNStore {
     /// "classified, unnamed"; cheap because the table names all twenty first moves
     /// (`everyPlayedGameGetsAName`). Library `onAppear` only; predicated, unlike the link backfill.
     @discardableResult
-    internal func backfillClassifications(
+    func backfillClassifications(
         using table: ECOClassifier = ECOTable.bundled
     ) throws -> Int {
         let games = try modelContext.fetch(
@@ -457,24 +457,24 @@ internal struct PGNStore {
     /// One game a retag touches, and which seats. **Both flags on one entry per game**: a player can
     /// hold both sides, and per-seat entries compute two hashes, neither the row's real future hash (D39′).
     private struct Rewrite {
-        internal let game: PGN
-        internal let isWhite: Bool
-        internal let isBlack: Bool
+        let game: PGN
+        let isWhite: Bool
+        let isBlack: Bool
     }
 
     /// A game and the row its rewritten hash would collide with. Identifiers and names, never models
     /// (`Error.duplicate` precedent — `Swift.Error` refines `Sendable`).
-    internal struct HashCollision: Sendable {
+    struct HashCollision: Sendable {
         /// The game being retagged.
-        internal let gameID: PersistentIdentifier
-        internal let gameName: String
+        let gameID: PersistentIdentifier
+        let gameName: String
         /// The row its rewritten hash would land on.
-        internal let existingID: PersistentIdentifier
-        internal let existingName: String
+        let existingID: PersistentIdentifier
+        let existingName: String
     }
 
     /// Pre-flight refusals: nothing has been written when one of these is thrown.
-    internal enum RetagRejection: Swift.Error {
+    enum RetagRejection: Swift.Error {
         /// D39′: the rewrite would hand a game a hash another row already owns.
         case wouldCollide([HashCollision])
         /// A retag to `"?"`/empty is a deletion wearing a rename's clothes — refused.
@@ -486,7 +486,7 @@ internal struct PGNStore {
     /// form**. Pre-flight and all-or-nothing (D39′): a refusal leaves the archive untouched.
     /// Cost, accepted: seat tags are inside the hash, so pre-rename exports no longer dedupe.
     @discardableResult
-    internal func retag(_ player: Player, to newTag: String) throws -> Int {
+    func retag(_ player: Player, to newTag: String) throws -> Int {
         let display = PlayerName.displayForm(of: newTag)
         guard !display.isEmpty, display != "?" else { throw RetagRejection.emptyTag }
 
@@ -536,7 +536,7 @@ internal struct PGNStore {
     /// Fetch-all-and-scan: `isOrphaned` reads relationships, which `#Predicate` cannot. The
     /// backfill's arm — the editing doors pass only the rows they displaced (D76′).
     @discardableResult
-    internal func collectOrphanedPlayers() -> Int {
+    func collectOrphanedPlayers() -> Int {
         guard let players = try? modelContext.fetch(FetchDescriptor<Player>()) else {
             // A failed fetch means no collection this pass, never a partial one; the next door retries.
             Self.logger?.error("Orphan collection skipped, player fetch failed")
@@ -548,7 +548,7 @@ internal struct PGNStore {
     /// The scoped core (D76′): the same rule over only `candidates`. A self-play edit passes one
     /// row twice — the `isDeleted` guard makes the second visit a no-op, never a double delete.
     @discardableResult
-    internal func collectOrphanedPlayers(among candidates: [Player]) -> Int {
+    func collectOrphanedPlayers(among candidates: [Player]) -> Int {
         var collected = 0
         for player in candidates where !player.isDeleted && Self.isOrphaned(player) {
             Self.logger?.info(
@@ -561,13 +561,13 @@ internal struct PGNStore {
     }
 
     /// The one spelling of "nothing points at this row" (D40′) — a second spelling is the twin-read-site pattern.
-    internal static func isOrphaned(_ player: Player) -> Bool {
+    static func isOrphaned(_ player: Player) -> Bool {
         player.whiteGames.isEmpty && player.blackGames.isEmpty
     }
 
     /// `isOrphaned`'s **prospective twin** — the players `pgns` would strand, asked before any delete
     /// (`.nullify` propagation cannot be relied on afterwards; "the array still looks fine" is the trap).
-    internal static func playersOrphaned(byDeleting pgns: [PGN]) -> [Player] {
+    static func playersOrphaned(byDeleting pgns: [PGN]) -> [Player] {
         let doomed = Set(pgns.map(\.persistentModelID))
         var seated: [PersistentIdentifier: Player] = [:]
         for pgn in pgns {

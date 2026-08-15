@@ -1,25 +1,25 @@
 /// The difference between two positions: squares that lost a piece, squares that now hold one.
-internal struct DGTBoardDiff: Equatable {
+struct DGTBoardDiff: Equatable {
     
     /// Squares that went from occupied to empty. Value = the piece that was
     /// lifted (a pure removal — a capture *destination* is in `placed`, since
     /// it ends up occupied).
-    internal let vacated: [Square: Piece]
+    let vacated: [Square: Piece]
     
     /// Squares that are now occupied and differ from before. Value = the piece
     /// now there. Covers plain placements (empty → piece) and capture
     /// destinations (enemy → mover).
-    internal let placed: [Square: Piece]
+    let placed: [Square: Piece]
     
-    internal var isEmpty: Bool { vacated.isEmpty && placed.isEmpty }
+    var isEmpty: Bool { vacated.isEmpty && placed.isEmpty }
     
     /// Every disagreeing square. The two maps are disjoint by construction (decided by end
     /// occupancy) — asserted by the suite; this accessor is test-only by decision.
-    internal var changedSquares: Set<Square> {
+    var changedSquares: Set<Square> {
         Set(vacated.keys).union(placed.keys)
     }
     
-    internal init(from before: Position, to after: Position) {
+    init(from before: Position, to after: Position) {
         var vacated: [Square: Piece] = [:]
         var placed: [Square: Piece] = [:]
         for square in Square.all {

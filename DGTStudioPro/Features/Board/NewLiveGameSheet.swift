@@ -4,19 +4,19 @@ import SwiftData
 // MARK: Placeholder Normalization
 
 /// PGN's `"?"` ↔ empty-field boundary: `"?"` → `""` seeding a form, trimmed `""` → `"?"`
-/// committing one. Kept adjacent so the round trip is obviously symmetric. `internal`:
-/// `EditGameInfoSheet` stages the same round trip.
-internal func formValue(_ tag: String) -> String {
+/// committing one. Kept adjacent so the round trip is obviously symmetric; not private,
+/// because `EditGameInfoSheet` stages the same round trip.
+func formValue(_ tag: String) -> String {
     tag == "?" ? "" : tag
 }
 
-internal func tagValue(_ field: String) -> String {
+func tagValue(_ field: String) -> String {
     let trimmed = field.trimmingCharacters(in: .whitespacesAndNewlines)
     return trimmed.isEmpty ? "?" : trimmed
 }
 
 /// Normalizes a whole roster before it leaves any form.
-internal func normalized(_ roster: LiveGame.Roster) -> LiveGame.Roster {
+func normalized(_ roster: LiveGame.Roster) -> LiveGame.Roster {
     var result = roster
     result.event = tagValue(roster.event)
     result.site  = tagValue(roster.site)
@@ -29,18 +29,18 @@ internal func normalized(_ roster: LiveGame.Roster) -> LiveGame.Roster {
 
 /// The roster form minus Result (the game tracks it — Decision #4). Shared by the new-game,
 /// edit-details and archive-confirmation sheets, so the field set cannot drift.
-internal struct LiveGameRosterForm: View {
+struct LiveGameRosterForm: View {
     
     // MARK: Bound State
     
-    @Binding internal var roster: LiveGame.Roster
+    @Binding var roster: LiveGame.Roster
     
     /// Identifier prefix for the six fields — the archive sheet passes `archive.form.*`.
-    internal var identifierPrefix = AccessibilityID.liveFormPrefix
+    var identifierPrefix = AccessibilityID.liveFormPrefix
     
     /// Known-player **tag forms** for the seat pickers (D16′/D29′ — the picker inserts
     /// `Player.tagName`, never `name`). The menu only fills; picking creates nothing.
-    internal var knownPlayers: [String] = []
+    var knownPlayers: [String] = []
     
     /// `Roster.date` is optional but the dialog always supplies one (default today), so the picker
     /// binds through a non-optional facade.
@@ -73,7 +73,7 @@ internal struct LiveGameRosterForm: View {
     
     // MARK: Body
     
-    internal var body: some View {
+    var body: some View {
         Form {
             Section("Players") {
                 HStack {
@@ -159,18 +159,18 @@ internal struct LiveGameRosterForm: View {
 
 /// The new-game dialog: presented on start-position detection (`shouldOfferNewGame`) or the
 /// HUD's manual button.
-internal struct NewLiveGameSheet: View {
+struct NewLiveGameSheet: View {
     
     // MARK: Stored Properties
     
     /// Called with the normalized roster on start; the caller owns `startNewGame` and dismissal.
-    internal let onStart: (LiveGame.Roster) -> Void
+    let onStart: (LiveGame.Roster) -> Void
     
     /// "Not Now" — dismiss without starting (no re-prompt until the board leaves and returns).
-    internal let onNotNow: () -> Void
+    let onNotNow: () -> Void
     
     /// True when starting would replace an unfinished game — gates the destructive confirmation.
-    internal let replacesUnfinishedGame: Bool
+    let replacesUnfinishedGame: Bool
     
     // MARK: Persisted Defaults
     
@@ -199,7 +199,7 @@ internal struct NewLiveGameSheet: View {
     
     // MARK: Body
     
-    internal var body: some View {
+    var body: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("New Game")
@@ -318,11 +318,11 @@ internal struct NewLiveGameSheet: View {
 
 /// Edits a running (or archived-pending) game's roster. Staged on a local copy so Cancel
 /// genuinely discards; Save hands the normalized roster back.
-internal struct EditLiveGameDetailsSheet: View {
+struct EditLiveGameDetailsSheet: View {
     
     // MARK: Stored Properties
     
-    internal let onSave: (LiveGame.Roster) -> Void
+    let onSave: (LiveGame.Roster) -> Void
     
     // MARK: Environment
     
@@ -334,7 +334,7 @@ internal struct EditLiveGameDetailsSheet: View {
     
     // MARK: Initializer
     
-    internal init(
+    init(
         initialRoster: LiveGame.Roster,
         onSave: @escaping (LiveGame.Roster) -> Void
     ) {
@@ -350,7 +350,7 @@ internal struct EditLiveGameDetailsSheet: View {
     
     // MARK: Body
     
-    internal var body: some View {
+    var body: some View {
         VStack(spacing: 0) {
             Text("Edit Game Details")
                 .font(.title2.bold())

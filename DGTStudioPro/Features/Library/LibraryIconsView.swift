@@ -4,7 +4,7 @@ import SwiftUI
 /// The icons grid with Finder's two selection gestures: arrow keys walk from the last-touched
 /// card (index math in reading order — the grid is not `.adaptive`, so the column count is
 /// computable), and a click-drag sweeps a rubber-band over the cards it crosses.
-internal struct LibraryIconsView: View {
+struct LibraryIconsView: View {
 
     // MARK: Static Constants
 

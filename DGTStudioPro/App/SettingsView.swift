@@ -2,7 +2,7 @@ import os
 import SwiftData
 import SwiftUI
 
-internal struct SettingsView: View {
+struct SettingsView: View {
     
     // MARK: Static Constants
     private static let logger = AppLog.logger(.settings)
@@ -56,7 +56,7 @@ internal struct SettingsView: View {
     /// Order is by how often a setting is touched, not alphabetically: the two that answer "why is
     /// the app doing that" come first, the two that are set once sit behind them, and Data is last
     /// because it holds the destructive button.
-    internal var body: some View {
+    var body: some View {
         TabView {
             Tab("General", systemImage: "gearshape") {
                 generalTab

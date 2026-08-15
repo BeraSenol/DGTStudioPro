@@ -3,14 +3,14 @@
 /// The toolbar subtitle grammar, all three destinations — a pure formatter (`GameHeadline`'s
 /// shape). The subtitle's one job is **state**: what a glance at the content does not already
 /// say. Nothing to say is a first-class answer.
-internal enum DestinationSubtitle {
+enum DestinationSubtitle {
 
     // MARK: Board
 
     /// Board: session status while playing, position status while reviewing, nothing otherwise.
     /// Exceptional states replace the routine one. `phase` arrives already priority-ordered
     /// (`SessionPhase.current`) — re-ordering here would be the second, quietly different copy.
-    internal static func board(
+    static func board(
         phase: LiveGameHUDView.Phase?,
         reviewing sideToMove: PieceColor?
     ) -> String? {
@@ -39,7 +39,7 @@ internal enum DestinationSubtitle {
     // MARK: Library
 
     /// Selection when there is one, else the analysis backlog, else nothing.
-    internal static func library(selected: Int, unanalyzed: Int) -> String? {
+    static func library(selected: Int, unanalyzed: Int) -> String? {
         if selected > 0 { return "\(selected) selected" }
         return unanalyzed > 0 ? "\(unanalyzed) unanalyzed" : nil
     }
@@ -48,7 +48,7 @@ internal enum DestinationSubtitle {
 
     /// One selected says nothing (the profile is right there). **Exactly two** is the head-to-head
     /// question: "Giri 7–3–2 Ding", numbers bracketed in reading order — an ordered pair, not a set.
-    internal static func players(
+    static func players(
         selected: Int,
         headToHead: (first: String, second: String, record: (Int, Int, Int))?
     ) -> String? {
@@ -66,7 +66,7 @@ extension PieceColor {
 
     /// "White to move" — extracted from the HUD's only copy. Deliberately not in `Piece.swift`:
     /// that file is chess-core pure and this is UI copy.
-    internal var toMoveDescription: String {
+    var toMoveDescription: String {
         self == .white ? "White to move" : "Black to move"
     }
 }

@@ -2,7 +2,7 @@ import Foundation
 
 /// What rank **1** means (D62′) — D11′ becomes the default rather than the only answer; its
 /// case delegates to `PlayerStats.rankingOrder` rather than restating the chain.
-internal enum PlayerRanking: String, CaseIterable, Identifiable, Sendable {
+enum PlayerRanking: String, CaseIterable, Identifiable, Sendable {
 
     /// D11′'s comparator, unchanged and undisplaced.
     case wins    = "wins"
@@ -12,9 +12,9 @@ internal enum PlayerRanking: String, CaseIterable, Identifiable, Sendable {
     /// Glicko-1 mean — the one method reading a number the other two cannot see.
     case rating  = "rating"
 
-    internal var id: String { rawValue }
+    var id: String { rawValue }
 
-    internal var displayName: String {
+    var displayName: String {
         switch self {
         case .wins:    "Rank by Wins"
         case .winRate: "Rank by Win %"
@@ -23,7 +23,7 @@ internal enum PlayerRanking: String, CaseIterable, Identifiable, Sendable {
     }
 
     /// The toolbar label once chosen — the noun alone; the menu already says what it is a menu of.
-    internal var shortName: String {
+    var shortName: String {
         switch self {
         case .wins:    "Wins"
         case .winRate: "Win %"
@@ -36,10 +36,10 @@ internal enum PlayerRanking: String, CaseIterable, Identifiable, Sendable {
     /// A pair, not `PlayerStats` alone — the structural consequence of `.rating`: a rating is not a
     /// stat; it comes from a separate fold, and widening `PlayerStats` would hand every consumer a
     /// Glicko dependency.
-    internal typealias Entry = (stats: PlayerStats, rating: Glicko1.Rating?)
+    typealias Entry = (stats: PlayerStats, rating: Glicko1.Rating?)
 
     /// Strict ordering: `true` when `lhs` ranks **above** `rhs`.
-    internal func precedes(_ lhs: Entry, _ rhs: Entry) -> Bool {
+    func precedes(_ lhs: Entry, _ rhs: Entry) -> Bool {
         switch self {
         case .wins:
             // Delegated, never restated — this case is why `rankingOrder` still has a production caller.
@@ -78,7 +78,7 @@ internal enum PlayerRanking: String, CaseIterable, Identifiable, Sendable {
 
     /// 1-based ranks under this method — the whole ladder in one place, so rank stays a consequence
     /// of the order, never a value anyone assigns.
-    internal func ranked(_ entries: [Entry]) -> [RankedPlayer] {
+    func ranked(_ entries: [Entry]) -> [RankedPlayer] {
         entries
             .sorted(by: precedes)
             .enumerated()

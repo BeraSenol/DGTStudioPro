@@ -4,15 +4,15 @@ import SwiftUI
 /// affordances cannot drift; one `label` feeds both `.help` and `.accessibilityLabel` so
 /// tooltip and spoken label cannot disagree. One production consumer since D57′ (the live
 /// inspector's Edit Details) — not dead, but "shared" is starting to describe history.
-internal struct InspectorEditButtonView: View {
+struct InspectorEditButtonView: View {
     
     // MARK: Stored Properties
-    internal let label: LocalizedStringKey
-    internal let identifier: String
-    internal let action: () -> Void
+    let label: LocalizedStringKey
+    let identifier: String
+    let action: () -> Void
     
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         Button(action: action) {
             Image(systemName: "pencil")
                 // The label's frame is the hit area under `.borderless`, and an SF Symbol's frame is mostly

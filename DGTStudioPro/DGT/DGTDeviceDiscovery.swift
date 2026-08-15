@@ -6,12 +6,12 @@ import os
 /// Enumerates the board's serial device — and *only* it: `kIOTTYDeviceKey` is pinned to the
 /// board's TTY name (derived from `onlyBoardPath`), so the app cannot see a device it would
 /// never connect to. The decree is a fact about the query, not a filter after it.
-internal enum DGTDeviceDiscovery {
+enum DGTDeviceDiscovery {
     
     private static let logger = AppLog.logger(.dgt)
     
     /// Every matching callout device, unsorted — enumeration order is not an opinion about order.
-    internal static func availableDevices() -> [DGTSerialDevice] {
+    static func availableDevices() -> [DGTSerialDevice] {
         guard let matching = IOServiceMatching(kIOSerialBSDServiceValue) else {
             logger?.error("IOServiceMatching returned nil for serial services")
             return []

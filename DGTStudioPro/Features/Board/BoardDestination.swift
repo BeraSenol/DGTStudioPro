@@ -6,7 +6,7 @@ import SwiftUI
 /// live DGT mirror (`connection.physicalBoard`, empty until connected) — the board is always on
 /// screen. Per-tab state lives on `ContentView`'s `TabState`, not here; switching destinations
 /// does not clear a tab's game.
-internal struct BoardDestination: View {
+struct BoardDestination: View {
     
     // MARK: Static Constants
     
@@ -14,11 +14,11 @@ internal struct BoardDestination: View {
     
     // MARK: Bound State
     
-    @Binding internal var loadedGameID: PersistentIdentifier?
+    @Binding var loadedGameID: PersistentIdentifier?
     
     // MARK: Tab State (lives on enclosing `ContentView`)
     
-    @Bindable internal var tabState: TabState
+    @Bindable var tabState: TabState
     
     // MARK: Environment
     
@@ -58,7 +58,7 @@ internal struct BoardDestination: View {
 
     // MARK: Body
     
-    internal var body: some View {
+    var body: some View {
         Group {
             if let pgn = tabState.boardPGN, let game = tabState.boardGame {
                 content(pgn: pgn, game: game)

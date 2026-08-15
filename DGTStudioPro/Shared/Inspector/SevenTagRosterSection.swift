@@ -3,7 +3,7 @@ import SwiftUI
 /// The Seven Tag Roster as one section (D22′), shared by all three inspectors. Rows driven by
 /// `SevenTagRoster.allCases`, so a host cannot render six tags or invent an order; labels are
 /// the standard's identifiers, unlocalized. The action renders in the header, trailing.
-internal struct SevenTagRosterSection<Actions: View>: View {
+struct SevenTagRosterSection<Actions: View>: View {
     
     // MARK: Static Constants
     
@@ -12,14 +12,14 @@ internal struct SevenTagRosterSection<Actions: View>: View {
     
     // MARK: Stored Properties
     
-    internal let roster: RosterSummary?
-    internal let headline: String
-    @ViewBuilder internal let actions: () -> Actions
+    let roster: RosterSummary?
+    let headline: String
+    @ViewBuilder let actions: () -> Actions
     
     // MARK: Body
     
     /// Collapses as `.roster` (D45′) — one section shown three times, not three that resemble each other.
-    internal var body: some View {
+    var body: some View {
         CollapsibleSection(.roster, title: headline) {
             ForEach(SevenTagRoster.allCases, id: \.self) { tag in
                 LabeledContent(tag.rawValue, value: value(for: tag))
@@ -40,7 +40,7 @@ extension SevenTagRosterSection where Actions == EmptyView {
     
     /// Rendered by all three inspectors that show a game's metadata: the Board's
     /// review inspector, the live inspector, and the Library inspector.
-    internal init(roster: RosterSummary?, headline: String) {
+    init(roster: RosterSummary?, headline: String) {
         self.init(roster: roster, headline: headline, actions: { EmptyView() })
     }
 }

@@ -1,18 +1,18 @@
 import SwiftUI
 
-internal struct SquareView: View {
+struct SquareView: View {
     
     // MARK: Stored Properties
     
     /// The physical occupant — retained for *gating*, not drawing, since M6: the piece renders in
     /// `BoardPieceLayer` (gliding is a relationship between two squares; only a layer sees both).
-    internal let piece: Piece
-    internal let isLightSquare: Bool
-    internal let highlight: SquareHighlight
-    internal let squareSize: CGFloat
-    internal let style: BoardStyle
+    let piece: Piece
+    let isLightSquare: Bool
+    let highlight: SquareHighlight
+    let squareSize: CGFloat
+    let style: BoardStyle
     /// Ghost at 50% when the square is empty — the square stays ignorant of castling semantics.
-    internal var ghostPiece: Piece? = nil
+    var ghostPiece: Piece? = nil
     
     // MARK: Computed Properties
     private var fillColor: Color {
@@ -20,7 +20,7 @@ internal struct SquareView: View {
     }
     
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         ZStack {
             Rectangle()
                 .fill(fillColor)

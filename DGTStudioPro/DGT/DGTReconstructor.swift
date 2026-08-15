@@ -1,6 +1,6 @@
 /// The outcome of trying to explain a settled physical board against the last
 /// known-legal game state.
-internal enum DGTReconstruction: Equatable {
+enum DGTReconstruction: Equatable {
     /// The physical board matches the last legal position — nothing happened
     /// (e.g. a piece was lifted and put back).
     case noChange
@@ -23,13 +23,13 @@ internal enum DGTReconstruction: Equatable {
 /// Reconstructs moves from physical board states. Entirely pure; the session owns all mutable
 /// state. Legality comes **only** from `GameState.legalMoves()` — never an engine — and answers
 /// only when exactly one legal move explains the whole board.
-internal enum DGTReconstructor {
+enum DGTReconstructor {
     
     // MARK: Coordinate Resolver
     
     /// `(from, to, promotion?) → Move`: the unique legal move, or nil — relies on the uniqueness
     /// invariant pinned by `MoveFootprintTests`.
-    internal static func move(
+    static func move(
         from: Square,
         to: Square,
         promotion: PieceType?,
@@ -42,7 +42,7 @@ internal enum DGTReconstructor {
     
     // MARK: Classification
     
-    internal static func reconstruct(
+    static func reconstruct(
         from lastLegal: GameState,
         physical: Position
     ) -> DGTReconstruction {

@@ -2,10 +2,10 @@ import SwiftUI
 
 /// The monogram avatar, shared by the card, the gallery's large preview,
 /// and the inspector header — one initials rule everywhere.
-internal struct PlayerMonogram: View {
+struct PlayerMonogram: View {
     
-    internal let name: String
-    internal var diameter: CGFloat = 64
+    let name: String
+    var diameter: CGFloat = 64
     
     private var initials: String {
         let words = name.split(separator: " ")
@@ -14,7 +14,7 @@ internal struct PlayerMonogram: View {
         return (first + last).uppercased()
     }
     
-    internal var body: some View {
+    var body: some View {
         ZStack {
             Circle()
                 .fill(.tertiary)
@@ -29,17 +29,17 @@ internal struct PlayerMonogram: View {
 
 /// One labelled metric in a gallery preview's grid — both galleries carried byte-identical
 /// private copies.
-internal struct PlayerStatCell: View {
+struct PlayerStatCell: View {
     
-    internal let label: String
-    internal let value: String
+    let label: String
+    let value: String
     
-    internal init(_ label: String, _ value: String) {
+    init(_ label: String, _ value: String) {
         self.label = label
         self.value = value
     }
     
-    internal var body: some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
                 .font(.caption)
@@ -52,12 +52,12 @@ internal struct PlayerStatCell: View {
 
 /// The stat grid of a player preview — shared by the gallery and the columns detail pane.
 /// Rated Games is deliberately absent: it needs the histories fold, which neither host receives.
-internal struct PlayerStatsGrid: View {
+struct PlayerStatsGrid: View {
 
-    internal let stats: PlayerStats
-    internal let rating: Glicko1.Rating?
+    let stats: PlayerStats
+    let rating: Glicko1.Rating?
 
-    internal var body: some View {
+    var body: some View {
         Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 6) {
             GridRow {
                 PlayerStatCell("Games", "\(stats.games)")
@@ -82,10 +82,10 @@ internal struct PlayerStatsGrid: View {
 
 /// Podium tint: gold, silver, bronze, nothing below third. `init?(rank:)` is the single
 /// statement of the podium's depth.
-internal enum RankMedal: String, CaseIterable, Identifiable, Sendable {
+enum RankMedal: String, CaseIterable, Identifiable, Sendable {
     case gold, silver, bronze
     
-    internal init?(rank: Int) {
+    init?(rank: Int) {
         switch rank {
         case 1:  self = .gold
         case 2:  self = .silver
@@ -94,9 +94,9 @@ internal enum RankMedal: String, CaseIterable, Identifiable, Sendable {
         }
     }
     
-    internal var id: String { rawValue }
+    var id: String { rawValue }
     
-    internal var color: Color {
+    var color: Color {
         switch self {
         case .gold:   Color(red: 0.78, green: 0.60, blue: 0.13)
         case .silver: Color(red: 0.60, green: 0.62, blue: 0.65)
@@ -106,7 +106,7 @@ internal enum RankMedal: String, CaseIterable, Identifiable, Sendable {
     
     /// Style for a rank on a **headline** surface — medal on the podium, `.tint` below. Erased
     /// because the two branches return different style types.
-    internal static func style(forRank rank: Int) -> AnyShapeStyle {
+    static func style(forRank rank: Int) -> AnyShapeStyle {
         if let medal = RankMedal(rank: rank) {
             AnyShapeStyle(medal.color)
         } else {
@@ -116,7 +116,7 @@ internal enum RankMedal: String, CaseIterable, Identifiable, Sendable {
 
     /// Style for a rank in a **column** — same podium colours, `.secondary` below. The fallbacks
     /// differ on purpose; the podium must not: one colour everywhere or the table and cards disagree.
-    internal static func tableStyle(forRank rank: Int) -> AnyShapeStyle {
+    static func tableStyle(forRank rank: Int) -> AnyShapeStyle {
         if let medal = RankMedal(rank: rank) {
             AnyShapeStyle(medal.color)
         } else {
@@ -128,11 +128,11 @@ internal enum RankMedal: String, CaseIterable, Identifiable, Sendable {
 /// The ladder position as a chip — one caller (the card) since the table went plain text; kept
 /// because a second host wanting a *different colour* is the failure this type prevents.
 /// The outer inset stays with the caller: the card needs it, a table cell must not inherit it.
-internal struct RankBadge: View {
+struct RankBadge: View {
 
-    internal let rank: Int
+    let rank: Int
 
-    internal var body: some View {
+    var body: some View {
         let style = RankMedal.style(forRank: rank)
         Text("#\(rank)")
             .font(.caption)
@@ -146,7 +146,7 @@ internal struct RankBadge: View {
 
 /// The Players analogue of `LibraryGameCardView` (icons grid, columns detail, gallery
 /// filmstrip); `rank` earns the badge.
-internal struct PlayerCardView: View {
+struct PlayerCardView: View {
     
     // MARK: Stored Properties
     let stats: PlayerStats

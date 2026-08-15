@@ -3,7 +3,7 @@ import SwiftUI
 /// The sidebar's session surface (D15′) — the single home for connection and session messaging,
 /// pinned under every tab's sidebar list. The stage above the board stays clear; only the
 /// recovery *overlays* stay on the board (they are the mirror's, not messaging).
-internal struct SessionSidebarPanel: View {
+struct SessionSidebarPanel: View {
     
     // MARK: Environment
     
@@ -14,14 +14,14 @@ internal struct SessionSidebarPanel: View {
     // MARK: Stored Properties
     
     /// Read for the per-tab `boardLoadError`.
-    internal let tabState: TabState
+    let tabState: TabState
     
     /// Navigates to Board and requests the new-game sheet — only the affordance re-homed; the
     /// presenter stays `BoardDestination`.
-    internal let onNewGame: () -> Void
+    let onNewGame: () -> Void
     
     /// Clears the tab's bound game ID — unbinding is the real resolution.
-    internal let onDismissLoadError: () -> Void
+    let onDismissLoadError: () -> Void
     
     // MARK: View State
     
@@ -30,7 +30,7 @@ internal struct SessionSidebarPanel: View {
     
     // MARK: Body
     
-    internal var body: some View {
+    var body: some View {
         // The empty guard keeps a disconnected, error-free sidebar exactly as it was — no blank inset.
         if hasContent {
             VStack(alignment: .leading, spacing: 8) {

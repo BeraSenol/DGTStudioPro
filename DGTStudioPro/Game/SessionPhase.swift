@@ -6,7 +6,7 @@ extension LiveGameHUDView.Phase {
     /// Board's subtitle — two computations was fine; two *spellings* of the priority order was not.
     /// Connection truth outranks session state; a failed archive outranks the finished banner.
     @MainActor
-    internal static func current(
+    static func current(
         session: DGTLiveSession,
         connection: DGTConnection
     ) -> Self? {

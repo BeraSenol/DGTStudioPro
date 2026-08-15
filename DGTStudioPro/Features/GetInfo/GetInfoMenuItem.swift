@@ -4,7 +4,7 @@ import SwiftUI
 
 /// The Get Info menu item, everywhere it appears — one type so the label, symbol and key
 /// cannot drift across hosts (a `Commands` scene can only *ask* a view to open the window).
-internal struct GetInfoMenuItem: View {
+struct GetInfoMenuItem: View {
 
     // MARK: Door
 
@@ -28,19 +28,19 @@ internal struct GetInfoMenuItem: View {
     // MARK: Initializers
 
     /// The context-menu form: this item owns the window route.
-    internal init(request: GetInfoRequest, identifier: String) {
+    init(request: GetInfoRequest, identifier: String) {
         self.door = .opens(request)
         self.identifier = identifier
     }
 
     /// The menu-bar form: the item sets a flag the Board observes.
-    internal init(requesting trigger: Binding<Bool>?, identifier: String) {
+    init(requesting trigger: Binding<Bool>?, identifier: String) {
         self.door = .requests(trigger)
         self.identifier = identifier
     }
 
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         Button {
             switch door {
             case .opens(let request):   openWindow(value: request)

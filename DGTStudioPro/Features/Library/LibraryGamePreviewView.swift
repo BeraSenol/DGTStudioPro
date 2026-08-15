@@ -1,19 +1,19 @@
 import SwiftData
 import SwiftUI
 
-internal struct LibraryGamePreviewView: View {
+struct LibraryGamePreviewView: View {
     
     // MARK: Stored Properties
     
     /// Optional so the no-selection state is *this* view with no game — the two states swap without
     /// the board moving.
-    internal let game: PGN?
-    internal let boardStyle: BoardStyle
+    let game: PGN?
+    let boardStyle: BoardStyle
     
     @State private var preview: LibraryGamePreviewState?
     
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         VStack(spacing: 16) {
             header
             board

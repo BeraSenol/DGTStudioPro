@@ -2,18 +2,18 @@
 /// skipped — the table already names those positions — and a ply scored at ≥ the target depth is
 /// kept rather than re-searched. Pure, so the decision is suite-testable without an engine —
 /// the `AnalysisQueue` extraction's reason, one layer down.
-internal enum AnalysisPlan {
+enum AnalysisPlan {
 
-    internal struct Plan: Equatable, Sendable {
+    struct Plan: Equatable, Sendable {
         /// Ply indices to search, ascending.
-        internal let searchable: [Int]
+        let searchable: [Int]
         /// True when `evaluations` does not fit `moveCount` and both arrays rebuild all-nil.
-        internal let resetsStorage: Bool
+        let resetsStorage: Bool
     }
 
     /// Depths that don't fit are *unknown*, not a reset: legacy games carry evaluations with no
     /// depths, and their scores must survive until each ply is actually re-searched.
-    internal static func plan(
+    static func plan(
         moveCount: Int,
         evaluations: [Evaluation?],
         depths: [Int?],

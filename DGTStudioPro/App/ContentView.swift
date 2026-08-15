@@ -5,7 +5,7 @@ import SwiftUI
 /// Root of every tab: per-tab sidebar selection, per-tab `TabState`, bound to the window's
 /// `PersistentIdentifier?`. `SidebarSelection` carries identifiers, never models — selections
 /// must stay `Hashable` and survive deletion. `.player` is programmatic-only (no sidebar row).
-internal struct ContentView: View {
+struct ContentView: View {
 
     // MARK: Static Constants
 
@@ -13,7 +13,7 @@ internal struct ContentView: View {
 
     // MARK: Window-Bound State
     
-    @Binding internal var loadedGameID: PersistentIdentifier?
+    @Binding var loadedGameID: PersistentIdentifier?
     
     // MARK: Per-Tab State
     
@@ -33,7 +33,7 @@ internal struct ContentView: View {
     
     // MARK: Initializer
     
-    internal init(loadedGameID: Binding<PersistentIdentifier?>) {
+    init(loadedGameID: Binding<PersistentIdentifier?>) {
         self._loadedGameID = loadedGameID
         // Start on Board for tabs opened with a specific game, on
         // Library for tabs opened blank.
@@ -45,7 +45,7 @@ internal struct ContentView: View {
     
     // MARK: Body
     
-    internal var body: some View {
+    var body: some View {
         NavigationSplitView {
             List(selection: $selection) {
                 Section("Favorites") {
@@ -208,27 +208,27 @@ internal struct ContentView: View {
 
 // MARK: Supporting Types
 
-internal enum SidebarSelection: Hashable {
+enum SidebarSelection: Hashable {
     case destination(Destination)
     case tag(PersistentIdentifier)
     /// Programmatic only: set by "Show in Library"; the filter chip renders and clears it.
     case player(PersistentIdentifier)
 }
 
-internal enum Destination: String, CaseIterable, Identifiable, Hashable {
+enum Destination: String, CaseIterable, Identifiable, Hashable {
     case board
     case library
     case players
     // `rankings` retired by D48′ — the selection stores the enum, so the deletion is total at
     // compile time.
 
-    internal var id: String { rawValue }
+    var id: String { rawValue }
 
-    internal var title: String {
+    var title: String {
         rawValue.capitalized
     }
 
-    internal var systemImage: String {
+    var systemImage: String {
         switch self {
         case .board:    "checkerboard.rectangle"
         case .library:  "books.vertical"

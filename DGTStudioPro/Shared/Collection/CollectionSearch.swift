@@ -2,37 +2,37 @@ import Foundation
 
 /// Live-search matching for the collection search fields. The fold is D30′'s — the identity
 /// rule the rest of the app already lives by ("Bücher" is found by "bücher", not "bucher").
-internal enum SearchMatch {
+enum SearchMatch {
 
     /// One side of a comparison, normalized.
-    internal static func folded(_ text: String) -> String {
+    static func folded(_ text: String) -> String {
         PlayerName.folded(text).lowercased()
     }
 
     /// Whitespace-separated terms; folding collapses runs first, so a single-space split is complete.
-    internal static func terms(in query: String) -> [String] {
+    static func terms(in query: String) -> [String] {
         folded(query).split(separator: " ").map(String.init)
     }
 
     /// AND over terms, OR over fields, `contains` per pair — the grammar every macOS search field
     /// teaches. Empty matches everything; callers gate on emptiness for clarity, not correctness.
-    internal static func matches(query: String, fields: [String]) -> Bool {
+    static func matches(query: String, fields: [String]) -> Bool {
         Query(query).matches(fields: fields)
     }
 
     /// A query folded once, matched many times — the one-shot form re-folded per row per keystroke.
     /// Delegates, so there is still exactly one matcher.
-    internal struct Query {
-        internal let needles: [String]
+    struct Query {
+        let needles: [String]
 
-        internal init(_ text: String) {
+        init(_ text: String) {
             self.needles = SearchMatch.terms(in: text)
         }
 
         /// Empty matches everything; callers test only to skip the walk.
-        internal var isEmpty: Bool { needles.isEmpty }
+        var isEmpty: Bool { needles.isEmpty }
 
-        internal func matches(fields: [String]) -> Bool {
+        func matches(fields: [String]) -> Bool {
             guard !needles.isEmpty else { return true }
             let haystacks = fields.map(SearchMatch.folded)
             return needles.allSatisfy { needle in
@@ -48,16 +48,16 @@ internal enum SearchMatch {
 
 /// The Library's two non-text facets. Replaced a pair of single-valued optionals — "1-0 or 0-1"
 /// was inexpressible.
-internal enum LibrarySearchToken: Hashable, Identifiable, CaseIterable {
+enum LibrarySearchToken: Hashable, Identifiable, CaseIterable {
     case result(GameResult)
     case analyzed
     case unanalyzed
 
-    internal static var allCases: [LibrarySearchToken] {
+    static var allCases: [LibrarySearchToken] {
         GameResult.allCases.map(Self.result) + [.analyzed, .unanalyzed]
     }
 
-    internal var id: String {
+    var id: String {
         switch self {
         case .result(let result): "result.\(result.rawValue)"
         case .analyzed:           "analyzed"
@@ -67,7 +67,7 @@ internal enum LibrarySearchToken: Hashable, Identifiable, CaseIterable {
 
     /// The chip's text; results pair the word with PGN's own vocabulary — a chip without "1-0"
     /// makes the user translate.
-    internal var displayName: String {
+    var displayName: String {
         switch self {
         case .result(.whiteWins): "White Wins (1-0)"
         case .result(.blackWins): "Black Wins (0-1)"
@@ -78,7 +78,7 @@ internal enum LibrarySearchToken: Hashable, Identifiable, CaseIterable {
         }
     }
 
-    internal var symbol: String {
+    var symbol: String {
         switch self {
         case .result:     "flag.checkered"
         case .analyzed:   "gear.badge.checkmark"
@@ -88,7 +88,7 @@ internal enum LibrarySearchToken: Hashable, Identifiable, CaseIterable {
 
     /// Whether tokens admit this result + analysis state. Takes the facts, not a `PGN` — the caller
     /// reads the app's one spelling of "analyzed?", not second-guessed here.
-    internal static func admit(
+    static func admit(
         _ tokens: [LibrarySearchToken],
         result: GameResult,
         isAnalyzed: Bool
@@ -115,14 +115,14 @@ internal enum LibrarySearchToken: Hashable, Identifiable, CaseIterable {
 }
 
 /// The Players tokens — rated-ness, the one non-text fact worth slicing on.
-internal enum PlayersSearchToken: String, CaseIterable, Identifiable {
+enum PlayersSearchToken: String, CaseIterable, Identifiable {
     case rated
     case provisional
     case unrated
 
-    internal var id: String { rawValue }
+    var id: String { rawValue }
 
-    internal var displayName: String {
+    var displayName: String {
         switch self {
         case .rated:       "Rated"
         case .provisional: "Provisional"
@@ -130,7 +130,7 @@ internal enum PlayersSearchToken: String, CaseIterable, Identifiable {
         }
     }
 
-    internal var symbol: String {
+    var symbol: String {
         switch self {
         case .rated:       "chart.line.uptrend.xyaxis"
         case .provisional: "hourglass"
@@ -141,7 +141,7 @@ internal enum PlayersSearchToken: String, CaseIterable, Identifiable {
     /// Provisional ⊂ rated by design: "Rated" answers who has a number, "Provisional" whose is
     /// still settling. Selecting both == Rated — correct for an OR, worth knowing before it looks
     /// like a bug.
-    internal func admits(_ rating: Glicko1.Rating?) -> Bool {
+    func admits(_ rating: Glicko1.Rating?) -> Bool {
         switch self {
         case .rated:       rating != nil
         case .provisional: rating?.isProvisional == true
@@ -150,7 +150,7 @@ internal enum PlayersSearchToken: String, CaseIterable, Identifiable {
     }
 
     /// OR across selected tokens; none admits everyone.
-    internal static func admit(
+    static func admit(
         _ tokens: [PlayersSearchToken],
         rating: Glicko1.Rating?
     ) -> Bool {

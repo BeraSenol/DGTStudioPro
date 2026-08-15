@@ -3,7 +3,7 @@ import SwiftUI
 /// A destination's sortable columns, named so something other than a table header can choose
 /// one — a `Picker` cannot hold a `KeyPathComparator`. The round trip (panel sets, header shows,
 /// header sets, panel shows) is the hard half.
-internal protocol CollectionSortField: RawRepresentable, CaseIterable, Hashable, Sendable
+protocol CollectionSortField: RawRepresentable, CaseIterable, Hashable, Sendable
 where RawValue == String {
 
     /// The row type. Unconstrained on purpose — `PGN` is a `@Model` class, `RankedPlayer` a value.
@@ -27,29 +27,29 @@ extension CollectionSortField {
 
     /// Which field a header chose, or nil for a column this enum does not name — **nil is a real
     /// answer** (the Analysis column is deliberately unmapped). Pinned.
-    internal static func matching(_ keyPath: PartialKeyPath<Row>) -> Self? {
+    static func matching(_ keyPath: PartialKeyPath<Row>) -> Self? {
         allCases.first { $0.keyPath == keyPath }
     }
 }
 
 /// A field plus a direction. `[KeyPathComparator]` is what `Table` speaks and a poor thing to
 /// persist: not `Codable`, and an array claims multi-level sorting neither destination has.
-internal struct CollectionSort<Field: CollectionSortField>: Equatable, Sendable {
+struct CollectionSort<Field: CollectionSortField>: Equatable, Sendable {
 
-    internal var field: Field
-    internal var isReverse: Bool
+    var field: Field
+    var isReverse: Bool
 
-    internal init(field: Field, isReverse: Bool) {
+    init(field: Field, isReverse: Bool) {
         self.field = field
         self.isReverse = isReverse
     }
 
-    internal static var `default`: Self {
+    static var `default`: Self {
         Self(field: Field.defaultField, isReverse: Field.defaultIsReverse)
     }
 
     /// What `Table` binds to.
-    internal var comparators: [KeyPathComparator<Field.Row>] {
+    var comparators: [KeyPathComparator<Field.Row>] {
         var comparator = field.comparator
         comparator.order = isReverse ? .reverse : .forward
         return [comparator]
@@ -57,7 +57,7 @@ internal struct CollectionSort<Field: CollectionSortField>: Equatable, Sendable 
 
     /// Failable rather than defaulting: an unmapped comparator should leave the panel showing
     /// nothing, not quietly rewrite the user's sort.
-    internal init?(comparators: [KeyPathComparator<Field.Row>]) {
+    init?(comparators: [KeyPathComparator<Field.Row>]) {
         guard let first = comparators.first,
               let field = Field.matching(first.keyPath) else { return nil }
         self.init(field: field, isReverse: first.order == .reverse)
@@ -67,13 +67,13 @@ internal struct CollectionSort<Field: CollectionSortField>: Equatable, Sendable 
 
     /// One string per destination (field + direction, colon-separated — no raw value contains one,
     /// pinned). Four keys for two values would double the dead-key risk `StorageKeys` records.
-    internal var storedValue: String {
+    var storedValue: String {
         "\(field.rawValue):\(isReverse ? "reverse" : "forward")"
     }
 
     /// An unreadable stored value is dropped, not repaired (D45′'s rule): retiring a column costs
     /// no migration; the next write evicts.
-    internal init?(storedValue: String) {
+    init?(storedValue: String) {
         let parts = storedValue.split(separator: ":", maxSplits: 1)
         guard parts.count == 2,
               let field = Field(rawValue: String(parts[0])) else { return nil }
@@ -89,7 +89,7 @@ internal struct CollectionSort<Field: CollectionSortField>: Equatable, Sendable 
 
 /// The Library table's sortable columns. Raw values are **hand-written persistence contracts**
 /// (`StorageKeys.librarySort`) — the D36′ trap; pinned on literals.
-internal enum LibrarySortField: String, CollectionSortField {
+enum LibrarySortField: String, CollectionSortField {
     case index         = "index"
     case white         = "white"
     case black         = "black"
@@ -100,10 +100,10 @@ internal enum LibrarySortField: String, CollectionSortField {
     case date          = "date"
     case round         = "round"
 
-    internal typealias Row = PGN
+    typealias Row = PGN
 
     /// The column headers verbatim — `#`, not "Index": two names for one column otherwise.
-    internal var displayName: String {
+    var displayName: String {
         switch self {
         case .index:         "#"
         case .white:         "White"
@@ -117,7 +117,7 @@ internal enum LibrarySortField: String, CollectionSortField {
         }
     }
 
-    internal var keyPath: PartialKeyPath<PGN> {
+    var keyPath: PartialKeyPath<PGN> {
         switch self {
         case .index:         \PGN.libraryIndex
         case .white:         \PGN.whiteDisplayName
@@ -131,7 +131,7 @@ internal enum LibrarySortField: String, CollectionSortField {
         }
     }
 
-    internal var comparator: KeyPathComparator<PGN> {
+    var comparator: KeyPathComparator<PGN> {
         switch self {
         case .index:         KeyPathComparator(\PGN.libraryIndex)
         case .white:         KeyPathComparator(\PGN.whiteDisplayName)
@@ -147,15 +147,15 @@ internal enum LibrarySortField: String, CollectionSortField {
 
     /// `#` descending — the shipped launch order; `theLibraryDefaultMatchesTheDestination` goes red
     /// if this and `LibraryDestination.defaultSortOrder` diverge.
-    internal static var defaultField: Self { .index }
-    internal static var defaultIsReverse: Bool { true }
+    static var defaultField: Self { .index }
+    static var defaultIsReverse: Bool { true }
 }
 
 // MARK: - Players
 
 /// The Players table's columns — same persistence contract. **`rank` is a sort, not the ranking
 /// method** (D62′ decides what rank 1 means; this decides row order).
-internal enum PlayersSortField: String, CollectionSortField {
+enum PlayersSortField: String, CollectionSortField {
     case rank         = "rank"
     case name         = "name"
     case games        = "games"
@@ -167,9 +167,9 @@ internal enum PlayersSortField: String, CollectionSortField {
     case rating       = "rating"
     case lastPlayed   = "lastPlayed"
 
-    internal typealias Row = RankedPlayer
+    typealias Row = RankedPlayer
 
-    internal var displayName: String {
+    var displayName: String {
         switch self {
         case .rank:         "Rank"
         case .name:         "Player"
@@ -184,7 +184,7 @@ internal enum PlayersSortField: String, CollectionSortField {
         }
     }
 
-    internal var keyPath: PartialKeyPath<RankedPlayer> {
+    var keyPath: PartialKeyPath<RankedPlayer> {
         switch self {
         case .rank:         \RankedPlayer.rank
         case .name:         \RankedPlayer.stats.name
@@ -199,7 +199,7 @@ internal enum PlayersSortField: String, CollectionSortField {
         }
     }
 
-    internal var comparator: KeyPathComparator<RankedPlayer> {
+    var comparator: KeyPathComparator<RankedPlayer> {
         switch self {
         case .rank:         KeyPathComparator(\RankedPlayer.rank)
         case .name:         KeyPathComparator(\RankedPlayer.stats.name)
@@ -215,6 +215,6 @@ internal enum PlayersSortField: String, CollectionSortField {
     }
 
     /// Rank ascending — the D11′ ladder; `defaultSortReproducesTheLadder` pins it.
-    internal static var defaultField: Self { .rank }
-    internal static var defaultIsReverse: Bool { false }
+    static var defaultField: Self { .rank }
+    static var defaultIsReverse: Bool { false }
 }

@@ -5,9 +5,9 @@ extension PGN {
     
     /// The one effective-date rule at the model (D11′) — a view sorting *models* needs the same
     /// answer the pure folds use.
-    internal var effectiveDate: Date { date ?? importedAt }
+    var effectiveDate: Date { date ?? importedAt }
     
-    internal var gameRecord: GameRecord {
+    var gameRecord: GameRecord {
         GameRecord(
             white: whitePlayer.map { GameRecord.Side(key: $0.normalizedName, name: $0.name) },
             black: blackPlayer.map { GameRecord.Side(key: $0.normalizedName, name: $0.name) },

@@ -4,7 +4,7 @@ import SwiftUI
 
 @main
 @MainActor
-internal struct DGTStudioProApp: App {
+struct DGTStudioProApp: App {
     
     /// Shared `ModelContainer`: tabs share one so `PersistentIdentifier`s round-trip.
     private let sharedContainer: ModelContainer = {

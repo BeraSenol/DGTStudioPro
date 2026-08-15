@@ -1,7 +1,7 @@
-internal struct FEN: Equatable, Sendable {
+struct FEN: Equatable, Sendable {
     
     // MARK: Static Constants
-    internal static let starting = FEN(
+    static let starting = FEN(
         position: .starting,
         activeColor: .white,
         castlingRights: .all,
@@ -10,28 +10,28 @@ internal struct FEN: Equatable, Sendable {
         fullmoveNumber: 1
     )
     
-    internal static let startingString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    static let startingString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
     
     // MARK: Stored Properties
-    internal let position: Position
-    internal let activeColor: PieceColor
-    internal let castlingRights: CastlingRights
-    internal let enPassantTarget: Square?
-    internal let halfmoveClock: Int
-    internal let fullmoveNumber: Int
+    let position: Position
+    let activeColor: PieceColor
+    let castlingRights: CastlingRights
+    let enPassantTarget: Square?
+    let halfmoveClock: Int
+    let fullmoveNumber: Int
     
     // MARK: Computed Properties
-    internal var string: String {
+    var string: String {
         "\(positionKey) \(halfmoveClock) \(fullmoveNumber)"
     }
     
-    internal var positionKey: String {
+    var positionKey: String {
         let color: Character = activeColor == .white ? "w" : "b"
         let enPassant = enPassantTarget?.algebraicNotation ?? "-"
         return "\(piecePlacement) \(color) \(castlingRights.fen) \(enPassant)"
     }
     
-    internal var piecePlacement: String {
+    var piecePlacement: String {
         var result = ""
         result.reserveCapacity(72)
         
@@ -67,7 +67,7 @@ internal struct FEN: Equatable, Sendable {
 extension FEN {
     /// Legal moves via `GameState` — the single source of legality. **Test-only by decision** (see
     /// the waiver register).
-    internal func legalMoves() -> [Move] {
+    func legalMoves() -> [Move] {
         GameState(self).legalMoves()
     }
 }
@@ -78,7 +78,7 @@ extension FEN {
     // MARK: String Parsing (7P prerequisite)
     
     /// Parses full six-field FEN and the four-field placement-only form.
-    internal init(parsing string: String) throws(FENParseError) {
+    init(parsing string: String) throws(FENParseError) {
         let fields = string.split(whereSeparator: { $0.isWhitespace })
         
         guard fields.count == 4 || fields.count == 6 else {
@@ -234,7 +234,7 @@ extension FEN {
 
 // MARK: Errors
 
-internal enum FENParseError: Error, Equatable {
+enum FENParseError: Error, Equatable {
     /// The FEN string did not contain 4 or 6 whitespace-separated fields.
     case wrongFieldCount(Int)
     /// Wrong rank count, bad file total, unknown piece character, or invalid digit.

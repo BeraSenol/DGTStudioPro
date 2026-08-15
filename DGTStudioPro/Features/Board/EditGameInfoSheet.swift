@@ -4,22 +4,22 @@ import SwiftUI
 /// details. Shares `LiveGameRosterForm` (so the three sheets cannot drift) under the
 /// `archive.form.*` prefix. Result shown, not edited (Decision #4). The caller owns the PGN
 /// write and the `refreshHash` — one hash, two doors.
-internal struct EditGameInfoSheet: View {
+struct EditGameInfoSheet: View {
     
     // MARK: Stored Properties
     
     /// Read for seeding the form and the header line.
-    internal let pgn: PGN
+    let pgn: PGN
     
     /// True when the archive deduplicated — the header says so instead of claiming a fresh save.
-    internal let deduplicated: Bool
+    let deduplicated: Bool
     
     /// Called with the normalized roster; the caller applies, rehashes, and syncs the live roster.
-    internal let onSave: (LiveGame.Roster) -> Void
+    let onSave: (LiveGame.Roster) -> Void
 
     /// Known-player tag forms, forwarded verbatim. **A parameter, not a `@Query`** — this sheet is
     /// deliberately container-free so its previews build; the presenter has the context.
-    internal let knownPlayers: [String]
+    let knownPlayers: [String]
     
     // MARK: Environment
     
@@ -34,7 +34,7 @@ internal struct EditGameInfoSheet: View {
     /// Hand-written because `_roster` seeds from `pgn` — which is also why `knownPlayers` is a
     /// parameter: a type with its own init gets no memberwise one, and a defaulted property is
     /// invisible to callers.
-    internal init(
+    init(
         pgn: PGN,
         deduplicated: Bool,
         onSave: @escaping (LiveGame.Roster) -> Void,
@@ -57,7 +57,7 @@ internal struct EditGameInfoSheet: View {
     
     // MARK: Body
     
-    internal var body: some View {
+    var body: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(headline)

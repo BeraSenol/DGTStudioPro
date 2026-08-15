@@ -1,4 +1,4 @@
-internal enum DGTCommand: UInt8, Sendable {
+enum DGTCommand: UInt8, Sendable {
     case sendReset              = 0x40
     case sendBoard              = 0x42
     case sendUpdateBoard        = 0x44
@@ -9,7 +9,7 @@ internal enum DGTCommand: UInt8, Sendable {
     case returnLongSerialNumber = 0x55
 }
 
-internal enum DGTMessage: UInt8, Sendable {
+enum DGTMessage: UInt8, Sendable {
     case boardDump        = 0x86
     case fieldUpdate      = 0x8E
     case serialNumber     = 0x91
@@ -19,7 +19,7 @@ internal enum DGTMessage: UInt8, Sendable {
     case longSerialNumber = 0xA2
 }
 
-internal enum DGTPiece: UInt8, Sendable {
+enum DGTPiece: UInt8, Sendable {
     // The DGT piece ordering differs from the app's `PieceType`:
     // Use the `piece` property to convert to the app's `Piece` type at
     // the protocol boundary.
@@ -42,7 +42,7 @@ internal enum DGTPiece: UInt8, Sendable {
     /// raw-value-indexed table: a new DGT case would have compiled against the
     /// table and trapped out of range at the decode boundary — here it's a
     /// build error, which is the only witness a wire enum can rely on.
-    internal var piece: Piece {
+    var piece: Piece {
         switch self {
         case .empty:       .empty
         case .whitePawn:   .whitePawn

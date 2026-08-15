@@ -5,25 +5,25 @@ import SwiftUI
 /// Keys borrowed where a convention exists (⌘O open, ⌘E export, ⌘⌫ trash); ⌘R = Run for
 /// Analyze, chosen over ⇧⌘A (one slipped modifier from ⌘A). **Not claimed: that keys fire while
 /// the menu is shut** — rendered for certain, liveness unmeasured.
-internal struct GameActionsMenu: View {
+struct GameActionsMenu: View {
 
     // MARK: Stored Properties
 
     /// The whole selection when a selected row is right-clicked, else the one under the pointer.
-    internal let games: [PGN]
+    let games: [PGN]
 
     /// Every closure takes the set (D56′). Open's old singular rule was well argued and wrong —
     /// N windows is Finder's answer; the arbitrary pick was the real hazard.
-    internal let onOpen: ([PGN]) -> Void
-    internal let onAnalyze: ([PGN]) -> Void
-    internal let onExport: ([PGN]) -> Void
-    internal let onDelete: ([PGN]) -> Void
+    let onOpen: ([PGN]) -> Void
+    let onAnalyze: ([PGN]) -> Void
+    let onExport: ([PGN]) -> Void
+    let onDelete: ([PGN]) -> Void
 
     /// Ambient rather than a sixth parameter — three hosts, one per card, each with previews.
     @Environment(\.analysisRunningGameID) private var runningAnalysisID
 
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         if !games.isEmpty {
             // Get Info stays singular — the only item that is (D56′): its window resolves one subject; a
             // set has no roster to show.

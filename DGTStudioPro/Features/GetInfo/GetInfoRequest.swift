@@ -5,7 +5,7 @@ import SwiftData
 /// One Get Info subject. An enum, and a wrapper — `openWindow(value:)` routes by type, and the
 /// main group claims `PersistentIdentifier`. `.live` carries nothing: a live game has no id
 /// until it archives, and an optional id would make "no game" and "the live game" one value.
-internal enum GetInfoRequest: Codable, Hashable, Sendable {
+enum GetInfoRequest: Codable, Hashable, Sendable {
 
     /// An archived game, from the Library or the Board's review branch.
     case game(PersistentIdentifier)

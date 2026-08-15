@@ -5,13 +5,13 @@ import SwiftUI
 /// nothing, so game number is the rating's own clock — the date axis spent its width on pauses.
 /// One clean monotone line, nothing else (band, dots and end annotation each shipped and were
 /// removed by request); `.monotone` never claims a value the rating didn't visit.
-internal struct PlayerRatingGraph: View {
+struct PlayerRatingGraph: View {
 
     // MARK: Stored Properties
-    internal let history: [Glicko1.Sample]
+    let history: [Glicko1.Sample]
 
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         CollapsibleSection(.ratingTrend, title: "Rating Trend") {
             if history.isEmpty {
                 // Names the number, not just its absence — "the rating starts" invites "at what?".
@@ -37,10 +37,10 @@ internal struct PlayerRatingGraph: View {
 
 /// The line itself, presentation-agnostic — extracted when the gallery preview became a second
 /// drawer, so two hosts cannot draw one history two ways.
-internal struct RatingTrendChart: View {
+struct RatingTrendChart: View {
 
     // MARK: Stored Properties
-    internal let history: [Glicko1.Sample]
+    let history: [Glicko1.Sample]
 
     // MARK: Computed Properties
 
@@ -64,7 +64,7 @@ internal struct RatingTrendChart: View {
     }
 
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         // Indexed identity: two rated games can share an effective date, so `\.date` could never be the
         // id — and on an ordinal axis the index IS the x-value.
         Chart(plotted, id: \.step) { point in

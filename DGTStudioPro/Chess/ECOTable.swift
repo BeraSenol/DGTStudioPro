@@ -4,7 +4,7 @@ import os
 /// The bundled ECO dataset, parsed once (D34′). Deliberately outside the chess core's purity
 /// contract and filed beside the classifier — the invariant names types, not folders. lichess
 /// data, CC0, bundled as fetched, never transcribed.
-internal enum ECOTable {
+enum ECOTable {
 
     private static let logger = AppLog.logger(.eco)
 
@@ -16,11 +16,11 @@ internal enum ECOTable {
 
     /// Built on first use, held for the process — `static let` gives once-only init for free; the
     /// parse is pure and read-only afterwards.
-    internal static let bundled: ECOClassifier = load()
+    static let bundled: ECOClassifier = load()
 
     /// Forces the lazy parse onto a background thread — the door every async caller should use
     /// (the parse is an order of magnitude slower in debug builds).
-    internal static func warmed() async -> ECOClassifier {
+    static func warmed() async -> ECOClassifier {
         await Task.detached(priority: .utility) { bundled }.value
     }
 

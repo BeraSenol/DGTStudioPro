@@ -1,15 +1,15 @@
 import SwiftUI
 
-internal enum CollectionViewMode: String, CaseIterable, Identifiable {
+enum CollectionViewMode: String, CaseIterable, Identifiable {
     case icons
     case list
     case columns
     case gallery
     
-    internal var id: String { rawValue }
-    internal var displayName: String { rawValue.capitalized }
+    var id: String { rawValue }
+    var displayName: String { rawValue.capitalized }
     
-    internal var systemImage: String {
+    var systemImage: String {
         switch self {
         case .icons:   "square.grid.2x2"
         case .list:    "list.bullet"
@@ -20,7 +20,7 @@ internal enum CollectionViewMode: String, CaseIterable, Identifiable {
 
     /// Whether the mode renders its own detail pane (only `.columns`), making the inspector a
     /// second copy of the same facts — the destination forces the inspector shut there.
-    internal var ownsDetailPane: Bool {
+    var ownsDetailPane: Bool {
         self == .columns
     }
 }

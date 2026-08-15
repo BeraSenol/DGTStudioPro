@@ -29,7 +29,7 @@ private final class ActivityToken {
 /// participate in the tracking loop so flipping it mid-run releases the token on that edge.
 @MainActor
 @Observable
-internal final class SleepInhibitor {
+final class SleepInhibitor {
 
     // MARK: Static Constants
     @ObservationIgnored
@@ -48,7 +48,7 @@ internal final class SleepInhibitor {
     /// The play gate. Observed, so Settings re-arms the loop; persisted on write — the `?? true` in
     /// `init` is the only place the default is stated. The storage key deliberately kept its old
     /// name: renaming would silently reset the preference.
-    internal var preventsSleepDuringPlay: Bool {
+    var preventsSleepDuringPlay: Bool {
         didSet {
             defaults.set(preventsSleepDuringPlay, forKey: StorageKeys.preventSleepDuringPlay)
             Self.logger?.info(
@@ -59,7 +59,7 @@ internal final class SleepInhibitor {
 
     /// The analysis gate (D66′). Same shape, separate value — overnight batches and instant sleep
     /// are the same person on different evenings.
-    internal var preventsSleepDuringAnalysis: Bool {
+    var preventsSleepDuringAnalysis: Bool {
         didSet {
             defaults.set(preventsSleepDuringAnalysis, forKey: StorageKeys.preventSleepDuringAnalysis)
             Self.logger?.info(
@@ -85,7 +85,7 @@ internal final class SleepInhibitor {
     // MARK: Init
 
     /// Injectable so the preference contract pins against a scratch suite.
-    internal init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         // Absent reads **true** (pre-toggle behaviour preserved). Assignment in `init` doesn't fire
         // `didSet`, so a first launch reads without writing back.
@@ -102,7 +102,7 @@ internal final class SleepInhibitor {
 
     /// The whole decision as a pure function: which reason to hold, or nil. Extracted because two
     /// gates over two causes is a crossable wiring — this is the one part worth testing.
-    internal static func activityReason(
+    static func activityReason(
         playing: Bool,
         analyzing: Bool,
         allowsPlay: Bool,
@@ -121,7 +121,7 @@ internal final class SleepInhibitor {
     /// queued main-actor task, after the mutation, so `setInhibited` reads settled state.
     /// Strong captures, deliberately: the closures capture the observables, not `self` — no cycle,
     /// and the App owns everything for the process lifetime.
-    internal func observe(
+    func observe(
         session: DGTLiveSession,
         connection: DGTConnection,
         analysis: AnalysisQueueController
@@ -174,7 +174,7 @@ extension SleepInhibitor {
 
     /// The instance previews inject — force-unwrap plus the wipe, because a preview reading the
     /// developer's real defaults leaks last state into the canvas (S4).
-    internal static var preview: SleepInhibitor {
+    static var preview: SleepInhibitor {
         let name = "preview"
         let defaults = UserDefaults(suiteName: name)!
         defaults.removePersistentDomain(forName: name)

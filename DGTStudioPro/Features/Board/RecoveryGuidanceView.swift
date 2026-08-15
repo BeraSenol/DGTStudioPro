@@ -3,18 +3,18 @@ import SwiftUI
 /// The square-by-square restore checklist under the status card while recovering. Pure
 /// presentation over `RecoveryGuidance`; a checklist, not a dialog — restoring the position is
 /// the only resolution (Decision #1).
-internal struct RecoveryGuidanceView: View {
+struct RecoveryGuidanceView: View {
     
     // MARK: Stored Properties
     
-    internal let guidance: RecoveryGuidance
+    let guidance: RecoveryGuidance
     
     /// Wired by `SessionSidebarPanel` to `sessionLog.exportViaSavePanel()`.
-    internal let onExportDiagnostics: () -> Void
+    let onExportDiagnostics: () -> Void
     
     // MARK: Body
     
-    internal var body: some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text("Restore these squares")

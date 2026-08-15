@@ -3,12 +3,12 @@ import SwiftUI
 /// The Diagnostics menu: session-log export and the board-stream recorder. App-scoped — a
 /// `Commands` scene has no `modelContext`. Stop-and-export is one action: a diagnostic
 /// recording stopped without saving has no audience.
-internal struct DiagnosticsCommands: Commands {
+struct DiagnosticsCommands: Commands {
     
-    internal let connection: DGTConnection
-    internal let sessionLog: DGTSessionLog
+    let connection: DGTConnection
+    let sessionLog: DGTSessionLog
     
-    internal var body: some Commands {
+    var body: some Commands {
         CommandMenu("Diagnostics") {
             // Ellipsis per HIG: this opens an NSSavePanel rather than acting
             // immediately. Same for the stop-and-export item below; "Start

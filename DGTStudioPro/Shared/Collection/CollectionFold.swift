@@ -6,24 +6,24 @@ import SwiftData
 /// **`evaluations` is deliberately absent**: not an input to either fold, and hashing it would
 /// re-fold the Library once per ply during a batch. A consumer that needs it keys its own
 /// signal (the Library's `FoldKey` adds queue counters).
-internal struct CollectionFoldKey: Equatable, Sendable {
+struct CollectionFoldKey: Equatable, Sendable {
 
     /// One game's contribution, as values — a suite builds a key without a container. Everything
     /// after `checkmate` is defaulted for fixture ergonomics; the hash covers all of it.
-    internal struct Row: Equatable, Sendable {
-        internal let contentHash: String
-        internal let checkmate: SpecialCheckmate?
-        internal let opening: ECOOpening?
-        internal let name: String
-        internal let isTimed: Bool
+    struct Row: Equatable, Sendable {
+        let contentHash: String
+        let checkmate: SpecialCheckmate?
+        let opening: ECOOpening?
+        let name: String
+        let isTimed: Bool
 
         /// Resolved players' *identifiers*, not names — identity is enough because a name cannot move
         /// under a row (rename retags and re-resolves; first-seen casing pins the rest). The one missed
         /// transition is nil → linked, which the backfill's own pass republishes anyway.
-        internal let white: PersistentIdentifier?
-        internal let black: PersistentIdentifier?
+        let white: PersistentIdentifier?
+        let black: PersistentIdentifier?
 
-        internal init(
+        init(
             contentHash: String,
             checkmate: SpecialCheckmate?,
             opening: ECOOpening? = nil,
@@ -44,7 +44,7 @@ internal struct CollectionFoldKey: Equatable, Sendable {
 
     private let rows: [Row]
 
-    internal init(rows: [Row]) {
+    init(rows: [Row]) {
         self.rows = rows
     }
 }
@@ -53,7 +53,7 @@ extension CollectionFoldKey {
 
     /// Construction over the `@Query` array. Order-sensitive by construction, correctly: both
     /// destinations fold an ordered array, and a reordering is a different fold input.
-    internal init(games: [PGN]) {
+    init(games: [PGN]) {
         self.init(
             rows: games.map {
                 Row(
@@ -74,15 +74,15 @@ extension CollectionFoldKey {
 /// **A box, not `@State`** — mutation during render is exactly the licence a memo needs and
 /// exactly what `@State` forbids; `.onChange` lands a frame late. One entry, not an LRU: both
 /// call sites read one value per pass.
-internal final class CollectionFoldCache<Key: Equatable, Value> {
+final class CollectionFoldCache<Key: Equatable, Value> {
 
     private var stored: (key: Key, value: Value)?
 
-    internal init() {}
+    init() {}
 
     /// Computes only when `key` differs from the stored one. `compute` is not `@escaping` — runs
     /// before return or not at all, so closing over the render pass is cycle-free.
-    internal func value(for key: Key, compute: () -> Value) -> Value {
+    func value(for key: Key, compute: () -> Value) -> Value {
         if let stored, stored.key == key { return stored.value }
         let fresh = compute()
         stored = (key, fresh)
@@ -90,7 +90,7 @@ internal final class CollectionFoldCache<Key: Equatable, Value> {
     }
 
     /// For the suites: "a hit is a hit" cannot be pinned through a door that computes on demand.
-    internal func isCached(_ key: Key) -> Bool {
+    func isCached(_ key: Key) -> Bool {
         stored?.key == key
     }
 }

@@ -4,20 +4,20 @@ import SwiftUI
 
 /// Finder-column shape: flat game list left, selected game's detail filling the rest —
 /// inspection density, not navigation (the smart tags own grouping).
-internal struct LibraryColumnsView: View {
+struct LibraryColumnsView: View {
 
     // MARK: Stored Properties
-    internal let games: [PGN]
+    let games: [PGN]
     /// Row badges' input, off the destination's memoized projection (D72′).
-    internal let analyzedIDs: Set<PGN.ID>
-    @Binding internal var selectedPGNs: Set<PGN.ID>
-    internal let boardStyle: BoardStyle
+    let analyzedIDs: Set<PGN.ID>
+    @Binding var selectedPGNs: Set<PGN.ID>
+    let boardStyle: BoardStyle
     /// Takes the set (D56′). Deliberately not adapted with a `forEach` like the others: those fan
     /// out to per-game doors, while Open's door owns the count threshold.
-    internal let onOpen: ([PGN]) -> Void
-    internal let onAnalyze: (PGN) -> Void
-    internal let onExport: (PGN) -> Void
-    internal let onDelete: (PGN) -> Void
+    let onOpen: ([PGN]) -> Void
+    let onAnalyze: (PGN) -> Void
+    let onExport: (PGN) -> Void
+    let onDelete: (PGN) -> Void
 
     /// Shared with list mode through the destination — one binding, so a sort survives the mode switch.
     @Binding var sortOrder: [KeyPathComparator<PGN>]
@@ -39,7 +39,7 @@ internal struct LibraryColumnsView: View {
     }
 
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         HSplitView {
             // 160/200/300 floors: columns is the one mode that must survive narrow windows.
             // `.layoutPriority(1)` enforces the floor — `HSplitView` honours `minWidth` only while the

@@ -4,18 +4,18 @@ import SwiftUI
 /// one), carrying an optional reference to the model it came from.
 /// Cancel discards the value; only OK touches a model — in
 /// `ContentView.commit`, never here.
-internal struct TagDraft: Identifiable {
-    internal let id = UUID()
-    internal let editing: SmartTag?
-    internal var name: String
-    internal var colorName: TagColor
-    internal var matchAll: Bool
-    internal var rules: [TagRule]
+struct TagDraft: Identifiable {
+    let id = UUID()
+    let editing: SmartTag?
+    var name: String
+    var colorName: TagColor
+    var matchAll: Bool
+    var rules: [TagRule]
     
     /// A fresh draft: one blank string rule, which matches nothing until
     /// filled (the empty-text rule) — a new tag is inert, never
     /// select-all.
-    internal init() {
+    init() {
         self.editing = nil
         self.name = "New Tag"
         self.colorName = .blue
@@ -23,7 +23,7 @@ internal struct TagDraft: Identifiable {
         self.rules = [TagRule()]
     }
     
-    internal init(editing tag: SmartTag) {
+    init(editing tag: SmartTag) {
         self.editing = tag
         self.name = tag.name
         self.colorName = tag.colorName
@@ -34,12 +34,12 @@ internal struct TagDraft: Identifiable {
 
 /// The Apple Music smart-playlist shape (D12′). Deliberately absent: Limit-to, checked-only,
 /// live-updating (computed at render — live by construction).
-internal struct SmartTagEditorView: View {
+struct SmartTagEditorView: View {
     
     // MARK: Stored Properties
     
-    @State internal var draft: TagDraft
-    internal let onSave: (TagDraft) -> Void
+    @State var draft: TagDraft
+    let onSave: (TagDraft) -> Void
     
     // MARK: Private Properties
     
@@ -51,7 +51,7 @@ internal struct SmartTagEditorView: View {
     
     // MARK: Body
     
-    internal var body: some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             header
             matchModeRow

@@ -14,7 +14,7 @@ import Testing
 /// asked for.
 @MainActor
 @Suite("Board sound preferences")
-internal struct BoardSoundPreferenceTests {
+struct BoardSoundPreferenceTests {
 
     /// A throwaway suite per test — `.standard` would edit the developer's own settings and a
     /// fixed name would race under parallel execution.
@@ -59,7 +59,7 @@ internal struct BoardSoundPreferenceTests {
     // MARK: Defaults
 
     @Test("An untouched preference reads as enabled")
-    internal func absentKeysReadAsEnabled() throws {
+    func absentKeysReadAsEnabled() throws {
         try withScratchDefaults { defaults in
             let sounds = makeSounds(defaults)
             #expect(sounds.playsMove)
@@ -74,14 +74,14 @@ internal struct BoardSoundPreferenceTests {
     /// `.wood` is what shipped first, so an install that has never seen the picker must keep
     /// hearing it. A default that drifted would silently re-voice every existing install.
     @Test("An untouched sound set reads as wood")
-    internal func absentSoundSetReadsAsWood() throws {
+    func absentSoundSetReadsAsWood() throws {
         try withScratchDefaults { defaults in
             #expect(makeSounds(defaults).soundSet == .wood)
         }
     }
 
     @Test("A stored sound set is honoured", arguments: BoardSoundSet.allCases)
-    internal func storedSoundSetIsHonoured(_ chosen: BoardSoundSet) throws {
+    func storedSoundSetIsHonoured(_ chosen: BoardSoundSet) throws {
         try withScratchDefaults { defaults in
             defaults.set(chosen.rawValue, forKey: StorageKeys.boardSoundSet)
             #expect(makeSounds(defaults).soundSet == chosen)
@@ -92,7 +92,7 @@ internal struct BoardSoundPreferenceTests {
     /// a set safe. Without it, dropping a set would leave anyone who had chosen it unable to
     /// launch, and the failure would arrive on their machine rather than in this suite.
     @Test("An unknown stored set falls back to the default")
-    internal func unknownSoundSetFallsBack() throws {
+    func unknownSoundSetFallsBack() throws {
         try withScratchDefaults { defaults in
             defaults.set("granite", forKey: StorageKeys.boardSoundSet)
             #expect(makeSounds(defaults).soundSet == .wood)
@@ -100,7 +100,7 @@ internal struct BoardSoundPreferenceTests {
     }
 
     @Test("Picking a set writes through")
-    internal func soundSetPersists() throws {
+    func soundSetPersists() throws {
         try withScratchDefaults { defaults in
             let sounds = makeSounds(defaults)
             sounds.soundSet = .marble
@@ -111,7 +111,7 @@ internal struct BoardSoundPreferenceTests {
     /// Construction must not write here either — same reason as the toggles, plus one of its own:
     /// a stored value is what tells a future default change from a deliberate choice.
     @Test("Reading the set writes nothing")
-    internal func soundSetConstructionDoesNotPersist() throws {
+    func soundSetConstructionDoesNotPersist() throws {
         try withScratchDefaults { defaults in
             _ = makeSounds(defaults)
             #expect(defaults.object(forKey: StorageKeys.boardSoundSet) == nil)
@@ -121,7 +121,7 @@ internal struct BoardSoundPreferenceTests {
     /// The cue toggles and the set are independent axes: switching material must not re-arm a cue
     /// the reader silenced. Cheap to assert and the kind of coupling a shared `didSet` invites.
     @Test("Changing the set leaves the cue toggles alone")
-    internal func soundSetDoesNotDisturbTheToggles() throws {
+    func soundSetDoesNotDisturbTheToggles() throws {
         try withScratchDefaults { defaults in
             let sounds = makeSounds(defaults)
             sounds.playsMove = false
@@ -142,7 +142,7 @@ internal struct BoardSoundPreferenceTests {
     /// passes even if two properties read each other's key. `eachCueReadsItsOwnKey` is the version
     /// that could fail — this one only proves nothing is ignored outright.
     @Test("A stored false is honoured")
-    internal func storedFalseIsHonoured() throws {
+    func storedFalseIsHonoured() throws {
         try withScratchDefaults { defaults in
             defaults.set(false, forKey: StorageKeys.moveSoundEnabled)
             defaults.set(false, forKey: StorageKeys.captureSoundEnabled)
@@ -161,7 +161,7 @@ internal struct BoardSoundPreferenceTests {
     /// touched" and "deliberately left on" indistinguishable, and a future change of default would
     /// then silently not apply to anyone who had ever opened the app.
     @Test("Construction writes nothing")
-    internal func constructionDoesNotPersist() throws {
+    func constructionDoesNotPersist() throws {
         try withScratchDefaults { defaults in
             _ = makeSounds(defaults)
             #expect(defaults.object(forKey: StorageKeys.moveSoundEnabled) == nil)
@@ -178,7 +178,7 @@ internal struct BoardSoundPreferenceTests {
     /// property reading its neighbour's key produces an identical, passing result. Here the
     /// expected answer differs per property, so a crossed read has somewhere to show.
     @Test("Each cue reads its own key", arguments: BoardCue.allCases)
-    internal func eachCueReadsItsOwnKey(_ cue: BoardCue) throws {
+    func eachCueReadsItsOwnKey(_ cue: BoardCue) throws {
         try withScratchDefaults { defaults in
             defaults.set(false, forKey: Self.key(for: cue))
             let sounds = makeSounds(defaults)
@@ -196,7 +196,7 @@ internal struct BoardSoundPreferenceTests {
     /// `didSet` persisting under a neighbour's key is silent in the running app — the value looks
     /// saved, and comes back wrong on the *next launch*, which is the worst place to discover it.
     @Test("Each cue writes its own key", arguments: BoardCue.allCases)
-    internal func eachCueWritesItsOwnKey(_ cue: BoardCue) throws {
+    func eachCueWritesItsOwnKey(_ cue: BoardCue) throws {
         try withScratchDefaults { defaults in
             let sounds = makeSounds(defaults)
             set(cue, to: false, on: sounds)
@@ -219,7 +219,7 @@ internal struct BoardSoundPreferenceTests {
     /// property the reader cares about ("it was still off this morning") without going through
     /// `StorageKeys` at all.
     @Test("A flip survives a relaunch", arguments: BoardCue.allCases)
-    internal func aFlipSurvivesARelaunch(_ cue: BoardCue) throws {
+    func aFlipSurvivesARelaunch(_ cue: BoardCue) throws {
         try withScratchDefaults { defaults in
             let first = makeSounds(defaults)
             set(cue, to: false, on: first)
@@ -236,7 +236,7 @@ internal struct BoardSoundPreferenceTests {
     /// The parameter is `chosen`, not `set` — a `set` here would shadow this suite's own
     /// `set(_:to:on:)` helper, which is the shape that already bit `makeSounds`.
     @Test("A chosen set survives a relaunch", arguments: BoardSoundSet.allCases)
-    internal func aChosenSetSurvivesARelaunch(_ chosen: BoardSoundSet) throws {
+    func aChosenSetSurvivesARelaunch(_ chosen: BoardSoundSet) throws {
         try withScratchDefaults { defaults in
             let first = makeSounds(defaults)
             first.soundSet = chosen
@@ -251,7 +251,7 @@ internal struct BoardSoundPreferenceTests {
     /// flag fails here rather than shipping permanently silent, and asserted in both directions:
     /// the cue's own flag enables it, and no other flag does.
     @Test("Each cue is governed by its own toggle and no other", arguments: BoardCue.allCases)
-    internal func eachCueReadsItsOwnFlag(_ cue: BoardCue) {
+    func eachCueReadsItsOwnFlag(_ cue: BoardCue) {
         for candidate in BoardCue.allCases {
             // Only `candidate`'s flag is on; every other flag is off.
             let enabled = BoardSounds.isEnabled(
@@ -271,7 +271,7 @@ internal struct BoardSoundPreferenceTests {
     /// The instance's answer must be the static one — otherwise the tested mapping and the shipped
     /// mapping are two mappings, which is the twin-read-site pattern wearing a method call.
     @Test("The instance agrees with the pure gate", arguments: BoardCue.allCases)
-    internal func instanceAgreesWithTheStaticGate(_ cue: BoardCue) throws {
+    func instanceAgreesWithTheStaticGate(_ cue: BoardCue) throws {
         try withScratchDefaults { defaults in
             let sounds = makeSounds(defaults)
             sounds.playsMove = false
@@ -296,7 +296,7 @@ internal struct BoardSoundPreferenceTests {
     /// `false` in every process this suite can run in, so a test asserting the constant would
     /// confirm nothing but the room it is standing in (D44′).
     @Test("A real launch is audible; a test host is not")
-    internal func audibilityFollowsTheTestHost() {
+    func audibilityFollowsTheTestHost() {
         #expect(BoardSounds.isAudible(in: [:]))
         #expect(BoardSounds.isAudible(in: ["PATH": "/usr/bin"]))
         #expect(BoardSounds.isAudible(in: ["XCTestConfigurationFilePath": "/tmp/x.xctestconfiguration"]) == false)
@@ -306,7 +306,7 @@ internal struct BoardSoundPreferenceTests {
     /// An inaudible player still answers the gate honestly — the two are independent, and folding
     /// them would make "the toggle is off" and "this process is silent" the same state.
     @Test("Silence does not disable the preferences")
-    internal func inaudibleStillReportsItsGates() throws {
+    func inaudibleStillReportsItsGates() throws {
         try withScratchDefaults { defaults in
             let sounds = makeSounds(defaults)
             #expect(sounds.isEnabled(.move))

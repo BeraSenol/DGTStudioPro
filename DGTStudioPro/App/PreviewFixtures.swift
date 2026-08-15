@@ -3,7 +3,7 @@ import Foundation
 /// Shared Players preview fixtures. Records, not memberwise stats: stats and ladder are
 /// *derived* (D10′), so previews build through the same folds. **Not `#if DEBUG`** — previews
 /// are stripped at link time, and the guard once broke six canvases in release schemes.
-internal enum PreviewFixtures {
+enum PreviewFixtures {
     
     /// Fixed epoch — previews must not shift with wall-clock time.
     private static func day(_ offset: Int) -> Date {
@@ -41,7 +41,7 @@ internal enum PreviewFixtures {
     
     /// A small rivalry set: a dominant player, an even pair, a provisional newcomer, and an
     /// unresolved seat (the "unknowns never inform" rule).
-    internal static func records() -> [GameRecord] {
+    static func records() -> [GameRecord] {
         [
             game("Bera", "Lorenzo", .whiteWins, day: 1, round: 1),
             game("Bera", "Lorenzo", .blackWins, day: 3, round: 2, mate: true),
@@ -60,13 +60,13 @@ internal enum PreviewFixtures {
         ]
     }
     
-    internal static func playerStats() -> [PlayerStats] {
+    static func playerStats() -> [PlayerStats] {
         PlayerStats.index(of: records()).sorted(by: PlayerStats.rankingOrder)
     }
     
     /// Reaches the upper win bands `records()` never produces — 10+ / 5–9 / 1–4 / none at once.
     /// Built by appending games, not hand-writing stats: the folds stay in the loop.
-    internal static func deepRecords() -> [GameRecord] {
+    static func deepRecords() -> [GameRecord] {
         var records = self.records()
         for offset in 0..<12 {
             records.append(game("Vasil", "Novak", .whiteWins, day: 20 + offset))
@@ -92,21 +92,21 @@ internal enum PreviewFixtures {
             }
     }
     
-    internal static func rankedPlayers() -> [RankedPlayer] {
+    static func rankedPlayers() -> [RankedPlayer] {
         ladder(from: records())
     }
     
-    internal static func deepRankedPlayers() -> [RankedPlayer] {
+    static func deepRankedPlayers() -> [RankedPlayer] {
         ladder(from: deepRecords())
     }
     
-    internal static func topStats() -> PlayerStats { playerStats()[0] }
+    static func topStats() -> PlayerStats { playerStats()[0] }
 
     /// A `CollectionViewOptions` on a wiped scratch suite. **Never `.standard`** — a canvas reading
     /// the developer's icon size renders wrong, and one writing it edits real preferences. Wiped on
     /// every call. `subject:` is required — defaulting it to nil hid the unlatched branch.
     @MainActor
-    internal static func viewOptions(
+    static func viewOptions(
         subject: CollectionViewOptionsSubject? = nil,
         iconSize: CGFloat? = nil,
         spacing: CGFloat? = nil

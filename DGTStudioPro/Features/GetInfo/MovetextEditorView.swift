@@ -3,15 +3,15 @@ import SwiftUI
 /// Edits an archived game's movetext (D18′). Every keystroke re-validates purely
 /// (`MovetextEdit.validate`); Save is gated on a legal, result-consistent line and hands the
 /// tokens to the caller — this view never touches SwiftData.
-internal struct MovetextEditorView: View {
+struct MovetextEditorView: View {
     
     // MARK: Stored Properties
     
     /// Read for its result (the claim validated against) and to seed the field.
-    internal let pgn: PGN
+    let pgn: PGN
     
     /// Called with the tokenized SAN on Save; the caller runs the store write.
-    internal let onCommit: ([String]) -> Void
+    let onCommit: ([String]) -> Void
     
     // MARK: View State
 
@@ -34,7 +34,7 @@ internal struct MovetextEditorView: View {
 
     // MARK: Initializer
 
-    internal init(pgn: PGN, onCommit: @escaping ([String]) -> Void) {
+    init(pgn: PGN, onCommit: @escaping ([String]) -> Void) {
         self.pgn = pgn
         self.onCommit = onCommit
         let seeded = Self.scoreSheet(pgn.moves)
@@ -55,7 +55,7 @@ internal struct MovetextEditorView: View {
     /// are decoration the validator never sees. Sharp edge, accepted: delete a ply mid-game and
     /// every number below is wrong and nothing complains — Save re-renders from accepted moves.
     /// (Tabs were tried and reverted: `TextEditor` gives no way to set tab stops.)
-    internal nonisolated static func scoreSheet(_ moves: [String]) -> String {
+    nonisolated static func scoreSheet(_ moves: [String]) -> String {
         guard !moves.isEmpty else { return "" }
         
         let lastNumber = (moves.count + 1) / 2
@@ -143,7 +143,7 @@ internal struct MovetextEditorView: View {
     
     // MARK: Body
     
-    internal var body: some View {
+    var body: some View {
         // One validation per character change (the cache), pulled once per render.
         let plain = String(text.characters)
         let check = checked(plain)

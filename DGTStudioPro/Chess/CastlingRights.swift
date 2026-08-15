@@ -1,16 +1,16 @@
-internal enum CastlingSide: Sendable {
+enum CastlingSide: Sendable {
     case kingSide
     case queenSide
     
     /// The king's destination file — g (6) kingside, c (2) queenside. One
     /// home for a constant that was a private `Move.kingSideKingFile` plus
     /// two bare literals in the SAN layer, none of which could see each other.
-    internal var kingDestinationFile: Int {
+    var kingDestinationFile: Int {
         self == .kingSide ? 6 : 2
     }
 }
 
-internal struct CastlingRights: Codable, Equatable, Hashable, Sendable {
+struct CastlingRights: Codable, Equatable, Hashable, Sendable {
     
     // MARK: Static Constants
     private static let whiteKingSideMask: UInt8  = 0b0001
@@ -18,19 +18,19 @@ internal struct CastlingRights: Codable, Equatable, Hashable, Sendable {
     private static let blackKingSideMask: UInt8  = 0b0100
     private static let blackQueenSideMask: UInt8 = 0b1000
     
-    internal static let none = CastlingRights(rawValue: 0b0000)
-    internal static let all  = CastlingRights(rawValue: 0b1111)
+    static let none = CastlingRights(rawValue: 0b0000)
+    static let all  = CastlingRights(rawValue: 0b1111)
     
     // MARK: Stored Properties
-    internal private(set) var rawValue: UInt8
+    private(set) var rawValue: UInt8
     
     // MARK: Computed Properties
-    internal var whiteKingSide:  Bool { rawValue & Self.whiteKingSideMask  != 0 }
-    internal var whiteQueenSide: Bool { rawValue & Self.whiteQueenSideMask != 0 }
-    internal var blackKingSide:  Bool { rawValue & Self.blackKingSideMask  != 0 }
-    internal var blackQueenSide: Bool { rawValue & Self.blackQueenSideMask != 0 }
+    var whiteKingSide:  Bool { rawValue & Self.whiteKingSideMask  != 0 }
+    var whiteQueenSide: Bool { rawValue & Self.whiteQueenSideMask != 0 }
+    var blackKingSide:  Bool { rawValue & Self.blackKingSideMask  != 0 }
+    var blackQueenSide: Bool { rawValue & Self.blackQueenSideMask != 0 }
     
-    internal var fen: String {
+    var fen: String {
         guard rawValue != 0 else { return "-" }
         
         var result = ""
@@ -44,11 +44,11 @@ internal struct CastlingRights: Codable, Equatable, Hashable, Sendable {
     }
     
     // MARK: Initializers
-    internal init() {
+    init() {
         rawValue = Self.all.rawValue
     }
     
-    internal init(rawValue: UInt8) {
+    init(rawValue: UInt8) {
         self.rawValue = rawValue
     }
     
@@ -57,15 +57,15 @@ internal struct CastlingRights: Codable, Equatable, Hashable, Sendable {
     /// `appendCastlingMoves`; the waiver register's "test-only by decision"
     /// entry covers the no-arg `init()` only, which nothing outside the suites
     /// reaches (production goes through `.all`, `.none`, or `init(rawValue:)`).
-    internal func has(_ color: PieceColor, _ side: CastlingSide) -> Bool {
+    func has(_ color: PieceColor, _ side: CastlingSide) -> Bool {
         rawValue & Self.mask(for: color, side).rawValue != 0
     }
     
-    internal mutating func revoke(_ rights: CastlingRights) {
+    mutating func revoke(_ rights: CastlingRights) {
         rawValue &= ~rights.rawValue
     }
     
-    internal mutating func revokeAll(for color: PieceColor) {
+    mutating func revokeAll(for color: PieceColor) {
         let mask = color == .white
         ? Self.whiteKingSideMask | Self.whiteQueenSideMask
         : Self.blackKingSideMask | Self.blackQueenSideMask
@@ -73,7 +73,7 @@ internal struct CastlingRights: Codable, Equatable, Hashable, Sendable {
     }
     
     // MARK: Static Methods
-    internal static func mask(for color: PieceColor, _ side: CastlingSide) -> CastlingRights {
+    static func mask(for color: PieceColor, _ side: CastlingSide) -> CastlingRights {
         switch (color, side) {
         case (.white, .kingSide):  return CastlingRights(rawValue: whiteKingSideMask)
         case (.white, .queenSide): return CastlingRights(rawValue: whiteQueenSideMask)

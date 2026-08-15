@@ -3,11 +3,11 @@ import Foundation
 /// The one rendering of a player name (D23′): PGN carries "Last, First", surfaces show
 /// "First Last". Storage untouched — the hash covers tags and D24′ round-trips them. No
 /// inverse exists: names travel tag → display only.
-internal enum PlayerName {
+enum PlayerName {
     
     /// **Idempotent by construction** — the output never contains a comma, so double application is
     /// a no-op; "apply exactly once" stopped being a rule callers must remember.
-    internal static func displayForm(of raw: String) -> String {
+    static func displayForm(of raw: String) -> String {
         let parts = raw.split(
             separator: ",", maxSplits: 1, omittingEmptySubsequences: false
         )
@@ -27,7 +27,7 @@ internal enum PlayerName {
     /// **The** whitespace fold: trim + collapse runs. Identity and the content hash are this plus
     /// `lowercased()`, and both call through here — a display name, its key and its hash input can
     /// never disagree about "Magnus  Carlsen".
-    internal static func folded(_ text: String) -> String {
+    static func folded(_ text: String) -> String {
         text
             .components(separatedBy: .whitespacesAndNewlines)
             .filter { !$0.isEmpty }

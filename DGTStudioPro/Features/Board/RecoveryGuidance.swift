@@ -1,13 +1,13 @@
 /// Per-square instructions for restoring a desynced board to the last legal position (Decision
 /// #1 locks the resolution; there is nothing to decide, only squares to fix).
-internal struct RecoveryGuidance: Equatable, Sendable {
+struct RecoveryGuidance: Equatable, Sendable {
     
     // MARK: Item
     
     /// One square to fix, with a ready-to-display instruction.
-    internal struct Item: Equatable, Sendable, Identifiable {
+    struct Item: Equatable, Sendable, Identifiable {
         
-        internal enum Action: Equatable, Sendable {
+        enum Action: Equatable, Sendable {
             /// The board holds a piece where the target square is empty.
             case remove(Piece)
             /// The target square holds a piece; the board square is empty.
@@ -16,14 +16,14 @@ internal struct RecoveryGuidance: Equatable, Sendable {
             case replace(current: Piece, expected: Piece)
         }
         
-        internal let square: Square
-        internal let action: Action
+        let square: Square
+        let action: Action
         
         /// One item per square — the square doubles as stable identity.
-        internal var id: Square { square }
+        var id: Square { square }
         
         /// "c3 — remove the White Knight" / "g1 — place…" / "e4 — replace… with…".
-        internal var message: String {
+        var message: String {
             switch action {
             case .remove(let piece):
                 "\(square.algebraicNotation), remove the \(Self.name(of: piece))"
@@ -59,12 +59,12 @@ internal struct RecoveryGuidance: Equatable, Sendable {
     // MARK: Stored Properties
     
     /// Sorted by square index (a1 → h8) — deterministic for UI and tests.
-    internal let items: [Item]
+    let items: [Item]
     
     // MARK: Computed Properties
     
     /// `.attention`: something here shouldn't be.
-    internal var attentionSquares: Set<Square> {
+    var attentionSquares: Set<Square> {
         Set(items.compactMap {
             switch $0.action {
             case .remove, .replace: $0.square
@@ -75,17 +75,17 @@ internal struct RecoveryGuidance: Equatable, Sendable {
     
     /// `.target`: a piece belongs on this empty square. Wrong-piece squares stay attention-only —
     /// stacking both styles reads as noise.
-    internal var targetSquares: Set<Square> {
+    var targetSquares: Set<Square> {
         Set(items.compactMap {
             if case .place = $0.action { $0.square } else { nil }
         })
     }
     
-    internal var isEmpty: Bool { items.isEmpty }
+    var isEmpty: Bool { items.isEmpty }
     
     // MARK: Initializer
     
-    internal init(physical: Position, target: Position) {
+    init(physical: Position, target: Position) {
         let diff = DGTBoardDiff(from: physical, to: target)
         var items: [Item] = []
         
@@ -115,7 +115,7 @@ extension RecoveryGuidance {
     /// The live checklist, or nil. Two consumers compute this independently by decision — two
     /// *computations* was the decision; two *spellings* was not, hence one static.
     @MainActor
-    internal static func current(
+    static func current(
         session: DGTLiveSession,
         connection: DGTConnection
     ) -> RecoveryGuidance? {

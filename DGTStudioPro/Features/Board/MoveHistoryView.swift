@@ -1,14 +1,14 @@
 import SwiftUI
 
-internal struct MoveHistoryView: View {
+struct MoveHistoryView: View {
     
     // MARK: Stored Properties
-    internal let moves: [String]
-    internal let currentMoveIndex: Int?
-    internal let onMoveTapped: ((Int) -> Void)?
+    let moves: [String]
+    let currentMoveIndex: Int?
+    let onMoveTapped: ((Int) -> Void)?
     /// Whether this view brings its own `ScrollView` — `false` lets a host `List` own scrolling
     /// (a nested scroll view is a fixed-size box inside an infinite proposal).
-    internal var scrollsIndependently: Bool = true
+    var scrollsIndependently: Bool = true
     
     // MARK: Computed Properties
     private var pairCount: Int {
@@ -16,7 +16,7 @@ internal struct MoveHistoryView: View {
     }
     
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         Group {
             if moves.isEmpty {
                 emptyState
@@ -113,7 +113,7 @@ extension View {
     
     /// Pins the applied container to the current ply — lives here because `ScrollViewReader` must
     /// wrap the container that actually scrolls.
-    internal func scrollsToCurrentMove(_ index: Int?) -> some View {
+    func scrollsToCurrentMove(_ index: Int?) -> some View {
         modifier(CurrentMoveScrollSync(currentMoveIndex: index))
     }
 }

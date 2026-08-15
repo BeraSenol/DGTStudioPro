@@ -4,7 +4,7 @@ import Foundation
 /// not the standard: LF endings; nine tags in fixed order (roster, `Board`, `TimeControl`); one
 /// blank line; one full move per line with a white-only final line; result alone on the last
 /// line; single trailing `\n`; no wrapping; evaluations and classification never written.
-internal enum PGNSerializer {
+enum PGNSerializer {
     
     // MARK: Placeholders
     
@@ -15,7 +15,7 @@ internal enum PGNSerializer {
     
     /// `RosterSummary` is the value carrier, **not** its own renderer — export needs the raw
     /// `"Senol, Bera"`; the display subscript belongs to the sidebars.
-    internal static func text(
+    static func text(
         roster: RosterSummary,
         board: String?,
         timeControl: String?,
@@ -56,7 +56,7 @@ internal enum PGNSerializer {
     
     /// The reference filename shape: ordinal, then **given** names, White vs Black — given names is
     /// what those files do.
-    internal static func fileName(white: String, black: String, index: Int) -> String {
+    static func fileName(white: String, black: String, index: Int) -> String {
         "\(index). \(givenName(white)) vs \(givenName(black)).pgn"
     }
 
@@ -64,7 +64,7 @@ internal enum PGNSerializer {
     /// both directions. **Reads the ordinal and nothing else**: the folder uses full names where
     /// the writer uses given names, so verifying seats would reject exactly the files this reads.
     /// Requiring the period is the guard — `1961 Candidates.pgn` is a year, not game 1961.
-    internal static func libraryIndex(fromFileName name: String) -> Int? {
+    static func libraryIndex(fromFileName name: String) -> Int? {
         let digits = name.prefix { $0.isNumber }
         guard !digits.isEmpty,
               name.dropFirst(digits.count).first == "."

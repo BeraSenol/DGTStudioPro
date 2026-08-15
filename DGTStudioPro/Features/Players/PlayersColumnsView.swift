@@ -5,7 +5,7 @@ import SwiftUI
 /// list follows `players`' display order; the rank badge stays honest in any order (rank is
 /// computed under the ranking method, not the sort). The one-column header cannot *display* an
 /// ordering it did not set — accepted cost, documented at the Library twin.
-internal struct PlayersColumnsView: View {
+struct PlayersColumnsView: View {
 
     // MARK: Stored Properties
     let players: [RankedPlayer]

@@ -10,7 +10,7 @@ extension LiveGame {
     /// describe a game this build's rules can reproduce — the UI's only
     /// offer for such a draft is deletion (Decision #3: resume or delete,
     /// nothing else).
-    internal enum ResumeError: Error, Equatable {
+    enum ResumeError: Error, Equatable {
         /// `startFEN` failed to parse into a legal starting state.
         case invalidStart(fen: String)
         /// A SAN string failed to parse against the state reached after the
@@ -33,7 +33,7 @@ extension LiveGame {
     /// The game's current on-disk form. `updatedAt` is stamped at snapshot
     /// time — the session takes one of these after every committed ply and
     /// every result/roster change.
-    internal var draftSnapshot: LiveGameDraft {
+    var draftSnapshot: LiveGameDraft {
         LiveGameDraft(
             schemaVersion: LiveGameDraft.currentSchemaVersion,
             startFEN: FEN(states[0]).string,
@@ -57,7 +57,7 @@ extension LiveGame {
     /// Rebuilds by replaying through the normal `commit` path — legality, SAN re-serialization,
     /// tracker walk and auto-result all come free; a replay-derived terminal result must equal the
     /// draft's or the file is corrupt.
-    internal convenience init(resuming draft: LiveGameDraft) throws(ResumeError) {
+    convenience init(resuming draft: LiveGameDraft) throws(ResumeError) {
         let start: GameState
         do {
             start = GameState(try FEN(parsing: draft.startFEN))

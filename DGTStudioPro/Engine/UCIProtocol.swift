@@ -1,13 +1,13 @@
 import Foundation
 
 /// Parses line-based UCI output. Parsing only — sending and subprocess management are the engine's.
-internal enum UCIProtocol {
+enum UCIProtocol {
     
     // MARK: Entry Point
     
     /// One line → response, or nil for empty / unrecognized / deliberately-ignored `option` lines
     /// (the app sends its options; it never negotiates against advertisements).
-    internal static func parse(_ line: String) -> UCIResponse? {
+    static func parse(_ line: String) -> UCIResponse? {
         // `.whitespacesAndNewlines`, not `.whitespaces` (space+tab only): a bare "\n" must take the
         // empty exit. Pinned.
         let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -32,13 +32,13 @@ internal enum UCIProtocol {
     // MARK: Two Kinds of nil
 
     /// Keywords understood and deliberately not acted on — `option` is the recorded invariant.
-    internal static let deliberatelyIgnoredKeywords: Set<String> = [
+    static let deliberatelyIgnoredKeywords: Set<String> = [
         "option", "copyprotection", "registration"
     ]
 
     /// Whether nil meant *known and ignored* rather than *unrecognized* (D63′). This distinction
     /// existed only in prose; ~25 option lines per start made the error channel unreadable.
-    internal static func isDeliberatelyIgnored(_ line: String) -> Bool {
+    static func isDeliberatelyIgnored(_ line: String) -> Bool {
         let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let first = trimmed.split(separator: " ").first else { return false }
         return deliberatelyIgnoredKeywords.contains(String(first))
@@ -149,7 +149,7 @@ internal enum UCIProtocol {
 
 // MARK: Response Types
 
-internal enum UCIResponse: Equatable, Sendable {
+enum UCIResponse: Equatable, Sendable {
     case info(UCIInfo)
     case bestMove(UCIBestMove)
     case readyOK
@@ -157,24 +157,24 @@ internal enum UCIResponse: Equatable, Sendable {
     case id(key: String, value: String)
 }
 
-internal struct UCIInfo: Equatable, Sendable {
-    internal var depth: Int? = nil
-    internal var selectiveDepth: Int? = nil
-    internal var score: UCIScore? = nil
-    internal var pv: [String]? = nil
-    internal var nodes: Int? = nil
-    internal var timeMs: Int? = nil
-    internal var nodesPerSecond: Int? = nil
+struct UCIInfo: Equatable, Sendable {
+    var depth: Int? = nil
+    var selectiveDepth: Int? = nil
+    var score: UCIScore? = nil
+    var pv: [String]? = nil
+    var nodes: Int? = nil
+    var timeMs: Int? = nil
+    var nodesPerSecond: Int? = nil
 }
 
-internal enum UCIScore: Equatable, Sendable {
+enum UCIScore: Equatable, Sendable {
     /// Centipawns, side-to-move perspective (UCI native).
     case centipawns(Int)
     /// Mate distance, side-to-move perspective.
     case mate(Int)
     
     /// → white-relative `Evaluation`; UCI scores are always side-to-move relative.
-    internal func toEvaluation(sideToMove: PieceColor) -> Evaluation {
+    func toEvaluation(sideToMove: PieceColor) -> Evaluation {
         let raw: Evaluation
         switch self {
         case .centipawns(let cp): raw = .centipawns(cp)
@@ -184,9 +184,9 @@ internal enum UCIScore: Equatable, Sendable {
     }
 }
 
-internal struct UCIBestMove: Equatable, Sendable {
+struct UCIBestMove: Equatable, Sendable {
     /// Move in UCI long algebraic notation, e.g. `"e2e4"` or `"e7e8q"`.
-    internal let move: String
+    let move: String
     /// Pondered reply, optional — most engines emit it only when enabled.
-    internal let ponder: String?
+    let ponder: String?
 }

@@ -1,14 +1,14 @@
 import SwiftUI
 
-internal struct EvaluationGraphView: View {
+struct EvaluationGraphView: View {
     
     // MARK: Stored Properties
-    internal let evaluations: [Double]
-    internal let currentMoveIndex: Int?
-    internal let style: BoardStyle
+    let evaluations: [Double]
+    let currentMoveIndex: Int?
+    let style: BoardStyle
     
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         Canvas { context, size in
             let drawArea = CGRect(
                 x: 0,

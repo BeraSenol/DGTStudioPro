@@ -6,7 +6,7 @@ extension GameState {
     
     /// Parses SAN in this state's context, returning the matching legal move. Strict SAN: `x`
     /// present iff capture; pawn captures carry the source file; promotion in `=Q`, `(Q)`, bare `Q`.
-    internal func parseSAN(_ san: String) throws(SANParseError) -> Move {
+    func parseSAN(_ san: String) throws(SANParseError) -> Move {
         var s = san.trimmingCharacters(in: .whitespaces)
         guard !s.isEmpty else { throw SANParseError.empty }
         
@@ -32,7 +32,7 @@ extension GameState {
     // MARK: SAN Serializer (7f)
     
     /// Canonical SAN for a legal `move` in this state.
-    internal func san(for move: Move) -> String {
+    func san(for move: Move) -> String {
         if move.isCastling {
             let castle = move.castlingSide == .kingSide ? "O-O" : "O-O-O"
             return castle + checkOrMateSuffix(after: move)
@@ -254,11 +254,11 @@ extension GameState {
 // MARK: FEN Forwarding
 
 extension FEN {
-    internal func parseSAN(_ san: String) throws(SANParseError) -> Move {
+    func parseSAN(_ san: String) throws(SANParseError) -> Move {
         try GameState(self).parseSAN(san)
     }
     
-    internal func san(for move: Move) -> String {
+    func san(for move: Move) -> String {
         GameState(self).san(for: move)
     }
 }
@@ -277,7 +277,7 @@ private struct SANTokens {
 
 // MARK: Errors
 
-internal enum SANParseError: Error, Equatable {
+enum SANParseError: Error, Equatable {
     /// SAN string was empty or whitespace-only.
     case empty
     /// SAN string didn't match the syntactic shape of a move.

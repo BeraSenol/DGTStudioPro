@@ -1,19 +1,19 @@
 /// The derived-truth pair: named opening + checkmate type (D19′, trigger revised by D34′).
 /// Pure and engine-free — classification is a table lookup and a position predicate, not
 /// analysis-time work.
-internal struct GameClassification: Sendable, Hashable {
+struct GameClassification: Sendable, Hashable {
 
-    internal let opening: ECOOpening?
+    let opening: ECOOpening?
     /// Matched book-prefix length in plies (D74′) — non-nil exactly when `opening` is.
-    internal let openingPlies: Int?
-    internal let specialCheckmate: SpecialCheckmate?
+    let openingPlies: Int?
+    let specialCheckmate: SpecialCheckmate?
 
-    internal static let unclassified = GameClassification(
+    static let unclassified = GameClassification(
         opening: nil, openingPlies: nil, specialCheckmate: nil
     )
 
     /// Classifies from stored SAN alone; the two halves fail independently, on purpose.
-    internal static func classify(
+    static func classify(
         moves: [String],
         using classifier: ECOClassifier
     ) -> GameClassification {

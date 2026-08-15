@@ -2,19 +2,19 @@ import SwiftUI
 
 /// The Players context menu, once — `GameActionsMenu`'s twin. **Single-subject** where the
 /// Library's counts: both verbs describe one player.
-internal struct PlayerActionsMenu: View {
+struct PlayerActionsMenu: View {
 
     // MARK: Stored Properties
 
     /// `Player.normalizedName` — the key every Players surface addresses rows by.
-    internal let key: PlayerStats.ID
+    let key: PlayerStats.ID
 
     /// Optional because navigation is the *host's* capability: card hosts without a Library route
     /// pass nothing and the item does not render (an affordance that cannot act should not exist).
-    internal var onShowInLibrary: ((PlayerStats.ID) -> Void)? = nil
+    var onShowInLibrary: ((PlayerStats.ID) -> Void)? = nil
 
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         GetInfoMenuItem(
             request: .player(key: key),
             identifier: AccessibilityID.getInfoMenuItem(Destination.players.rawValue)

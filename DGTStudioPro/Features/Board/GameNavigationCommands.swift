@@ -9,7 +9,7 @@ private struct ActiveGameKey: FocusedValueKey {
 }
 
 extension FocusedValues {
-    internal var activeGame: Game? {
+    var activeGame: Game? {
         get { self[ActiveGameKey.self] }
         set { self[ActiveGameKey.self] = newValue }
     }
@@ -22,7 +22,7 @@ private struct GetInfoRequestKey: FocusedValueKey {
 }
 
 extension FocusedValues {
-    internal var boardGetInfoRequest: Binding<Bool>? {
+    var boardGetInfoRequest: Binding<Bool>? {
         get { self[GetInfoRequestKey.self] }
         set { self[GetInfoRequestKey.self] = newValue }
     }
@@ -33,7 +33,7 @@ extension FocusedValues {
 /// First/Previous/Next/Last with ←/→/Home/End. Gated on `game == nil` only — a bounds-based
 /// `disabled(_:)` doesn't re-evaluate until focus changes; with no game the items disable and
 /// the bare arrows are NOT consumed (the collection grids keep them).
-internal struct GameNavigationCommands: Commands {
+struct GameNavigationCommands: Commands {
 
     @FocusedValue(\.activeGame) private var game: Game?
     @FocusedValue(\.boardGetInfoRequest) private var getInfo: Binding<Bool>?
@@ -41,7 +41,7 @@ internal struct GameNavigationCommands: Commands {
     // No step throttle (removed): pacing ←/→ to the glide duration made a held arrow lag the key
     // repeat. If revisited: extend the in-flight repeat, never drop the input.
 
-    internal var body: some Commands {
+    var body: some Commands {
         CommandMenu("Game") {
             Button("First Move") { game?.toStart() }
                 .keyboardShortcut(.home, modifiers: [])

@@ -4,7 +4,7 @@ import Foundation
 /// the D1 decode layer and the only DGT-shaped value the rest of the app sees:
 /// coordinates are already app `Square`s, occupants are already app `Piece`s,
 /// and no DGT field index or raw byte leaks past this boundary.
-internal enum DGTEvent: Equatable, Sendable {
+enum DGTEvent: Equatable, Sendable {
     /// Full 64-square snapshot (`DGT_MSG_BOARD_DUMP`, `0x86`).
     case boardDump(Position)
     /// A single field changed (`DGT_MSG_FIELD_UPDATE`, `0x8E`). A physical move
@@ -31,11 +31,11 @@ internal enum DGTEvent: Equatable, Sendable {
 /// The `a8 ↔ a1` coordinate transform happens here, via `Square(dgtField:)`,
 /// and the `DGTPiece → Piece` remap happens here, via `DGTPiece.piece`. Both
 /// are the documented boundary at which hardware indexing is erased.
-internal enum DGTDecoder {
+enum DGTDecoder {
     
     // MARK: Entry Point
     
-    internal static func decode(_ frame: DGTFrame) -> DGTEvent? {
+    static func decode(_ frame: DGTFrame) -> DGTEvent? {
         guard let message = DGTMessage(rawValue: frame.message) else {
             return nil // Unknown/unhandled message ID — let the caller log raw.
         }

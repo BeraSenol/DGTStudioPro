@@ -3,19 +3,19 @@ import SwiftUI
 
 /// The player profile (absorbed the Rankings inspector, D48′): pure-value inputs; only the
 /// recent-games list carries models, for the `openWindow` handle. One grid, each fact once.
-internal struct PlayersInspectorView: View {
+struct PlayersInspectorView: View {
 
     // MARK: Stored Properties
-    internal let ranked: RankedPlayer?
-    internal let history: [Glicko1.Sample]
-    internal let recentGames: [PGN]
+    let ranked: RankedPlayer?
+    let history: [Glicko1.Sample]
+    let recentGames: [PGN]
 
     /// Selection count: `ranked` arrives nil for empty *and* plural, so this tells "select someone"
     /// from "you selected five".
-    internal var selectionCount: Int = 0
+    var selectionCount: Int = 0
 
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         // D26′ — empty renders outside the `List`; see `InspectorEmptyState`.
         if let ranked {
             List {

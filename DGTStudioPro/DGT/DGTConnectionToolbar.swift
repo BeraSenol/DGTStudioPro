@@ -3,20 +3,20 @@ import SwiftUI
 /// The connection control as `ToolbarContent` a host composes into its own builder — a second
 /// `.toolbar` modifier leaves the toolbar undivided. The sheet is the host's `@State`; this
 /// only flips it.
-internal struct DGTConnectionToolbarContent: ToolbarContent {
+struct DGTConnectionToolbarContent: ToolbarContent {
     
     /// Status as a plain value, sheet as a `Binding`: dynamic properties inside a custom
     /// `ToolbarContent` are not reliably observed.
-    internal let status: DGTConnection.Status
+    let status: DGTConnection.Status
     
     /// No default, per the `board.connectButton` agreement: a shared fallback
     /// silently gives two hosts the same identifier, and a required parameter
     /// makes forgetting a compile error.
-    internal let identifier: String
+    let identifier: String
     
-    @Binding internal var isSheetPresented: Bool
+    @Binding var isSheetPresented: Bool
     
-    internal var body: some ToolbarContent {
+    var body: some ToolbarContent {
         ToolbarItem {
             Button {
                 isSheetPresented = true

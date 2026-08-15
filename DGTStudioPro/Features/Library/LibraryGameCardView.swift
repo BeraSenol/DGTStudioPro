@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-internal struct LibraryGameCardView: View {
+struct LibraryGameCardView: View {
     
     // MARK: Stored Properties
     let game: PGN

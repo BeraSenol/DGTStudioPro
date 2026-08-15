@@ -2,19 +2,19 @@
 /// algorithm. Accepted iff every ply is legal and the result is consistent where claimable:
 /// a trailing `#` must actually mate; checkmate forces the winner; stalemate forces a draw;
 /// `*` is never a finished result (Decision #3). Accept whole or reject whole.
-internal enum MovetextEdit {
+enum MovetextEdit {
     
     /// A validated edit. Produced only by `validate` — this type existing *is* the "persisted
     /// movetext never bypasses the replayer" invariant.
-    internal struct Accepted: Equatable {
+    struct Accepted: Equatable {
         /// Canonical SAN, one string per ply.
-        internal let moves: [String]
+        let moves: [String]
         /// The position after the last ply — what the result was checked against.
-        internal let finalState: GameState
+        let finalState: GameState
     }
     
     /// Why a proposed movetext was refused. Every case is user-facing.
-    internal enum Rejection: Error, Equatable {
+    enum Rejection: Error, Equatable {
         /// The ply at `index` is illegal; `reason` is the parser's verdict.
         case illegalMove(index: Int, san: String, reason: SANParseError)
         /// The final ply carries `#` but the position is not checkmate.
@@ -34,7 +34,7 @@ internal enum MovetextEdit {
     
     /// Replays `proposed` from `start` — canonical storable edit, or the first refusal. Mirrors
     /// `GameState.replay` rather than calling it: this path needs every intermediate state.
-    internal static func validate(
+    static func validate(
         _ proposed: [String],
         claimedResult: GameResult,
         from start: GameState = .starting
@@ -92,7 +92,7 @@ extension MovetextEdit {
     /// Splits movetext into SAN tokens: move numbers dropped (spaced or glued), a result token
     /// dropped **only when it closes the text** — mid-text ones throw `.splicedGames`. SAN only.
     /// Asymmetry left in place: a trailing token contradicting the claimed result is dropped silently.
-    internal static func tokenize(_ movetext: String) throws(Rejection) -> [String] {
+    static func tokenize(_ movetext: String) throws(Rejection) -> [String] {
         let tokens = movetext
             .split(whereSeparator: \.isWhitespace)
             .map(strippingMoveNumberPrefix)
@@ -121,7 +121,7 @@ extension MovetextEdit {
     /// Character offsets, so a display layer can mark the offending move without re-tokenizing
     /// (D79′). Walks by `tokenize`'s own rules — same splitter, same prefix stripper, same
     /// result-token skip — so the two cannot disagree about which token is ply N.
-    internal static func characterRange(ofPly index: Int, in movetext: String) -> Range<Int>? {
+    static func characterRange(ofPly index: Int, in movetext: String) -> Range<Int>? {
         guard index >= 0 else { return nil }
         var seen = 0
 

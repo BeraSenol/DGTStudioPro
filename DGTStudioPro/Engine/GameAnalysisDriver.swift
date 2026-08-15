@@ -8,14 +8,14 @@ import SwiftData
 /// a ply already scored at ≥ the target depth is kept — re-analysis deepens instead of restarting.
 @Observable
 @MainActor
-internal final class GameAnalysisDriver {
+final class GameAnalysisDriver {
     
     // MARK: Static Constants
     private static let logger = AppLog.logger(.analysis)
     
     // MARK: Status
     /// Coarse pass state, read only by `AnalysisQueueController` — no view reads it.
-    internal enum Status: Equatable {
+    enum Status: Equatable {
         case idle
         case analyzing(progress: Double)
         case done
@@ -26,22 +26,22 @@ internal final class GameAnalysisDriver {
 
     /// What the engine is doing right now, for the queue window. Here and not on the model — the
     /// whole point of write-coalescing: per-ply model writes invalidated every `@Query` in the app.
-    internal struct Search: Equatable, Sendable {
+    struct Search: Equatable, Sendable {
         /// 0-based ply index within the game.
-        internal let plyIndex: Int
-        internal let totalPlies: Int
+        let plyIndex: Int
+        let totalPlies: Int
         /// The move whose resulting position is being searched, in SAN.
-        internal let san: String
-        internal let progress: EngineProgress
+        let san: String
+        let progress: EngineProgress
 
         /// The requested depth (the `18` in `go depth 18`) — what the window's Depth fact shows, by request.
-        internal let targetDepth: Int
+        let targetDepth: Int
     }
 
-    internal private(set) var search: Search?
+    private(set) var search: Search?
 
     // MARK: Stored Properties
-    internal private(set) var status: Status = .idle
+    private(set) var status: Status = .idle
 
     private var engine: StockfishEngine?
     private var task: Task<Void, Never>?
@@ -50,7 +50,7 @@ internal final class GameAnalysisDriver {
     
     /// One full-game pass, awaitable so the controller knows when to advance. No-op if already in flight.
     @discardableResult
-    internal func analyze(
+    func analyze(
         pgn: PGN,
         // The one depth default in the codebase; evaluated per call, so a batch queued after a Settings
         // change analyzes at the new depth.
@@ -103,13 +103,13 @@ internal final class GameAnalysisDriver {
     
     /// Cancels the running pass; cancellation propagates through `onTermination` into the actor,
     /// which sends UCI `stop`. Evaluations already populated stay.
-    internal func stop() {
+    func stop() {
         Self.logger?.info("Analysis stop requested")
         task?.cancel()
     }
     
     /// Cancel + engine shutdown with grace. Called at queue drain (decision 4) and teardown; re-entrant.
-    internal func shutdown() async {
+    func shutdown() async {
         Self.logger?.info("Analysis driver shutdown")
         task?.cancel()
         await engine?.shutdown()

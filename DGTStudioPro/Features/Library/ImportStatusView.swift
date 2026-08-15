@@ -4,12 +4,12 @@ import SwiftUI
 
 /// Outcome of importing a single PGN file in a batch. Drives one row in
 /// the import status sheet.
-internal struct ImportResult: Identifiable {
-    internal let id = UUID()
-    internal let fileName: String
-    internal let outcome: Outcome
+struct ImportResult: Identifiable {
+    let id = UUID()
+    let fileName: String
+    let outcome: Outcome
     
-    internal enum Outcome {
+    enum Outcome {
         case imported(name: String)
         case failed(PGNStore.Error)
         
@@ -17,11 +17,11 @@ internal struct ImportResult: Identifiable {
         /// counts, the row icon, and the row tint each open-coded this match,
         /// and each had to independently remember that a duplicate is *not*
         /// a failure — it's the no-op the user asked for.
-        internal enum Category {
+        enum Category {
             case imported, duplicate, failed
         }
         
-        internal var category: Category {
+        var category: Category {
             switch self {
             case .imported:           .imported
             case .failed(.duplicate): .duplicate
@@ -33,16 +33,16 @@ internal struct ImportResult: Identifiable {
 
 /// Live state of a running (or finished) import batch. The Library owns
 /// one of these as `@State` and mutates it per file; the sheet renders it.
-internal struct ImportProgress {
-    internal var total: Int
-    internal var results: [ImportResult] = []
-    internal var isFinished: Bool = false
+struct ImportProgress {
+    var total: Int
+    var results: [ImportResult] = []
+    var isFinished: Bool = false
     
-    internal var completed: Int { results.count }
+    var completed: Int { results.count }
     
-    internal var importedCount: Int  { count(of: .imported) }
-    internal var duplicateCount: Int { count(of: .duplicate) }
-    internal var failedCount: Int    { count(of: .failed) }
+    var importedCount: Int  { count(of: .imported) }
+    var duplicateCount: Int { count(of: .duplicate) }
+    var failedCount: Int    { count(of: .failed) }
     
     /// `count(where:)`, not `filter { … }.count` — the old form built three
     /// throwaway arrays to ask three questions about their sizes.
@@ -53,12 +53,12 @@ internal struct ImportProgress {
 
 // MARK: Sheet
 
-internal struct ImportStatusView: View {
+struct ImportStatusView: View {
     
-    internal let progress: ImportProgress
-    internal let onDismiss: () -> Void
+    let progress: ImportProgress
+    let onDismiss: () -> Void
     
-    internal var body: some View {
+    var body: some View {
         VStack(spacing: 0) {
             header
             

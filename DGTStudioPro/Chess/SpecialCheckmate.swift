@@ -2,7 +2,7 @@
 /// Pure predicates over the final position — no engine, no last move needed. Each case is
 /// defined so it cannot false-positive on an unrelated mate; the `isCheckmate` guard in
 /// `classify` is load-bearing — recognisers only ever run on real mates.
-internal enum SpecialCheckmate: String, Codable, Sendable, CaseIterable {
+enum SpecialCheckmate: String, Codable, Sendable, CaseIterable {
 
     // Ordered for a reader; precedence lives in `precedence` below, so reordering this list cannot
     // change what a game classifies as.
@@ -22,7 +22,7 @@ internal enum SpecialCheckmate: String, Codable, Sendable, CaseIterable {
     /// The one user-facing rendering (smart-tag picker, Checkmate Type column, Get Info).
     /// Title case by request ("Back Rank"); unlocalized; deliberately not `rawValue.capitalized`,
     /// which renders `backRank` wrong.
-    internal var displayName: String {
+    var displayName: String {
         switch self {
         case .smothered: return "Smothered"
         case .backRank:  return "Back Rank"
@@ -40,7 +40,7 @@ internal enum SpecialCheckmate: String, Codable, Sendable, CaseIterable {
     // MARK: Classification
 
     /// The checkmate type, or nil for non-mate / ordinary mate. Self-checking (`isCheckmate` guarded).
-    internal static func classify(_ state: GameState) -> SpecialCheckmate? {
+    static func classify(_ state: GameState) -> SpecialCheckmate? {
         guard state.isCheckmate else { return nil }
 
         let mated = state.activeColor          // the side to move is the mated side

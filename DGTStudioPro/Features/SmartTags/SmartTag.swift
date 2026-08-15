@@ -3,12 +3,12 @@ import SwiftData
 import SwiftUI
 
 /// A fixed palette rather than arbitrary `Color`: Codable-trivial, theme-stable, Finder-shaped.
-internal enum TagColor: String, Codable, CaseIterable, Identifiable, Sendable {
+enum TagColor: String, Codable, CaseIterable, Identifiable, Sendable {
     case red, orange, yellow, green, blue, purple, gray
     
-    internal var id: String { rawValue }
+    var id: String { rawValue }
     
-    internal var color: Color {
+    var color: Color {
         switch self {
         case .red:    .red
         case .orange: .orange
@@ -24,26 +24,26 @@ internal enum TagColor: String, Codable, CaseIterable, Identifiable, Sendable {
 /// A user-editable smart tag (D12′) — the Apple Music smart-playlist shape; the old built-ins
 /// live on as seeded, fully editable defaults.
 @Model
-internal final class SmartTag: Identifiable {
+final class SmartTag: Identifiable {
     
     // MARK: Stored Properties
     
-    internal var name: String
-    internal var colorName: TagColor
+    var name: String
+    var colorName: TagColor
     /// `true` = all rules must match; `false` = any (the editor default).
-    internal var matchAll: Bool
+    var matchAll: Bool
     /// The `PGN.evaluations` precedent: a Codable value array on the model.
-    internal var rules: [TagRule]
-    internal var createdAt: Date
+    var rules: [TagRule]
+    var createdAt: Date
     
     // MARK: Computed Properties
     
-    internal var id: PersistentIdentifier { persistentModelID }
-    internal var color: Color { colorName.color }
+    var id: PersistentIdentifier { persistentModelID }
+    var color: Color { colorName.color }
     
     // MARK: Initializers
     
-    internal init(
+    init(
         name: String,
         colorName: TagColor = .blue,
         matchAll: Bool = false,
@@ -58,14 +58,14 @@ internal final class SmartTag: Identifiable {
     
     // MARK: Matching
     
-    internal func matches(_ record: GameRecord) -> Bool {
+    func matches(_ record: GameRecord) -> Bool {
         TagRule.evaluate(rules, matchAll: matchAll, against: record)
     }
     
     // MARK: Defaults
     
     /// The former enum cases as editable rule sets — the one factory behind the first-run seed.
-    internal static func defaultTags() -> [SmartTag] {
+    static func defaultTags() -> [SmartTag] {
         [
             SmartTag(
                 name: "Checkmate",
@@ -101,7 +101,7 @@ internal final class SmartTag: Identifiable {
     /// First normal launch only, flag-guarded: reseeding on every empty launch would make deletion
     /// impossible.
     @MainActor
-    internal static func seedDefaultsOnce(into container: ModelContainer) {
+    static func seedDefaultsOnce(into container: ModelContainer) {
         let defaults = UserDefaults.standard
         guard !defaults.bool(forKey: StorageKeys.didSeedDefaultSmartTags) else { return }
         

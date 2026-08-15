@@ -3,13 +3,13 @@ import SwiftUI
 
 /// The analysis-state glyph: gear + checkmark analyzed, + xmark not, bare while the engine has
 /// it. One home for symbol and tint; the predicate lives on `PGN.hasScoredPly`.
-internal enum AnalysisGlyph {
+enum AnalysisGlyph {
     
     // MARK: State
     
     /// Three states, not a `Bool`: `isAnalyzed` is true for any scored ply and the driver writes
     /// plies as it walks, so a `Bool` went green at ply one.
-    internal enum State: Equatable {
+    enum State: Equatable {
         /// Nothing scored, nothing working on it. Queued games sit here too.
         case unanalyzed
         /// On the engine now. Beats the array, which is mid-write underneath.
@@ -20,14 +20,14 @@ internal enum AnalysisGlyph {
     }
     
     /// "Has been analyzed", spelled once — forwards to `PGN`, which owns the question.
-    internal static func isAnalyzed(_ game: PGN) -> Bool {
+    static func isAnalyzed(_ game: PGN) -> Bool {
         game.hasScoredPly
     }
     
     /// The glyph's state for the rendered games. Running wins, then all-or-nothing (mixed selections
     /// read unanalyzed, so the action stays offerable). **Membership is asked of `games`, so `games`
     /// must be the caller's real subject, not a list something else can narrow.**
-    internal static func state(
+    static func state(
         of games: [PGN],
         runningID: PersistentIdentifier?
     ) -> State {
@@ -39,7 +39,7 @@ internal enum AnalysisGlyph {
     
     /// Per-row spelling off the memoized projection (D72′) — exists so a row badge cannot cost a
     /// blob decode. A cache, not a second opinion (`hasAnalysis` is the same predicate).
-    internal static func state(
+    static func state(
         of game: PGN,
         isAnalyzed: Bool,
         runningID: PersistentIdentifier?
@@ -50,7 +50,7 @@ internal enum AnalysisGlyph {
     
     /// Bare `gear` while analyzing: a badge is a *verdict*, and three silhouettes stay legible where
     /// menus render monochrome templates.
-    internal static func name(_ state: State) -> String {
+    static func name(_ state: State) -> String {
         switch state {
         case .unanalyzed: "gear.badge.xmark"
         case .analyzing:  "gear"
@@ -60,7 +60,7 @@ internal enum AnalysisGlyph {
     
     /// Corner-badge symbol — plain verdict marks, no gear (D72′ postscript, by request). The gear is
     /// shared for `.analyzing`, so "the engine has it" has one silhouette everywhere.
-    internal static func badgeName(_ state: State) -> String {
+    static func badgeName(_ state: State) -> String {
         switch state {
         case .unanalyzed: "xmark.circle.fill"
         case .analyzing:  "gear"
@@ -72,7 +72,7 @@ internal enum AnalysisGlyph {
     
     /// Badge colour: green analyzed, red not, **nil while running** — no verdict to report. Here,
     /// not at render sites: a colour decided per site is the twin-read-site pattern with a `Color`.
-    internal static func tint(_ state: State) -> Color? {
+    static func tint(_ state: State) -> Color? {
         switch state {
         case .unanalyzed: .red
         case .analyzing:  nil
@@ -82,7 +82,7 @@ internal enum AnalysisGlyph {
     
     /// "Analyze", "Analyzing…", "Analyzed" — state over verb: the common reason to look is to find
     /// out whether it has been done.
-    internal static func actionTitle(_ state: State) -> String {
+    static func actionTitle(_ state: State) -> String {
         switch state {
         case .unanalyzed: "Analyze"
         case .analyzing:  "Analyzing…"
@@ -92,7 +92,7 @@ internal enum AnalysisGlyph {
     
     /// Status vocabulary ("Not Analyzed" …) for surfaces that state rather than act; matches
     /// `LibrarySearchToken.unanalyzed`'s chip so badge and filter speak alike.
-    internal static func statusLabel(_ state: State) -> String {
+    static func statusLabel(_ state: State) -> String {
         switch state {
         case .unanalyzed: "Not Analyzed"
         case .analyzing:  "Analyzing"
@@ -107,16 +107,16 @@ extension EnvironmentValues {
     
     /// The game on the engine now, or nil — the app's first custom environment value. An id, not the
     /// controller: a leaf holding the controller could start work; a leaf holding an id can only compare.
-    @Entry internal var analysisRunningGameID: PersistentIdentifier?
+    @Entry var analysisRunningGameID: PersistentIdentifier?
 }
 
 // MARK: Running Gear
 
 /// The badgeless turning gear — one spelling of "working now" for the queue toolbar item and
 /// `AnalysisLabel`. `.rotate` is confirmed to turn `gear`; that it *repeats* is not.
-internal struct AnalyzingGear: View {
+struct AnalyzingGear: View {
     
-    internal var body: some View {
+    var body: some View {
         Image(systemName: AnalysisGlyph.name(.analyzing))
             .symbolEffect(.rotate, options: .repeat(.continuous))
     }
@@ -126,18 +126,18 @@ internal struct AnalyzingGear: View {
 
 /// Glyph beside title — badge tinted, spinning where bare, **the text left alone** in every case.
 /// A view, not a modifier: the structure cannot be applied after the fact.
-internal struct AnalysisLabel: View {
+struct AnalysisLabel: View {
     
-    internal let title: String
-    internal let state: AnalysisGlyph.State
+    let title: String
+    let state: AnalysisGlyph.State
     
     /// Defaults to `actionTitle`; token chips pass their own — "Not Analyzed" is a filter's name, not a verb.
-    internal init(state: AnalysisGlyph.State, title: String? = nil) {
+    init(state: AnalysisGlyph.State, title: String? = nil) {
         self.state = state
         self.title = title ?? AnalysisGlyph.actionTitle(state)
     }
     
-    internal var body: some View {
+    var body: some View {
         Label {
             Text(title)
         } icon: {
@@ -154,11 +154,11 @@ internal struct AnalysisLabel: View {
 
 /// The glyph alone. Palette arrangement scoped to the `Image`; the running gear takes **no**
 /// foreground style — `.primary` would override a host supplying its own (prominent button, selected row).
-internal struct AnalysisGlyphIcon: View {
+struct AnalysisGlyphIcon: View {
     
-    internal let state: AnalysisGlyph.State
+    let state: AnalysisGlyph.State
     
-    internal var body: some View {
+    var body: some View {
         if let tint = AnalysisGlyph.tint(state) {
             Image(systemName: AnalysisGlyph.name(state))
                 .symbolRenderingMode(.palette)
@@ -172,11 +172,11 @@ internal struct AnalysisGlyphIcon: View {
 // MARK: Badge Icon
 
 /// The plain-mark icon behind both D72′ badge surfaces — one view so the two cannot pick different marks.
-internal struct AnalysisBadgeIcon: View {
+struct AnalysisBadgeIcon: View {
     
-    internal let state: AnalysisGlyph.State
+    let state: AnalysisGlyph.State
     
-    internal var body: some View {
+    var body: some View {
         if let tint = AnalysisGlyph.tint(state) {
             Image(systemName: AnalysisGlyph.badgeName(state))
                 .foregroundStyle(tint)
@@ -190,11 +190,11 @@ internal struct AnalysisBadgeIcon: View {
 
 /// The corner badge, with a backing chip that is load-bearing: the card's white sheet would
 /// swallow a bare glyph in dark mode. Status, not a control — swallows no clicks.
-internal struct AnalysisStatusBadge: View {
+struct AnalysisStatusBadge: View {
     
-    internal let state: AnalysisGlyph.State
+    let state: AnalysisGlyph.State
     
-    internal var body: some View {
+    var body: some View {
         AnalysisBadgeIcon(state: state)
             .font(.title2)
             .background(.ultraThinMaterial, in: Circle())

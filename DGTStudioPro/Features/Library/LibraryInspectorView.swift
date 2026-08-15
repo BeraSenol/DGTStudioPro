@@ -2,17 +2,17 @@ import AppKit
 import SwiftData
 import SwiftUI
 
-internal struct LibraryInspectorView: View {
+struct LibraryInspectorView: View {
     
     // MARK: Stored Properties
-    internal let pgn: PGN?
+    let pgn: PGN?
     
     /// Selection count: `pgn` arrives nil for empty *and* multiple, so without this the view cannot
     /// tell "select something" from "you selected twelve".
-    internal let selectionCount: Int
+    let selectionCount: Int
 
     // MARK: Initializers
-    internal init(
+    init(
         pgn: PGN? = nil,
         selectionCount: Int = 0
     ) {
@@ -21,7 +21,7 @@ internal struct LibraryInspectorView: View {
     }
     
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         // D26′ — the empty branch renders *outside* the `List`; inside one it is a top-aligned row with
         // sidebar chrome behind it.
         if let pgn {

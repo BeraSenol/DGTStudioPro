@@ -4,11 +4,11 @@ import SwiftUI
 /// The magnifier's request. **The wrapper is the whole reason this type exists**:
 /// `openWindow(value:)` routes by type, and the main group already claims `PersistentIdentifier`
 /// — a second group over it would make every existing call unspecified.
-internal struct EvaluationGraphRequest: Codable, Hashable, Sendable {
+struct EvaluationGraphRequest: Codable, Hashable, Sendable {
 
-    internal let gameID: PersistentIdentifier
+    let gameID: PersistentIdentifier
 
-    internal init(gameID: PersistentIdentifier) {
+    init(gameID: PersistentIdentifier) {
         self.gameID = gameID
     }
 }
@@ -17,7 +17,7 @@ internal struct EvaluationGraphRequest: Codable, Hashable, Sendable {
 /// sheet — field-tested, not argued: the popover was built and reverted in one day (dismisses on
 /// the first board click, killing the companion-while-scrubbing use). Hover read-outs are what
 /// 100 pt in a sidebar cannot afford — bigger makes a different question askable.
-internal struct EvaluationGraphWindow: View {
+struct EvaluationGraphWindow: View {
 
     // MARK: Static Constants
 
@@ -25,7 +25,7 @@ internal struct EvaluationGraphWindow: View {
     private static let contentPadding: CGFloat = 20
 
     // MARK: Stored Properties
-    internal let request: EvaluationGraphRequest?
+    let request: EvaluationGraphRequest?
 
     // MARK: Private Properties
     @Environment(\.modelContext) private var modelContext
@@ -36,7 +36,7 @@ internal struct EvaluationGraphWindow: View {
     @State private var pgn: PGN?
 
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         Group {
             // `hasScoredPly`, not `!evaluations.isEmpty`: an all-nil array passed the old gate and the
             // `?? 0.5` map drew a flat midline curve instead of the empty state below.
@@ -95,15 +95,15 @@ internal struct EvaluationGraphWindow: View {
 private struct EvaluationGraphContent: View {
 
     // MARK: Stored Properties
-    internal let moves: [String]
-    internal let evaluations: [Evaluation?]
-    internal let curve: [Double]
-    internal let style: BoardStyle
+    let moves: [String]
+    let evaluations: [Evaluation?]
+    let curve: [Double]
+    let style: BoardStyle
 
     @State private var hoveredPly: Int?
 
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             readout
             graph
@@ -170,16 +170,16 @@ private struct EvaluationGraphContent: View {
 /// a popover; reverted — the D46′ anchor holds the round trip.) Not an `InspectorEditButtonView`
 /// — that hardcodes the pencil on purpose; shares only `.font(.body)` + one label for both
 /// `.help` and `.accessibilityLabel`.
-internal struct EvaluationMagnifierButton: View {
+struct EvaluationMagnifierButton: View {
 
     // MARK: Stored Properties
-    internal let gameID: PersistentIdentifier
+    let gameID: PersistentIdentifier
 
     // MARK: Private Properties
     @Environment(\.openWindow) private var openWindow
 
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         Button {
             openWindow(value: EvaluationGraphRequest(gameID: gameID))
         } label: {

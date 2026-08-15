@@ -5,26 +5,26 @@ import SwiftUI
 /// `UserDefaults` injection is load-bearing (scratch suites); clamped on every read-back.
 @MainActor
 @Observable
-internal final class CollectionViewOptions {
+final class CollectionViewOptions {
 
     // MARK: Geometry constants
 
     /// Card width the grid packs. Default is the old `minimumColumnWidth` verbatim, so an install
     /// that never opens the panel lays out exactly as before.
-    internal static let iconSizeRange: ClosedRange<CGFloat> = 80...240
-    internal static let defaultIconSize: CGFloat = 120
+    static let iconSizeRange: ClosedRange<CGFloat> = 80...240
+    static let defaultIconSize: CGFloat = 120
 
     /// Both axes, as before — the gutters read square.
-    internal static let spacingRange: ClosedRange<CGFloat> = 4...40
-    internal static let defaultSpacing: CGFloat = 16
+    static let spacingRange: ClosedRange<CGFloat> = 4...40
+    static let defaultSpacing: CGFloat = 16
 
     /// The glyph is a fraction of the card, not a second slider. 0.5 = 60/120, the exact pre-panel
     /// pair — at the default nothing moves.
-    internal static let glyphWidthFraction: CGFloat = 0.5
+    static let glyphWidthFraction: CGFloat = 0.5
 
     /// Deliberately not on the panel: insets the grid from the window's dividers — destination
     /// chrome, not cards. Finder doesn't offer it either.
-    internal static let inset: CGFloat = 16
+    static let inset: CGFloat = 16
 
     // MARK: Stored Properties
 
@@ -35,7 +35,7 @@ internal final class CollectionViewOptions {
     /// clamp in the setter. Storage is not `@ObservationIgnored` — the macro instruments it.
     private var iconSizeStorage: CGFloat
 
-    internal var iconSize: CGFloat {
+    var iconSize: CGFloat {
         get { iconSizeStorage }
         set {
             let clamped = newValue.clamped(to: Self.iconSizeRange)
@@ -47,7 +47,7 @@ internal final class CollectionViewOptions {
 
     private var spacingStorage: CGFloat
 
-    internal var spacing: CGFloat {
+    var spacing: CGFloat {
         get { spacingStorage }
         set {
             let clamped = newValue.clamped(to: Self.spacingRange)
@@ -59,14 +59,14 @@ internal final class CollectionViewOptions {
 
     /// `didSet` is safe *here* and would not be if these needed correcting: sorts persist whatever
     /// they are handed — already valid by construction.
-    internal var librarySort: CollectionSort<LibrarySortField> {
+    var librarySort: CollectionSort<LibrarySortField> {
         didSet {
             guard librarySort != oldValue else { return }
             defaults.set(librarySort.storedValue, forKey: StorageKeys.librarySort)
         }
     }
 
-    internal var playersSort: CollectionSort<PlayersSortField> {
+    var playersSort: CollectionSort<PlayersSortField> {
         didSet {
             guard playersSort != oldValue else { return }
             defaults.set(playersSort.storedValue, forKey: StorageKeys.playersSort)
@@ -78,13 +78,13 @@ internal final class CollectionViewOptions {
     /// Which surface the panel describes. **Session state, deliberately unpersisted** — a fact
     /// about what is on screen. Written by the destinations; the panel must not read focus itself
     /// (opening it makes it key, so its focused value is already nil).
-    internal var activeSubject: CollectionViewOptionsSubject?
+    var activeSubject: CollectionViewOptionsSubject?
 
     // MARK: Initialization
 
     /// `object(forKey:)`, not `double(forKey:)`: the latter returns 0 for absent, and clamping 0
     /// hands every fresh install the floor instead of the default.
-    internal init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
 
         // Closures, not `.map(CGFloat.init)` — ambiguous: CGFloat has an initializer for every numeric
@@ -109,11 +109,11 @@ internal final class CollectionViewOptions {
     // MARK: Derived Geometry
 
     /// The card's glyph width at the current size.
-    internal var glyphWidth: CGFloat { iconSize * Self.glyphWidthFraction }
+    var glyphWidth: CGFloat { iconSize * Self.glyphWidthFraction }
 
     /// Columns computed rather than `.adaptive` — `IconGridSelection` needs the count to answer
     /// "where does ↓ land", and `.adaptive` never reports one. Pinned from both ends.
-    internal static func columnCount(
+    static func columnCount(
         containerWidth: CGFloat,
         iconSize: CGFloat,
         spacing: CGFloat
@@ -126,12 +126,12 @@ internal final class CollectionViewOptions {
         return max(1, fitted)
     }
 
-    internal func columnCount(containerWidth: CGFloat) -> Int {
+    func columnCount(containerWidth: CGFloat) -> Int {
         Self.columnCount(containerWidth: containerWidth, iconSize: iconSize, spacing: spacing)
     }
 
     /// `.flexible`, not `.fixed`: the count is ours; the width inside it is SwiftUI's to distribute.
-    internal func columns(containerWidth: CGFloat) -> [GridItem] {
+    func columns(containerWidth: CGFloat) -> [GridItem] {
         Array(
             repeating: GridItem(.flexible(minimum: Self.iconSizeRange.lowerBound), spacing: spacing),
             count: columnCount(containerWidth: containerWidth)
