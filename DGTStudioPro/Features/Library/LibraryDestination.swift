@@ -49,36 +49,9 @@ struct LibraryDestination: View {
     @State private var selectedPGNs: Set<PGN.ID> = []
     @State private var importProgress: ImportProgress?
 
-    /// Memo key for the `GameRecord` projection: content plus an analysis signal.
-    /// The signal is the queue's counters, never the `evaluations` array — an array read would defeat the memo.
-    /// Internal (not private) so the key-completeness suite can construct one.
-    struct FoldKey: Equatable {
-        let content: CollectionFoldKey
-        let running: PersistentIdentifier?
-        let completed: Int
-        let hasFailures: Bool
-    }
-
     /// The Library's `GameRecord` projection, memoized — rebuilt only when `FoldKey` moves.
+    /// (`FoldKey`, `NarrowKey` and `NarrowResult` live in `LibraryFold.swift`.)
     @State private var foldCache = CollectionFoldCache<FoldKey, [GameRecord]>()
-
-    /// The narrowing inputs as one value: the projection's key plus everything filter,
-    /// search and sort read. A missed input here is stale rows on screen — the suite pins the
-    /// field list, which is the only defence a memo key has.
-    struct NarrowKey: Equatable {
-        let fold: FoldKey
-        let filter: LibraryFilter.Signature?
-        let query: String
-        let tokens: [LibrarySearchToken]
-        let sort: [KeyPathComparator<PGN>]
-    }
-
-    /// Narrowed pairs and their sorted projection, cached as one unit — the sort was the last
-    /// unconditional per-render O(n log n) (the ECO comparator rehydrates per comparison, censused).
-    struct NarrowResult {
-        let pairs: [(game: PGN, record: GameRecord)]
-        let sorted: [PGN]
-    }
 
     @State private var narrowCache = CollectionFoldCache<NarrowKey, NarrowResult>()
 
@@ -202,10 +175,6 @@ struct LibraryDestination: View {
         !searchText.isEmpty || !searchTokens.isEmpty
     }
     
-    private var hasActiveMenuFilters: Bool {
-        !searchTokens.isEmpty
-    }
-    
     /// Nil for empty *and* multiple: the inspector details one thing, never an arbitrary member of a set.
     private func selectedPGN(in games: [PGN]) -> PGN? {
         guard selectedPGNs.count == 1, let id = selectedPGNs.first else { return nil }
@@ -223,7 +192,6 @@ struct LibraryDestination: View {
         selectedPGNs = Set(games.map(\.id))
     }
 
-
     // MARK: Body
     var body: some View {
         coreContent
@@ -236,7 +204,7 @@ struct LibraryDestination: View {
                     Button("Cancel", role: .cancel) {}
                 },
                 message: { game in
-                    Text(Self.deletionMessage(
+                    Text(LibraryMessages.deletion(
                         for: [game],
                         lead: "\(game.name) will be permanently deleted."
                     ))
@@ -248,7 +216,7 @@ struct LibraryDestination: View {
                 isPresented: Binding(present: $backfillReport),
                 presenting: backfillReport,
                 actions: { _ in Button("OK") {} },
-                message: { report in Text(Self.backfillMessage(for: report)) }
+                message: { report in Text(LibraryMessages.backfill(for: report)) }
             )
             .alert(
                 "Couldn’t Read That Folder",
@@ -282,7 +250,7 @@ struct LibraryDestination: View {
                     Button("Cancel", role: .cancel) {}
                 },
                 message: { games in
-                    Text(Self.deletionMessage(
+                    Text(LibraryMessages.deletion(
                         for: games,
                         lead: "\(games.count) games will be permanently deleted. This can't be undone."
                     ))
@@ -330,7 +298,7 @@ struct LibraryDestination: View {
         : { selectAll(games) }
         return VStack(spacing: 0) {
             if let filter {
-                filterChipBar(for: filter)
+                LibraryFilterChipBar(filter: filter, onClear: onClearFilter)
                 Divider()
             }
             Group {
@@ -344,7 +312,7 @@ struct LibraryDestination: View {
                             description: Text("No games match the current search or filters.")
                         )
                     } else {
-                        emptyState
+                        LibraryEmptyStateView(filter: filter)
                             .accessibilityIdentifier(AccessibilityID.libraryEmptyState)
                     }
                 } else {
@@ -405,7 +373,7 @@ struct LibraryDestination: View {
             placement: .toolbarPrincipal,
             prompt: "Search Games"
         ) { token in
-            tokenLabel(token)
+            LibrarySearchTokenLabel(token: token)
         }
         .sheet(isPresented: Binding(present: $importProgress)) {
             if let importProgress {
@@ -416,36 +384,6 @@ struct LibraryDestination: View {
                 .interactiveDismissDisabled(!importProgress.isFinished)
             }
         }
-    }
-    
-    /// Clearable filter chip. For a programmatic player filter it is the whole UI — the state's one face and exit.
-    private func filterChipBar(for filter: LibraryFilter) -> some View {
-        HStack {
-            HStack(spacing: 6) {
-                Image(systemName: filter.systemImage)
-                Text("\(filter.kindLabel): \(filter.displayName)")
-                    .lineLimit(1)
-                Button {
-                    onClearFilter?()
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.borderless)
-                .help("Show the full Library")
-                .accessibilityIdentifier(AccessibilityID.libraryFilterChipClear)
-            }
-            .font(.callout)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(Capsule().fill(.secondary.opacity(0.15)))
-            .accessibilityElement(children: .contain)
-            .accessibilityIdentifier(AccessibilityID.libraryFilterChip)
-            
-            Spacer()
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
     }
     
     // MARK: Instance Methods
@@ -572,52 +510,8 @@ struct LibraryDestination: View {
     @ToolbarContentBuilder
     private var filterToolbarItem: some ToolbarContent {
         ToolbarItem {
-            Menu {
-                // Toggles, not a picker: the state stopped being single-valued ("1-0 and 0-1" must be expressible).
-                ForEach(LibrarySearchToken.allCases) { token in
-                    Toggle(isOn: binding(for: token)) {
-                        tokenLabel(token)
-                    }
-                }
-                if hasActiveMenuFilters {
-                    Divider()
-                    Button("Clear Filters") { searchTokens.removeAll() }
-                }
-            } label: {
-                Label("Filter", systemImage: hasActiveMenuFilters
-                      ? "line.3.horizontal.decrease.circle.fill"
-                      : "line.3.horizontal.decrease.circle")
-            }
-            .menuIndicator(.hidden)
-            .help(hasActiveMenuFilters
-                  ? "Filters are narrowing the list"
-                  : "Filter by result or analysis state")
+            LibraryFilterMenu(searchTokens: $searchTokens)
         }
-    }
-
-    /// One token rendering for chip and menu row, so the two cannot drift. State arrives as a literal —
-    /// a facet never consults the queue.
-    @ViewBuilder
-    private func tokenLabel(_ token: LibrarySearchToken) -> some View {
-        switch token {
-        case .analyzed:   AnalysisLabel(state: .analyzed, title: token.displayName)
-        case .unanalyzed: AnalysisLabel(state: .unanalyzed, title: token.displayName)
-        case .result:     Label(token.displayName, systemImage: token.symbol)
-        }
-    }
-
-    /// Membership as a `Binding<Bool>`; appends so chips sit in the order they were chosen.
-    private func binding(for token: LibrarySearchToken) -> Binding<Bool> {
-        Binding(
-            get: { searchTokens.contains(token) },
-            set: { isOn in
-                if isOn {
-                    if !searchTokens.contains(token) { searchTokens.append(token) }
-                } else {
-                    searchTokens.removeAll { $0 == token }
-                }
-            }
-        )
     }
     
     /// File doors: in, out, and — only while some game lacks an ordinal — reconcile. No spacer: adjacent
@@ -665,14 +559,14 @@ struct LibraryDestination: View {
     /// Only the queue status item remains — Analyze, Delete and Export moved to the row menus by request.
     @ToolbarContentBuilder
     private var queueToolbarItem: some ToolbarContent {
-        // Visible while a batch runs or failures are unacknowledged — see `queueStatusLabel`.
+        // Visible while a batch runs or failures are unacknowledged — see `LibraryQueueStatusLabel`.
         if analysisQueue.queue.isActive || analysisQueue.queue.hasFailures {
             ToolbarItem {
                 Button {
                     // Window, not popover; `openWindow(id:)` — one queue, singleton scene, nothing to route (no request wrapper).
                     openWindow(id: AnalysisQueueStatusWindowView.sceneID)
                 } label: {
-                    queueStatusLabel
+                    LibraryQueueStatusLabel(queue: analysisQueue.queue)
                 }
                 .help("Show the analysis queue")
                 .accessibilityIdentifier(AccessibilityID.libraryQueueStatus)
@@ -697,39 +591,6 @@ struct LibraryDestination: View {
                   ? "Columns view shows details in its own pane"
                   : "Show or hide the inspector")
             .accessibilityIdentifier(AccessibilityID.libraryInspectorToggle)
-        }
-    }
-    
-    /// Gear + count while live; warning + counts after a failed drain, until Clear acknowledges — an error is
-    /// never swallowed by the batch ending. A clean drain hides it. Drawn through `AnalyzingGear` with `AnalysisLabel`.
-    private var queueStatusLabel: some View {
-        HStack(spacing: 6) {
-            if analysisQueue.queue.isActive {
-                AnalyzingGear()
-            } else {
-                Image(systemName: "exclamationmark.triangle")
-            }
-            // `batchPosition`, not `completedCount` — the queue owns the arithmetic; both surfaces read it.
-            Text("\(analysisQueue.queue.batchPosition)/\(analysisQueue.queue.totalCount)")
-                .monospacedDigit()
-        }
-    }
-    
-    @ViewBuilder
-    private var emptyState: some View {
-        if let filter {
-            ContentUnavailableView {
-                Label("No \(filter.displayName) Games", systemImage: filter.systemImage)
-            } description: {
-                Text("No games match this \(filter.kindLabel.lowercased()) yet.")
-            }
-            
-        } else {
-            ContentUnavailableView {
-                Label("No Games", systemImage: "books.vertical")
-            } description: {
-                Text("Import a PGN file to get started.")
-            }
         }
     }
     
@@ -806,57 +667,6 @@ struct LibraryDestination: View {
         Self.logger?.info("Import batch complete: \(imported)/\(urls.count) imported")
     }
     
-    /// Confirmation body; players clause appended only when the cascade would take any.
-    /// Advisory — `PGNStore.delete(_:)` recomputes at write time.
-    private static func deletionMessage(for games: [PGN], lead: String) -> String {
-        let stranded = PGNStore.playersOrphaned(byDeleting: games)
-        guard !stranded.isEmpty else { return lead }
-        let shown = stranded.prefix(5).map(\.name)
-        let more = stranded.count > shown.count
-        ? " And \(stranded.count - shown.count) more."
-        : ""
-        let subject = shown.joined(separator: ", ")
-        let clause = stranded.count == 1
-        ? "\(subject) is in no other game and will be removed from Players."
-        : "\(subject) are in no other games and will be removed from Players."
-        return lead + " " + clause + more
-    }
-
-    /// Leads with what did not happen when nothing did; `unmatched` is a finding, not a fault (three names max).
-    private static func backfillMessage(for report: PGNStore.LibraryIndexBackfill) -> String {
-        guard report.scanned > 0 else {
-            return "That folder has no PGN files in it."
-        }
-        guard report.stamped > 0 || report.alreadyNumbered > 0 else {
-            return "Scanned \(report.scanned) file\(report.scanned == 1 ? "" : "s") and matched "
-            + "none of them to games in your Library. If these are your games, "
-            + "check that you picked the folder they were imported from."
-        }
-
-        var parts: [String] = []
-        if report.stamped > 0 {
-            parts.append("Numbered \(report.stamped) game\(report.stamped == 1 ? "" : "s").")
-        }
-        if report.alreadyNumbered > 0 {
-            parts.append("\(report.alreadyNumbered) already had a number and were left alone.")
-        }
-        if !report.unmatched.isEmpty {
-            let shown = report.unmatched.prefix(3).joined(separator: ", ")
-            let more = report.unmatched.count > 3
-            ? " and \(report.unmatched.count - 3) more"
-            : ""
-            parts.append("\(report.unmatched.count) file\(report.unmatched.count == 1 ? " is" : "s are") "
-                         + "not in your Library yet (\(shown)\(more)).")
-        }
-        if !report.unnumbered.isEmpty {
-            parts.append("\(report.unnumbered.count) filename\(report.unnumbered.count == 1 ? " carries" : "s carry") no number.")
-        }
-        if !report.skipped.isEmpty {
-            parts.append("\(report.skipped.count) couldn’t be read.")
-        }
-        return parts.joined(separator: " ")
-    }
-
     /// Delete for an id set: one game reuses the single-game flow (dirty confirmation); more go to batch confirmation.
     private func requestDelete(ids: Set<PGN.ID>) {
         let games = gamesInDisplayOrder(ids)
@@ -973,21 +783,6 @@ struct LibraryDestination: View {
         guard !ordered.isEmpty else { return }
         Self.logger?.info("Export requested: \(ordered.count) game(s)")
         PGNExporter.export(ordered)
-    }
-}
-
-// MARK: Presentation Bindings
-
-extension Binding where Value == Bool {
-    /// Presentation flag over optional state: true while present; dismissal clears the source.
-    /// `BoardDestination`'s offer bindings look identical and are deliberately not folded in — they ignore dismissal.
-    /// Waived warning ×2: non-Sendable `Binding` captured in `@Sendable` closures; expires by deletion when
-    /// `.alert(item:)` ships (the register's one compiler-warning waiver).
-    init<T>(present source: Binding<T?>) {
-        self.init(
-            get: { source.wrappedValue != nil },
-            set: { if !$0 { source.wrappedValue = nil } }
-        )
     }
 }
 
