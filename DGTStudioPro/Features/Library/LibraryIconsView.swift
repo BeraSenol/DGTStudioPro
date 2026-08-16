@@ -31,10 +31,6 @@ struct LibraryIconsView: View {
     /// Ambient, written once by the destination; nil in previews, which is honest.
     @Environment(\.analysisRunningGameID) private var runningAnalysisID
 
-    /// The smart tags for the Finder dots, sidebar order.
-    @Query(sort: [SortDescriptor(\SmartTag.sortIndex), SortDescriptor(\SmartTag.createdAt)])
-    private var tags: [SmartTag]
-
     /// Realized card frames in `gridSpace` - a box, not observed state. **Populated only while a
     /// band is sweeping**; stale entries are re-checked against `games` rather than trusted.
     @State private var cardFrames = IconGridFrameStore<PGN.ID>()
@@ -63,7 +59,6 @@ struct LibraryIconsView: View {
                                     isAnalyzed: analyzedIDs.contains(game.id),
                                     runningID: runningAnalysisID
                                 ),
-                                tagColors: SmartTagMatches.colors(for: game, in: tags),
                                 isSelected: selectedPGNs.contains(game.id),
                                 onSelect:  { select(game) },
                                 onOpen:    { open(game) },
