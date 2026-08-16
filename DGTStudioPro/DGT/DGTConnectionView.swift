@@ -37,11 +37,13 @@ struct DGTConnectionView: View {
             Divider()
             footer
         }
-        // Width fixed, height a floor (was a fixed 320 until the trademark showed in full,
-        // 16 Aug 2026): the scene's `.contentSize` resizability sizes the window to whatever
-        // the connected panel needs, and the sparser panels keep their old proportions.
+        // Width fixed, height bounded (was a fixed 320 until the trademark showed in full,
+        // 16 Aug 2026): under `.contentSize` the window opens at the *ideal*, so one is stated -
+        // an unbounded greedy child reporting a huge ideal is the giant-floating-window bug the
+        // New Game dialog shipped with. 380 fits the connected panel with the full banner; the
+        // sparser panels centre in it.
         .frame(width: 420)
-        .frame(minHeight: 320)
+        .frame(minHeight: 320, idealHeight: 380, maxHeight: 700)
         .onAppear {
             // Attempt on sight - unless live or mid-reconnect: a player opening this mid-loop wants to see
             // (or stop) the retry, not restart it.

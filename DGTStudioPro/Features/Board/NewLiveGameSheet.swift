@@ -292,7 +292,12 @@ struct NewLiveGameSheet: View {
             }
             .padding()
         }
-        .frame(minWidth: 400, idealWidth: 440, minHeight: 380)
+        // Sized for the window scene (16 Aug 2026): under `.contentSize` a window opens at its
+        // content's *ideal* size, and a `Form` reports an enormous one - without an explicit
+        // idealHeight this opened as a screen-swallowing floating window. A sheet never showed
+        // the gap because sheets size themselves.
+        .frame(minWidth: 400, idealWidth: 440, maxWidth: 560,
+               minHeight: 380, idealHeight: 470, maxHeight: 700)
         .accessibilityIdentifier(AccessibilityID.liveNewGameSheet)
         .onAppear {
             prefillFromDefaults()
