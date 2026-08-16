@@ -445,7 +445,7 @@ struct BoardDestination: View {
             // The former HUD `disconnected` banner, relocated with an action instead of a dead message.
             InspectorEmptyState(
                 title: "No Board Connected",
-                systemImage: "cable.connector.horizontal",
+                systemImage: "cable.connector.slash",
                 message: "Connect your DGT board to record games live.",
                 identifier: AccessibilityID.liveInspectorNoBoard
             )

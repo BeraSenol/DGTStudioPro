@@ -37,7 +37,11 @@ struct DGTConnectionView: View {
             Divider()
             footer
         }
-        .frame(width: 420, height: 320)
+        // Width fixed, height a floor (was a fixed 320 until the trademark showed in full,
+        // 16 Aug 2026): the scene's `.contentSize` resizability sizes the window to whatever
+        // the connected panel needs, and the sparser panels keep their old proportions.
+        .frame(width: 420)
+        .frame(minHeight: 320)
         .onAppear {
             // Attempt on sight - unless live or mid-reconnect: a player opening this mid-loop wants to see
             // (or stop) the retry, not restart it.
@@ -108,7 +112,7 @@ struct DGTConnectionView: View {
         ContentUnavailableView {
             Label("Board Not Found", systemImage: "cable.connector.slash")
         } description: {
-            Text("Nothing is attached at \(DGTConnection.onlyBoardPath). Plug the board in, then try again.")
+            Text("Nothing is attached at \(DGTConnection.onlyBoardPath).\nPlug the board in, then try again.")
         }
         .accessibilityIdentifier(AccessibilityID.dgtNotFoundPanel)
     }
@@ -160,7 +164,19 @@ struct DGTConnectionView: View {
                 infoRow("Serial", connection.boardInfo.serialNumber)
                 infoRow("Version", connection.boardInfo.version)
                 infoRow("Hardware", connection.boardInfo.hardwareVersion)
-                infoRow("Trademark", connection.boardInfo.trademark)
+
+                // The trademark is the handshake's whole multi-line banner - name, copyright,
+                // firmware and hardware lines - so a label:value row truncated it to its first
+                // line. A block of its own, shown fully (16 Aug 2026, by request); `fixedSize`
+                // is the anti-truncation half of the fix, the window's flexible height the other.
+                if let trademark = connection.boardInfo.trademark, !trademark.isEmpty {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Trademark").foregroundStyle(.secondary)
+                        Text(trademark)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.top, Metrics.captionSpacing)
+                }
             }
             .font(.caption)
             .frame(maxWidth: Metrics.infoTableWidth, alignment: .leading)
