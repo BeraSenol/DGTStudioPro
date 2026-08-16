@@ -76,21 +76,17 @@ struct BoardDestination: View {
         .toolbar { boardToolbarContent }
         // The connect dialog is its own window since 16 Aug 2026 - one fewer sheet contending
         // for this window's single modal slot.
-        // The new-game dialog at body level: the sidebar's New Game button reaches Board with a
-        // game loaded too. The *auto* offer stays gated to the live branch inside the binding - a tab
-        // reviewing a PGN isn't interrupted.
-        .sheet(isPresented: isNewGameSheetPresented) {
-            NewLiveGameSheet(
-                onStart: { roster in
-                    session.startNewGame(roster: roster)
-                    tabState.manualNewGameRequested = false
-                },
-                onNotNow: { isNewGameSheetPresented.wrappedValue = false },
-                // A resumable draft counts as unfinished: starting fresh overwrites its file, so same
-                // destructive confirmation (a *corrupt* file is not a game).
-                replacesUnfinishedGame: session.liveGame?.isFinished == false
-                || session.resumableDraft != nil
-            )
+        // The New Game dialog is a window since 16 Aug 2026 (`NewLiveGameWindow`). This destination
+        // still translates the session's auto-offer into presentation - gated off the review
+        // branch, so a tab reviewing a PGN isn't interrupted - and the manual request into the
+        // same door, `getInfoRequested`'s reset-then-open shape.
+        .onChange(of: session.shouldOfferNewGame && tabState.boardPGN == nil) { _, offered in
+            if offered { openWindow(id: NewLiveGameWindow.sceneID) }
+        }
+        .onChange(of: tabState.manualNewGameRequested) { _, requested in
+            guard requested else { return }
+            tabState.manualNewGameRequested = false
+            openWindow(id: NewLiveGameWindow.sceneID)
         }
         // The removed the last editing surface here: an archived game's roster is edited in Get Info.
         .focusedSceneValue(\.activeGame, tabState.boardGame)
@@ -106,7 +102,14 @@ struct BoardDestination: View {
             getInfoRequested = false
             if let subject = getInfoSubject { openWindow(value: subject) }
         }
-        .onAppear { loadIfNeeded() }
+        .onAppear {
+            loadIfNeeded()
+            // A pending offer raised while no Board destination was on screen - `onChange` never
+            // saw a change, so arrival is the moment to present it.
+            if session.shouldOfferNewGame && tabState.boardPGN == nil {
+                openWindow(id: NewLiveGameWindow.sceneID)
+            }
+        }
         .onChange(of: loadedGameID) { _, _ in loadIfNeeded() }
     }
     
@@ -399,23 +402,10 @@ struct BoardDestination: View {
     }
 
 
-    private var isNewGameSheetPresented: Binding<Bool> {
-        Binding(
-            get: {
-                // Auto-offer presents only on the live branch; the manual request presents everywhere.
-                tabState.manualNewGameRequested
-                || (session.shouldOfferNewGame && tabState.boardPGN == nil)
-            },
-            set: { presented in
-                guard !presented else { return }
-                tabState.manualNewGameRequested = false
-                if session.shouldOfferNewGame {
-                    session.dismissNewGameOffer()
-                }
-            }
-        )
-    }
-    
+    // (`isNewGameSheetPresented` stood here until 16 Aug 2026 - the dialog is a window now, and
+    // the binding's dismiss half lives on the window's own `onDisappear`.)
+
+
     /// Live-branch inspector: game details when one exists, otherwise a connection-aware hint -
     /// the toggle is never a dead switch on the mirror.
     @ViewBuilder

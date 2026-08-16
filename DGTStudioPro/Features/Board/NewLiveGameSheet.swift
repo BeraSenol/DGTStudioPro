@@ -170,10 +170,47 @@ struct LiveGameRosterForm: View {
     }
 }
 
+// MARK: New Game Window
+
+/// The New Game dialog as its own window (16 Aug 2026; it was `BoardDestination`'s sheet - the
+/// everything-is-a-window pass). A singleton by id: one session, one offer. `BoardDestination`
+/// translates the session's auto-offer and the panel's manual request into `openWindow`;
+/// closing the window is "Not Now" - `onDisappear` dismisses the offer, so the next
+/// start-position settle can raise it again.
+struct NewLiveGameWindow: View {
+
+    static let sceneID = "newLiveGame"
+
+    @Environment(DGTLiveSession.self) private var session
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NewLiveGameSheet(
+            onStart: { roster in
+                session.startNewGame(roster: roster)
+                dismiss()
+            },
+            onNotNow: { dismiss() },
+            // A resumable draft counts as unfinished: starting fresh overwrites its file, so same
+            // destructive confirmation (a *corrupt* file is not a game).
+            replacesUnfinishedGame: session.liveGame?.isFinished == false
+                || session.resumableDraft != nil
+        )
+        // A game beginning under the dialog - this window's own Start, or play simply beginning
+        // on the board - makes it stale; close rather than offer a second game over a first.
+        .onChange(of: session.liveGame != nil) { _, hasGame in
+            if hasGame { dismiss() }
+        }
+        .onDisappear {
+            if session.shouldOfferNewGame { session.dismissNewGameOffer() }
+        }
+    }
+}
+
 // MARK: New Game Sheet
 
-/// The new-game dialog: presented on start-position detection (`shouldOfferNewGame`) or the
-/// HUD's manual button.
+/// The dialog body: start-position detection (`shouldOfferNewGame`) or the session panel's
+/// manual button reach it through `NewLiveGameWindow` since 16 Aug 2026.
 struct NewLiveGameSheet: View {
     
     // MARK: Stored Properties

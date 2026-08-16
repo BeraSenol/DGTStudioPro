@@ -230,6 +230,19 @@ struct DGTStudioProApp: App {
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
 .windowManagerRole(.associated)
+        // The New Game dialog (16 Aug 2026; was BoardDestination's sheet) - singleton: one
+        // session, one offer. Floating like its connection sibling below.
+        Window("New Game", id: NewLiveGameWindow.sceneID) {
+            NewLiveGameWindow()
+                .environment(dgtSession)
+        }
+        .modelContainer(sharedContainer)
+        .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled) // see the Analysis window above
+        .windowResizability(.contentSize)
+        .windowLevel(.floating)
+        .windowManagerRole(.associated)
+
         // The board connection dialog (16 Aug 2026; was BoardDestination's sheet) - a singleton
         // `Window` for the queue scene's reason: one board, one connection, opened by id.
         // Floating like View Options: a companion consulted over the board, not a tab.
