@@ -56,7 +56,7 @@ struct CollectionViewOptionsWindow: View {
                 Form {
                     sortSection(for: subject, options: $options)
                     if subject.hasSizableGrid {
-                        gridSection(options: $options)
+                        gridSection(for: subject.collection, options: $options)
                     } else {
                         Section {
                             Text("Icon size and spacing apply to icon view.")
@@ -126,8 +126,16 @@ struct CollectionViewOptionsWindow: View {
         .accessibilityIdentifier(AccessibilityID.viewOptionsSortDirection)
     }
 
-    private func gridSection(options: Bindable<CollectionViewOptions>) -> some View {
-        Section("Grid") {
+    private func gridSection(
+        for collection: CollectionViewOptionsSubject.Collection,
+        options: Bindable<CollectionViewOptions>
+    ) -> some View {
+        // The size slider wears the subject's own silhouette (16 Aug 2026, by request): a document
+        // sheet meant nothing on Players, whose cards are person monograms. Spacing keeps the grid
+        // glyphs on both - a grid is a grid whatever fills it.
+        let sizeGlyph = collection == .players ? "person" : "doc"
+
+        return Section("Grid") {
             // `in:` takes the ranges the type clamps to, so the slider cannot ask for a value the object
             // silently corrects - extremes that do nothing read as a stuck slider.
             sizedSlider(
@@ -136,9 +144,9 @@ struct CollectionViewOptionsWindow: View {
                 binding: options.iconSize,
                 range: CollectionViewOptions.iconSizeRange,
                 step: Self.iconSizeStep,
-                minimumGlyph: "doc",
+                minimumGlyph: sizeGlyph,
                 minimumSize: 11,
-                maximumGlyph: "doc",
+                maximumGlyph: sizeGlyph,
                 maximumSize: 22,
                 identifier: AccessibilityID.viewOptionsIconSize
             )
@@ -169,9 +177,15 @@ struct CollectionViewOptionsWindow: View {
     private static let iconSizeStep: CGFloat = 20
     private static let spacingStep: CGFloat = 4
 
-    /// Finder's View Options slider: value in the label, small/large glyphs at the ends - the
-    /// affordance, not decoration. Icon size shows a value, grid spacing does not (Finder's split);
-    /// `pt`, not `128×128` - the layout has no square to promise.
+    /// The label cluster's fixed slot, so the two sliders' tracks start at one x whatever the
+    /// title says - two rows with hugging labels are two sliders that never align (the tag
+    /// editor's 16 Aug lesson, one window over). Wide enough for "Icon size: 240 pt".
+    private static let labelColumnWidth: CGFloat = 118
+
+    /// Finder's View Options slider on one line (label above until 16 Aug 2026, by request):
+    /// value in the label, small/large glyphs at the ends - the affordance, not decoration.
+    /// Icon size shows a value, grid spacing does not (Finder's split); `pt`, not `128×128` -
+    /// the layout has no square to promise.
     @ViewBuilder
     private func sizedSlider(
         title: String,
@@ -185,7 +199,7 @@ struct CollectionViewOptionsWindow: View {
         maximumSize: CGFloat,
         identifier: String
     ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        HStack(spacing: 10) {
             HStack(spacing: 6) {
                 Text("\(title):")
                 if let value {
@@ -195,6 +209,7 @@ struct CollectionViewOptionsWindow: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .frame(width: Self.labelColumnWidth, alignment: .leading)
 
             HStack(spacing: 10) {
                 Image(systemName: minimumGlyph)
@@ -278,7 +293,7 @@ struct ShowViewOptionsButton: View {
 }
 
 /// Players' field list - ten cases to the Library's nine; catches a picker bound to the wrong
-/// destination's options.
+/// destination's options. Also the person glyphs on the size slider (the Library keeps the doc).
 #Preview("Players - Icons") {
     CollectionViewOptionsWindow()
         .environment(
