@@ -14,6 +14,10 @@ struct LibraryGameCardView: View {
     /// The analysis badge's subject, bottom-trailing on the sheet in every host. Both
     /// production hosts pass state, never the model - no blob decode per card.
     var analysisState: AnalysisGlyph.State = .unanalyzed
+
+    /// Matching smart tags' colors for the Finder dots before the name (16 Aug 2026); hosts
+    /// compute via `SmartTagMatches.colors`. Empty renders nothing, so previews stay unchanged.
+    var tagColors: [Color] = []
     
     let isSelected: Bool
     let onSelect: () -> Void
@@ -101,17 +105,21 @@ struct LibraryGameCardView: View {
     
     @ViewBuilder
     private var nameLabel: some View {
-        Text(game.name)
-            .font(.callout)
-            .lineLimit(3)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(isSelected ? Color.accentColor : .clear)
-            )
-            .foregroundStyle(isSelected ? Color.white : .primary)
+        // Dots lead the name inside the selection capsule, Finder's icon-view arrangement.
+        HStack(spacing: 4) {
+            TagDots(colors: tagColors)
+            Text(game.name)
+                .font(.callout)
+                .lineLimit(3)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(isSelected ? Color.accentColor : .clear)
+        )
+        .foregroundStyle(isSelected ? Color.white : .primary)
     }
     
     /// The file's ordinal, written on the sheet. The placeholder glyph renders a state that is meant
@@ -228,6 +236,40 @@ private func sampleGame(
     }
     .padding()
     .frame(width: 540)
+    .modelContainer(for: PGN.self, inMemory: true)
+}
+
+/// One dot, two overlapping, and four capped at three - beside an untagged card, and one
+/// selected so the hairline reads against the accent capsule too.
+#Preview("Tag Dots") {
+    HStack(spacing: 12) {
+        LibraryGameCardView(
+            game: sampleGame(),
+            tagColors: [],
+            isSelected: false,
+            onSelect: {}, onOpen: {}, onAnalyze: {}, onExport: {}, onDelete: {}
+        )
+        LibraryGameCardView(
+            game: sampleGame(),
+            tagColors: [.red],
+            isSelected: false,
+            onSelect: {}, onOpen: {}, onAnalyze: {}, onExport: {}, onDelete: {}
+        )
+        LibraryGameCardView(
+            game: sampleGame(),
+            tagColors: [.red, .blue],
+            isSelected: true,
+            onSelect: {}, onOpen: {}, onAnalyze: {}, onExport: {}, onDelete: {}
+        )
+        LibraryGameCardView(
+            game: sampleGame(),
+            tagColors: [.red, .blue, .green, .orange],
+            isSelected: false,
+            onSelect: {}, onOpen: {}, onAnalyze: {}, onExport: {}, onDelete: {}
+        )
+    }
+    .padding()
+    .frame(width: 720)
     .modelContainer(for: PGN.self, inMemory: true)
 }
 

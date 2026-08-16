@@ -29,6 +29,10 @@ struct LibraryColumnsView: View {
     /// Ambient rather than a parameter - argument at the environment value's declaration.
     @Environment(\.analysisRunningGameID) private var runningAnalysisID
 
+    /// The smart tags for the Finder dots, sidebar order.
+    @Query(sort: [SortDescriptor(\SmartTag.sortIndex), SortDescriptor(\SmartTag.createdAt)])
+    private var tags: [SmartTag]
+
     // MARK: Computed Properties
 
     /// Single selection or nil - the detail pane details one thing; multi gets a counting
@@ -107,6 +111,7 @@ struct LibraryColumnsView: View {
             Image(systemName: "doc.text")
                 .foregroundStyle(.tint)
                 .imageScale(.medium)
+            TagDots(colors: SmartTagMatches.colors(for: game, in: tags))
             Text(game.name)
                 .lineLimit(1)
                 .truncationMode(.middle)

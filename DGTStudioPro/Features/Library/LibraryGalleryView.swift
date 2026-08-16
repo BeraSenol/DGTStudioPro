@@ -26,6 +26,10 @@ struct LibraryGalleryView: View {
     /// Ambient - `LibraryIconsView`'s twin, argued at the environment value.
     @Environment(\.analysisRunningGameID) private var runningAnalysisID
 
+    /// The smart tags for the Finder dots, sidebar order.
+    @Query(sort: [SortDescriptor(\SmartTag.sortIndex), SortDescriptor(\SmartTag.createdAt)])
+    private var tags: [SmartTag]
+
     var body: some View {
         VStack(spacing: 0) {
             preview
@@ -98,6 +102,7 @@ struct LibraryGalleryView: View {
                 isAnalyzed: analyzedIDs.contains(game.id),
                 runningID: runningAnalysisID
             ),
+            tagColors: SmartTagMatches.colors(for: game, in: tags),
             isSelected: selectedPGNs.contains(game.id),
             onSelect:  { selectedPGNs = [game.id]; isFocused = true },
             onOpen:    { onOpen([game]) },

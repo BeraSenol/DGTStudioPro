@@ -22,6 +22,10 @@ struct LibraryListView: View {
     /// Ambient - the Analysis column tells "analyzed" from "on the engine now".
     @Environment(\.analysisRunningGameID) private var runningAnalysisID
 
+    /// The smart tags for the Finder dots, sidebar order.
+    @Query(sort: [SortDescriptor(\SmartTag.sortIndex), SortDescriptor(\SmartTag.createdAt)])
+    private var tags: [SmartTag]
+
     /// Header sort. **A binding, not `@State`**: display order feeds export numbering, queue
     /// order and bulk-open tab order through `gamesInDisplayOrder`, so the sort must live where
     /// `filteredGames` applies it. Not persisted, unlike column customization.
@@ -45,8 +49,13 @@ struct LibraryListView: View {
             // Carries `gameRow(name)` and is hideable anyway (no cell is a guaranteed address).
             // Sorted on the **display** form: the stored tag would order by a surname the cell doesn't print.
             TableColumn("White", value: \.whiteDisplayName) { game in
-                Text(game.whiteDisplayName)
-                    .accessibilityIdentifier(AccessibilityID.gameRow(game.name))
+                // Dots lead the row's name-bearing cell, Finder's list arrangement; the
+                // identifier stays on the text, so the addressable element is unchanged.
+                HStack(spacing: 5) {
+                    TagDots(colors: SmartTagMatches.colors(for: game, in: tags))
+                    Text(game.whiteDisplayName)
+                        .accessibilityIdentifier(AccessibilityID.gameRow(game.name))
+                }
             }
             .customizationID("white")
             TableColumn("Black", value: \.blackDisplayName) { Text($0.blackDisplayName) }
