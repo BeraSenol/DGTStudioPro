@@ -212,7 +212,12 @@ struct DGTStudioProApp: App {
             SmartTagEditorWindow(request: request)
         }
         .modelContainer(sharedContainer)
-        .windowResizability(.contentSize)
+        // No `.windowResizability(.contentSize)` here or on the two dialogs below, and the
+        // absence is the fix (16 Aug 2026): the modifier is per-scene on paper and leaks to the
+        // main window in practice - a content-sized main window re-sizes itself around the board
+        // on every content change and its green button can only maximize, which is exactly the
+        // "everything zooms and full screen is gone" report. The windows' own frames already
+        // bound them; automatic resizability derives its limits from content.
         .windowManagerRole(.associated)
         .restorationBehavior(.disabled) // companion - see the graph above
 
@@ -239,7 +244,6 @@ struct DGTStudioProApp: App {
         .modelContainer(sharedContainer)
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled) // see the Analysis window above
-        .windowResizability(.contentSize)
         .windowLevel(.floating)
         .windowManagerRole(.associated)
 
@@ -252,7 +256,6 @@ struct DGTStudioProApp: App {
         }
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled) // see the Analysis window above
-        .windowResizability(.contentSize)
         .windowLevel(.floating)
         .windowManagerRole(.associated)
 
