@@ -10,6 +10,12 @@ enum DestinationSubtitle {
     /// Board: session status while playing, position status while reviewing, nothing otherwise.
     /// Exceptional states replace the routine one. `phase` arrives already priority-ordered
     /// (`SessionPhase.current`) - re-ordering here would be the second, quietly different copy.
+    ///
+    /// **No production caller since 16 Aug 2026**: the Board dropped its subtitle - first as a
+    /// hypothesis about the full-screen toolbar fault (disproven: the crash survived the drop
+    /// and its 17 Aug opposite), standing now because the session panel says the same words.
+    /// The full history is at `BoardDestination`. Kept with its pins because the grammar
+    /// returns if the subtitle ever does - the test-only-by-decision shape.
     static func board(
         phase: LiveGameHUDView.Phase?,
         reviewing sideToMove: PieceColor?

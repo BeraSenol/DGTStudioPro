@@ -61,22 +61,17 @@ struct BoardDestination: View {
                 liveSurface
             }
         }
-        // Load-error surface lives in the sidebar session panel.
+        // Load-error surface lives in the session panel atop the inspector.
         .navigationTitle(tabState.boardPGN?.name ?? "Board")
-        // Subtitle is *state*; title is identity; the inspector's `GameHeadline` is the pairing.
-        // A tab reviewing a PGN has no business announcing a desync it isn't party to.
-        // (A `destinationSubtitle` door coalescing nil to a no-break space stood here for a few
-        // hours on 17 Aug 2026, hypothesizing the ""↔text flip caused the full-screen toolbar
-        // crash. Disproven by rebuild-and-repro - and by review tabs flipping subtitle text every
-        // arrow step without incident - so the door went rather than surviving on a false why.)
-        .navigationSubtitle(
-            DestinationSubtitle.board(
-                phase: .current(session: session, connection: connection),
-                reviewing: tabState.boardPGN == nil
-                    ? nil
-                    : tabState.boardGame?.currentState.activeColor
-            ) ?? ""
-        )
+        // NO subtitle on this destination - a product call that outlived its first justification.
+        // The panel atop the inspector already says the same words, so the subtitle was an echo;
+        // that reason carries the removal. What does NOT carry it: this was twice built as the
+        // fix for the full-screen toolbar fault (16 Aug: dropped outright, hypothesizing the
+        // ""↔present flip forced the NSToolbar replacement; 17 Aug: held permanently present
+        // with a no-break space, same hypothesis from the other side) and the crash survived
+        // both, plus review tabs flip subtitle text every arrow step without incident. The
+        // subtitle is exonerated as the trigger; the fault hunt continues elsewhere. Library
+        // and Players keep theirs - their values don't flip with session state.
         .toolbar { boardToolbarContent }
         // The connect dialog is its own window since 16 Aug 2026 - one fewer sheet contending
         // for this window's single modal slot.
