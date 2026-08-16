@@ -252,17 +252,23 @@ struct BoardDestination: View {
                 : nil
         )
         .inspector(isPresented: $tabState.boardInspectorPresented) {
-            BoardInspectorView(
-                pgn: pgn,
-                evaluations: pgn.evaluations.map {
-                    $0?.whiteWinProbability ?? 0.5
-                },
-                moves: pgn.moves,
-                currentMoveIndex: game.currentPly > 0 ? game.currentPly - 1 : nil,
-                style: boardStyle,
-                onMoveTapped: { index in game.jump(to: index + 1) }
-            )
-            .safeAreaInset(edge: .top, spacing: 0) { sessionPanel }
+            // Plain layout, NOT `safeAreaInset` (16 Aug 2026): an inset inside `.inspector` leaks
+            // into the split view's window-level safe-area constraints, and the whole window's
+            // content lays out taller than the window the moment the panel's card changes - the
+            // "board zooms and everything shifts off screen at game start" bug.
+            VStack(spacing: 0) {
+                sessionPanel
+                BoardInspectorView(
+                    pgn: pgn,
+                    evaluations: pgn.evaluations.map {
+                        $0?.whiteWinProbability ?? 0.5
+                    },
+                    moves: pgn.moves,
+                    currentMoveIndex: game.currentPly > 0 ? game.currentPly - 1 : nil,
+                    style: boardStyle,
+                    onMoveTapped: { index in game.jump(to: index + 1) }
+                )
+            }
             .inspectorColumnWidth(min: 350, ideal: 350, max: 400)
         }
     }
@@ -274,9 +280,12 @@ struct BoardDestination: View {
     private var liveSurface: some View {
         mirrorBoard
             .inspector(isPresented: $tabState.boardInspectorPresented) {
-                liveInspector
-                    .safeAreaInset(edge: .top, spacing: 0) { sessionPanel }
-                    .inspectorColumnWidth(min: 350, ideal: 350, max: 400)
+                // Plain layout, not `safeAreaInset` - the review branch's reasoning, stated there.
+                VStack(spacing: 0) {
+                    sessionPanel
+                    liveInspector
+                }
+                .inspectorColumnWidth(min: 350, ideal: 350, max: 400)
             }
         // M4.3 resume offer - a modal fork, not a banner: resume-or-delete is a genuine either/or.
             .alert(
