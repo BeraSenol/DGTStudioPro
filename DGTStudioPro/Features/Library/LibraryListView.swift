@@ -3,7 +3,7 @@ import SwiftUI
 
 struct LibraryListView: View {
     let games: [PGN]
-    /// The Analysis column's input, off the memoized projection — the per-row blob decode
+    /// The Analysis column's input, off the memoized projection - the per-row blob decode
     /// this replaced was the last one standing, on the mode most on screen during a batch.
     let analyzedIDs: Set<PGN.ID>
     @Binding var selectedPGNs: Set<PGN.ID>
@@ -14,12 +14,12 @@ struct LibraryListView: View {
     let onDeleteIDs: (Set<PGN.ID>) -> Void
 
     /// Column visibility and order, from the header's right-click menu. **Visibility and order
-    /// only** — `TableColumnCustomization` cannot carry a width. IDs are stored state, never
+    /// only** - `TableColumnCustomization` cannot carry a width. IDs are stored state, never
     /// derived from titles (titles are editable prose).
     @AppStorage(StorageKeys.libraryColumns)
     private var columnCustomization = TableColumnCustomization<PGN>()
 
-    /// Ambient — the Analysis column tells "analyzed" from "on the engine now".
+    /// Ambient - the Analysis column tells "analyzed" from "on the engine now".
     @Environment(\.analysisRunningGameID) private var runningAnalysisID
 
     /// Header sort. **A binding, not `@State`**: display order feeds export numbering, queue
@@ -32,7 +32,7 @@ struct LibraryListView: View {
               selection: $selectedPGNs,
               sortOrder: $sortOrder,
               columnCustomization: $columnCustomization) {
-            // The file's ordinal, leading because that is where a filing number reads. Em dash for
+            // The file's ordinal, leading because that is where a filing number reads. The placeholder for
             // nil (ECO's blank is the documented exception).
             TableColumn("#", sortUsing: KeyPathComparator(\PGN.libraryIndex)) { game in
                 Text(game.libraryIndex.map(String.init) ?? RosterSummary.displayUnknown)
@@ -52,9 +52,9 @@ struct LibraryListView: View {
             TableColumn("Black", value: \.blackDisplayName) { Text($0.blackDisplayName) }
                 .customizationID("black")
 
-            // The analysis column; clicking queues that game. **The tenth column — the ceiling**:
+            // The analysis column; clicking queues that game. **The tenth column - the ceiling**:
             // `TableColumnBuilder` tops out at ten; an eleventh fails type-check obscurely (remedy: `Group`).
-            // The only column with a control — the fact and the verb are one thought.
+            // The only column with a control - the fact and the verb are one thought.
             TableColumn("Analysis") { game in
                 Button {
                     // The singular set, not `selectedPGNs`: a row's button is a statement about that row. Same
@@ -76,32 +76,32 @@ struct LibraryListView: View {
             }
             .width(min: 96, ideal: 116, max: 160)
             .customizationID("analysis")
-            // Raw value, so the order is PGN's own vocabulary — at least it matches what the cell prints.
+            // Raw value, so the order is PGN's own vocabulary - at least it matches what the cell prints.
             TableColumn("Result", value: \.result.rawValue) { game in
                 Text(game.result.rawValue).foregroundStyle(.secondary)
             }
             .width(60)
             .customizationID("result")
             // Code only (the family truncates at column width; the inspector has all three rows). Nothing
-            // rather than an em dash — a column of dashes is noise. Read and sorted through `opening`,
-            // never `ecoCode` — rehydrates per sort recompute (memoized), censused.
+            // rather than the placeholder - a column of dashes is noise. Read and sorted through `opening`,
+            // never `ecoCode` - rehydrates per sort recompute (memoized), censused.
             TableColumn("ECO", sortUsing: KeyPathComparator(\PGN.opening?.code)) { game in
                 Text(game.opening?.code ?? "").foregroundStyle(.secondary)
             }
             .width(min: 44, ideal: 52)
             .customizationID("eco")
-            // The other half — classified, stamped and cleared together, so showing only the opening was
+            // The other half - classified, stamped and cleared together, so showing only the opening was
             // an asymmetry. Sorted on the stored rawValue (1:1 with display).
             TableColumn("Checkmate Type", sortUsing: KeyPathComparator(\PGN.specialCheckmate?.rawValue)) { game in
                 Text(game.specialCheckmate?.displayName ?? RosterSummary.displayUnknown)
                     .foregroundStyle(.secondary)
             }
-            // The customization ID stays `"mate"` — stored state; a rename must not reset a column layout.
+            // The customization ID stays `"mate"` - stored state; a rename must not reset a column layout.
             .width(min: 96, ideal: 110)
             .customizationID("mate")
             TableColumn("Event", value: \.event) { Text($0.event).lineLimit(1) }
                 .customizationID("event")
-            // `effectiveDate` (date ?? importedAt) — the app's one ordering rule, so this column
+            // `effectiveDate` (date ?? importedAt) - the app's one ordering rule, so this column
             // agrees with every pure fold. Display and sort diverge for an undated game on purpose.
             TableColumn("Date", value: \.effectiveDate) { game in
                 Text(game.displayDate).foregroundStyle(.secondary)
@@ -126,7 +126,7 @@ struct LibraryListView: View {
                 onDelete: { onDeleteIDs(Set($0.map(\.id))) }
             )
         } primaryAction: { ids in
-            // Fires on double-click and Return. **Opens the whole set** — this read `ids.first`
+            // Fires on double-click and Return. **Opens the whole set** - this read `ids.first`
             // once: "some row, in `Set` order", a game wearing another's face.
             onOpen(games.filter { ids.contains($0.id) })
         }
@@ -208,6 +208,6 @@ private func listPreviewGames() -> [PGN] {
     )
     .frame(width: 720, height: 360)
     .modelContainer(for: PGN.self, inMemory: true)
-    // Never `.standard` — same reason as above.
+    // Never `.standard` - same reason as above.
     .defaultAppStorage(UserDefaults(suiteName: "preview")!)
 }

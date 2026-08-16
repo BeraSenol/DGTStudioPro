@@ -1,12 +1,12 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The one display rule for player names. Nonisolated — `PlayerName`
+/// The one display rule for player names. Nonisolated - `PlayerName`
 /// is a pure enum over strings, so no container and no `@MainActor`. The
 /// order and degenerate-input cases moved here verbatim from
 /// `PGNDisplayTests` when the transform left `PGN`; the whitespace-fold and
 /// idempotency cases are new.
-@Suite("PlayerName — Display Order")
+@Suite("PlayerName - Display Order")
 struct PlayerNameTests {
     
     /// Every input the suite exercises, in one place, so `displayIsIdempotent`
@@ -46,7 +46,7 @@ struct PlayerNameTests {
     
     /// `"?"` is a string like any other here. What a placeholder *means* is
     /// `resolvePlayer`'s call (no player) and `GameHeadline`'s (print the
-    /// glyph) — never this transform's.
+    /// glyph) - never this transform's.
     @Test func passesThroughThePlaceholderTag() {
         #expect(PlayerName.displayForm(of: "?") == "?")
     }
@@ -69,7 +69,7 @@ struct PlayerNameTests {
     
     /// Both arrival forms of one name reach one identity. The tag form must go
     /// through `displayForm` here because `resolvePlayer` display-forms *before*
-    /// keying — keying a raw "Carlsen, Magnus" is not a path the app takes.
+    /// keying - keying a raw "Carlsen, Magnus" is not a path the app takes.
     @Test func bothArrivalFormsReachOneIdentity() {
         let fromDisplay = Player.normalizedKey(for: PlayerName.displayForm(of: "Magnus   Carlsen"))
         let fromTag     = Player.normalizedKey(for: PlayerName.displayForm(of: "Carlsen, Magnus"))

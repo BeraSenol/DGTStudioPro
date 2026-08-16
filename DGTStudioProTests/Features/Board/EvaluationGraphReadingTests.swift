@@ -16,7 +16,7 @@ struct EvaluationGraphGeometryTests {
 
     /// Fewer than two plies has no step, which is the same threshold
     /// `EvaluationGraphView` guards its drawing on. Pinned so the two cannot
-    /// drift apart — a geometry that answered for one ply would place it at
+    /// drift apart - a geometry that answered for one ply would place it at
     /// x = 0 and draw a curve with no width.
     @Test(arguments: [0, 1])
     func aCurveShorterThanTwoPliesHasNoStep(plyCount: Int) {
@@ -28,7 +28,7 @@ struct EvaluationGraphGeometryTests {
 
     /// A zero-width rect is the first layout pass, before SwiftUI has proposed
     /// a size. Dividing by it yields infinity rather than trapping, so nothing
-    /// would have complained — the points would simply all be placed at
+    /// would have complained - the points would simply all be placed at
     /// infinity for one frame.
     @Test func zeroWidthHasNoStep() {
         #expect(EvaluationGraphGeometry(width: 0, plyCount: 40).step == nil)
@@ -50,7 +50,7 @@ struct EvaluationGraphGeometryTests {
         #expect(last == 300)
     }
 
-    /// Offsets, not absolute coordinates — the caller adds its own `minX`.
+    /// Offsets, not absolute coordinates - the caller adds its own `minX`.
     /// Stated in the doc and pinned here, because the difference is invisible
     /// in the one caller whose rect happens to start at zero, which is both of
     /// them today.
@@ -87,7 +87,7 @@ struct EvaluationGraphGeometryTests {
         #expect(geometry.ply(nearestTo: 51) == 1)
     }
 
-    /// Clamped rather than nil outside the curve — a pointer one pixel past the
+    /// Clamped rather than nil outside the curve - a pointer one pixel past the
     /// last point is still asking about the last ply, and a read-out that
     /// blanks at the very edge of the graph reads as a defect in the read-out.
     @Test func pointersOutsideTheCurveClampToItsEnds() {
@@ -105,7 +105,7 @@ struct EvaluationGraphReadingTests {
 
     // MARK: Move Grammar
 
-    /// White plies take the number, black plies take the ellipsis — the
+    /// White plies take the number, black plies take the ellipsis - the
     /// display convention, deliberately not `PGNSerializer`'s file form, which
     /// never has to name a black ply on its own.
     @Test func whitePliesNumberAndBlackPliesElide() throws {
@@ -140,7 +140,7 @@ struct EvaluationGraphReadingTests {
         }
     }
 
-    /// An unevaluated ply still happened, so it still reads — it just folds to
+    /// An unevaluated ply still happened, so it still reads - it just folds to
     /// the bar's nil rule. The alternative, failing the whole reading, would
     /// blank the move name too and make a partially analysed game unreadable
     /// exactly where the analysis stopped.
@@ -154,7 +154,7 @@ struct EvaluationGraphReadingTests {
 
     /// `PGN.evaluations` is empty or exactly as long as `moves` by documented
     /// invariant, but the reading must not trap if that invariant is ever
-    /// violated — a short array is a data defect, and a crash in a read-out is
+    /// violated - a short array is a data defect, and a crash in a read-out is
     /// a worse way to learn about it than a dash.
     @Test func aShortEvaluationArrayDoesNotTrap() throws {
         let reading = try #require(

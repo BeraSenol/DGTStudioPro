@@ -1,14 +1,14 @@
 import Foundation
 import SwiftData
 
-/// A cheap exact answer to "have the fold's inputs changed?" — both destinations fold the whole
+/// A cheap exact answer to "have the fold's inputs changed?" - both destinations fold the whole
 /// Library in `body`, and re-folds ran at pointer rate over an unchanged library.
 /// **`evaluations` is deliberately absent**: not an input to either fold, and hashing it would
 /// re-fold the Library once per ply during a batch. A consumer that needs it keys its own
 /// signal (the Library's `FoldKey` adds queue counters).
 struct CollectionFoldKey: Equatable, Sendable {
 
-    /// One game's contribution, as values — a suite builds a key without a container. Everything
+    /// One game's contribution, as values - a suite builds a key without a container. Everything
     /// after `checkmate` is defaulted for fixture ergonomics; the hash covers all of it.
     struct Row: Equatable, Sendable {
         let contentHash: String
@@ -17,7 +17,7 @@ struct CollectionFoldKey: Equatable, Sendable {
         let name: String
         let isTimed: Bool
 
-        /// Resolved players' *identifiers*, not names — identity is enough because a name cannot move
+        /// Resolved players' *identifiers*, not names - identity is enough because a name cannot move
         /// under a row (rename retags and re-resolves; first-seen casing pins the rest). The one missed
         /// transition is nil → linked, which the backfill's own pass republishes anyway.
         let white: PersistentIdentifier?
@@ -71,7 +71,7 @@ extension CollectionFoldKey {
 }
 
 /// One-entry memo for a fold a `View` body needs on the same pass its inputs change.
-/// **A box, not `@State`** — mutation during render is exactly the licence a memo needs and
+/// **A box, not `@State`** - mutation during render is exactly the licence a memo needs and
 /// exactly what `@State` forbids; `.onChange` lands a frame late. One entry, not an LRU: both
 /// call sites read one value per pass.
 final class CollectionFoldCache<Key: Equatable, Value> {
@@ -80,7 +80,7 @@ final class CollectionFoldCache<Key: Equatable, Value> {
 
     init() {}
 
-    /// Computes only when `key` differs from the stored one. `compute` is not `@escaping` — runs
+    /// Computes only when `key` differs from the stored one. `compute` is not `@escaping` - runs
     /// before return or not at all, so closing over the render pass is cycle-free.
     func value(for key: Key, compute: () -> Value) -> Value {
         if let stored, stored.key == key { return stored.value }

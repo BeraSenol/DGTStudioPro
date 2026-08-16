@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// The batch projection and its two renderings. Nonisolated, load-bearing — the compile is the
+/// The batch projection and its two renderings. Nonisolated, load-bearing - the compile is the
 /// witness no `Date.now` was smuggled in.
 @Suite("Batch Progress Estimate")
 struct BatchProgressEstimateTests {
@@ -37,7 +37,7 @@ struct BatchProgressEstimateTests {
         #expect(remaining == 200)
     }
 
-    /// Nil for the three empty states, asserted separately — different questions wearing one answer.
+    /// Nil for the three empty states, asserted separately - different questions wearing one answer.
     @Test("No projection without a rate, work, and a clock")
     func nilCases() {
         #expect(
@@ -59,7 +59,7 @@ struct BatchProgressEstimateTests {
 
     // MARK: Renderings
 
-    /// Coarse below a minute, in five-second steps, with a floor of five — so
+    /// Coarse below a minute, in five-second steps, with a floor of five - so
     /// the figure stops twitching between renders and never reads "about 0 sec",
     /// which is a promise about to be broken.
     @Test(
@@ -103,7 +103,7 @@ struct BatchProgressEstimateTests {
     }
 
     /// A negative interval is reachable if the system clock moves backwards
-    /// under a running batch — NTP correction, or the user changing the date.
+    /// under a running batch - NTP correction, or the user changing the date.
     /// Clamped rather than printing "-1:-3", which is the kind of thing that
     /// gets screenshotted.
     @Test("A clock that ran backwards reads zero rather than negative")

@@ -3,7 +3,7 @@ import SwiftUI
 /// The pencil that edits what a section header names. Hardcodes the pencil so edit
 /// affordances cannot drift; one `label` feeds both `.help` and `.accessibilityLabel` so
 /// tooltip and spoken label cannot disagree. One production consumer (the live
-/// inspector's Edit Details) — not dead, but "shared" is starting to describe history.
+/// inspector's Edit Details) - not dead, but "shared" is starting to describe history.
 struct InspectorEditButtonView: View {
     
     // MARK: Stored Properties
@@ -16,7 +16,7 @@ struct InspectorEditButtonView: View {
         Button(action: action) {
             Image(systemName: "pencil")
                 // The label's frame is the hit area under `.borderless`, and an SF Symbol's frame is mostly
-                // transparent — `.contentShape` makes the whole box clickable.
+                // transparent - `.contentShape` makes the whole box clickable.
                 .contentShape(Rectangle())
         }
         .buttonStyle(.borderless)
@@ -31,7 +31,7 @@ struct InspectorEditButtonView: View {
 
 // MARK: Previews
 
-/// In the surface it exists for, headline long enough to truncate — the pencil stays pinned
+/// In the surface it exists for, headline long enough to truncate - the pencil stays pinned
 /// trailing, the header one line tall.
 #Preview("In a Section Header") {
     List {
@@ -48,7 +48,7 @@ struct InspectorEditButtonView: View {
             headline: "Reviewing 7. Magnus Carlsen vs Ian Nepomniachtchi"
         ) {
             InspectorEditButtonView(
-                // **Edit Details is the app's only pencil** — repointed as the others went.
+                // **Edit Details is the app's only pencil** - repointed as the others went.
                 label: "Edit Details",
                 identifier: AccessibilityID.liveInspectorEditDetails,
                 action: {}
@@ -60,7 +60,7 @@ struct InspectorEditButtonView: View {
     .environment(InspectorSectionCollapse.preview)
 }
 
-/// The narrowest drag, with and without an action — where a shift in header height shows.
+/// The narrowest drag, with and without an action - where a shift in header height shows.
 #Preview("Narrow, With and Without") {
     List {
         SevenTagRosterSection(

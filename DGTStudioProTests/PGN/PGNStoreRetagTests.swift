@@ -3,10 +3,10 @@ import Foundation
 import SwiftData
 @testable import DGTStudioPro
 
-/// M5's store door: rename and delete over `Player` — refusal before writing,
+/// M5's store door: rename and delete over `Player` - refusal before writing,
 /// both-seat rewrites, and the orphan cascade.
 @MainActor
-@Suite("PGN Store — Player Retag and Delete")
+@Suite("PGN Store - Player Retag and Delete")
 struct PGNStoreRetagTests {
 
     // MARK: Helpers
@@ -56,7 +56,7 @@ struct PGNStoreRetagTests {
         try context.fetch(FetchDescriptor<Player>()).filter(PGNStore.isOrphaned)
     }
 
-    /// Mints a linkless row — **now the only way to produce one**. Through `resolvePlayer`,
+    /// Mints a linkless row - **now the only way to produce one**. Through `resolvePlayer`,
     /// not `context.insert`: the single door, or the collector is pinned against a shape the app
     /// cannot produce.
     private static func orphanedRow(
@@ -76,7 +76,7 @@ struct PGNStoreRetagTests {
         try #require(try store.resolvePlayer(named: tag))
     }
 
-    /// The identity key a raw tag resolves to — `resolvePlayer`'s own route.
+    /// The identity key a raw tag resolves to - `resolvePlayer`'s own route.
     private static func key(forTag tag: String) -> String {
         Player.normalizedKey(for: PlayerName.displayForm(of: tag))
     }
@@ -84,7 +84,7 @@ struct PGNStoreRetagTests {
     // MARK: Library Index
 
     /// The index is filing, not identity: two ordinals, one game, second import refused. Asserted
-    /// through the door, not the digest — the field most likely to be folded into the hash by a
+    /// through the door, not the digest - the field most likely to be folded into the hash by a
     /// future refactor.
     @Test("A game filed under two different numbers is still one game")
     func theLibraryIndexIsOutsideTheContentHash() throws {
@@ -105,7 +105,7 @@ struct PGNStoreRetagTests {
         }
     }
 
-    /// Nil is a real answer — the door must not invent an ordinal.
+    /// Nil is a real answer - the door must not invent an ordinal.
     @Test("A game imported without a filename ordinal keeps none")
     func textImportCarriesNoIndex() throws {
         let store = try Self.store()
@@ -145,7 +145,7 @@ struct PGNStoreRetagTests {
         #expect(game.contentHash != before)
     }
 
-    /// Games the player isn't in are untouched — the rewrite is scoped by the
+    /// Games the player isn't in are untouched - the rewrite is scoped by the
     /// relationship, not by a string sweep over the Library.
     @Test("Rename leaves unrelated games alone")
     func renameLeavesOthersAlone() throws {
@@ -174,7 +174,7 @@ struct PGNStoreRetagTests {
 
         let count = try store.retag(bera, to: "Şenol, Bera")
 
-        // One game, not two — the union is folded on identity.
+        // One game, not two - the union is folded on identity.
         #expect(count == 1)
         #expect(game.white == "Şenol, Bera")
         #expect(game.black == "Şenol, Bera")
@@ -197,7 +197,7 @@ struct PGNStoreRetagTests {
     // MARK: Collision refusal
 
     /// The Library-side collision: the rewrite would land on a row that
-    /// already exists. Refused, and — the load-bearing half — refused with
+    /// already exists. Refused, and - the load-bearing half - refused with
     /// nothing written.
     @Test("A rename that would collide with an existing game is refused whole")
     func collidingRenameIsRefusedWhole() throws {
@@ -251,7 +251,7 @@ struct PGNStoreRetagTests {
     @Test("Two of the player's own games colliding with each other is caught")
     func batchInternalCollisionIsCaught() throws {
         let store = try Self.store()
-        // Both games are "Bera"'s, and differ only in the *black* spelling —
+        // Both games are "Bera"'s, and differ only in the *black* spelling -
         // so retagging Black's player collapses them onto one hash.
         _ = try store.importPGN(text: Self.pgnText(black: "Reinaud, Lorenzo"))
         _ = try store.importPGN(text: Self.pgnText(black: "Lorenzo Reinaud"))
@@ -266,7 +266,7 @@ struct PGNStoreRetagTests {
     }
 
     /// A rename that only changes casing or spacing folds to the same hash the
-    /// game already has, so the game collides with *itself* — which is not a
+    /// game already has, so the game collides with *itself* - which is not a
     /// collision. The identity check in the pre-flight is what makes this pass.
     @Test("A fold-equivalent rename is not a self-collision")
     func foldEquivalentRenameIsAllowed() throws {
@@ -305,7 +305,7 @@ struct PGNStoreRetagTests {
         #expect(try store.player(withNormalizedKey: Self.key(forTag: "Ghost, Casper")) == nil)
     }
 
-    /// **The generator collection exists for**: re-spelling a seat — `applyEdit` re-resolves,
+    /// **The generator collection exists for**: re-spelling a seat - `applyEdit` re-resolves,
     /// `resolvePlayer` creates, and the old spelling's row lingered forever.
     @Test("Correcting a seat collects the row the old spelling minted")
     func reSpellingASeatCollectsTheStrandedRow() throws {
@@ -321,7 +321,7 @@ struct PGNStoreRetagTests {
         #expect(try Self.orphans(in: context).isEmpty)
     }
 
-    /// A rename collects the row it renamed *from*, in the same transaction —
+    /// A rename collects the row it renamed *from*, in the same transaction -
     /// which is what makes `retag` an honest merge replacement:
     /// retag onto an existing name and the loser does not linger as a duplicate
     /// spelling in every seat picker.
@@ -338,7 +338,7 @@ struct PGNStoreRetagTests {
         #expect(try store.player(withNormalizedKey: Self.key(forTag: "Senol, Bera")) != nil)
     }
 
-    /// The backlog arm: `backfillPlayerLinks` collects — **after** relinking, or it would delete
+    /// The backlog arm: `backfillPlayerLinks` collects - **after** relinking, or it would delete
     /// rows the loop is about to link.
     @Test("The backfill collects the pre-existing backlog, after relinking")
     func backfillCollectsTheBacklogAfterRelinking() throws {
@@ -353,9 +353,9 @@ struct PGNStoreRetagTests {
         #expect(try Self.orphans(in: context).isEmpty)
     }
 
-    // MARK: Delete — the game-deletion cascade
+    // MARK: Delete - the game-deletion cascade
 
-    /// Deleting the last game collects both players — works where delete-player could not, because
+    /// Deleting the last game collects both players - works where delete-player could not, because
     /// the tags go with the game.
     @Test("Deleting the last game collects both of its players")
     func deletingTheLastGameCollectsItsPlayers() throws {
@@ -386,7 +386,7 @@ struct PGNStoreRetagTests {
         #expect(try store.player(withNormalizedKey: Self.key(forTag: "Reinaud, Lorenzo")) == nil)
     }
 
-    /// Self-play is one row, collected once — the identifier-keyed fold prevents a double delete.
+    /// Self-play is one row, collected once - the identifier-keyed fold prevents a double delete.
     @Test("A self-play game's single player is collected once")
     func selfPlayCollectsTheRowOnce() throws {
         let (store, context) = try Self.storeAndContext()
@@ -448,7 +448,7 @@ struct PGNStoreRetagTests {
         #expect(created.whiteGames.count == 2)
     }
 
-    /// A renamed game's export re-imports and dedupes against itself — the
+    /// A renamed game's export re-imports and dedupes against itself - the
     /// milestone's gate sentence, and the reason the rehash rides the rewrite
     /// rather than waiting for a later `refreshHash`.
     @Test("A renamed game's export dedupes against itself")
@@ -458,7 +458,7 @@ struct PGNStoreRetagTests {
         try store.retag(try Self.player(store, named: "Senol, Bera"), to: "Şenol, Bera")
 
         // The import door *throws* on a duplicate; "dedupes" is asserted as a refusal naming the
-        // identifier — a refusal naming some other game would pass a weaker test meaning the opposite.
+        // identifier - a refusal naming some other game would pass a weaker test meaning the opposite.
         do {
             _ = try store.importPGN(text: game.pgnText)
             Issue.record("Expected the re-import to be refused as a duplicate")

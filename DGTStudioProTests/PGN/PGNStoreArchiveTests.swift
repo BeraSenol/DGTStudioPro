@@ -3,10 +3,10 @@ import Foundation
 import SwiftData
 @testable import DGTStudioPro
 
-/// The second door of one-hash/two-doors (M5): a hash match on archive is *success* — the
+/// The second door of one-hash/two-doors (M5): a hash match on archive is *success* - the
 /// opposite of import.
 @MainActor
-@Suite("PGN Store — Archive Door")
+@Suite("PGN Store - Archive Door")
 struct PGNStoreArchiveTests {
     
     // MARK: Helpers
@@ -45,7 +45,7 @@ struct PGNStoreArchiveTests {
         try context.fetchCount(FetchDescriptor<PGN>())
     }
 
-    /// An importable game that is not the archive fixture — all seven tags (`importPGN` throws on
+    /// An importable game that is not the archive fixture - all seven tags (`importPGN` throws on
     /// missing ones), distinct moves so it can never dedupe against the archived game.
     private static func importableText() -> String {
         """
@@ -76,7 +76,7 @@ struct PGNStoreArchiveTests {
         #expect(result.pgn.round == 3)
         #expect(result.pgn.moves == ["e4"])
         #expect(result.pgn.result == .blackWins)
-        // The hash must be *stored*, not just computed — same regression
+        // The hash must be *stored*, not just computed - same regression
         // the import suite pins (an empty hash kills deduplication).
         #expect(result.pgn.contentHash.count == 32)
         #expect(try Self.libraryCount(in: context) == 1)
@@ -84,7 +84,7 @@ struct PGNStoreArchiveTests {
 
     // MARK: Board Tag (M2)
 
-    /// The archive door threads `Roster.board` to `PGN.board` — and because
+    /// The archive door threads `Roster.board` to `PGN.board` - and because
     /// the tag sits outside the content hash (equipment, not game),
     /// a boarded game still dedupes against its board-less twin, which is
     /// exactly the pre-M2 archive it might meet in the Library.
@@ -101,7 +101,7 @@ struct PGNStoreArchiveTests {
         let first = try store.archive(boarded)
         #expect(first.pgn.board == "DGT 3000448278")
 
-        // Same game, no board — the crash-resume / pre-M2 shape.
+        // Same game, no board - the crash-resume / pre-M2 shape.
         let second = try store.archive(Self.finishedGame())
         #expect(second.deduplicated == true)
         #expect(try Self.libraryCount(in: context) == 1)
@@ -125,7 +125,7 @@ struct PGNStoreArchiveTests {
         #expect(try Self.libraryCount(in: context) == 0)
     }
     
-    // MARK: Deduplication — the success kind
+    // MARK: Deduplication - the success kind
     
     @Test func archivingTwiceDeduplicatesAsSuccess() throws {
         let context = try Self.makeContext()
@@ -216,7 +216,7 @@ struct PGNStoreArchiveTests {
         #expect(result.pgn.libraryIndex == 1)
     }
 
-    /// One step further out, and the arm that actually bit: games present, none numbered — still an
+    /// One step further out, and the arm that actually bit: games present, none numbered - still an
     /// empty run.
     @Test func aLibraryOfUnnumberedGamesStillStartsItsRunAtOne() throws {
         let context = try Self.makeContext()
@@ -229,7 +229,7 @@ struct PGNStoreArchiveTests {
         #expect(result.pgn.libraryIndex == 1)
     }
 
-    /// `max + 1` once a run exists — and deliberately `max`, not `count`. A
+    /// `max + 1` once a run exists - and deliberately `max`, not `count`. A
     /// folder's numbering is neither gapless nor dense, so a Library
     /// holding one game at 47 continues at 48 rather than at 2.
     @Test func anArchivedGameContinuesTheHighestRun() throws {
@@ -243,7 +243,7 @@ struct PGNStoreArchiveTests {
         #expect(result.pgn.libraryIndex == 48)
     }
 
-    /// A deduplicated archive keeps the existing row's ordinal — the new one is computed before the
+    /// A deduplicated archive keeps the existing row's ordinal - the new one is computed before the
     /// hash probe and must be discarded with the fresh row.
     @Test func aDeduplicatedArchiveKeepsTheExistingOrdinal() throws {
         let context = try Self.makeContext()

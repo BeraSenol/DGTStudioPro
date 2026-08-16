@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 import SwiftUI
 
-/// Finder-column shape: flat game list left, selected game's detail filling the rest —
+/// Finder-column shape: flat game list left, selected game's detail filling the rest -
 /// inspection density, not navigation (the smart tags own grouping).
 struct LibraryColumnsView: View {
 
@@ -19,19 +19,19 @@ struct LibraryColumnsView: View {
     let onExport: (PGN) -> Void
     let onDelete: (PGN) -> Void
 
-    /// Shared with list mode through the destination — one binding, so a sort survives the mode switch.
+    /// Shared with list mode through the destination - one binding, so a sort survives the mode switch.
     @Binding var sortOrder: [KeyPathComparator<PGN>]
 
-    /// "No value" for derived rows (`OpeningSection`'s em-dash meaning, restated per surface);
-    /// roster rows never need it — `RosterSummary` speaks PGN's own `?`.
+    /// "No value" for derived rows (`OpeningSection`'s placeholder meaning, restated per surface);
+    /// roster rows never need it - `RosterSummary` speaks PGN's own `?`.
     private static let noValue = RosterSummary.displayUnknown
 
-    /// Ambient rather than a parameter — argument at the environment value's declaration.
+    /// Ambient rather than a parameter - argument at the environment value's declaration.
     @Environment(\.analysisRunningGameID) private var runningAnalysisID
 
     // MARK: Computed Properties
 
-    /// Single selection or nil — the detail pane details one thing; multi gets a counting
+    /// Single selection or nil - the detail pane details one thing; multi gets a counting
     /// placeholder, never an arbitrary `first`.
     private var selectedGame: PGN? {
         guard selectedPGNs.count == 1, let id = selectedPGNs.first else { return nil }
@@ -42,7 +42,7 @@ struct LibraryColumnsView: View {
     var body: some View {
         HSplitView {
             // 160/200/300 floors: columns is the one mode that must survive narrow windows.
-            // `.layoutPriority(1)` enforces the floor — `HSplitView` honours `minWidth` only while the
+            // `.layoutPriority(1)` enforces the floor - `HSplitView` honours `minWidth` only while the
             // other side yields.
             gameList
                 .frame(minWidth: 160, idealWidth: 200, maxWidth: 300, maxHeight: .infinity)
@@ -71,18 +71,18 @@ struct LibraryColumnsView: View {
             .frame(maxWidth: .infinity)
         } else {
             // A one-column `Table`, not a `List` (Bera's call): the un-suppressible header became the sort
-            // affordance. **No `columnCustomization`, load-bearing** — a hidden column here is a broken mode.
+            // affordance. **No `columnCustomization`, load-bearing** - a hidden column here is a broken mode.
             Table(games, selection: $selectedPGNs, sortOrder: $sortOrder) {
                 TableColumn("Name", value: \.name) { game in
                     row(for: game)
                 }
                 // The 160 twice is NOT the twin pattern: the frame's floor governs the *pane*, this one the
-                // *column*. All three bounds — min-only did not stop mid-truncation at wide widths.
+                // *column*. All three bounds - min-only did not stop mid-truncation at wide widths.
                 .width(min: 160, ideal: 200, max: .infinity)
             }
             .tableStyle(.inset)
             // Selection-typed (the `LibraryListView` shape): inherits ⌘/⇧-click multi-select and hands the
-            // whole set to `GameActionsMenu` — counted plurals were unreachable from this mode before.
+            // whole set to `GameActionsMenu` - counted plurals were unreachable from this mode before.
             .contextMenu(forSelectionType: PGN.ID.self) { ids in
                 GameActionsMenu(
                     games: games.filter { ids.contains($0.id) },
@@ -95,7 +95,7 @@ struct LibraryColumnsView: View {
         }
     }
 
-    /// Finder's row: one icon, one name, one line — plus the analysis glyph at the trailing edge
+    /// Finder's row: one icon, one name, one line - plus the analysis glyph at the trailing edge
     ///: the one fact the detail pane only answers for games you have not clicked yet.
     private func row(for game: PGN) -> some View {
         let state = AnalysisGlyph.state(
@@ -116,7 +116,7 @@ struct LibraryColumnsView: View {
                 .accessibilityLabel(AnalysisGlyph.statusLabel(state))
         }
         .padding(.vertical, 1)
-        // The menu moved to the `Table` as selection-typed — a per-row `.contextMenu` in a cell would
+        // The menu moved to the `Table` as selection-typed - a per-row `.contextMenu` in a cell would
         // shadow it and act on one game regardless of selection.
     }
 
@@ -140,7 +140,7 @@ struct LibraryColumnsView: View {
         }
     }
 
-    /// Raw PGN above, facts below. The preview board is gone — it was the squeeze: a view *asking*
+    /// Raw PGN above, facts below. The preview board is gone - it was the squeeze: a view *asking*
     /// for space rather than taking what is given. `PGN.pgnText` is the inspector's same accessor,
     /// byte-identical to Export; one game per render, censused.
     private func gameDetail(_ game: PGN) -> some View {
@@ -187,7 +187,7 @@ struct LibraryColumnsView: View {
                 Button {
                     onAnalyze(game)
                 } label: {
-                    // The projection overload — the same input the row badges read, so button and badge
+                    // The projection overload - the same input the row badges read, so button and badge
                     // cannot disagree.
                     AnalysisLabel(
                         state: AnalysisGlyph.state(
@@ -203,7 +203,7 @@ struct LibraryColumnsView: View {
         .padding(20)
     }
 
-    /// Finder's info-row shape; values truncate in the middle — serials and site names carry their
+    /// Finder's info-row shape; values truncate in the middle - serials and site names carry their
     /// information at the ends.
     private func factRow(_ label: String, _ value: String) -> some View {
         GridRow {

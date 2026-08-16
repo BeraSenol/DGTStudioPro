@@ -1,9 +1,9 @@
 import Testing
 @testable import DGTStudioPro
 
-/// `PGN.hasScoredPly` — the one spelling of "is there analysis to show?", extracted after
+/// `PGN.hasScoredPly` - the one spelling of "is there analysis to show?", extracted after
 /// `!evaluations.isEmpty` drew a fabricated flat curve over an all-nil array.
-@Suite("PGN — has a scored ply")
+@Suite("PGN - has a scored ply")
 struct PGNScoredPlyTests {
 
     private static func game(evaluations: [Evaluation?]) -> PGN {
@@ -19,21 +19,21 @@ struct PGNScoredPlyTests {
     }
 
     /// **The regression**: the driver resets to all-nil *before* the walk, so a pass stopped before
-    /// scoring leaves exactly this — not empty, containing no analysis.
+    /// scoring leaves exactly this - not empty, containing no analysis.
     @Test func aFullLengthAllNilArrayHasNoScoredPly() {
         let stalled = Self.game(evaluations: [Evaluation?](repeating: nil, count: 4))
         #expect(stalled.evaluations.isEmpty == false)   // the old gate said yes
         #expect(stalled.hasScoredPly == false)          // the question actually being asked
     }
 
-    /// One scored ply is enough (the driver writes as it walks) — "some plies" vs "all plies" are
+    /// One scored ply is enough (the driver writes as it walks) - "some plies" vs "all plies" are
     /// different questions; this answers the first.
     @Test func oneScoredPlyIsEnough() {
         let partial = Self.game(evaluations: [nil, .drawn, nil, nil])
         #expect(partial.hasScoredPly)
     }
 
-    /// A *drawn* evaluation is a real score, not an absence — same number as the display fold,
+    /// A *drawn* evaluation is a real score, not an absence - same number as the display fold,
     /// different meaning.
     @Test func aDrawnEvaluationIsAScore() {
         #expect(Self.game(evaluations: [.drawn, nil, nil, nil]).hasScoredPly)

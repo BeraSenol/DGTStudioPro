@@ -12,7 +12,7 @@ struct UCIProtocolTests {
         #expect(UCIProtocol.parse("\n") == nil)
     }
     
-    /// The distinguishing pin for the `.whitespacesAndNewlines` trim — a *keyword* wearing the
+    /// The distinguishing pin for the `.whitespacesAndNewlines` trim - a *keyword* wearing the
     /// newline only parses when the trim actually runs.
     @Test func keywordSurvivesTrailingNewlineOrCR() {
         #expect(UCIProtocol.parse("readyok\n") == .readyOK)
@@ -23,7 +23,7 @@ struct UCIProtocolTests {
     @Test func unknownKeywordReturnsNil() {
         #expect(UCIProtocol.parse("garbage") == nil)
         // `option name X type spin ...` lines are deliberately not recognized
-        // — engine option discovery isn't part of the eval-only phase.
+        // - engine option discovery isn't part of the eval-only phase.
         #expect(
             UCIProtocol.parse("option name Threads type spin default 1") == nil
         )
@@ -55,7 +55,7 @@ struct UCIProtocolTests {
         )
     }
     
-    // MARK: info Line — Score
+    // MARK: info Line - Score
     
     @Test func infoCpScoreParses() throws {
         let response = try #require(UCIProtocol.parse("info depth 12 score cp 45"))
@@ -94,7 +94,7 @@ struct UCIProtocolTests {
         #expect(info.score == .mate(-2))
     }
     
-    // MARK: info Line — PV
+    // MARK: info Line - PV
     
     @Test func infoPvCollectsRemainingTokens() throws {
         let response = try #require(UCIProtocol.parse(
@@ -131,7 +131,7 @@ struct UCIProtocolTests {
         #expect(info.pv == ["e7e8q", "a1a2"])
     }
     
-    // MARK: info Line — Multiple Fields
+    // MARK: info Line - Multiple Fields
     
     @Test func infoFullProductionLineParses() throws {
         let line = "info depth 20 seldepth 27 multipv 1 score cp 32 "
@@ -154,7 +154,7 @@ struct UCIProtocolTests {
     @Test func infoLowerboundUpperboundDoesNotConsumePayload() throws {
         // Aspiration-window qualifiers appear during search but carry no
         // payload. The parser must skip them without eating the next
-        // keyword — a bug here would cause the following field to be lost.
+        // keyword - a bug here would cause the following field to be lost.
         let response = try #require(UCIProtocol.parse(
             "info depth 5 score cp 100 lowerbound nodes 500"
         ))
@@ -238,7 +238,7 @@ struct UCIProtocolTests {
 
     // MARK: Known-and-ignored vs unrecognized
 
-    /// nil means two things, and previously both landed on the error channel — ~25 option lines per
+    /// nil means two things, and previously both landed on the error channel - ~25 option lines per
     /// start. This is the part a caller can only classify through.
     @Test(arguments: [
         "option name Hash type spin default 16 min 1 max 33554432",
@@ -247,11 +247,11 @@ struct UCIProtocolTests {
         "registration ok"
     ])
     func knownButUnusedKeywordsAreDeliberatelyIgnored(_ line: String) {
-        #expect(UCIProtocol.parse(line) == nil, "still unparsed — that has not changed")
+        #expect(UCIProtocol.parse(line) == nil, "still unparsed - that has not changed")
         #expect(UCIProtocol.isDeliberatelyIgnored(line), "but it is not news")
     }
 
-    /// Genuine drift is NOT absorbed — a classifier too eager to say "known" silences the very
+    /// Genuine drift is NOT absorbed - a classifier too eager to say "known" silences the very
     /// thing the error channel was cleared to reveal.
     @Test(arguments: [
         "Stockfish 18 by the Stockfish developers (see AUTHORS file)",
@@ -263,21 +263,21 @@ struct UCIProtocolTests {
     }
 
     /// Leading whitespace must not hide a known keyword, because the caller
-    /// asks this *before* it asks whether the line is blank — so a padded
+    /// asks this *before* it asks whether the line is blank - so a padded
     /// `option` line that classified as unrecognized would land back on the
     /// error channel this change exists to clear.
     @Test func leadingWhitespaceStillFindsTheKeyword() {
         #expect(UCIProtocol.isDeliberatelyIgnored("   option name Hash type spin default 16"))
     }
 
-    /// An empty line is neither — it takes the caller's own empty exit, and
+    /// An empty line is neither - it takes the caller's own empty exit, and
     /// asking this of it must not trap.
     @Test(arguments: ["", "   ", "\n"])
     func blankLinesClassifyAsNothing(_ line: String) {
         #expect(UCIProtocol.isDeliberatelyIgnored(line) == false)
     }
 
-    /// The lines the app actually acts on are untouched by the new arm — the
+    /// The lines the app actually acts on are untouched by the new arm - the
     /// check that this change subtracted nothing.
     @Test(arguments: ["uciok", "readyok", "id name Stockfish 18", "bestmove e2e4"])
     func handledResponsesAreNeverClassifiedAsIgnorable(_ line: String) {

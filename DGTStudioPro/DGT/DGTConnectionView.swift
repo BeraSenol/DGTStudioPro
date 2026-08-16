@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The board connection window — a confirmation/error surface since the device picker was
+/// The board connection window - a confirmation/error surface since the device picker was
 /// deleted (the app connects to `onlyBoardPath`, never anything else). A thin view over the
 /// app-global `DGTConnection`; never opens a port itself.
 struct DGTConnectionView: View {
@@ -17,7 +17,7 @@ struct DGTConnectionView: View {
         static let groupSpacing: CGFloat = 12
         /// A text line and its caption.
         static let captionSpacing: CGFloat = 4
-        /// The connected panel's info table width — sizing, see above.
+        /// The connected panel's info table width - sizing, see above.
         static let infoTableWidth: CGFloat = 260
     }
 
@@ -34,7 +34,7 @@ struct DGTConnectionView: View {
         }
         .frame(width: 420, height: 320)
         .onAppear {
-            // Attempt on sight — unless live or mid-reconnect: a player opening this mid-loop wants to see
+            // Attempt on sight - unless live or mid-reconnect: a player opening this mid-loop wants to see
             // (or stop) the retry, not restart it.
             if connection.isReconnecting || connection.isConnected { return }
             attemptConnect()
@@ -45,7 +45,7 @@ struct DGTConnectionView: View {
     // MARK: The One Attempt
 
     private func attemptConnect() {
-        // `search()` resolves the board itself — the "what counts as the board" rule stays out of views.
+        // `search()` resolves the board itself - the "what counts as the board" rule stays out of views.
         connection.search()
         guard let board = connection.attachedBoard else { return }  // not-found panel renders
         Task { await connection.connect(to: board) }
@@ -123,7 +123,7 @@ struct DGTConnectionView: View {
         .accessibilityIdentifier(AccessibilityID.dgtConnectingPanel)
     }
 
-    /// The retry loop's face; the loop lives in `DGTConnection` — this panel is pure status.
+    /// The retry loop's face; the loop lives in `DGTConnection` - this panel is pure status.
     private func reconnectingPanel(_ device: DGTSerialDevice) -> some View {
         VStack(spacing: Metrics.groupSpacing) {
             ProgressView()
@@ -222,7 +222,7 @@ struct DGTConnectionView: View {
                     .keyboardShortcut(.defaultAction)
 
             case .connected:
-                // Dismisses — a deliberate disconnect shouldn't resolve to a panel that looks like a stalled connect.
+                // Dismisses - a deliberate disconnect shouldn't resolve to a panel that looks like a stalled connect.
                 Button("Disconnect", role: .destructive) {
                     Task {
                         await connection.disconnect()
@@ -248,7 +248,7 @@ struct DGTConnectionView: View {
 
 // MARK: Previews
 
-/// `status` is `private(set)`, so a canvas can't pass the resting state — the standing waiver.
+/// `status` is `private(set)`, so a canvas can't pass the resting state - the standing waiver.
 /// The not-found panel is what a boardless canvas honestly shows.
 #Preview("Board Not Found") {
     DGTConnectionView()

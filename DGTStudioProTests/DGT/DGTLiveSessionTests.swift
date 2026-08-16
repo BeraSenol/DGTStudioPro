@@ -13,7 +13,7 @@ struct DGTLiveSessionTests {
         .init(white: "White", black: "Black")
     }
     
-    /// Awaits the armed settle — deterministic, no clock, no ceiling to re-guess (F7, superseded twice).
+    /// Awaits the armed settle - deterministic, no clock, no ceiling to re-guess (F7, superseded twice).
     private func settled(_ session: DGTLiveSession) async throws {
         let armed = try #require(session.quiescenceTask)
         await armed.value
@@ -64,7 +64,7 @@ struct DGTLiveSessionTests {
 
     /// The one write to `Roster.board`: `startNewGame` stamps the
     /// hook's answer onto the roster, and a nil hook (headless tests, or a
-    /// handshake that never reported a serial) leaves it nil — pre-M2
+    /// handshake that never reported a serial) leaves it nil - pre-M2
     /// archive shape, never an invented identity.
     @Test func startNewGameStampsBoardIdentityFromHook() {
         let session = DGTLiveSession()
@@ -100,7 +100,7 @@ struct DGTLiveSessionTests {
     // MARK: Manual Result Passthrough
     
     /// `resign` forwards to the running game (the other side wins). Reached via
-    /// `awaitingSetup` — no `boardChanged`, so no quiescence task is armed and
+    /// `awaitingSetup` - no `boardChanged`, so no quiescence task is armed and
     /// the test is fully deterministic.
     @Test func resignForwardsToLiveGame() {
         let session = DGTLiveSession()
@@ -122,7 +122,7 @@ struct DGTLiveSessionTests {
         #expect(session.liveGame?.isFinished == true)
     }
     
-    /// A manual result during `awaitingSetup` normalizes to `playing` — decided games have nothing
+    /// A manual result during `awaitingSetup` normalizes to `playing` - decided games have nothing
     /// left to set up (pre-fix, the session stayed stuck in setup).
     @Test func resignDuringSetupEndsTheSetupWait() {
         let session = DGTLiveSession()
@@ -137,7 +137,7 @@ struct DGTLiveSessionTests {
         #expect(session.liveGame?.result == .whiteWins)
     }
     
-    /// The draw twin — the same normalization covers both manual results.
+    /// The draw twin - the same normalization covers both manual results.
     @Test func agreeDrawDuringSetupEndsTheSetupWaitToo() {
         let session = DGTLiveSession()
         session.startNewGame(roster: roster())
@@ -170,7 +170,7 @@ struct DGTLiveSessionTests {
         #expect(session.liveGame?.roster == edited)
     }
     
-    /// With no game running there is nothing to edit — a documented no-op.
+    /// With no game running there is nothing to edit - a documented no-op.
     @Test func updateRosterWhileIdleIsANoOp() {
         let session = DGTLiveSession()
         
@@ -238,7 +238,7 @@ struct DGTLiveSessionTests {
         #expect(session.liveGame?.result == .blackWins)
     }
     
-    /// The draw twin of the resign path above — both manual results share
+    /// The draw twin of the resign path above - both manual results share
     /// `normalizeModeForManualResult`.
     @Test func agreeDrawDuringRecoveryEndsRecoveryToo() async throws {
         let session = DGTLiveSession()
@@ -271,7 +271,7 @@ struct DGTLiveSessionTests {
         session.startNewGame(roster: roster())        // already-set-up → playing
         
         // A pawn materializing on e5 completes no legal move from the
-        // start position — the same unexplainable board the recovery
+        // start position - the same unexplainable board the recovery
         // tests above use.
         var garbage = Position.starting
         garbage[Squares.e5] = .whitePawn
@@ -297,7 +297,7 @@ struct DGTLiveSessionTests {
         )
     }
     
-    /// `startNewGame` writes a roster-only snapshot immediately — the file
+    /// `startNewGame` writes a roster-only snapshot immediately - the file
     /// is claimed before the first ply, so even a crash during move one
     /// still resurrects the roster.
     @Test func startNewGameSavesADraft() throws {
@@ -407,7 +407,7 @@ struct DGTLiveSessionTests {
         #expect(session.pendingDraft == nil)
     }
     
-    /// A file that exists but won't decode surfaces as `.corrupt` — never
+    /// A file that exists but won't decode surfaces as `.corrupt` - never
     /// deleted behind the player's back, never silently ignored.
     @Test func corruptFileLoadsAsCorrupt() throws {
         let store = temporaryStore()
@@ -447,7 +447,7 @@ struct DGTLiveSessionTests {
     
     /// When the physical board already matches the game's current position
     /// (pieces untouched across the relaunch), resume goes straight to
-    /// `playing` — the same already-set-up shortcut as `startNewGame`.
+    /// `playing` - the same already-set-up shortcut as `startNewGame`.
     @Test func resumeWithBoardAlreadyAtCurrentPositionBeginsPlaying() throws {
         let store = temporaryStore()
         let original = LiveGame(roster: roster())
@@ -548,7 +548,7 @@ struct DGTLiveSessionTests {
     }
     
     /// A finished-but-unarchived draft resumes with its manual result
-    /// re-applied — the game comes back decided, not half-forgotten. This
+    /// re-applied - the game comes back decided, not half-forgotten. This
     /// suite runs headless (nil `onGameFinished`), so no archive fires here;
     /// the wired self-heal path lives in `DGTLiveSessionArchiveTests`.
     @Test func resumeOfAFinishedDraftReappliesTheResult() throws {
@@ -568,7 +568,7 @@ struct DGTLiveSessionTests {
     // MARK: Board-Dump Resync
 
     /// The `.unresolved` pre-flight: with the resync hook wired, the first
-    /// unexplainable settle asks for a dump and stays in `playing` — no
+    /// unexplainable settle asks for a dump and stays in `playing` - no
     /// recovery, no desync record, and exactly one request.
     @Test func firstUnresolvedSettleAsksForADumpInsteadOfRecovery() async throws {
         let session = DGTLiveSession()
@@ -589,7 +589,7 @@ struct DGTLiveSessionTests {
     }
 
     /// A board the dump-refreshed state still can't explain escalates for
-    /// real — and does not ask twice: the second unresolved settle spends
+    /// real - and does not ask twice: the second unresolved settle spends
     /// the debt rather than re-arming it, so recovery is always reachable.
     @Test func secondUnresolvedSettleEntersRecoveryWithoutAskingAgain() async throws {
         let session = DGTLiveSession()
@@ -611,7 +611,7 @@ struct DGTLiveSessionTests {
     }
 
     /// An explained settle retires the one-shot debt, so a *later*
-    /// divergence earns a fresh dump before recovery does — the debt is per
+    /// divergence earns a fresh dump before recovery does - the debt is per
     /// divergence, not per game.
     @Test func anExplainedSettleReArmsTheResyncForTheNextDivergence() async throws {
         let session = DGTLiveSession()
@@ -626,7 +626,7 @@ struct DGTLiveSessionTests {
         session.boardChanged(garbage)
         try await settled(session)          // defers, asks (1)
         session.boardChanged(.starting)     // dump answers: board was fine
-        try await settled(session)          // .noChange — debt retired
+        try await settled(session)          // .noChange - debt retired
         #expect(session.needsRecovery == false)
 
         session.boardChanged(garbage)       // a new divergence
@@ -639,7 +639,7 @@ struct DGTLiveSessionTests {
     }
 
     /// The additive contract, pinned from the side that would break: with no
-    /// hook — headless suites, unwired builds — `.unresolved` enters
+    /// hook - headless suites, unwired builds - `.unresolved` enters
     /// recovery on the first settle, exactly as before the dump gate. (The recovery
     /// suite above relies on this; here it is the *subject*.)
     @Test func unresolvedWithoutTheHookEntersRecoveryImmediately() async throws {

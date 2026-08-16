@@ -76,7 +76,7 @@ extension GameState {
         !isInCheck && legalMoves().isEmpty
     }
     
-    /// Apply hypothetically and test the king — one check that naturally covers pins, EP discovered
+    /// Apply hypothetically and test the king - one check that naturally covers pins, EP discovered
     /// checks, moving while in check, and king self-checks.
     private func isLegal(_ move: Move, currentKingSquare: Square) -> Bool {
         let nextKingSquare = move.pieceType == .king ? move.to : currentKingSquare
@@ -224,7 +224,7 @@ extension GameState {
             var previous = square
             var target = square + direction
             
-            // Each ray step's file may change by at most 1 — more is a wraparound.
+            // Each ray step's file may change by at most 1 - more is a wraparound.
             while target.isOnBoard && abs(target.file - previous.file) <= 1 {
                 let targetPiece = position[target]
                 
@@ -252,7 +252,7 @@ extension GameState {
     }
     
     // MARK: Castling (7d)
-    // Own conditions because the king's *transit* square must not be attacked — the legal filter
+    // Own conditions because the king's *transit* square must not be attacked - the legal filter
     // only sees the final square. Destination safety falls out of the filter.
     private func appendCastlingMoves(from square: Square, into moves: inout [Move]) {
         let color = activeColor
@@ -266,7 +266,7 @@ extension GameState {
         guard castlingRights.has(color, .kingSide)
                 || castlingRights.has(color, .queenSide) else { return }
         
-        // Rights imply a home rook for positions reached through `applying` — NOT for a parsed FEN,
+        // Rights imply a home rook for positions reached through `applying` - NOT for a parsed FEN,
         // and the draft sidecar resumes through `FEN(parsing:)`, so a hand-edited file reaches here.
         let homeRook = Piece(color, .rook)
         let kingSideRookHome:  Square = color == .white ? Squares.h1 : Squares.h8

@@ -35,7 +35,7 @@ struct LiveGameRosterForm: View {
     
     @Binding var roster: LiveGame.Roster
     
-    /// Identifier prefix for the six fields — the archive sheet passes `archive.form.*`.
+    /// Identifier prefix for the six fields - the archive sheet passes `archive.form.*`.
     var identifierPrefix = AccessibilityID.liveFormPrefix
     
     /// Known-player **tag forms** for the seat pickers (the picker inserts
@@ -51,7 +51,7 @@ struct LiveGameRosterForm: View {
         )
     }
     
-    /// The seat picker: a borderless menu trailing the field — the combo-box shape, no AppKit
+    /// The seat picker: a borderless menu trailing the field - the combo-box shape, no AppKit
     /// needed. Hidden when the host supplies no players.
     @ViewBuilder
     private func playerMenu(for field: Binding<String>, identifier: String) -> some View {
@@ -105,7 +105,7 @@ struct LiveGameRosterForm: View {
                 }
 
                 // The guard: the two seats are one `Roster`, so the check needs no drafts to compare.
-                // A warning line plus a disabled Start — the alert belongs to Get Info's commit model.
+                // A warning line plus a disabled Start - the alert belongs to Get Info's commit model.
                 if roster.seatsNameOnePlayer {
                     Label(
                         "\(PlayerName.displayForm(of: roster.white)) can’t play both sides. "
@@ -131,10 +131,25 @@ struct LiveGameRosterForm: View {
                 TextField(
                     "Site",
                     text: $roster.site,
-                    prompt: Text("Home")
+                    prompt: Text(verbatim: "City, Region BEL")
                 )
                 .accessibilityIdentifier(AccessibilityID.formSite(identifierPrefix))
-                
+
+                // The seat guard's shape, applied to format: a warning line here, the disabled
+                // affirmative button at each host. Empty is exempt - it folds to "?" at the door.
+                if roster.siteViolatesFormat {
+                    Label(
+                        "Site follows PGN’s “City, Region CCC” - “Hasselt, Limburg BEL”. "
+                        + "Clear the field for an unknown site.",
+                        systemImage: "exclamationmark.triangle.fill"
+                    )
+                    .font(.callout)
+                    .foregroundStyle(.orange)
+                    .accessibilityIdentifier(
+                        AccessibilityID.formSiteFormat(identifierPrefix)
+                    )
+                }
+
                 DatePicker(
                     "Date",
                     selection: dateBinding,
@@ -166,27 +181,30 @@ struct NewLiveGameSheet: View {
     /// Called with the normalized roster on start; the caller owns `startNewGame` and dismissal.
     let onStart: (LiveGame.Roster) -> Void
     
-    /// "Not Now" — dismiss without starting (no re-prompt until the board leaves and returns).
+    /// "Not Now" - dismiss without starting (no re-prompt until the board leaves and returns).
     let onNotNow: () -> Void
     
-    /// True when starting would replace an unfinished game — gates the destructive confirmation.
+    /// True when starting would replace an unfinished game - gates the destructive confirmation.
     let replacesUnfinishedGame: Bool
     
     // MARK: Persisted Defaults
     
-    @AppStorage(StorageKeys.defaultEvent) private var defaultEvent = ""
-    @AppStorage(StorageKeys.defaultSite) private var defaultSite = ""
+    /// Built-in fallbacks (Bera, 16 Aug 2026): the board's own name and the room it lives in,
+    /// already in Site's required shape. Absent keys only - a stored value, including a
+    /// deliberately cleared one, still wins, and Start writes back whatever was typed.
+    @AppStorage(StorageKeys.defaultEvent) private var defaultEvent = "DGT USB eBoard"
+    @AppStorage(StorageKeys.defaultSite) private var defaultSite = "Hasselt, Limburg BEL"
     @AppStorage(StorageKeys.defaultWhitePlayer) private var defaultWhite = ""
     
     // MARK: Round Prefill
-    /// The picker's source and resolution set. Matching only — the dialog never creates a `Player`.
+    /// The picker's source and resolution set. Matching only - the dialog never creates a `Player`.
     @Query(sort: \Player.name) private var players: [Player]
     
     /// Library games projected for the pairing fold. An unhealed row projects nil seats and simply
-    /// doesn't inform — degrades to no suggestion, never a wrong one.
+    /// doesn't inform - degrades to no suggestion, never a wrong one.
     @Query private var games: [PGN]
     
-    /// The last value the prefill wrote, so it only overwrites its own suggestion — a typed round is
+    /// The last value the prefill wrote, so it only overwrites its own suggestion - a typed round is
     /// never touched.
     @State private var prefilledRound: Int?
     
@@ -211,7 +229,7 @@ struct NewLiveGameSheet: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding([.horizontal, .top])
             
-            // Tag form into the field, `name` fallback — display form is still a valid tag, just not
+            // Tag form into the field, `name` fallback - display form is still a valid tag, just not
             // the remembered one.
             LiveGameRosterForm(
                 roster: $roster,
@@ -227,12 +245,12 @@ struct NewLiveGameSheet: View {
                 
                 Spacer()
                 
-                // Cannot start with one player on both sides. The form says why; this stops the gesture.
-                // Both read `roster.seatsNameOnePlayer` — one predicate, called twice (the remedy).
+                // Cannot start with one player on both sides or a malformed site. The form says
+                // why; this stops the gesture. Each guard is one predicate, called twice (the remedy).
                 Button("Start Game", action: startTapped)
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
-                    .disabled(roster.seatsNameOnePlayer)
+                    .disabled(roster.seatsNameOnePlayer || roster.siteViolatesFormat)
                     .accessibilityIdentifier(AccessibilityID.liveNewGameStart)
             }
             .padding()
@@ -241,7 +259,7 @@ struct NewLiveGameSheet: View {
         .accessibilityIdentifier(AccessibilityID.liveNewGameSheet)
         .onAppear {
             prefillFromDefaults()
-            // The persisted White default may itself resolve — a returning pair sees its round on open.
+            // The persisted White default may itself resolve - a returning pair sees its round on open.
             updateRoundPrefill()
         }
         .onChange(of: roster.white) { _, _ in updateRoundPrefill() }
@@ -288,7 +306,7 @@ struct NewLiveGameSheet: View {
     }
     
     /// A seat resolves iff its text matches a known player under the fold, routed through
-    /// `displayForm` first exactly like `resolvePlayer` — the field carries tag form.
+    /// `displayForm` first exactly like `resolvePlayer` - the field carries tag form.
     private func resolvedKey(for field: String) -> String? {
         let display = PlayerName.displayForm(of: field)
         guard !display.isEmpty, display != "?" else { return nil }
@@ -368,12 +386,16 @@ struct EditLiveGameDetailsSheet: View {
                 
                 Spacer()
                 
+                // Gated since 16 Aug 2026 - this Save was the one roster door with *no* guard: the
+                // shared form drew the seat warning here and nothing stopped the gesture, so an
+                // edit could mint by hand what the self-play guard scoped out. Site joins under the same rule.
                 Button("Save") {
                     onSave(normalized(roster))
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
+                .disabled(roster.seatsNameOnePlayer || roster.siteViolatesFormat)
                 .accessibilityIdentifier(AccessibilityID.liveEditDetailsSave)
             }
             .padding()
@@ -407,8 +429,22 @@ struct EditLiveGameDetailsSheet: View {
     )
 }
 
+/// The site-format guard's warning arm (16 Aug 2026) - the branch a well-behaved fixture
+/// never reaches, which is why it has a preview.
+#Preview("Roster Form, Malformed Site") {
+    @Previewable @State var roster = LiveGame.Roster(
+        event: "Club Night",
+        site: "Home",
+        white: "Senol, Bera",
+        black: "Baelus, Lorenzo"
+    )
+
+    LiveGameRosterForm(roster: $roster)
+        .frame(width: 420, height: 400)
+}
+
 /// The seat guard, which nothing else renders. The two seats are spelled differently on
-/// purpose — tag form against display form, one player either way — proving the fold, not `==`.
+/// purpose - tag form against display form, one player either way - proving the fold, not `==`.
 #Preview("Roster Form, Seats Collide") {
     @Previewable @State var roster = LiveGame.Roster(
         event: "Club Night",

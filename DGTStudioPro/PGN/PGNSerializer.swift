@@ -1,6 +1,6 @@
 import Foundation
 
-/// Writes the DGT reference shape, byte for byte — pinned to the three reference files,
+/// Writes the DGT reference shape, byte for byte - pinned to the three reference files,
 /// not the standard: LF endings; nine tags in fixed order (roster, `Board`, `TimeControl`); one
 /// blank line; one full move per line with a white-only final line; result alone on the last
 /// line; single trailing `\n`; no wrapping; evaluations and classification never written.
@@ -13,7 +13,7 @@ enum PGNSerializer {
     
     // MARK: Text
     
-    /// `RosterSummary` is the value carrier, **not** its own renderer — export needs the raw
+    /// `RosterSummary` is the value carrier, **not** its own renderer - export needs the raw
     /// `"Senol, Bera"`; the display subscript belongs to the sidebars.
     static func text(
         roster: RosterSummary,
@@ -22,7 +22,7 @@ enum PGNSerializer {
         moves: [String]
     ) -> String {
         var out = ""
-        // The seven from the enum that owns the order — an eighth roster tag is a compile error, not a
+        // The seven from the enum that owns the order - an eighth roster tag is a compile error, not a
         // line that quietly stops being written. Board and TimeControl follow.
         for tag in SevenTagRoster.allCases {
             out += self.tag(tag.rawValue, roster.tagValue(for: tag))
@@ -40,7 +40,7 @@ enum PGNSerializer {
     }
     
     /// One full move per line; a game ending on White's move gets a white-only final line. Zero
-    /// moves emit nothing — blank line and result still stand.
+    /// moves emit nothing - blank line and result still stand.
     private static func movetext(_ moves: [String]) -> String {
         var lines: [String] = []
         var ply = 0
@@ -54,16 +54,16 @@ enum PGNSerializer {
     
     // MARK: Filename
     
-    /// The reference filename shape: ordinal, then **given** names, White vs Black — given names is
+    /// The reference filename shape: ordinal, then **given** names, White vs Black - given names is
     /// what those files do.
     static func fileName(white: String, black: String, index: Int) -> String {
         "\(index). \(givenName(white)) vs \(givenName(black)).pgn"
     }
 
-    /// The reader half of `fileName` — here because the type that owns a convention owns
+    /// The reader half of `fileName` - here because the type that owns a convention owns
     /// both directions. **Reads the ordinal and nothing else**: the folder uses full names where
     /// the writer uses given names, so verifying seats would reject exactly the files this reads.
-    /// Requiring the period is the guard — `1961 Candidates.pgn` is a year, not game 1961.
+    /// Requiring the period is the guard - `1961 Candidates.pgn` is a year, not game 1961.
     static func libraryIndex(fromFileName name: String) -> Int? {
         let digits = name.prefix { $0.isNumber }
         guard !digits.isEmpty,
@@ -80,7 +80,7 @@ enum PGNSerializer {
         return first.isEmpty ? unknownTag : sanitized(first)
     }
     
-    /// `/` is illegal on APFS and `:` the legacy separator — both become `-` so near-identical
+    /// `/` is illegal on APFS and `:` the legacy separator - both become `-` so near-identical
     /// names don't collide.
     private static func sanitized(_ component: String) -> String {
         component

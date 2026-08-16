@@ -1,14 +1,14 @@
 import Foundation
 
-/// A Library game projected to the pure value the cores consume — `PlayerStats` and
+/// A Library game projected to the pure value the cores consume - `PlayerStats` and
 /// `Glicko1` never touch `@Model`s. Sides are the *resolved* links, never raw tags: `"?"` and
 /// unbackfilled rows are both "no player".
 struct GameRecord: Sendable, Hashable {
     
     struct Side: Sendable, Hashable {
-        /// `Player.normalizedName` — opaque to the cores.
+        /// `Player.normalizedName` - opaque to the cores.
         let key: String
-        /// `Player.name` — first-seen display casing.
+        /// `Player.name` - first-seen display casing.
         let name: String
     }
     
@@ -21,7 +21,7 @@ struct GameRecord: Sendable, Hashable {
     let importedAt: Date
     let contentHash: String
     
-    // The fields `TagRule` reads; trailing defaults are fixture ergonomics — the projection passes
+    // The fields `TagRule` reads; trailing defaults are fixture ergonomics - the projection passes
     // every field explicitly.
     let event: String
     let site: String
@@ -31,7 +31,7 @@ struct GameRecord: Sendable, Hashable {
     let hasAnalysis: Bool
     let isTimed: Bool
 
-    // The *stored* classification, never the moves it was derived from — movetext on records would
+    // The *stored* classification, never the moves it was derived from - movetext on records would
     // make every fold carry it for nothing.
     let opening: ECOOpening?
     let specialCheckmate: SpecialCheckmate?
@@ -79,7 +79,7 @@ struct GameRecord: Sendable, Hashable {
     var effectiveDate: Date { date ?? importedAt }
     
     /// The recorded ordering contract for every fold: `effectiveDate` ↑, then `importedAt`, then
-    /// `contentHash` — a fold's output is only as deterministic as its order, so the chain down to
+    /// `contentHash` - a fold's output is only as deterministic as its order, so the chain down to
     /// a total tiebreak is the contract.
     static func chronologicalOrder(_ lhs: GameRecord, _ rhs: GameRecord) -> Bool {
         if lhs.effectiveDate != rhs.effectiveDate { return lhs.effectiveDate < rhs.effectiveDate }

@@ -1,7 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// Acceptance for `FEN(parsing:)` — the happy path; rejections live in the rejection suite.
+/// Acceptance for `FEN(parsing:)` - the happy path; rejections live in the rejection suite.
 @Suite("FEN String Parsing")
 struct FENParsingTests {
 
@@ -53,7 +53,7 @@ struct FENParsingTests {
     }
 
     @Test func sparseEndgameParsesCorrectly() throws {
-        // Perft position 3 — minimal-material endgame.
+        // Perft position 3 - minimal-material endgame.
         let fen = try FEN(parsing: "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -")
         #expect(fen.position[Squares.a5] == .whiteKing)
         #expect(fen.position[Squares.h4] == .blackKing)
@@ -108,7 +108,7 @@ struct FENParsingTests {
 
     @Test func castlingNonCanonicalOrderAccepted() throws {
         // Per FEN spec the canonical order is KQkq, but castling rights are
-        // a set, not a sequence — order does not change semantic meaning.
+        // a set, not a sequence - order does not change semantic meaning.
         let fen = try FEN(parsing: "8/8/8/8/8/8/8/8 w qkQK -")
         #expect(fen.castlingRights == .all)
     }
@@ -180,7 +180,7 @@ struct FENParsingTests {
     @Test func positionKeyCarriesEveryDoublePushEPTarget() throws {
         // `updatedEnPassantTarget` is *permissive*: it stamps the skipped square after every double
         // push, so a dead EP right splits two otherwise-identical `positionKey`s. Pinned as
-        // documentation, not endorsement — no repetition-detection consumer exists yet.
+        // documentation, not endorsement - no repetition-detection consumer exists yet.
         let start: GameState = .starting
         let afterDoublePush = start.applying(try start.parseSAN("e4"))
 

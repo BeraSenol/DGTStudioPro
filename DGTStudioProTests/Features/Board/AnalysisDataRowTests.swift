@@ -1,8 +1,8 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The Analysis Data row fold. Nonisolated — pure values.
-@Suite("Analysis Data — Rows")
+/// The Analysis Data row fold. Nonisolated - pure values.
+@Suite("Analysis Data - Rows")
 struct AnalysisDataRowTests {
 
     private let moves = ["e4", "e5", "Nf3", "Nc6"]
@@ -10,7 +10,7 @@ struct AnalysisDataRowTests {
     // MARK: The Nil Rule
 
     /// **The deliberate divergence, pinned**: the bar folds nil to "0.0" (it must render
-    /// something); the data table carries nil — "0.0" for a never-scored ply is a lie.
+    /// something); the data table carries nil - "0.0" for a never-scored ply is a lie.
     @Test("An unscored ply carries nil, never the bar's 0.0 fold")
     func unscoredPliesAreNilNotZero() {
         let rows = AnalysisDataRow.rows(
@@ -26,7 +26,7 @@ struct AnalysisDataRowTests {
         #expect(rows[2].evaluation != nil)
     }
 
-    /// `PGN`'s other invariant shape — an empty array — yields a full-length
+    /// `PGN`'s other invariant shape - an empty array - yields a full-length
     /// table of unscored rows rather than no rows: the *moves* happened, and
     /// a window that showed nothing would read as a resolution failure.
     @Test("An empty evaluations array yields unscored rows for every move")
@@ -40,11 +40,11 @@ struct AnalysisDataRowTests {
     // MARK: Swing
 
     /// The step against the ply before, in percentage points of white's win
-    /// probability — the blunder signal, folded from data the app already
+    /// probability - the blunder signal, folded from data the app already
     /// stores. Expected values computed through `whiteWinProbability` itself,
     /// which is a **base-e** sigmoid at k=400: 0 cp = 50%, +100 cp ≈ 56%, a
-    /// mate clamps to 100%. (The first spelling of this test assumed base-10 —
-    /// 64% at +100 cp — and ⌘U corrected the author, not the fold.)
+    /// mate clamps to 100%. (The first spelling of this test assumed base-10 -
+    /// 64% at +100 cp - and ⌘U corrected the author, not the fold.)
     @Test("The swing is the win-probability step against the ply before")
     func swingIsTheStepAgainstThePreviousPly() {
         let rows = AnalysisDataRow.rows(
@@ -79,7 +79,7 @@ struct AnalysisDataRowTests {
     // MARK: Shared Grammars
 
     /// The move column is `EvaluationGraphReading`'s spelling, asserted
-    /// against that type's own output rather than a literal — the
+    /// against that type's own output rather than a literal - the
     /// assert-against-the-shared-source rule, so the two surfaces cannot
     /// drift while both suites stay green.
     @Test("The move grammar is the graph reading's, verbatim")
@@ -115,7 +115,7 @@ struct AnalysisDataRowTests {
 
     // MARK: Win Probability
 
-    /// Mates clamp to the ends and a dead-equal position is 50% — the
+    /// Mates clamp to the ends and a dead-equal position is 50% - the
     /// projection is `whiteWinProbability`'s, so these are its known points
     /// rendered, not a new sigmoid.
     @Test("Win percent renders the projection's known points")
@@ -133,7 +133,7 @@ struct AnalysisDataRowTests {
 
     // MARK: Identity
 
-    /// Ids are the ply indices — unique by construction, which is the one
+    /// Ids are the ply indices - unique by construction, which is the one
     /// thing a `Table`'s `ForEach` cannot tolerate being wrong.
     @Test("Row ids are the ply indices, distinct and ordered")
     func idsArePlyIndices() {

@@ -4,14 +4,14 @@ import SwiftUI
 /// Finder-column shape, `LibraryColumnsView`'s twin: flat player list left, detail right. The
 /// list follows `players`' display order; the rank badge stays honest in any order (rank is
 /// computed under the ranking method, not the sort). The one-column header cannot *display* an
-/// ordering it did not set — accepted cost, documented at the Library twin.
+/// ordering it did not set - accepted cost, documented at the Library twin.
 struct PlayersColumnsView: View {
 
     // MARK: Stored Properties
     let players: [RankedPlayer]
     /// A set (shared selection model); the detail pane counts a plural selection.
     @Binding var selectedKeys: Set<PlayerStats.ID>
-    /// The selected player's games, newest first — threaded exactly as the inspector gets it.
+    /// The selected player's games, newest first - threaded exactly as the inspector gets it.
     let recentGames: [PGN]
     let onShowInLibrary: (PlayerStats.ID) -> Void
 
@@ -22,7 +22,7 @@ struct PlayersColumnsView: View {
 
     // MARK: Computed Properties
 
-    /// Single or nothing — the detail pane details one thing.
+    /// Single or nothing - the detail pane details one thing.
     private var selectedPlayer: RankedPlayer? {
         guard selectedKeys.count == 1, let key = selectedKeys.first else { return nil }
         return players.first { $0.id == key }
@@ -58,13 +58,13 @@ struct PlayersColumnsView: View {
             }
             .frame(maxWidth: .infinity)
         } else {
-            // A one-column `Table`, the Library's twin — see `LibraryColumnsView.gameList` for the header
+            // A one-column `Table`, the Library's twin - see `LibraryColumnsView.gameList` for the header
             // cost and the missing `columnCustomization`.
             Table(players, selection: $selectedKeys, sortOrder: $sortOrder) {
                 TableColumn("Player", value: \.stats.name) { player in
                     row(for: player)
                 }
-                // 160 floor, all three bounds — the Library twin's reasoning verbatim (min-only did not hold).
+                // 160 floor, all three bounds - the Library twin's reasoning verbatim (min-only did not hold).
                 .width(min: 160, ideal: 200, max: .infinity)
             }
             .tableStyle(.inset)
@@ -77,7 +77,9 @@ struct PlayersColumnsView: View {
         }
     }
 
-    /// Finder's row: monogram, name, game count, rank chip — reasoning at `LibraryColumnsView.row(for:)`.
+    /// Finder's row: symbol and name, nothing else - reasoning at `LibraryColumnsView.row(for:)`.
+    /// (This sentence listed "monogram, game count, rank chip" long after the row had shed all
+    /// three; corrected 16 Aug 2026.)
     private func row(for player: RankedPlayer) -> some View {
         HStack(spacing: 6) {
             Image(systemName: "person")
@@ -116,9 +118,9 @@ struct PlayersColumnsView: View {
     private func playerDetail(_ player: RankedPlayer) -> some View {
         ScrollView {
             VStack(spacing: 16) {
-                PlayerMonogram(name: player.stats.name, diameter: 96)
+                PlayerMonogram(name: player.stats.name, side: 96)
 
-                // The gallery's identity row, kept in both hosts — rank earns the medal beside the name.
+                // The gallery's identity row, kept in both hosts - rank earns the medal beside the name.
                 HStack(spacing: 8) {
                     Text("#\(player.rank)")
                         .font(.title2.weight(.bold).monospacedDigit())
@@ -147,7 +149,7 @@ struct PlayersColumnsView: View {
     }
 
     /// The inspector's recent-games rules restated: capped at ten with a tail, rows open via
-    /// `openWindow(value:)`. Two hosts' decisions that agree today — deliberately not shared.
+    /// `openWindow(value:)`. Two hosts' decisions that agree today - deliberately not shared.
     private var recentGamesBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Recent Games")
@@ -216,7 +218,7 @@ struct PlayersColumnsView: View {
     .modelContainer(for: PGN.self, inMemory: true)
 }
 
-/// The no-games branch — "No games", not a collapsed void.
+/// The no-games branch - "No games", not a collapsed void.
 #Preview("Selected, No Games") {
     @Previewable @State var selection: Set<PlayerStats.ID> = [PreviewFixtures.topStats().id]
     @Previewable @State var sort = PlayersDestination.defaultSortOrder
@@ -232,7 +234,7 @@ struct PlayersColumnsView: View {
     .modelContainer(for: PGN.self, inMemory: true)
 }
 
-/// The counting branch — the state single-select columns could never render.
+/// The counting branch - the state single-select columns could never render.
 #Preview("Multi-Selection") {
     @Previewable @State var selection: Set<PlayerStats.ID> = Set(
         PreviewFixtures.rankedPlayers().prefix(2).map(\.id)

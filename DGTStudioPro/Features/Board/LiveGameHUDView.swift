@@ -1,20 +1,20 @@
 import SwiftUI
 
 /// The live-play status card (M3.1; re-homed into the sidebar's
-/// `SessionSidebarPanel`) — the answer to "what is the app doing
+/// `SessionSidebarPanel`) - the answer to "what is the app doing
 /// with my board right now?", shown whenever a board is connected or
 /// being chased (`reconnecting`). Plain disconnected has no card at all:
 /// the message carried no action, so it lives in the live inspector's
 /// empty state. Laid out as a narrow vertical card for the sidebar; the
 /// container owns outer spacing. The `live.hud.*` identifiers are
-/// unchanged — their witness stays the hardware checklist, so the
+/// unchanged - their witness stays the hardware checklist, so the
 /// re-home is not a contract break.
 struct LiveGameHUDView: View {
 
     // MARK: Phase
 
     /// Everything the banner can say. Derivation (including priority between
-    /// overlapping session flags) lives in `SessionSidebarPanel.hudPhase` —
+    /// overlapping session flags) lives in `SessionSidebarPanel.hudPhase` -
     /// moved there with the card itself.
     enum Phase: Equatable {
         case reconnecting
@@ -28,15 +28,15 @@ struct LiveGameHUDView: View {
         case playing(sideToMove: PieceColor, lastSAN: String?, ply: Int)
         /// A legal move is recognized but one physical fix remains (e.g. an
         /// en-passant capture whose taken pawn wasn't lifted). A gentle
-        /// nudge — visually distinct from recovery.
+        /// nudge - visually distinct from recovery.
         case correction(message: String)
-        /// The board can't be explained by any legal move — restore the last
+        /// The board can't be explained by any legal move - restore the last
         /// legal position. The per-square checklist renders below this card
         /// (`RecoveryGuidanceView`); this is only the headline.
         case recovering(lastSAN: String?)
         /// Terminal result reached and safely in the Library.
         case finished(result: GameResult)
-        /// Terminal result reached but the Library save failed — the game
+        /// Terminal result reached but the Library save failed - the game
         /// is held (draft kept, new-game suppressed) until Retry succeeds
         /// or the player discards from the inspector.
         case archiveFailed(result: GameResult, message: String)
@@ -126,7 +126,7 @@ struct LiveGameHUDView: View {
         case .awaitingSetup:
             "Set up the starting position on the board…"
         case .playing(let side, _, _):
-            // One spelling, shared with the toolbar subtitle — this card and
+            // One spelling, shared with the toolbar subtitle - this card and
             // that subtitle are on screen together, so a drift between "to
             // move" and "to play" would be visible at a glance.
             side.toMoveDescription

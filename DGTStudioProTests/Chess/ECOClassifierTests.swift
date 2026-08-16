@@ -4,10 +4,10 @@ import Testing
 /// The opening classifier. Two halves, deliberately separated: the pure
 /// walk over a five-row fixture (no bundle, nonisolated, the `Glicko1` /
 /// `TagRule` shape), and a handful of spot checks against the real bundled
-/// table guarded against vacuity — a missing resource must fail loudly here
+/// table guarded against vacuity - a missing resource must fail loudly here
 /// rather than let the app quietly classify nothing, which is exactly the
 /// failure mode "no opening found" is indistinguishable from in the UI.
-@Suite("ECO — Classification")
+@Suite("ECO - Classification")
 struct ECOClassifierTests {
 
     // MARK: Fixture
@@ -40,7 +40,7 @@ struct ECOClassifierTests {
             for: ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6"]
         )
         #expect(match?.opening.code == "C68")
-        // Six of the eight plies are book — the analysis skip starts at the seventh.
+        // Six of the eight plies are book - the analysis skip starts at the seventh.
         #expect(match?.plies == 6)
     }
 
@@ -118,7 +118,7 @@ struct ECOClassifierTests {
 
     /// SAN is case-significant, so the fold must not reach for `lowercased()`
     /// the way the string fold does. This is the tripwire for that.
-    @Test("Case is not folded — a bishop move and a b-pawn move stay distinct")
+    @Test("Case is not folded - a bishop move and a b-pawn move stay distinct")
     func caseIsNotFolded() {
         let classifier = ECOClassifier([
             (["b4"], ECOOpening(code: "A00", name: "Polish Opening")),
@@ -160,23 +160,23 @@ struct ECOClassifierTests {
 // MARK: - The Bundled Table
 
 /// Spot checks against the real asset. Every expectation here is a line read
-/// off the source file's own bytes, never inferred from a neighbour — the
+/// off the source file's own bytes, never inferred from a neighbour - the
 /// standing rule about guessing an API name, applied to data.
-@Suite("ECO — Bundled Table")
+@Suite("ECO - Bundled Table")
 struct ECOTableTests {
 
     /// The vacuity guard. Without it every expectation below would pass
     /// trivially against an empty table if the resource ever fell out of the
-    /// bundle — the M1 lesson, in the shape this feature can fail.
+    /// bundle - the M1 lesson, in the shape this feature can fail.
     private func loadedTable() throws -> ECOClassifier {
         let table = ECOTable.bundled
-        // Probed with `1. e4 e6`, a row read off the source file's bytes —
+        // Probed with `1. e4 e6`, a row read off the source file's bytes -
         // not `1. e4` alone, whose presence would be an assumption about a
         // line nobody has looked at.
         try #require(
             table.opening(for: ["e4", "e6"]) != nil,
             """
-            The bundled ECO table classifies nothing — the eco-a…eco-e.tsv \
+            The bundled ECO table classifies nothing - the eco-a…eco-e.tsv \
             resources are missing from the app bundle, and every classification \
             expectation below would pass vacuously against it.
             """
@@ -221,7 +221,7 @@ struct ECOTableTests {
         #expect(mainLine?.variation == "Vienna Gambit, Main Line")
     }
 
-    @Test("The Ruy Lopez classifies — the milestone's own gate sentence")
+    @Test("The Ruy Lopez classifies - the milestone's own gate sentence")
     func ruyLopezClassifies() throws {
         let ruy = try loadedTable().opening(for: ["e4", "e5", "Nf3", "Nc6", "Bb5"])
         #expect(ruy?.code == "C60")
@@ -231,7 +231,7 @@ struct ECOTableTests {
 
     /// One row per volume, because the single probe in ``loadedTable()``
     /// cannot tell a fully bundled table from one where only `eco-c.tsv`
-    /// made it into Resources — the C-volume expectations above would all
+    /// made it into Resources - the C-volume expectations above would all
     /// still pass, and every English, Sicilian, Slav and Nimzo-Indian in the
     /// Library would quietly classify as nothing.
     @Test(

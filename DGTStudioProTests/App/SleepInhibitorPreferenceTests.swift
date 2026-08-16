@@ -8,8 +8,8 @@ import Testing
 /// that used to be duplicated across an `@AppStorage` initial and a `??`
 /// fallback, so it is pinned here rather than trusted.
 ///
-/// **The two-gate revision moved the predicate onto this list too.** The token stays waived —
-/// it is `ProcessInfo` transport and the hardware checklist is its witness —
+/// **The two-gate revision moved the predicate onto this list too.** The token stays waived -
+/// it is `ProcessInfo` transport and the hardware checklist is its witness -
 /// but the *decision* stopped being bare when a second gate arrived, because
 /// two gates over two causes can be crossed. `activityReason` is pure, so the
 /// truth table is cheap and the crossed wiring is reachable from a test.
@@ -17,7 +17,7 @@ import Testing
 @Suite("Sleep inhibition preference")
 struct SleepInhibitorPreferenceTests {
 
-    /// A throwaway suite per test — `.standard` would edit the developer's
+    /// A throwaway suite per test - `.standard` would edit the developer's
     /// own settings, and a fixed suite name would race under parallel
     /// execution.
     private func withScratchDefaults(_ body: (UserDefaults) throws -> Void) throws {
@@ -50,7 +50,7 @@ struct SleepInhibitorPreferenceTests {
     /// **The two gates are independent**, which is the whole point and the
     /// one thing a shared-key implementation would pass every other test
     /// while getting wrong. Each arm sets one key and asserts the *other*
-    /// preference is untouched — the assertion that fails if the second
+    /// preference is untouched - the assertion that fails if the second
     /// property ever quietly reads the first one's key.
     @Test("Each gate reads its own key")
     func gatesAreIndependent() throws {
@@ -92,7 +92,7 @@ struct SleepInhibitorPreferenceTests {
     // MARK: The predicate
 
     /// Neither cause running is the resting state, and it must stay `nil`
-    /// whatever the gates say — a preference is permission, not a request.
+    /// whatever the gates say - a preference is permission, not a request.
     @Test("Nothing running holds nothing")
     func idleHoldsNothing() {
         #expect(SleepInhibitor.activityReason(
@@ -102,7 +102,7 @@ struct SleepInhibitorPreferenceTests {
 
     /// **The crossed wiring**, and the reason this function exists. Each arm
     /// runs one cause with only the *other* gate open, so a predicate that
-    /// paired `allowsAnalysis` with playing — which compiles and reads fine —
+    /// paired `allowsAnalysis` with playing - which compiles and reads fine -
     /// returns a reason here instead of nil.
     @Test("A gate only permits its own cause")
     func gatesDoNotCross() {
@@ -135,7 +135,7 @@ struct SleepInhibitorPreferenceTests {
 
     /// Both causes at once name both. A reason that reported only the first
     /// would be the one lie this type's single diagnostic surface can tell,
-    /// and it would only ever appear while analyzing during a live game —
+    /// and it would only ever appear while analyzing during a live game -
     /// which is exactly the session nobody is watching Console for.
     @Test("Two causes name both")
     func bothCausesAreNamed() throws {
@@ -146,7 +146,7 @@ struct SleepInhibitorPreferenceTests {
         #expect(both.contains("analysis"))
     }
 
-    /// Both gates shut is off, whatever is running — the opt-out still opts
+    /// Both gates shut is off, whatever is running - the opt-out still opts
     /// out, which is the contract inherited rather than re-decided.
     @Test("Both gates shut holds nothing")
     func bothGatesShutHoldsNothing() {

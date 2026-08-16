@@ -1,7 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The composition — what only lives here: the two halves are wired together and fail
+/// The composition - what only lives here: the two halves are wired together and fail
 /// independently.
 @Suite("Game Classification")
 struct GameClassificationTests {
@@ -18,7 +18,7 @@ struct GameClassificationTests {
 
     // MARK: Both Halves Together
 
-    /// The Réti trap — 6.Nd6# is mate only because `Qe2` pins the e-pawn, so
+    /// The Réti trap - 6.Nd6# is mate only because `Qe2` pins the e-pawn, so
     /// this is a real game reaching a real smothered mate, not a constructed
     /// position. Every neighbour of e8 (d7, e7, f7, d8, f8) holds a black
     /// piece and the checker is a knight.
@@ -36,7 +36,7 @@ struct GameClassificationTests {
 
     @Test("An ordinary mate classifies as no pattern")
     func foolsMateIsNotAPattern() {
-        // 1. f3 e5 2. g4 Qh4# — the queen checks along the diagonal, so it is
+        // 1. f3 e5 2. g4 Qh4# - the queen checks along the diagonal, so it is
         // neither smothered nor a back-rank mate.
         let result = Self.classify(["f3", "e5", "g4", "Qh4#"])
         #expect(result.opening?.family == "Barnes Opening")
@@ -49,13 +49,13 @@ struct GameClassificationTests {
         #expect(Self.classify([]).specialCheckmate == nil)
     }
 
-    /// The gate is `contains("#")`, not `hasSuffix` — NOT "because annotations survive import"
+    /// The gate is `contains("#")`, not `hasSuffix` - NOT "because annotations survive import"
     /// (they don't): `classify` is pure over a `[String]` it does not own, and must tolerate an
     /// annotated ply from any caller.
     @Test("An annotated mating move still claims mate")
     func annotatedMateStillClaimsMate() {
         let result = Self.classify(["f3", "e5", "g4", "Qh4#!"])
-        // Reached the replay and was asked: an ordinary mate, hence nil —
+        // Reached the replay and was asked: an ordinary mate, hence nil -
         // indistinguishable from "never asked" by value, so the sibling
         // expectation below is what separates them.
         #expect(result.specialCheckmate == nil)

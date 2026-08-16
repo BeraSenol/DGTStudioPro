@@ -3,7 +3,7 @@ enum DGTAutoConnectPolicy {
 
     // MARK: The Rule (3 Aug 2026)
 
-    /// Which of `devices` is the board — the one spelling. Matched on `path`, never `name`: exactly
+    /// Which of `devices` is the board - the one spelling. Matched on `path`, never `name`: exactly
     /// one criterion in the codebase for what counts as the board.
     static func board(
         at boardPath: String,
@@ -16,7 +16,7 @@ enum DGTAutoConnectPolicy {
 
     /// The launch decision: connect silently iff enabled and **the** board is attached
     /// (`onlyBoardPath` at every production call site). A likely-looking stranger on another path
-    /// never wins — there is no heuristic left to win with.
+    /// never wins - there is no heuristic left to win with.
     static func launchTarget(
         enabled: Bool,
         boardPath: String,
@@ -30,15 +30,15 @@ enum DGTAutoConnectPolicy {
     
     /// The three things one lap of the mid-game reconnect loop can decide.
     enum ReconnectLap: Equatable {
-        /// The game ended or was discarded — stand down quietly.
+        /// The game ended or was discarded - stand down quietly.
         case stop
-        /// Still worth reconnecting, but the device isn't back — sleep.
+        /// Still worth reconnecting, but the device isn't back - sleep.
         case wait
-        /// The vanished device's path has reappeared — attempt to open it.
+        /// The vanished device's path has reappeared - attempt to open it.
         case attempt
     }
     
-    /// Decides a lap. `gameActive` re-asked every lap; `stop` outranks `attempt` — a discarded game
+    /// Decides a lap. `gameActive` re-asked every lap; `stop` outranks `attempt` - a discarded game
     /// ends the loop even in the lap the device came back.
     static func reconnectLap(
         gameActive: Bool,

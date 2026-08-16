@@ -1,7 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// Deep perft — depth 5, all six canonical positions, ~468M leaf nodes (~10–33 min; excluded
+/// Deep perft - depth 5, all six canonical positions, ~468M leaf nodes (~10–33 min; excluded
 /// from the default plan via the `.slow` tag). **Never delete**: depth 5 is what makes the
 /// counts a proof rather than a spot check.
 @Suite("Perft Deep (Depth 5)", .tags(.slow))
@@ -33,20 +33,20 @@ struct PerftDeepTests {
 
     // MARK: Depth-5 Reference Counts
 
-    /// ~4.9M nodes. Fastest of the six — a useful warm-up that catches
+    /// ~4.9M nodes. Fastest of the six - a useful warm-up that catches
     /// regressions in the basic move generation before committing to the
     /// slower tests.
     @Test func startingPositionDepth5() {
         #expect(perft(.starting, depth: 5) == 4_865_609)
     }
 
-    /// ~193.7M nodes — Kiwipete at depth 5 exercises virtually every generator interaction at scale.
+    /// ~193.7M nodes - Kiwipete at depth 5 exercises virtually every generator interaction at scale.
     @Test func kiwipeteDepth5() throws {
         let state = GameState(try FEN(parsing: Self.kiwipete))
         #expect(perft(state, depth: 5) == 193_690_690)
     }
 
-    /// ~675K nodes — sparse endgame, the fastest of the non-starting
+    /// ~675K nodes - sparse endgame, the fastest of the non-starting
     /// positions. Stresses en passant and discovered attacks at scale
     /// (52K captures, 1165 en-passants at this depth).
     @Test func position3Depth5() throws {
@@ -72,7 +72,7 @@ struct PerftDeepTests {
     }
 
     /// ~164.1M nodes. Dense middlegame with high branching factor. No
-    /// special-case features (no castling, no EP, no near-promotion) —
+    /// special-case features (no castling, no EP, no near-promotion) -
     /// just enormous breadth, which tends to catch generator bugs that
     /// only manifest under unusual piece interactions in the leaves.
     @Test func position6Depth5() throws {

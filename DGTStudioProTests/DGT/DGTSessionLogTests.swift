@@ -58,7 +58,7 @@ struct DGTSessionLogTests {
 
     /// Past the cap, the oldest entries are evicted first and the count holds
     /// steady at the cap. Appending `cap + 100` numbered entries must leave
-    /// exactly `cap` of them — the most recent — with entry "100" now oldest.
+    /// exactly `cap` of them - the most recent - with entry "100" now oldest.
     @Test func ringBufferEvictsOldestPastCap() {
         let log = DGTSessionLog()
         for i in 0..<(cap + 100) {
@@ -99,7 +99,7 @@ struct DGTSessionLogTests {
 
         let message = log.entries[0].message
         #expect(message.contains("Nc3 Nd5 Be2 Bf4 Qg4 Kh1 O-O-O Rd1"))
-        #expect(!message.contains("Ra1"))   // dropped — only the last eight survive
+        #expect(!message.contains("Ra1"))   // dropped - only the last eight survive
         #expect(!message.contains("Rb1"))
     }
 

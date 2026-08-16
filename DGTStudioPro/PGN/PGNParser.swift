@@ -32,7 +32,7 @@ enum PGNParser {
         case unbalancedBraces
         case unbalancedParentheses
         /// More than one game in the file. The movetext scanner has no notion of SAN shape, so the
-        /// second game's tag block would import as plies — refusing is the honest answer.
+        /// second game's tag block would import as plies - refusing is the honest answer.
         case multipleGames
     }
     
@@ -54,7 +54,7 @@ enum PGNParser {
             throw Error.missingRequiredTags(missing)
         }
         
-        // A tag pair can only open a *new* game once movetext has begun — legal movetext never starts a
+        // A tag pair can only open a *new* game once movetext has begun - legal movetext never starts a
         // line with `[Key "`.
         if containsTagPairLine(movetextSection) {
             logger?.error("Parse failed: file contains more than one game")
@@ -130,7 +130,7 @@ enum PGNParser {
         return dateFormatter.date(from: date)
     }
     
-    /// The writer's half of `parseDate` — same formatter, so parse and serialize cannot drift.
+    /// The writer's half of `parseDate` - same formatter, so parse and serialize cannot drift.
     /// Lives here, not on `PGNSerializer`, precisely so there is one formatter.
     static func pgnDateString(_ date: Date?) -> String {
         guard let date else { return RosterSummary.unknownDate }
@@ -138,7 +138,7 @@ enum PGNParser {
     }
     
     /// **Integer rounds only**: `Int(_)` refuses multipart rounds, so `1.3` imports as nil
-    /// and exports as `?` — lossy, and deliberate. Pinned by `roundParsesIntegersOnly`.
+    /// and exports as `?` - lossy, and deliberate. Pinned by `roundParsesIntegersOnly`.
     static func parseRound(_ round: String?) -> Int? {
         guard let round else { return nil }
         return Int(round)
@@ -158,7 +158,7 @@ enum PGNParser {
     
     // MARK: Movetext Parsing
     
-    /// Single-pass scanner producing moves plus parallel evaluations from `{[%eval …]}` comments —
+    /// Single-pass scanner producing moves plus parallel evaluations from `{[%eval …]}` comments -
     /// `evaluations[i]` follows `moves[i]`, the Lichess convention.
     static func parseMovesAndEvaluations(
         from movetext: String
@@ -317,7 +317,7 @@ enum PGNParser {
             .replacingOccurrences(of: "\r", with: "\n")
     }
     
-    /// Any line opening a tag pair — line-anchored, since `[` inside a brace comment is legal.
+    /// Any line opening a tag pair - line-anchored, since `[` inside a brace comment is legal.
     private static func containsTagPairLine(_ text: String) -> Bool {
         text.components(separatedBy: .newlines).contains { line in
             let trimmed = line.trimmingCharacters(in: .whitespaces)
@@ -351,7 +351,7 @@ enum PGNParser {
         return i
     }
     
-    /// Strips trailing `!`/`?` and **preserves** `+`/`#` — mate must survive import
+    /// Strips trailing `!`/`?` and **preserves** `+`/`#` - mate must survive import
     /// (`endedInMate` round trips). The app's other stripper (`parseSAN`'s) drops them,
     /// correctly there. These are the only two.
     private static func stripAnnotations(_ san: String) -> String {

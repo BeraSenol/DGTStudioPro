@@ -2,12 +2,12 @@
 
 /// The Library's alert copy, split out of the destination: string builders with no view state.
 /// `@MainActor` because `deletion(for:lead:)` asks the store's main-actor orphan pre-flight,
-/// and every caller is view code — the isolation the old home inherited from `View`.
+/// and every caller is view code - the isolation the old home inherited from `View`.
 @MainActor
 enum LibraryMessages {
 
     /// Confirmation body; players clause appended only when the cascade would take any.
-    /// Advisory — `PGNStore.delete(_:)` recomputes at write time.
+    /// Advisory - `PGNStore.delete(_:)` recomputes at write time.
     static func deletion(for games: [PGN], lead: String) -> String {
         let stranded = PGNStore.playersOrphaned(byDeleting: games)
         guard !stranded.isEmpty else { return lead }

@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import DGTStudioPro
 
-/// Nonisolated deliberately — the search types are pure values, and the
+/// Nonisolated deliberately - the search types are pure values, and the
 /// suite's isolation matches its subject.
 struct SearchMatchTests {
 
@@ -42,11 +42,11 @@ struct SearchMatchTests {
         #expect(!SearchMatch.matches(query: "kasparov", fields: []))
     }
 
-    /// `Query` is the hoisted spelling (4 Aug 2026) — needles fold at
+    /// `Query` is the hoisted spelling (4 Aug 2026) - needles fold at
     /// construction, so a filter loop folds the query exactly once however
     /// many rows it walks. The one-shot `matches(query:fields:)` delegates
     /// here, which is what keeps this one grammar rather than two agreeing
-    /// ones — so the pins are on the *hoist* itself: construction does the
+    /// ones - so the pins are on the *hoist* itself: construction does the
     /// folding, and matching consumes the already-folded needles.
     @Test func queryFoldsAtConstructionAndMatchesFromNeedles() {
         let query = SearchMatch.Query("  BÜCHER   1-0 ")
@@ -62,7 +62,7 @@ struct SearchMatchTests {
 }
 
 /// Was `PlayersSearchScopeTests`. The per-case assertions survive verbatim
-/// minus `.all`, which was deleted with the scope bar — an empty token list
+/// minus `.all`, which was deleted with the scope bar - an empty token list
 /// is what "all" means now, so the case could never be selected.
 struct PlayersSearchTokenTests {
 
@@ -77,7 +77,7 @@ struct PlayersSearchTokenTests {
         #expect(PlayersSearchToken.unrated.admits(nil))
     }
 
-    /// Provisional is a subset of rated — both tokens admit it, which is
+    /// Provisional is a subset of rated - both tokens admit it, which is
     /// the documented overlap, not a defect.
     @Test func provisionalRatingIsRatedAndProvisional() {
         #expect(PlayersSearchToken.rated.admits(provisional))
@@ -93,7 +93,7 @@ struct PlayersSearchTokenTests {
 
     /// **No tokens admits everyone**, which is the case that replaced `.all`.
     /// If this ever regressed to "empty matches nothing", the Players list
-    /// would come up blank on a fresh launch — visible instantly, but only
+    /// would come up blank on a fresh launch - visible instantly, but only
     /// if someone launches; the test is what catches it first.
     @Test func noTokensAdmitsEveryone() {
         #expect(PlayersSearchToken.admit([], rating: nil))
@@ -101,7 +101,7 @@ struct PlayersSearchTokenTests {
     }
 
     /// OR, not AND. Rated and Unrated are disjoint, so under an AND reading
-    /// selecting both would empty the list — the shape that makes a
+    /// selecting both would empty the list - the shape that makes a
     /// multi-select filter feel broken.
     @Test func multipleTokensUnionRatherThanIntersect() {
         let both: [PlayersSearchToken] = [.rated, .unrated]
@@ -123,8 +123,8 @@ struct LibrarySearchTokenTests {
         #expect(LibrarySearchToken.admit([], result: .whiteWins, isAnalyzed: true))
     }
 
-    /// Two results widen. Under an AND reading this is unsatisfiable — a
-    /// game has one result — so "decisive games" would show nothing at all.
+    /// Two results widen. Under an AND reading this is unsatisfiable - a
+    /// game has one result - so "decisive games" would show nothing at all.
     @Test func twoResultTokensUnion() {
         let decisive: [LibrarySearchToken] = [.result(.whiteWins), .result(.blackWins)]
         #expect(LibrarySearchToken.admit(decisive, result: .whiteWins, isAnalyzed: false))
@@ -133,7 +133,7 @@ struct LibrarySearchTokenTests {
         #expect(!LibrarySearchToken.admit(decisive, result: .ongoing, isAnalyzed: false))
     }
 
-    /// Across facets it narrows — and this is the pin for the "empty facet
+    /// Across facets it narrows - and this is the pin for the "empty facet
     /// must not veto" guard. A result token alone must not exclude analyzed
     /// games, and an analysis token alone must not exclude any result.
     @Test func facetsIntersectWithoutVetoingEachOther() {
@@ -157,7 +157,7 @@ struct LibrarySearchTokenTests {
     }
 
     /// The suggestion list is built by subtracting applied tokens from
-    /// `allCases`, so the identities have to be distinct — two cases sharing
+    /// `allCases`, so the identities have to be distinct - two cases sharing
     /// an `id` would make one chip un-removable and the other undismissable
     /// from the suggestions. The compiler cannot check hand-written ids.
     @Test func everyTokenHasADistinctIdentity() {

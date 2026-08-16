@@ -131,7 +131,7 @@ struct PawnMoveGenerationTests {
         let moves = GameState.test(pos, enPassantTarget: nil)
             .pseudoLegalMoves(from: Squares.e5)
         
-        // d6 is empty but not EP target — must not produce a phantom EP move
+        // d6 is empty but not EP target - must not produce a phantom EP move
         #expect(moves.count == 1)
         #expect(moves.first?.to == Squares.e6)
         #expect(!moves.contains { $0.isEnPassant })

@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// The mutable accumulator the connection drives (@MainActor — a genuine isolation). Offsets
+/// The mutable accumulator the connection drives (@MainActor - a genuine isolation). Offsets
 /// asserted non-negative and non-decreasing, never exact milliseconds.
 @MainActor
 @Suite("DGT Session Recorder")
@@ -13,7 +13,7 @@ struct DGTSessionRecorderTests {
 
     /// The recorder's ring, mirroring the log's: a forgotten recording must
     /// not grow without bound, and the *newest* window is the one worth
-    /// keeping. Markers first, then a full cap of clean boards — the
+    /// keeping. Markers first, then a full cap of clean boards - the
     /// markers must be gone.
     @Test func ringBufferEvictsOldestPastCap() {
         let recorder = DGTSessionRecorder()
@@ -65,7 +65,7 @@ struct DGTSessionRecorderTests {
     }
 
     /// `recordedAt` is stamped at construction, so by the time `finish()` is
-    /// inspected it is at or before "now" — a light sanity check that the
+    /// inspected it is at or before "now" - a light sanity check that the
     /// timestamp is wired through to the finished recording.
     @Test func recordedAtIsStampedAtConstruction() {
         let recorder = DGTSessionRecorder()

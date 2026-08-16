@@ -4,7 +4,7 @@ struct BoardView: View {
     
     // MARK: Stored Properties
     let position: Position
-    /// What the piece layer animates under — resolved by the caller through `PieceIdentity`,
+    /// What the piece layer animates under - resolved by the caller through `PieceIdentity`,
     /// because only the caller knows which arm applies.
     let pieces: [ResolvedPiece]
     let style: BoardStyle
@@ -12,21 +12,23 @@ struct BoardView: View {
     let lastMove: LastMove?
     let checkSquare: Square?
     /// Reserved: nothing selects a square today (the physical board is the input). Defaulted, not
-    /// removed — the highlight machinery is built; a click-to-move surface only passes a value.
+    /// removed - the highlight machinery is built; a click-to-move surface only passes a value.
     var selectedSquare: Square? = nil
     /// The mid-castle ghost square; both ghost fields must be non-nil to render.
     var ghostSquare: Square? = nil
-    /// The ghost piece — drawn only when the square is actually empty, so a mid-fumble real piece
+    /// The ghost piece - drawn only when the square is actually empty, so a mid-fumble real piece
     /// hides the ghost rather than overlapping it.
     var ghostPiece: Piece? = nil
     /// Recovery highlights: `.attention` ("shouldn't be here") and `.target` ("belongs here").
     /// The board knows styles, not recovery.
     var attentionSquares: Set<Square> = []
     var targetSquares: Set<Square> = []
+    /// Legal destinations of the one lifted piece (`MoveHints`) - the board knows dots, not chess.
+    var hintSquares: Set<Square> = []
     
     // MARK: Preferences
     
-    /// The coordinates — read here (one consumer) rather than threaded like `style`.
+    /// The coordinates - read here (one consumer) rather than threaded like `style`.
     @AppStorage(StorageKeys.showBoardCoordinates) private var showsCoordinates = true
     
     // MARK: Body
@@ -134,7 +136,7 @@ struct BoardView: View {
         }
     }
     
-    /// One frame glyph — `Color.clear` when off, so the strip's layout contribution is unambiguous:
+    /// One frame glyph - `Color.clear` when off, so the strip's layout contribution is unambiguous:
     /// the board keeps its 10×10 grid and size at every setting.
     @ViewBuilder
     private func coordinateLabel(_ character: Character, squareSize: CGFloat) -> some View {
@@ -161,7 +163,7 @@ struct BoardView: View {
                             style: style,
                             ghostPiece: (square == ghostSquare) ? ghostPiece : nil
                         )
-                        // "square.e4" — stable algebraic handle, kept per the registry's bet.
+                        // "square.e4" - stable algebraic handle, kept per the registry's bet.
                         .accessibilityIdentifier(
                             AccessibilityID.boardSquare(square.algebraicNotation)
                         )
@@ -246,7 +248,7 @@ struct BoardView: View {
         if square == checkSquare {
             result.insert(.check)
         }
-        // Unreachable today: every call site takes the default. Kept as pre-wiring — one value turns
+        // Unreachable today: every call site takes the default. Kept as pre-wiring - one value turns
         // all three on.
         if square == selectedSquare {
             result.insert(.selected)
@@ -256,6 +258,9 @@ struct BoardView: View {
         }
         if targetSquares.contains(square) {
             result.insert(.target)
+        }
+        if hintSquares.contains(square) {
+            result.insert(.hint)
         }
         return result
     }
@@ -355,6 +360,28 @@ private struct Layout {
         checkSquare: nil,
         ghostSquare: Squares.d8,
         ghostPiece: .blackRook
+    )
+    .frame(width: 600, height: 600)
+}
+
+// The mirror mid-lift: after 1. e4 d5 White's e4-pawn is up - a dot on the empty e5, a ring
+// under the black d5-pawn. The composition check the square-level preview cannot make, since
+// glyphs live on the piece layer.
+#Preview("Lift Hints") {
+    var position = Position.starting
+    position[Squares.e2] = .empty          // e4 was played,
+    position[Squares.d7] = .empty          // ...d5 answered,
+    position[Squares.d5] = .blackPawn
+    // ...and the e4-pawn is in the player's hand (e4 stays empty).
+
+    return BoardView(
+        position: position,
+        pieces: PieceIdentity.resolved(position: position, tracker: .empty),
+        style: .walnut,
+        perspective: .white,
+        lastMove: LastMove(from: Squares.d7, to: Squares.d5),
+        checkSquare: nil,
+        hintSquares: [Squares.e5, Squares.d5]
     )
     .frame(width: 600, height: 600)
 }

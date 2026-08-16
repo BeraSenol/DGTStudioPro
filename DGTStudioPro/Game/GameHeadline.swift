@@ -10,11 +10,11 @@ enum GameHeadline {
         case recording = "Recording"
     }
     
-    /// The placeholder for a seat with no usable name — the `"?"` the PGN
+    /// The placeholder for a seat with no usable name - the `"?"` the PGN
     /// tag convention and `displayRound` already use.
     private static let unknownPlayer = "?"
     
-    /// Takes **raw tag form** — the display transform happens here, so the two call sites can't drift.
+    /// Takes **raw tag form** - the display transform happens here, so the two call sites can't drift.
     static func text(
         _ activity: Activity,
         round: Int?,

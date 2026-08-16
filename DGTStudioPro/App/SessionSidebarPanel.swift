@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The sidebar's session surface — the single home for connection and session messaging,
+/// The sidebar's session surface - the single home for connection and session messaging,
 /// pinned under every tab's sidebar list. The stage above the board stays clear; only the
 /// recovery *overlays* stay on the board (they are the mirror's, not messaging).
 struct SessionSidebarPanel: View {
@@ -16,11 +16,11 @@ struct SessionSidebarPanel: View {
     /// Read for the per-tab `boardLoadError`.
     let tabState: TabState
     
-    /// Navigates to Board and requests the new-game sheet — only the affordance re-homed; the
+    /// Navigates to Board and requests the new-game sheet - only the affordance re-homed; the
     /// presenter stays `BoardDestination`.
     let onNewGame: () -> Void
     
-    /// Clears the tab's bound game ID — unbinding is the real resolution.
+    /// Clears the tab's bound game ID - unbinding is the real resolution.
     let onDismissLoadError: () -> Void
     
     // MARK: View State
@@ -31,7 +31,7 @@ struct SessionSidebarPanel: View {
     // MARK: Body
     
     var body: some View {
-        // The empty guard keeps a disconnected, error-free sidebar exactly as it was — no blank inset.
+        // The empty guard keeps a disconnected, error-free sidebar exactly as it was - no blank inset.
         if hasContent {
             VStack(alignment: .leading, spacing: 8) {
                 if let phase = hudPhase {
@@ -77,7 +77,7 @@ struct SessionSidebarPanel: View {
             .padding(10)
             .animation(.default, value: session.needsRecovery)
             .onChange(of: session.needsRecovery) { wasRecovering, isRecovering in
-                // Flash only on a genuine auto-exit — discard / new-game change the whole surface.
+                // Flash only on a genuine auto-exit - discard / new-game change the whole surface.
                 if wasRecovering, !isRecovering,
                    let game = session.liveGame, !game.isFinished {
                     withAnimation { showsRestoredFlash = true }
@@ -96,7 +96,7 @@ struct SessionSidebarPanel: View {
     // MARK: Load Error
     
     /// The load-error card (re-homed by identifiers renamed with it). Dismiss clears
-    /// `loadedGameID` — the tab becomes an honest live tab.
+    /// `loadedGameID` - the tab becomes an honest live tab.
     private func loadErrorCard(_ message: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
@@ -131,14 +131,14 @@ struct SessionSidebarPanel: View {
     // MARK: Phase Derivation
     
     /// Status-card phase, priority-ordered: connection truth first (a pulled cable outranks
-    /// everything; reconnecting reads as its own card). Delegates to `SessionPhase.current` —
+    /// everything; reconnecting reads as its own card). Delegates to `SessionPhase.current` -
     /// the ordering is the content, and two surfaces must agree on it.
     private var hudPhase: LiveGameHUDView.Phase? {
         .current(session: session, connection: connection)
     }
     
     /// The restore checklist while recovering; recomputed per observable change so rows disappear
-    /// live. `BoardDestination` computes its own diff for the *overlays* — two 64-square diffs per
+    /// live. `BoardDestination` computes its own diff for the *overlays* - two 64-square diffs per
     /// render is cheap.
     private var recoveryGuidance: RecoveryGuidance? {
         .current(session: session, connection: connection)
@@ -164,7 +164,7 @@ struct SessionSidebarPanel: View {
     .environment(DGTSessionLog())
 }
 
-/// The empty guard: disconnected and error-free renders *nothing* — the canvas should be empty.
+/// The empty guard: disconnected and error-free renders *nothing* - the canvas should be empty.
 #Preview("Empty Guard") {
     SessionSidebarPanel(tabState: TabState(), onNewGame: {}, onDismissLoadError: {})
         .frame(width: 260, height: 80)

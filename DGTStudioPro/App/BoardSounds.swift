@@ -5,8 +5,8 @@ import os
 
 /// Plays the board cues and owns the four preferences that gate them.
 ///
-/// The owned-value shape rather than `@AppStorage`: the toggles have two readers — Settings
-/// binds them, this type consults them — and a twin default is exactly the arrangement that
+/// The owned-value shape rather than `@AppStorage`: the toggles have two readers - Settings
+/// binds them, this type consults them - and a twin default is exactly the arrangement that
 /// agreed perfectly on a value neither side could produce. Every default is stated once,
 /// in `init`; nobody else spells `?? true`.
 ///
@@ -28,12 +28,12 @@ final class BoardSounds {
     /// one layer over: a single `@Test` that walks a game would fire a cue per ply, and a suite
     /// that plays audio is a suite nobody runs with headphones on.
     ///
-    /// No `DGT_LOG` twin — logging needs an escape hatch because a suppressed *diagnostic* can
+    /// No `DGT_LOG` twin - logging needs an escape hatch because a suppressed *diagnostic* can
     /// hide a defect, and a suppressed *click* cannot. Re-armable by constructing with
     /// `audible: true`, which is what the previews do.
     static let isAudible: Bool = isAudible(in: ProcessInfo.processInfo.environment)
 
-    /// The policy as a pure function of an environment — `AppLog.isEnabled(in:)`'s reason, which
+    /// The policy as a pure function of an environment - `AppLog.isEnabled(in:)`'s reason, which
     /// is the only one that matters here: the constant above is `false` in every process a test
     /// runs in, so the arm a real launch takes is unreachable from a suite without this seam.
     static func isAudible(in environment: [String: String]) -> Bool {
@@ -62,7 +62,7 @@ final class BoardSounds {
         }
     }
 
-    /// Absent reads **true** for all four — the feature is opt-out, matching the illegal-move
+    /// Absent reads **true** for all four - the feature is opt-out, matching the illegal-move
     /// cue rather than arriving switched off and needing to be discovered.
     var playsMove: Bool {
         didSet { persist(playsMove, forKey: StorageKeys.moveSoundEnabled, describing: "move") }
@@ -91,7 +91,7 @@ final class BoardSounds {
     /// finding).
     ///
     /// Keyed on the cue alone rather than on `(set, cue)` because `soundSet`'s `didSet` empties it
-    /// — one dictionary that is always about one set, instead of a compound key that would hold
+    /// - one dictionary that is always about one set, instead of a compound key that would hold
     /// every set a reader ever auditioned for the life of the process.
     @ObservationIgnored private var players: [BoardCue: AVAudioPlayer?] = [:]
 
@@ -103,7 +103,7 @@ final class BoardSounds {
         self.defaults = defaults
         self.audible = audible
         // Assignment in `init` does not fire `didSet`, so a first launch reads without writing
-        // back — and, for the set, without auditioning at launch, which would make every start of
+        // back - and, for the set, without auditioning at launch, which would make every start of
         // the app click at you.
         self.soundSet = (defaults.string(forKey: StorageKeys.boardSoundSet)
             .flatMap(BoardSoundSet.init(rawValue:))) ?? .wood
@@ -115,7 +115,7 @@ final class BoardSounds {
 
     // MARK: The gate
 
-    /// Which toggle governs which cue, as a pure function — `SleepInhibitor.activityReason`'s
+    /// Which toggle governs which cue, as a pure function - `SleepInhibitor.activityReason`'s
     /// shape and its argument, sharpened: four cues over four flags is a crossable wiring, and a
     /// `check` that reads the capture toggle compiles, renders, and is caught only by ear.
     static func isEnabled(
@@ -150,7 +150,7 @@ final class BoardSounds {
     /// layering: holding → walks plies faster than a sample is long, and eight overlapping clicks
     /// is noise where one click per keypress is feedback.
     ///
-    /// `ignoringPreference` exists for the audition and nothing else — see `audition()`. Audibility
+    /// `ignoringPreference` exists for the audition and nothing else - see `audition()`. Audibility
     /// is **not** overridable by it: that flag is about the process, not about the reader's taste.
     func play(_ cue: BoardCue, ignoringPreference: Bool = false) {
         guard audible else { return }
@@ -167,7 +167,7 @@ final class BoardSounds {
     /// Deliberately past the per-cue gate: you are auditioning the **set**, not the move cue, so a
     /// reader who has turned Move off would otherwise pick in silence and reasonably conclude the
     /// picker was broken. `.move` is the one to play because it is the cue you hear a hundred times
-    /// an evening — the set should be chosen on its most frequent sound, not its most dramatic.
+    /// an evening - the set should be chosen on its most frequent sound, not its most dramatic.
     private func audition() {
         play(.move, ignoringPreference: true)
     }
@@ -194,7 +194,7 @@ final class BoardSounds {
         guard let url = Bundle.main.url(forResource: name, withExtension: "wav") else {
             Self.logger?.error(
                 """
-                Board cue '\(name, privacy: .public).wav' missing from the app bundle — \
+                Board cue '\(name, privacy: .public).wav' missing from the app bundle - \
                 that cue stays silent until it is restored
                 """
             )

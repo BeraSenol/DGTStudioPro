@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Which collection surface the panel is describing — both halves, because the destination
+/// Which collection surface the panel is describing - both halves, because the destination
 /// decides which sort fields exist and the mode whether the grid section renders.
 struct CollectionViewOptionsSubject: Equatable, Sendable {
 
@@ -36,7 +36,7 @@ extension FocusedValues {
     }
 }
 
-/// Finder's ⌘J. A singleton `Window` — one panel, opened by id, no wrapper type to mint.
+/// Finder's ⌘J. A singleton `Window` - one panel, opened by id, no wrapper type to mint.
 /// One panel, not one per destination: sizes are preferences about browsing, not destinations.
 struct CollectionViewOptionsWindow: View {
 
@@ -44,7 +44,7 @@ struct CollectionViewOptionsWindow: View {
 
     @Environment(CollectionViewOptions.self) private var options
 
-    /// A pure reader — no `@FocusedValue` here, and that is the fix: opening the panel makes it key,
+    /// A pure reader - no `@FocusedValue` here, and that is the fix: opening the panel makes it key,
     /// so by first render the focused value is already nil. The destinations latch into `options`.
     private var subject: CollectionViewOptionsSubject? { options.activeSubject }
 
@@ -129,7 +129,7 @@ struct CollectionViewOptionsWindow: View {
     private func gridSection(options: Bindable<CollectionViewOptions>) -> some View {
         Section("Grid") {
             // `in:` takes the ranges the type clamps to, so the slider cannot ask for a value the object
-            // silently corrects — extremes that do nothing read as a stuck slider.
+            // silently corrects - extremes that do nothing read as a stuck slider.
             sizedSlider(
                 title: "Icon size",
                 value: "\(Int(options.wrappedValue.iconSize)) pt",
@@ -164,14 +164,14 @@ struct CollectionViewOptionsWindow: View {
 
     // MARK: Slider Steps
 
-    /// Both steps chosen so the shipped default lands **on** a tick — `Use Defaults` moves the
+    /// Both steps chosen so the shipped default lands **on** a tick - `Use Defaults` moves the
     /// thumb, and a thumb between ticks reads as a failed snap.
     private static let iconSizeStep: CGFloat = 20
     private static let spacingStep: CGFloat = 4
 
-    /// Finder's View Options slider: value in the label, small/large glyphs at the ends — the
+    /// Finder's View Options slider: value in the label, small/large glyphs at the ends - the
     /// affordance, not decoration. Icon size shows a value, grid spacing does not (Finder's split);
-    /// `pt`, not `128×128` — the layout has no square to promise.
+    /// `pt`, not `128×128` - the layout has no square to promise.
     @ViewBuilder
     private func sizedSlider(
         title: String,
@@ -199,7 +199,7 @@ struct CollectionViewOptionsWindow: View {
             HStack(spacing: 10) {
                 Image(systemName: minimumGlyph)
                     .font(.system(size: minimumSize))
-                // `step:` draws the tick marks — ticks and snapping are one decision, so the step constants
+                // `step:` draws the tick marks - ticks and snapping are one decision, so the step constants
                 // carry the argument.
                 Slider(value: binding, in: range, step: step)
                     .accessibilityIdentifier(identifier)
@@ -208,7 +208,7 @@ struct CollectionViewOptionsWindow: View {
                 Image(systemName: maximumGlyph)
                     .font(.system(size: maximumSize))
             }
-            // Both glyphs together, so a host tinting one tints both — a divergence reads as one enabled.
+            // Both glyphs together, so a host tinting one tints both - a divergence reads as one enabled.
             .foregroundStyle(.secondary)
             // The tallest glyph sets the row height; otherwise rows sit at different heights per `maximumSize`.
             .frame(minHeight: 24)
@@ -217,7 +217,7 @@ struct CollectionViewOptionsWindow: View {
     }
 }
 
-/// The View menu's half of ⌘J — a `Commands` scene has no `openWindow`, so the shared button
+/// The View menu's half of ⌘J - a `Commands` scene has no `openWindow`, so the shared button
 /// carries the action and this scene just hosts it.
 struct CollectionViewOptionsCommands: Commands {
 
@@ -226,7 +226,7 @@ struct CollectionViewOptionsCommands: Commands {
     var body: some Commands {
         CommandGroup(after: .toolbar) {
             // ⌘J applied here and nowhere else: the shortcut lived on the shared button with five hosts, so
-            // icons mode registered ⌘J twice — live and ambiguous, the exact class flagged for ⌘R/⌘E.
+            // icons mode registered ⌘J twice - live and ambiguous, the exact class flagged for ⌘R/⌘E.
             ShowViewOptionsButton()
                 .keyboardShortcut("j", modifiers: .command)
                 .disabled(subject == nil)
@@ -234,7 +234,7 @@ struct CollectionViewOptionsCommands: Commands {
     }
 }
 
-/// The shared button for the menu and the four grid backgrounds — the *wording* must not fork.
+/// The shared button for the menu and the four grid backgrounds - the *wording* must not fork.
 /// Carries label and action, deliberately not the shortcut: a key equivalent is a claim to own
 /// the verb globally, and only the menu may make it.
 struct ShowViewOptionsButton: View {
@@ -251,9 +251,9 @@ struct ShowViewOptionsButton: View {
 
 // MARK: Previews
 
-/// The standing witness for the slider row — glyph ratio and tick spacing are visual claims no
+/// The standing witness for the slider row - glyph ratio and tick spacing are visual claims no
 /// compiler or unit test can see.
-#Preview("Library — Icons") {
+#Preview("Library - Icons") {
     CollectionViewOptionsWindow()
         .environment(
             PreviewFixtures.viewOptions(
@@ -263,9 +263,9 @@ struct ShowViewOptionsButton: View {
         .frame(width: 360, height: 420)
 }
 
-/// Both sliders at an extreme: three digits over a held thumb — if the row shifts as the number
+/// Both sliders at an extreme: three digits over a held thumb - if the row shifts as the number
 /// widens, `monospacedDigit` came off. Also both thumbs against the maximum glyph.
-#Preview("Library — Icons, Extremes") {
+#Preview("Library - Icons, Extremes") {
     CollectionViewOptionsWindow()
         .environment(
             PreviewFixtures.viewOptions(
@@ -277,9 +277,9 @@ struct ShowViewOptionsButton: View {
         .frame(width: 360, height: 420)
 }
 
-/// Players' field list — ten cases to the Library's nine; catches a picker bound to the wrong
+/// Players' field list - ten cases to the Library's nine; catches a picker bound to the wrong
 /// destination's options.
-#Preview("Players — Icons") {
+#Preview("Players - Icons") {
     CollectionViewOptionsWindow()
         .environment(
             PreviewFixtures.viewOptions(
@@ -290,7 +290,7 @@ struct ShowViewOptionsButton: View {
 }
 
 /// The gallery arm: no grid section, with the sentence saying why.
-#Preview("Library — Gallery") {
+#Preview("Library - Gallery") {
     CollectionViewOptionsWindow()
         .environment(
             PreviewFixtures.viewOptions(
@@ -300,7 +300,7 @@ struct ShowViewOptionsButton: View {
         .frame(width: 360, height: 420)
 }
 
-/// The unlatched state — a restored panel with nothing in front.
+/// The unlatched state - a restored panel with nothing in front.
 #Preview("No Subject") {
     CollectionViewOptionsWindow()
         .environment(PreviewFixtures.viewOptions())

@@ -10,7 +10,7 @@ struct LibraryDestination: View {
     // MARK: Static Constants
     private static let logger = AppLog.logger(.library)
 
-    /// Above this many, Open asks first — the one bulk action that confirms on count, not consequence.
+    /// Above this many, Open asks first - the one bulk action that confirms on count, not consequence.
     private static let openConfirmationThreshold = 10
     
     // MARK: Stored Properties
@@ -28,7 +28,7 @@ struct LibraryDestination: View {
     @AppStorage(StorageKeys.collectionViewMode) private var viewMode: CollectionViewMode = .list
     @Environment(\.modelContext) private var modelContext
 
-    /// View Options panel subject — read here because this destination owns the sort.
+    /// View Options panel subject - read here because this destination owns the sort.
     @Environment(CollectionViewOptions.self) private var options
 
     /// Resolves the key window's value: nil whenever another window is front, which is the signal the mirror needs.
@@ -49,13 +49,13 @@ struct LibraryDestination: View {
     @State private var selectedPGNs: Set<PGN.ID> = []
     @State private var importProgress: ImportProgress?
 
-    /// The Library's `GameRecord` projection, memoized — rebuilt only when `FoldKey` moves.
+    /// The Library's `GameRecord` projection, memoized - rebuilt only when `FoldKey` moves.
     /// (`FoldKey`, `NarrowKey` and `NarrowResult` live in `LibraryFold.swift`.)
     @State private var foldCache = CollectionFoldCache<FoldKey, [GameRecord]>()
 
     @State private var narrowCache = CollectionFoldCache<NarrowKey, NarrowResult>()
 
-    /// The backfill result for the report alert; failure is separate state — it means the folder itself was unreadable.
+    /// The backfill result for the report alert; failure is separate state - it means the folder itself was unreadable.
     @State private var backfillReport: PGNStore.LibraryIndexBackfill?
     @State private var backfillFailure: String?
     
@@ -104,12 +104,12 @@ struct LibraryDestination: View {
         )
     }
 
-    /// Games paired with records, memoized. Zipped — index is the correspondence.
+    /// Games paired with records, memoized. Zipped - index is the correspondence.
     private var pairedGames: [(game: PGN, record: GameRecord)] {
         let records = foldCache.value(for: currentFoldKey) {
             games.map(\.gameRecord)
         }
-        // One argument: a two-parameter closure here is the tuple splat Swift 3 removed — reads right, won't compile.
+        // One argument: a two-parameter closure here is the tuple splat Swift 3 removed - reads right, won't compile.
         return zip(games, records).map { pair in (game: pair.0, record: pair.1) }
     }
 
@@ -138,7 +138,7 @@ struct LibraryDestination: View {
                 }
             }
             if !searchTokens.isEmpty {
-                // `record.hasAnalysis` is `AnalysisGlyph.isAnalyzed`'s own input — still one spelling of "analyzed?".
+                // `record.hasAnalysis` is `AnalysisGlyph.isAnalyzed`'s own input - still one spelling of "analyzed?".
                 result = result.filter {
                     LibrarySearchToken.admit(
                         searchTokens,
@@ -155,15 +155,15 @@ struct LibraryDestination: View {
     }
 
     /// Sidebar filter → search → chips, narrowing only; every bulk action reads this same narrowed set.
-    /// Narrowed but not sorted — the sort is `filteredGames`' last stage.
+    /// Narrowed but not sorted - the sort is `filteredGames`' last stage.
     private var narrowedPairs: [(game: PGN, record: GameRecord)] { narrowed.pairs }
 
-    /// The narrowed list in display order — what every consumer outside the render pass wants.
+    /// The narrowed list in display order - what every consumer outside the render pass wants.
     /// Render reads it once; actions re-derive fresh (a re-read of the cache recomputes iff an
     /// input moved, which is the same correctness, cheaper). Sort is unconditional.
     private var filteredGames: [PGN] { narrowed.sorted }
     
-    /// A game's searchable strings — every field, always; a query already names its own field.
+    /// A game's searchable strings - every field, always; a query already names its own field.
     private func searchFields(of game: PGN) -> [String] {
         [game.name, game.whiteDisplayName, game.blackDisplayName,
          game.event, game.site, game.result.rawValue,
@@ -210,7 +210,7 @@ struct LibraryDestination: View {
                     ))
                 }
             )
-            // Always reports, including "nothing matched" — a silent scan looks like a scan that never ran.
+            // Always reports, including "nothing matched" - a silent scan looks like a scan that never ran.
             .alert(
                 "Matched \(backfillReport?.stamped ?? 0) Games",
                 isPresented: Binding(present: $backfillReport),
@@ -257,12 +257,12 @@ struct LibraryDestination: View {
                 }
             )
             // Plain ⌫ deliberately does not delete (one slip from a forgotten multi-selection); ⌘⌫ is the only key,
-            // resting on the row menu's copy — known only to render, an open question rather than settled.
+            // resting on the row menu's copy - known only to render, an open question rather than settled.
             .focusedSceneValue(
                 \.collectionViewOptionsSubject,
                 CollectionViewOptionsSubject(collection: .library, mode: viewMode)
             )
-            // Mirrors the focused subject into the global options object — this view is on screen while its window is key;
+            // Mirrors the focused subject into the global options object - this view is on screen while its window is key;
             // the panel never is. Only non-nil writes land, so focus moving away keeps the last collection.
             .onChange(of: focusedSubject, initial: true) { _, newValue in
                 guard let newValue else { return }
@@ -273,7 +273,7 @@ struct LibraryDestination: View {
                 backfillPlayerLinks()
                 applyInspectorPolicy(for: viewMode)
             }
-        // `.task`: has to await the ECO table — see `backfillClassifications()`.
+        // `.task`: has to await the ECO table - see `backfillClassifications()`.
             .task {
                 await backfillClassifications()
             }
@@ -284,11 +284,11 @@ struct LibraryDestination: View {
     
     /// Split from the deletion alerts: one combined modifier chain blew SwiftUI's type-check budget.
     private var coreContent: some View {
-        // One walk per render — consumers below read these locals; none re-runs the filter.
+        // One walk per render - consumers below read these locals; none re-runs the filter.
         let narrowed = narrowedPairs
         let games = narrowed.map { $0.game }.sorted(using: sortOrder.wrappedValue)
         let unanalyzedCount = narrowed.count { !$0.record.hasAnalysis }
-        // Row badges: membership built once per render off the same records — one spelling of "analyzed?".
+        // Row badges: membership built once per render off the same records - one spelling of "analyzed?".
         let analyzedIDs = Set(
             narrowed.lazy.filter { $0.record.hasAnalysis }.map { $0.game.id }
         )
@@ -326,7 +326,7 @@ struct LibraryDestination: View {
                 #selector(NSStandardKeyBindingResponding.selectAll(_:)),
                 perform: selectAllAction
             )
-            // The threshold. Not `role:.destructive` — opening destroys nothing; the dialog is about volume.
+            // The threshold. Not `role:.destructive` - opening destroys nothing; the dialog is about volume.
             .alert(
                 "Open \(pendingBatchOpen?.count ?? 0) Games?",
                 isPresented: Binding(present: $pendingBatchOpen),
@@ -360,7 +360,7 @@ struct LibraryDestination: View {
             )
             .inspectorColumnWidth(min: 335, ideal: 335, max: 400)
         }
-        // The one write of the glyph's ambient state — applied once so the four modes cannot disagree.
+        // The one write of the glyph's ambient state - applied once so the four modes cannot disagree.
         .environment(\.analysisRunningGameID, analysisQueue.runningID)
         .toolbar { toolbarContent }
         // Tokens ahead of the text; suggestions exclude chips already applied.
@@ -442,7 +442,7 @@ struct LibraryDestination: View {
     }
     
     /// One resolution point for "open these in windows". macOS dedups and tabs, which makes the plural
-    /// safe; arrives and stays in display order — visible here as tab order.
+    /// safe; arrives and stays in display order - visible here as tab order.
     private func openGames(_ pgns: [PGN]) {
         guard !pgns.isEmpty else { return }
         if pgns.count > Self.openConfirmationThreshold {
@@ -514,7 +514,7 @@ struct LibraryDestination: View {
         }
     }
     
-    /// File doors: in, out, and — only while some game lacks an ordinal — reconcile. No spacer: adjacent
+    /// File doors: in, out, and - only while some game lacks an ordinal - reconcile. No spacer: adjacent
     /// items share a capsule. The third item vanishes at zero rather than sitting disabled.
     @ToolbarContentBuilder
     private var transferToolbarItems: some ToolbarContent {
@@ -545,7 +545,7 @@ struct LibraryDestination: View {
     private var viewModeToolbarItem: some ToolbarContent {
         ToolbarItem {
             // NOTE: a `.segmented` Picker from `Label(_:systemImage:)` renders icon-only; AX keys segments by
-            // SF Symbol name, not per-segment identifier — only the picker container is tagged.
+            // SF Symbol name, not per-segment identifier - only the picker container is tagged.
             Picker("View Mode", selection: $viewMode) {
                 ForEach(CollectionViewMode.allCases) { mode in
                     Label(mode.displayName, systemImage: mode.systemImage).tag(mode)
@@ -556,14 +556,14 @@ struct LibraryDestination: View {
         }
     }
     
-    /// Only the queue status item remains — Analyze, Delete and Export moved to the row menus by request.
+    /// Only the queue status item remains - Analyze, Delete and Export moved to the row menus by request.
     @ToolbarContentBuilder
     private var queueToolbarItem: some ToolbarContent {
-        // Visible while a batch runs or failures are unacknowledged — see `LibraryQueueStatusLabel`.
+        // Visible while a batch runs or failures are unacknowledged - see `LibraryQueueStatusLabel`.
         if analysisQueue.queue.isActive || analysisQueue.queue.hasFailures {
             ToolbarItem {
                 Button {
-                    // Window, not popover; `openWindow(id:)` — one queue, singleton scene, nothing to route (no request wrapper).
+                    // Window, not popover; `openWindow(id:)` - one queue, singleton scene, nothing to route (no request wrapper).
                     openWindow(id: AnalysisQueueStatusWindowView.sceneID)
                 } label: {
                     LibraryQueueStatusLabel(queue: analysisQueue.queue)
@@ -585,7 +585,7 @@ struct LibraryDestination: View {
             } label: {
                 Label("Inspector", systemImage: "sidebar.trailing")
             }
-            // Disabled, not hidden — vanishing on a mode switch reads as a glitch; the guard is producible.
+            // Disabled, not hidden - vanishing on a mode switch reads as a glitch; the guard is producible.
             .disabled(viewMode.ownsDetailPane)
             .help(viewMode.ownsDetailPane
                   ? "Columns view shows details in its own pane"
@@ -606,7 +606,7 @@ struct LibraryDestination: View {
     }
 
     /// The backfill: point at the folder; the content hash decides which row each file is.
-    /// Stamps one `Int?` per match — never resolves players, classifies or rehashes.
+    /// Stamps one `Int?` per match - never resolves players, classifies or rehashes.
     private func presentBackfillPanel() {
         let panel = NSOpenPanel()
         panel.title = "Match Folder to Library"
@@ -672,19 +672,19 @@ struct LibraryDestination: View {
         let games = gamesInDisplayOrder(ids)
         guard !games.isEmpty else { return }
         if games.count == 1 {
-            // Through the alert — a single game must confirm like a batch does; the dirty-changes fork is unchanged.
+            // Through the alert - a single game must confirm like a batch does; the dirty-changes fork is unchanged.
             pendingDeletion = games[0]
         } else {
             pendingBatchDeletion = games
         }
     }
     
-    /// One transaction; closes open tabs first. Unsaved changes discarded without prompt — acceptable while
+    /// One transaction; closes open tabs first. Unsaved changes discarded without prompt - acceptable while
     /// the dirty path is dormant (no editor defers writes yet).
     private func performBatchDelete(_ pgns: [PGN]) {
         for pgn in pgns {
             let id = pgn.persistentModelID
-            // Before the store delete — see `performDelete` for the why.
+            // Before the store delete - see `performDelete` for the why.
             analysisQueue.gameWasDeleted(id)
             openGames.markClean(id)
             // Close the tab before teardown so it never renders a tombstoned PGN.
@@ -703,7 +703,7 @@ struct LibraryDestination: View {
     }
     
     /// From "Delete Game?": dirty+open routes to a discard confirmation; otherwise deletes immediately.
-    /// The dirty arm is unreachable today by design — no editor defers writes (see `OpenGamesRegistry.markDirty`).
+    /// The dirty arm is unreachable today by design - no editor defers writes (see `OpenGamesRegistry.markDirty`).
     private func delete(_ pgn: PGN) {
         if openGames.isDirty(pgn.persistentModelID) {
             pendingDirtyDeletion = pgn
@@ -716,7 +716,7 @@ struct LibraryDestination: View {
     private func performDelete(_ pgn: PGN) {
         let id = pgn.persistentModelID
         selectedPGNs.remove(pgn.id)
-        // Before the store delete: `gameWasDeleted` stops the running pass synchronously — the engine never
+        // Before the store delete: `gameWasDeleted` stops the running pass synchronously - the engine never
         // writes into a tombstoned model.
         analysisQueue.gameWasDeleted(id)
         openGames.markClean(id)
@@ -750,7 +750,7 @@ struct LibraryDestination: View {
     }
     
     /// Store-owned and idempotent; both collection destinations call it on appear. Behind the
-    /// converged stamp — the healed steady state skips the scan. This is the Library's error sink.
+    /// converged stamp - the healed steady state skips the scan. This is the Library's error sink.
     private func backfillPlayerLinks() {
         do {
             try PGNStore(modelContext: modelContext).healPlayersIfNeeded()
@@ -771,13 +771,13 @@ struct LibraryDestination: View {
     
     // MARK: Export
     
-    /// Single-game entry: a save panel — the user names the file.
+    /// Single-game entry: a save panel - the user names the file.
     private func requestExport(_ pgn: PGN) {
         Self.logger?.info("Export requested: '\(pgn.name, privacy: .public)'")
         PGNExporter.export([pgn])
     }
     
-    /// Multi-game entry; resolves against `filteredGames` — the order numbers the filenames.
+    /// Multi-game entry; resolves against `filteredGames` - the order numbers the filenames.
     private func requestExport(ids: Set<PGN.ID>) {
         let ordered = gamesInDisplayOrder(ids)
         guard !ordered.isEmpty else { return }

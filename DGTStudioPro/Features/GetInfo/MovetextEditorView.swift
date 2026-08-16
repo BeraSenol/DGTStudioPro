@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Edits an archived game's movetext. Every keystroke re-validates purely
 /// (`MovetextEdit.validate`); Save is gated on a legal, result-consistent line and hands the
-/// tokens to the caller — this view never touches SwiftData.
+/// tokens to the caller - this view never touches SwiftData.
 struct MovetextEditorView: View {
     
     // MARK: Stored Properties
@@ -15,15 +15,15 @@ struct MovetextEditorView: View {
     
     // MARK: View State
 
-    /// `AttributedString` — the macOS 26 `TextEditor` binding — so the offending ply
+    /// `AttributedString` - the macOS 26 `TextEditor` binding - so the offending ply
     /// can render red *in the field*. Characters are the data; colour is derived, never typed.
     @State private var text: AttributedString
 
-    /// The seed, kept so **Revert** can restore it without re-reading `pgn` — a live `@Model` holds
+    /// The seed, kept so **Revert** can restore it without re-reading `pgn` - a live `@Model` holds
     /// the *new* moves after a commit, and Revert must mean "what the tab opened with or last saved".
     @State private var seed: String
 
-    /// The last character content the highlight pass styled — the guard that keeps the
+    /// The last character content the highlight pass styled - the guard that keeps the
     /// attribute-only write in `restyle()` from re-entering `onChange` forever.
     @State private var styledPlain: String
 
@@ -53,7 +53,7 @@ struct MovetextEditorView: View {
     /// Plies as a numbered two-column score sheet (by request). **Safe because the numbers are not
     /// data**: `MovetextEdit.tokenize` strips a leading `<digits><dots>` run, so numbers and padding
     /// are decoration the validator never sees. Sharp edge, accepted: delete a ply mid-game and
-    /// every number below is wrong and nothing complains — Save re-renders from accepted moves.
+    /// every number below is wrong and nothing complains - Save re-renders from accepted moves.
     /// (Tabs were tried and reverted: `TextEditor` gives no way to set tab stops.)
     nonisolated static func scoreSheet(_ moves: [String]) -> String {
         guard !moves.isEmpty else { return "" }
@@ -70,7 +70,7 @@ struct MovetextEditorView: View {
             let white = moves[index]
             
             guard index + 1 < moves.count else {
-                // A game ending on White's move gets a white-only final line — the shape, arrived at
+                // A game ending on White's move gets a white-only final line - the shape, arrived at
                 // independently: it is simply what a score sheet does.
                 return gutter + label + "  " + white
             }
@@ -87,7 +87,7 @@ struct MovetextEditorView: View {
     private typealias Validation = Result<MovetextEdit.Accepted, MovetextEdit.Rejection>
 
     /// Tokenization and validation as one step: `tokenize` refuses spliced input, so tokens and
-    /// verdict travel together. On a splice the tokens are empty — safe, Save gates on `.success`.
+    /// verdict travel together. On a splice the tokens are empty - safe, Save gates on `.success`.
     private nonisolated static func check(
         _ plain: String,
         claimedResult: GameResult
@@ -113,7 +113,7 @@ struct MovetextEditorView: View {
 
     // MARK: Highlight
 
-    /// Colours cleared, then the offending ply — and only it — painted red. Attribute-only: the
+    /// Colours cleared, then the offending ply - and only it - painted red. Attribute-only: the
     /// characters are never touched, so the caret stays put. Colour is the *pointer*; the words
     /// stay in the status line, so the signal is never colour-alone.
     private nonisolated static func highlighted(
@@ -132,7 +132,7 @@ struct MovetextEditorView: View {
     }
 
     /// Re-derives the highlight after a character change. Typing at the edge of a red run briefly
-    /// inherits its colour — repainted here on the same change, so it never survives a frame the
+    /// inherits its colour - repainted here on the same change, so it never survives a frame the
     /// reader can act on. The `styledPlain` guard swallows the attribute-only echo.
     private func restyle() {
         let plain = String(text.characters)
@@ -164,8 +164,8 @@ struct MovetextEditorView: View {
             Divider()
 
             HStack {
-                // **Revert, not Cancel** — a tab cannot close, so the button means "put the text back".
-                // Disabled state is producible (open the tab, touch nothing) — the check.
+                // **Revert, not Cancel** - a tab cannot close, so the button means "put the text back".
+                // Disabled state is producible (open the tab, touch nothing) - the check.
                 Button("Revert") { text = AttributedString(seed) }
                     .disabled(plain == seed)
                     .accessibilityIdentifier(AccessibilityID.movetextEditorCancel)
@@ -176,7 +176,7 @@ struct MovetextEditorView: View {
                 // a move, and a default-action Save would commit on the field's most ordinary keystroke.
                 Button("Save") {
                     onCommit(check.tokens)
-                    // Re-render from the **accepted** moves — the canonical SAN the store persists — the one moment
+                    // Re-render from the **accepted** moves - the canonical SAN the store persists - the one moment
                     // the editor can show exactly what landed (also re-aligns the score sheet).
                     if case .success(let accepted) = check.validation {
                         let sheet = Self.scoreSheet(accepted.moves)
@@ -260,7 +260,7 @@ struct MovetextEditorView: View {
     .frame(width: 460, height: 420)
 }
 
-/// The rejection arm, seeded legal: the *transition* is the behaviour — Save disables the
+/// The rejection arm, seeded legal: the *transition* is the behaviour - Save disables the
 /// moment the line stops being legal.
 #Preview("Result Mismatch") {
     MovetextEditorView(
@@ -271,8 +271,8 @@ struct MovetextEditorView: View {
 }
 
 /// The witness, and the game-98 shape: stored moves that never replayed show their offending
-/// ply red **on open**. The defect this guards is visual — the wrong token painted, or the paint
-/// surviving a fix — which only a canvas can see.
+/// ply red **on open**. The defect this guards is visual - the wrong token painted, or the paint
+/// surviving a fix - which only a canvas can see.
 #Preview("Illegal Ply") {
     MovetextEditorView(
         pgn: PGN(white: "Alice", black: "Bob", moves: ["e4", "e5", "Qf4+"], result: .whiteWins),

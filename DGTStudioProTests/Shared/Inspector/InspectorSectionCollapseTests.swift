@@ -8,7 +8,7 @@ import Testing
 @Suite("Inspector section collapse")
 struct InspectorSectionCollapseTests {
 
-    /// A throwaway suite per test — `.standard` would edit the developer's own
+    /// A throwaway suite per test - `.standard` would edit the developer's own
     /// settings, and a fixed suite name would race under parallel execution.
     /// Lifted verbatim from `SleepInhibitorPreferenceTests`, which is the
     /// helper this suite's subject is modelled on.
@@ -21,7 +21,7 @@ struct InspectorSectionCollapseTests {
 
     // MARK: Default
 
-    /// Sections default open via the representation: an absent key decodes to the empty set — no
+    /// Sections default open via the representation: an absent key decodes to the empty set - no
     /// `?? true` to keep in step.
     @Test func absentKeyLeavesEverySectionOpen() throws {
         try withScratchDefaults { defaults in
@@ -74,7 +74,7 @@ struct InspectorSectionCollapseTests {
         }
     }
 
-    /// Sections are independent — collapsing one must not disturb another.
+    /// Sections are independent - collapsing one must not disturb another.
     /// Cheap, and it is the assertion that fails if the set is ever replaced
     /// by a single stored section.
     @Test func sectionsCollapseIndependently() throws {
@@ -91,7 +91,7 @@ struct InspectorSectionCollapseTests {
     // MARK: Retired Sections
 
     /// The answer to "what does a removed section leave in the store": nothing
-    /// that can affect a live one. An unknown raw value is dropped on read —
+    /// that can affect a live one. An unknown raw value is dropped on read -
     /// the alternative, treating it as an error, would make deleting a section
     /// from the app a migration.
     @Test func unknownStoredSectionsAreIgnored() throws {
@@ -129,7 +129,7 @@ struct InspectorSectionCollapseTests {
 
     /// A malformed value of the wrong *type* must not crash the read. Not
     /// defensive nil-handling for its own sake: `stringArray(forKey:)` returns
-    /// nil for a non-array, and the whole store would silently reset — which
+    /// nil for a non-array, and the whole store would silently reset - which
     /// is the correct outcome and worth pinning so it stays deliberate.
     @Test func aNonArrayValueReadsAsNothingCollapsed() throws {
         try withScratchDefaults { defaults in
@@ -146,7 +146,7 @@ struct InspectorSectionCollapseTests {
 
     /// The written order is sorted, so re-storing identical state produces an
     /// identical array. A `Set`'s iteration order is not stable across runs,
-    /// and an unsorted write would churn the domain for no reason — which is
+    /// and an unsorted write would churn the domain for no reason - which is
     /// invisible until someone diffs a `defaults export` and finds noise.
     @Test func theStoredArrayIsSorted() throws {
         try withScratchDefaults { defaults in
@@ -163,7 +163,7 @@ struct InspectorSectionCollapseTests {
     }
 
     /// Raw values are stored form and hand-written (so a rename can't reach the store), which means
-    /// two *can* collide — the one check the compiler doesn't do.
+    /// two *can* collide - the one check the compiler doesn't do.
     @Test func everySectionHasADistinctStoredKey() {
         let keys = Set(InspectorSection.allCases.map(\.rawValue))
         #expect(keys.count == InspectorSection.allCases.count)

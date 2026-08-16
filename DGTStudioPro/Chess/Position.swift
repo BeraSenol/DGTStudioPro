@@ -53,7 +53,7 @@ struct Position: Codable, Equatable, Sendable {
         return result
     }
     
-    /// Linear scan, called once per `legalMoves()` and once per `isInCheck` —
+    /// Linear scan, called once per `legalMoves()` and once per `isInCheck` -
     /// which is per node in perft. `firstIndex(of:)` is the same complexity
     /// but hands the search to the stdlib rather than a Swift loop over an
     /// index range.

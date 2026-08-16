@@ -1,7 +1,7 @@
 extension Position {
     
     /// Whether any offset, stepped once and wrap-guarded, holds `piece`. `maxFileDistance` is NOT
-    /// derivable from the offsets — a knight legitimately changes file by 2.
+    /// derivable from the offsets - a knight legitimately changes file by 2.
     func hasPiece(
         _ piece: Piece,
         steppingFrom square: Square,
@@ -41,7 +41,7 @@ extension Position {
             if self[from] == attackingKing { return true }
         }
         
-        // Orthogonal sliders (rook, queen) — cast rays along ranks/files.
+        // Orthogonal sliders (rook, queen) - cast rays along ranks/files.
         for direction in Square.rookDirections {
             if rayHitsSlider(
                 from: square, direction: direction,
@@ -50,7 +50,7 @@ extension Position {
             ) { return true }
         }
         
-        // Diagonal sliders (bishop, queen) — cast rays along diagonals.
+        // Diagonal sliders (bishop, queen) - cast rays along diagonals.
         for direction in Square.bishopDirections {
             if rayHitsSlider(
                 from: square, direction: direction,
@@ -62,7 +62,7 @@ extension Position {
         return false
     }
     
-    /// Walks a ray; true iff the first occupied square holds a matching enemy slider. Internal —
+    /// Walks a ray; true iff the first occupied square holds a matching enemy slider. Internal -
     /// `SpecialCheckmate` reads it.
     func rayHitsSlider(
         from square: Square,

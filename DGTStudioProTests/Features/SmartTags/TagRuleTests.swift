@@ -77,7 +77,7 @@ struct TagRuleTests {
         #expect(TagRule(field: .opening, comparison: .notEquals, text: "French").matches(game) == false)
     }
 
-    /// **The stored raw value survived the rename** — `"matePattern"` is encoded in every saved
+    /// **The stored raw value survived the rename** - `"matePattern"` is encoded in every saved
     /// tag's blob, and following the Swift name would silently drop the rule. On the literal, correctly.
     @Test func theCheckmateTypeFieldKeepsItsStoredRawValue() {
         #expect(TagRule.Field.checkmateType.rawValue == "matePattern")
@@ -227,7 +227,7 @@ struct TagRuleTests {
     
     // MARK: Dates
     
-    /// Date rules answer "when was this played" — the `importedAt`
+    /// Date rules answer "when was this played" - the `importedAt`
     /// fallback orders folds, it does not answer that, so undated games
     /// never match.
     @Test func dateBeforeAfterAndUndated() {
@@ -254,7 +254,7 @@ struct TagRuleTests {
 
     /// The 27 July quantifier fix, finally pinned (M1 item 18): "Player
     /// is not X" means *neither* seat is X. Under `contains` it read
-    /// "some seat isn't X" — true of every game X ever played against
+    /// "some seat isn't X" - true of every game X ever played against
     /// anyone, the exact inverse of the rule's plain meaning.
     @Test func playerNotEqualsFlipsTheQuantifier() {
         let notBera = TagRule(field: .player, comparison: .notEquals, text: "bera")
@@ -264,12 +264,12 @@ struct TagRuleTests {
         #expect(notBera.matches(record(white: "Christophe", black: "Bera")) == false)
         // Third parties only → matched.
         #expect(notBera.matches(record(white: "Christophe", black: "Reinaud")))
-        // No resolved seat: nothing can prove or disprove a player rule —
+        // No resolved seat: nothing can prove or disprove a player rule -
         // unknowns never match, negation included.
         #expect(notBera.matches(record(white: nil, black: nil)) == false)
     }
 
-    /// Unknowns never match, negation included, for single subjects — the guard is
+    /// Unknowns never match, negation included, for single subjects - the guard is
     /// `.notEquals`-only.
     @Test func singleSubjectNotEqualsNeverMatchesUnknowns() {
         let notCarlsen = TagRule(field: .white, comparison: .notEquals, text: "carlsen")
@@ -314,7 +314,7 @@ struct TagRuleTests {
         #expect(TagRule.evaluate([], matchAll: true, against: game) == false)
     }
     
-    /// Every field's default comparison is one its kind admits — the
+    /// Every field's default comparison is one its kind admits - the
     /// editor's field-switch reset depends on this being total.
     @Test func everyFieldOwnsItsComparisons() {
         for field in TagRule.Field.allCases {

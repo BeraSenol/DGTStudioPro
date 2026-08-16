@@ -1,6 +1,6 @@
 // MARK: Destination Subtitle
 
-/// The toolbar subtitle grammar, all three destinations — a pure formatter (`GameHeadline`'s
+/// The toolbar subtitle grammar, all three destinations - a pure formatter (`GameHeadline`'s
 /// shape). The subtitle's one job is **state**: what a glance at the content does not already
 /// say. Nothing to say is a first-class answer.
 enum DestinationSubtitle {
@@ -9,19 +9,19 @@ enum DestinationSubtitle {
 
     /// Board: session status while playing, position status while reviewing, nothing otherwise.
     /// Exceptional states replace the routine one. `phase` arrives already priority-ordered
-    /// (`SessionPhase.current`) — re-ordering here would be the second, quietly different copy.
+    /// (`SessionPhase.current`) - re-ordering here would be the second, quietly different copy.
     static func board(
         phase: LiveGameHUDView.Phase?,
         reviewing sideToMove: PieceColor?
     ) -> String? {
         if let sideToMove {
-            // The enum owns the app's user-facing verbs — a second "Reviewing" literal is how the headline
+            // The enum owns the app's user-facing verbs - a second "Reviewing" literal is how the headline
             // and the toolbar drift on a word they show at once.
             return "\(GameHeadline.Activity.reviewing.rawValue) · \(sideToMove.toMoveDescription)"
         }
         guard let phase else { return nil }
         switch phase {
-        // Named for the problem, not the response — "Desynced" is `recordDesync`'s own vocabulary.
+        // Named for the problem, not the response - "Desynced" is `recordDesync`'s own vocabulary.
         case .recovering:    return "Desynced"
         case .correction:    return "Fix a piece"
         case .awaitingSetup: return "Set up pieces"
@@ -47,7 +47,7 @@ enum DestinationSubtitle {
     // MARK: Players
 
     /// One selected says nothing (the profile is right there). **Exactly two** is the head-to-head
-    /// question: "Giri 7–3–2 Ding", numbers bracketed in reading order — an ordered pair, not a set.
+    /// question: "Giri 7–3–2 Ding", numbers bracketed in reading order - an ordered pair, not a set.
     static func players(
         selected: Int,
         headToHead: (first: String, second: String, record: (Int, Int, Int))?
@@ -64,7 +64,7 @@ enum DestinationSubtitle {
 
 extension PieceColor {
 
-    /// "White to move" — extracted from the HUD's only copy. Deliberately not in `Piece.swift`:
+    /// "White to move" - extracted from the HUD's only copy. Deliberately not in `Piece.swift`:
     /// that file is chess-core pure and this is UI copy.
     var toMoveDescription: String {
         self == .white ? "White to move" : "Black to move"

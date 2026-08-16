@@ -1,6 +1,6 @@
 /// Which material the board cues are made of. One set holds all four cues,
 /// so switching is one choice rather than four, and a set is internally consistent
-/// by construction — a felt move cannot end up beside a marble capture.
+/// by construction - a felt move cannot end up beside a marble capture.
 ///
 /// Ordered soft → hard, which is the order a picker should offer them in: the list
 /// reads as a scale rather than as three unrelated names.
@@ -23,7 +23,7 @@ enum BoardSoundSet: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// The bundled sample for one cue in this set — `wood-capture`, `felt-move`.
+    /// The bundled sample for one cue in this set - `wood-capture`, `felt-move`.
     ///
     /// The set owns this rather than `BoardCue` because the set is the axis that
     /// varies: a cue is one of four fixed questions, a set is a growing list, and

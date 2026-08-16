@@ -3,9 +3,9 @@ import Foundation
 import SwiftData
 @testable import DGTStudioPro
 
-/// Transport-level pin — the one defect that lived *between* the pure queue and the engine.
+/// Transport-level pin - the one defect that lived *between* the pure queue and the engine.
 @MainActor
-@Suite("Analysis Queue Controller — drain race")
+@Suite("Analysis Queue Controller - drain race")
 struct AnalysisQueueControllerTests {
 
     // `nonisolated`, load-bearing: `.enabled(if:)` evaluates in a `Sendable` closure outside the
@@ -15,7 +15,7 @@ struct AnalysisQueueControllerTests {
     }
 
     /// An `enqueue` landing inside the drain's shutdown grace must start a fresh run once the task
-    /// clears — pre-fix it was refused and the batch sat queued forever.
+    /// clears - pre-fix it was refused and the batch sat queued forever.
     @Test(.enabled(if: stockfishAvailable))
     func enqueueDuringDrainGraceStartsAFreshRun() async throws {
         let container = try ModelContainer(
@@ -43,7 +43,7 @@ struct AnalysisQueueControllerTests {
         let controller = AnalysisQueueController()
         controller.enqueue([first], modelContext: context)
 
-        // Poll with a deadline and assert after — a timeout must be a
+        // Poll with a deadline and assert after - a timeout must be a
         // failure, never a silent pass (the F7 lesson).
         var deadline = Date().addingTimeInterval(90)
         while Date() < deadline, controller.queue.completedCount < 1 {
@@ -53,7 +53,7 @@ struct AnalysisQueueControllerTests {
 
         // The race: land B while the drain sits in its grace window.
         // (Enqueueing onto the momentarily-idle queue also resets the
-        // finished log — the documented fresh-batch rule — which is why
+        // finished log - the documented fresh-batch rule - which is why
         // the assertions below ask about B's status, not counts.)
         controller.enqueue([second], modelContext: context)
 

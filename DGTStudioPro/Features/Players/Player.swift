@@ -36,7 +36,7 @@ final class Player: Identifiable {
     // MARK: Initializers
     
     /// `name` must already be display form; the resolver is the only production caller and always
-    /// supplies `tagName` — the default exists for fixtures.
+    /// supplies `tagName` - the default exists for fixtures.
     init(name: String, tagName: String? = nil) {
         self.name = name
         self.normalizedName = Self.normalizedKey(for: name)
@@ -45,20 +45,20 @@ final class Player: Identifiable {
     
     // MARK: Static Methods
     
-    /// The identity fold: lowercase + collapse whitespace — one folding rule for "same player".
+    /// The identity fold: lowercase + collapse whitespace - one folding rule for "same player".
     static func normalizedKey(for displayName: String) -> String {
         PlayerName.folded(displayName).lowercased()
     }
 
     /// The identity a raw **seat tag** resolves to, or nil for the absence of a player (`"?"`/empty).
-    /// Extracted when the guard needed the answer without creating a row — one spelling.
+    /// Extracted when the guard needed the answer without creating a row - one spelling.
     static func identity(forTag rawTag: String) -> String? {
         let display = PlayerName.displayForm(of: rawTag)
         guard !display.isEmpty, display != RosterSummary.unknownTag else { return nil }
         return normalizedKey(for: display)
     }
 
-    /// Whether two seat tags name one player — the app's one spelling of "seats collide".
+    /// Whether two seat tags name one player - the app's one spelling of "seats collide".
     /// Identities, not strings ("Lopez, Ruy" == "Ruy Lopez"); nil never collides (two unknowns are
     /// two absences, or every all-unknown import would refuse every edit).
     static func seatsNameOnePlayer(_ one: String, _ other: String) -> Bool {

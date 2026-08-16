@@ -2,11 +2,11 @@ import Foundation
 import os
 
 /// The transport seam `DGTConnection` drives (F9): real port below, scripted fakes in tests.
-/// **The event stream finishing is the single "port is gone" signal** — teardown cancels it, an
+/// **The event stream finishing is the single "port is gone" signal** - teardown cancels it, an
 /// unplug does not.
 protocol DGTPortProviding: Actor {
     /// Opens the device and returns the decoded event stream; the stream finishes when the port
-    /// closes — explicitly, or because the device went away (F1).
+    /// closes - explicitly, or because the device went away (F1).
     func open(path: String) throws -> AsyncStream<DGTEvent>
     /// Closes the port and finishes the event stream. No-op when not open.
     func close()
@@ -14,10 +14,10 @@ protocol DGTPortProviding: Actor {
     func send(_ command: DGTCommand) throws
 }
 
-/// Owns the serial fd and turns inbound bytes into decoded `DGTEvent`s — `StockfishEngine`'s
+/// Owns the serial fd and turns inbound bytes into decoded `DGTEvent`s - `StockfishEngine`'s
 /// analogue. Raw bytes never escape un-decoded: framing (`DGTFramer`) and semantics
 /// (`DGTDecoder`) live here, so the @MainActor connection only sees events. Chunk order is
-/// preserved end to end — two swapped chunks would desync the framer (F2).
+/// preserved end to end - two swapped chunks would desync the framer (F2).
 actor DGTSerialPort: DGTPortProviding {
     
     // MARK: Logging
@@ -50,13 +50,13 @@ actor DGTSerialPort: DGTPortProviding {
     init() {}
     
     /// Whether the port holds a file descriptor. **The app target's one symbol with no consumer,
-    /// kept by decision** (not the disposition — no better sibling answers this question).
+    /// kept by decision** (not the disposition - no better sibling answers this question).
     var isOpen: Bool { fileDescriptor >= 0 }
     
     // MARK: Open / Close
     
     /// Opens, configures, starts the ordered pipeline, returns decoded events (stream finishes when
-    /// the port closes — F1).
+    /// the port closes - F1).
     func open(path: String) throws -> AsyncStream<DGTEvent> {
         guard fileDescriptor < 0 else {
             Self.logger?.error("Serial open ignored, port already open")
@@ -80,12 +80,12 @@ actor DGTSerialPort: DGTPortProviding {
         fileDescriptor = fd
         framer = DGTFramer()
         
-        // The ordered byte pipeline (F2) — see the type doc.
+        // The ordered byte pipeline (F2) - see the type doc.
         let (bytes, byteContinuation) = AsyncStream.makeStream(of: Data.self)
         self.byteContinuation = byteContinuation
         
         let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: false)
-        // Raw `read(2)` instead of `availableData` (F1). The closure captures no `self` — it only
+        // Raw `read(2)` instead of `availableData` (F1). The closure captures no `self` - it only
         // bridges bytes and the end signal.
         handle.readabilityHandler = { handle in
             var buffer = [UInt8](repeating: 0, count: 512)
@@ -93,13 +93,13 @@ actor DGTSerialPort: DGTPortProviding {
             if count > 0 {
                 byteContinuation.yield(Data(buffer[0..<count]))
             } else if count == 0 {
-                // EOF — device gone. Stop the source, end the pipeline.
+                // EOF - device gone. Stop the source, end the pipeline.
                 handle.readabilityHandler = nil
                 byteContinuation.finish()
             } else if errno == EAGAIN || errno == EINTR {
-                // Spurious wakeup — the next callback retries.
+                // Spurious wakeup - the next callback retries.
             } else {
-                // Fatal read error (ENXIO/EIO after unplug) — same exit.
+                // Fatal read error (ENXIO/EIO after unplug) - same exit.
                 handle.readabilityHandler = nil
                 byteContinuation.finish()
             }
@@ -107,7 +107,7 @@ actor DGTSerialPort: DGTPortProviding {
         fileHandle = handle
         
         // One long-lived actor-isolated consumer, in stream order. Created before `eventContinuation`
-        // exists would be a bug — a Task in actor-isolated code cannot run until this method suspends.
+        // exists would be a bug - a Task in actor-isolated code cannot run until this method suspends.
         readLoopTask = Task {
             for await chunk in bytes {
                 ingest(chunk)
@@ -144,7 +144,7 @@ actor DGTSerialPort: DGTPortProviding {
     }
     
     /// Byte stream finished. `close()`-initiated → nothing to do; otherwise the device vanished
-    /// (F1): close ourselves, which finishes the *event* stream — the signal the connection keys on.
+    /// (F1): close ourselves, which finishes the *event* stream - the signal the connection keys on.
     private func readSourceEnded() {
         guard fileDescriptor >= 0 else { return }
         Self.logger?.error("Serial read source ended (device vanished or read failed), closing port")

@@ -2,7 +2,7 @@ import SwiftData
 import SwiftUI
 
 /// The analysis queue in full: the live search, both clocks, everything in line, everything
-/// done with its outcome — the room the popover never had.
+/// done with its outcome - the room the popover never had.
 struct AnalysisQueueStatusWindowView: View {
 
     // MARK: Static Constants
@@ -24,7 +24,7 @@ struct AnalysisQueueStatusWindowView: View {
                 if let search = controller.currentSearch {
                     searchPanel(search)
                 } else if controller.queue.current != nil {
-                    // Between plies and before the first `info` line — naming the state holds the layout still.
+                    // Between plies and before the first `info` line - naming the state holds the layout still.
                     Text("Waiting for the engine…")
                         .font(.callout)
                         .foregroundStyle(.secondary)
@@ -42,7 +42,7 @@ struct AnalysisQueueStatusWindowView: View {
 
     // MARK: Header
 
-    /// Title, counted position, two clocks. `TimelineView`, not a published tick — a per-second
+    /// Title, counted position, two clocks. `TimelineView`, not a published tick - a per-second
     /// write to an `@Observable` would invalidate every observer.
     @ViewBuilder
     private var header: some View {
@@ -70,7 +70,7 @@ struct AnalysisQueueStatusWindowView: View {
         return "Analyzing \(queue.batchPosition) of \(queue.totalCount)"
     }
 
-    /// Only the knowable half: the projection drops off once the queue drains — "about 0 sec" is
+    /// Only the knowable half: the projection drops off once the queue drains - "about 0 sec" is
     /// not the same statement as no estimate.
     private func timingLine(now: Date, started: Date) -> String {
         let elapsed = BatchProgressEstimate.describe(
@@ -84,7 +84,7 @@ struct AnalysisQueueStatusWindowView: View {
 
     // MARK: Running Search
 
-    /// The move in chess notation, not a ply ordinal — a bare ordinal reads as a full-move number
+    /// The move in chess notation, not a ply ordinal - a bare ordinal reads as a full-move number
     /// and points at the wrong move for every black ply.
     private func searchPanel(_ search: GameAnalysisDriver.Search) -> some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -109,7 +109,7 @@ struct AnalysisQueueStatusWindowView: View {
                 // The *target*, not the live iteration: `progress.depth` climbs 1→18 inside every ply, so the
                 // readout spun and read as the setting bouncing.
                 searchFact("Depth", "\(search.targetDepth)")
-                // Through `EvaluationBarReading` — this window, the graph and the bar cannot disagree about
+                // Through `EvaluationBarReading` - this window, the graph and the bar cannot disagree about
                 // what "+1.3" or "#4" looks like (the pinned grammar).
                 searchFact("Evaluation", EvaluationBarReading(search.progress.evaluation).label)
                 searchFact("Speed", speedLabel(search.progress.nodesPerSecond))
@@ -136,7 +136,7 @@ struct AnalysisQueueStatusWindowView: View {
         return "\(number)\(separator)\(search.san)"
     }
 
-    /// "8.9 Mn/s" — the unit every engine front end shows; degrades to thousands below a million.
+    /// "8.9 Mn/s" - the unit every engine front end shows; degrades to thousands below a million.
     private func speedLabel(_ nodesPerSecond: Int?) -> String {
         guard let nodesPerSecond else { return RosterSummary.displayUnknown }
         if nodesPerSecond >= 1_000_000 {
@@ -147,7 +147,7 @@ struct AnalysisQueueStatusWindowView: View {
 
     // MARK: Lists
 
-    /// Everything in line, in run order, per-row removal. No cap — "…and 92 more" was a popover's
+    /// Everything in line, in run order, per-row removal. No cap - "…and 92 more" was a popover's
     /// apology for being a popover.
     private var waitingSection: some View {
         section("Up Next", count: controller.queue.waiting.count) {
@@ -176,7 +176,7 @@ struct AnalysisQueueStatusWindowView: View {
         }
     }
 
-    /// Done, newest first — unlike the queue's completion-order storage: a log read during a live
+    /// Done, newest first - unlike the queue's completion-order storage: a log read during a live
     /// batch wants the newest where the eyes already are.
     private var finishedSection: some View {
         section("Finished", count: controller.queue.finished.count) {
@@ -216,7 +216,7 @@ struct AnalysisQueueStatusWindowView: View {
         }
     }
 
-    /// "58 plies to search" — searchable, not total: the number the estimate is
+    /// "58 plies to search" - searchable, not total: the number the estimate is
     /// denominated in, so a jumped "about 9 min" is explicable.
     private func plyLabel(for id: PersistentIdentifier) -> String {
         guard let plies = controller.plyCount(for: id) else { return "" }
@@ -233,7 +233,7 @@ struct AnalysisQueueStatusWindowView: View {
         }
     }
 
-    /// Cancelled is deliberately not a warning colour — reporting the user's own choice back as a
+    /// Cancelled is deliberately not a warning colour - reporting the user's own choice back as a
     /// problem teaches people to ignore warnings.
     private func outcomeTint(_ outcome: AnalysisQueue<PersistentIdentifier>.Outcome) -> Color {
         switch outcome {
@@ -264,7 +264,7 @@ struct AnalysisQueueStatusWindowView: View {
                 }
                 .accessibilityIdentifier(AccessibilityID.analysisQueueStopAll)
             } else {
-                // Clearing also hides the Library's toolbar item (`hasFailures`). The window stays open — a
+                // Clearing also hides the Library's toolbar item (`hasFailures`). The window stays open - a
                 // window that closes itself on a button press is the popover behaviour this view leaves behind.
                 Button("Clear") {
                     controller.clearFinished()
@@ -279,7 +279,7 @@ struct AnalysisQueueStatusWindowView: View {
 
 // MARK: Previews
 
-/// One preview, empty state only — a waiver: the queue is `private(set)` by design, so a canvas
+/// One preview, empty state only - a waiver: the queue is `private(set)` by design, so a canvas
 /// cannot seed a running batch without an engine and a container.
 #Preview("Idle") {
     AnalysisQueueStatusWindowView()

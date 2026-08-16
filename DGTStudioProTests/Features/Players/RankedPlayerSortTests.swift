@@ -3,13 +3,13 @@ import Testing
 @testable import DGTStudioPro
 
 /// The column sort that replaced the picker. Nonisolated, load-bearing. Not tested: that
-/// `sorted(using:)` sorts — that is the framework's.
+/// `sorted(using:)` sorts - that is the framework's.
 @Suite("Ranked player column sort")
 struct RankedPlayerSortTests {
 
     // MARK: Fixtures
 
-    /// Deliberately duplicated builder — that suite pins the comparator; this one a different claim
+    /// Deliberately duplicated builder - that suite pins the comparator; this one a different claim
     /// that happens to need the same fixtures.
     private func player(_ key: String, wins: Int, losses: Int) -> PlayerStats {
         PlayerStats(
@@ -39,7 +39,7 @@ struct RankedPlayerSortTests {
 
     // MARK: The equivalence the picker's deletion rests on
 
-    /// The shipped default sort reproduces the shipped default *ranking method* — two separate
+    /// The shipped default sort reproduces the shipped default *ranking method* - two separate
     /// values that must agree. Sorted from a **shuffled** input, so it cannot pass by luck.
     @Test func defaultSortReproducesTheLadder() {
         let expected = ladder().map(\.stats.key)
@@ -78,7 +78,7 @@ struct RankedPlayerSortTests {
         #expect(sorted.map(\.stats.key) == expected)
     }
 
-    /// The Player column reproduces what the "By Name" position did —
+    /// The Player column reproduces what the "By Name" position did -
     /// `stats.name` ascending. Pinned because the picker that used to spell
     /// this is gone, so this comparator is now the only place the app says
     /// what alphabetical means here.
@@ -92,7 +92,7 @@ struct RankedPlayerSortTests {
 
     // MARK: The optional-valued columns
 
-    /// Unrated players group at one end rather than scattering — the arm that breaks first if
+    /// Unrated players group at one end rather than scattering - the arm that breaks first if
     /// someone "simplifies" the nil ordering.
     @Test func unratedPlayersGroupRatherThanScatter() {
         func rated(_ key: String, _ mean: Double?) -> RankedPlayer {
@@ -112,7 +112,7 @@ struct RankedPlayerSortTests {
         #expect(sorted.suffix(2).map(\.stats.key) == ["mid", "high"])
     }
 
-    /// A provisional rating sorts by its mean, not by its uncertainty — the
+    /// A provisional rating sorts by its mean, not by its uncertainty - the
     /// display marker is display only. Stated as a test because the comment
     /// arguing it sits in the view, where nothing compiles it.
     @Test func provisionalRatingSortsOnTheMeanAlone() {

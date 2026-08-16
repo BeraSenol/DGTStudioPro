@@ -20,7 +20,7 @@ struct DGTSessionRecordingTests {
         Position.make { $0[square] = piece }
     }
     
-    /// `before` with the given squares emptied — a "piece in hand" snapshot.
+    /// `before` with the given squares emptied - a "piece in hand" snapshot.
     private func lifting(_ board: Position, _ squares: Square...) -> Position {
         var position = board
         for square in squares { position[square] = .empty }
@@ -40,7 +40,7 @@ struct DGTSessionRecordingTests {
         )
     }
     
-    // MARK: settledBoards — Boundaries
+    // MARK: settledBoards - Boundaries
     
     @Test func emptyRecordingSettlesToNothing() {
         let recording = DGTSessionRecording(entries: [])
@@ -96,9 +96,9 @@ struct DGTSessionRecordingTests {
         #expect(recording.settledBoards(quiescence: .milliseconds(200)) == [a, b])
     }
     
-    // MARK: reconstructions — Full Replay
+    // MARK: reconstructions - Full Replay
     
-    /// A three-move opening with sub-quiescence transients — reconstruction must drop the
+    /// A three-move opening with sub-quiescence transients - reconstruction must drop the
     /// transients and resolve exactly three moves.
     @Test func replaysAThreeMoveOpening() throws {
         let start = GameState.starting
@@ -159,7 +159,7 @@ struct DGTSessionRecordingTests {
     
     /// `.correctable` does not advance the game either: the EP-without-lifting
     /// slip surfaces as a correctable nudge, and the completing `.move` lands
-    /// only once the victim pawn is cleared — both reconstructed against the
+    /// only once the victim pawn is cleared - both reconstructed against the
     /// same pre-move state.
     @Test func correctableEnPassantDoesNotAdvanceState() throws {
         let state = try GameState.parsing("4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1")
@@ -191,7 +191,7 @@ struct DGTSessionRecordingTests {
     
     /// A recording survives the JSON round-trip used by the export/import path.
     /// `jsonData()` encodes dates as ISO-8601, which truncates sub-second
-    /// precision — so the fixture uses a whole-second `recordedAt`, the only
+    /// precision - so the fixture uses a whole-second `recordedAt`, the only
     /// values that round-trip to an exact `==`.
     @Test func jsonRoundTripPreservesRecording() throws {
         let recording = DGTSessionRecording(

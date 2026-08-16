@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The connection control as `ToolbarContent` a host composes into its own builder — a second
+/// The connection control as `ToolbarContent` a host composes into its own builder - a second
 /// `.toolbar` modifier leaves the toolbar undivided. The sheet is the host's `@State`; this
 /// only flips it.
 struct DGTConnectionToolbarContent: ToolbarContent {
@@ -33,7 +33,7 @@ struct DGTConnectionToolbarContent: ToolbarContent {
         switch status {
         case .connecting, .reconnecting:
             // A spinner in the toolbar communicates the in-progress
-            // handshake — or the M7.3 retry loop working to get the board
+            // handshake - or the M7.3 retry loop working to get the board
             // back (the HUD carries the words; this is just the pulse).
             ProgressView()
                 .controlSize(.small)
@@ -43,7 +43,7 @@ struct DGTConnectionToolbarContent: ToolbarContent {
         }
     }
     
-    /// Failure reads as "not connected" here by design — `tint` is what
+    /// Failure reads as "not connected" here by design - `tint` is what
     /// distinguishes it (red vs plain). The enumerated `.failed` case returned
     /// the same string as `default` and decided nothing; if a distinct failure
     /// glyph is ever wanted, it goes back here.

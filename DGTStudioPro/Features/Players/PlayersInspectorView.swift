@@ -45,7 +45,7 @@ struct PlayersInspectorView: View {
         )
     }
 
-    /// The counting variant — the Library inspector's shape and symbol, one vocabulary.
+    /// The counting variant - the Library inspector's shape and symbol, one vocabulary.
     private var multiSelectionState: some View {
         InspectorEmptyState(
             title: "\(selectionCount) Players Selected",
@@ -63,7 +63,7 @@ private struct ProfileSection: View {
     let ranked: RankedPlayer
     let ratedGames: Int
 
-    /// `.playerProfile` — the surviving identity of the merge; a stored collapse under the
+    /// `.playerProfile` - the surviving identity of the merge; a stored collapse under the
     /// retired raw value evicts on the next write (the designed cost).
     var body: some View {
         CollapsibleSection(.playerProfile, title: ranked.stats.name) {
@@ -74,7 +74,7 @@ private struct ProfileSection: View {
             LabeledContent("Win Rate", value: ranked.stats.winRate.formatted(.percent.precision(.fractionLength(0))))
             LabeledContent("Rating", value: ranked.rating?.displaySummary ?? "Unrated")
             if let rating = ranked.rating {
-                // The deviation IS the honesty of the number above — surfaced, not hidden in the provisional flag.
+                // The deviation IS the honesty of the number above - surfaced, not hidden in the provisional flag.
                 LabeledContent("Uncertainty", value: "±\(Int(rating.deviation.rounded()))")
             }
             LabeledContent("Rated Games", value: "\(ratedGames)")
@@ -82,11 +82,11 @@ private struct ProfileSection: View {
             LabeledContent("First Played", value: RosterSummary.displayDate(ranked.stats.firstPlayed))
             LabeledContent("Last Played", value: RosterSummary.displayDate(ranked.stats.lastPlayed))
         } actions: {
-            // The player's name is the title — the destination says what kind of thing this is; the header
+            // The player's name is the title - the destination says what kind of thing this is; the header
             // says *which*.
         }
         // Identifier stays on the section: collapsing hides the rows, not this. A future suite should
-        // expect the § Zero failures here — header controls unresolvable by identifier, cause unknown
+        // expect the § Zero failures here - header controls unresolvable by identifier, cause unknown
         // (shadowing disproved; closed unresolved).
         .accessibilityIdentifier(AccessibilityID.playersInspectorProfile)
     }
@@ -119,7 +119,7 @@ private struct RecentGamesSection: View {
         }
     }
 
-    /// Row tap opens the game — same `openWindow(value:)` route as the Library inspector.
+    /// Row tap opens the game - same `openWindow(value:)` route as the Library inspector.
     private func row(for game: PGN) -> some View {
         Button {
             openWindow(value: game.persistentModelID)
@@ -152,7 +152,7 @@ private struct RecentGamesSection: View {
         .environment(InspectorSectionCollapse.preview)
 }
 
-/// The counting branch — no fixture reaches it by accident.
+/// The counting branch - no fixture reaches it by accident.
 #Preview("Multi-Selection") {
     PlayersInspectorView(ranked: nil, history: [], recentGames: [], selectionCount: 5)
         .frame(width: 300, height: 400)
@@ -188,7 +188,7 @@ private struct RecentGamesSection: View {
     .environment(InspectorSectionCollapse.preview)
 }
 
-/// Long history with a visible swing — the y-domain's stress case.
+/// Long history with a visible swing - the y-domain's stress case.
 #Preview("Long History") {
     let samples = (0..<24).map { step in
         Glicko1.Sample(

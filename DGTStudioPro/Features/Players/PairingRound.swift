@@ -1,7 +1,7 @@
 import Foundation
 
 /// The New Game round prefill: latest round among games pairing these two, plus one.
-/// The pair matches as a *set*; "latest" is the numeric maximum — a late-imported old game
+/// The pair matches as a *set*; "latest" is the numeric maximum - a late-imported old game
 /// can't wind the rivalry counter backwards; unknowns never inform.
 enum PairingRound {
     
@@ -16,7 +16,7 @@ enum PairingRound {
         // Pair-as-set, without building a set per record. Self-pairing stays
         // total: with `first == second` the first clause matches a game a
         // player played against themselves, and an `a` vs `a` game still
-        // fails an `a` vs `b` query — the two cases `PairingRoundTests` pins.
+        // fails an `a` vs `b` query - the two cases `PairingRoundTests` pins.
         let latest = records
             .compactMap { record -> Int? in
                 guard let white = record.white, let black = record.black else { return nil }

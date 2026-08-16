@@ -1,6 +1,6 @@
 import Foundation
 
-/// The derived board state a preview renders: position, tracker, last move, check square — a
+/// The derived board state a preview renders: position, tracker, last move, check square - a
 /// pure value computed by walking SAN, the exact pairing the review board renders.
 struct LibraryGamePreviewState: Equatable {
     

@@ -1,10 +1,10 @@
 /// The derived-truth pair: named opening + checkmate type (trigger revised).
-/// Pure and engine-free — classification is a table lookup and a position predicate, not
+/// Pure and engine-free - classification is a table lookup and a position predicate, not
 /// analysis-time work.
 struct GameClassification: Sendable, Hashable {
 
     let opening: ECOOpening?
-    /// Matched book-prefix length in plies — non-nil exactly when `opening` is.
+    /// Matched book-prefix length in plies - non-nil exactly when `opening` is.
     let openingPlies: Int?
     let specialCheckmate: SpecialCheckmate?
 
@@ -25,7 +25,7 @@ struct GameClassification: Sendable, Hashable {
         )
     }
 
-    /// Replays and asks `SpecialCheckmate`, only for a game that *claims* mate — a cost filter, not
+    /// Replays and asks `SpecialCheckmate`, only for a game that *claims* mate - a cost filter, not
     /// correctness (`classify` self-guards on `isCheckmate`). Spelled `contains("#")`, not
     /// `hasSuffix`, matching the validator; `endedInMate` spells it `hasSuffix` and the
     /// divergence is a standing open item.

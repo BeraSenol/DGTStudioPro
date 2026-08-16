@@ -9,7 +9,7 @@ struct DGTStudioProApp: App {
     /// Shared `ModelContainer`: tabs share one so `PersistentIdentifier`s round-trip.
     private let sharedContainer: ModelContainer = {
         do {
-            // All three listed explicitly — load-bearing: `SmartTag` has no relationships, so schema
+            // All three listed explicitly - load-bearing: `SmartTag` has no relationships, so schema
             // inference from `PGN` would never pull it in.
             let container = try ModelContainer(
                 for: PGN.self, Player.self, SmartTag.self,
@@ -26,12 +26,12 @@ struct DGTStudioProApp: App {
     /// discard confirmation is needed.
     @State private var openGames = OpenGamesRegistry()
 
-    /// The app's one analysis queue (app-global since 6 Aug — a scene receives values, not a tab's
+    /// The app's one analysis queue (app-global since 6 Aug - a scene receives values, not a tab's
     /// instance). Constructed here; `init()` is the only place that runs exactly once.
     @State private var analysisQueue: AnalysisQueueController
     
     // The three app-global DGT observables. Every registry must be injected into the WindowGroup or
-    // a destination reading one traps at runtime — that was a real crash (previews injected, App didn't).
+    // a destination reading one traps at runtime - that was a real crash (previews injected, App didn't).
     @State private var dgtConnection: DGTConnection
     @State private var dgtSession: DGTLiveSession
     @State private var sessionLog: DGTSessionLog
@@ -44,11 +44,11 @@ struct DGTStudioProApp: App {
     /// scenes: Settings binds the toggles, and `BoardDestination` wires each `Game`'s step cue.
     @State private var boardSounds: BoardSounds
 
-    /// Which inspector sections are folded. Injected into the WindowGroup — every inspector
+    /// Which inspector sections are folded. Injected into the WindowGroup - every inspector
     /// reads it, shared across tabs: collapsing Opening is a statement about openings, not a window.
     @State private var inspectorCollapse = InspectorSectionCollapse(defaults: .standard)
 
-    /// View Options subject — `inspectorCollapse`'s arrangement, for its reasons.
+    /// View Options subject - `inspectorCollapse`'s arrangement, for its reasons.
     @State private var viewOptions = CollectionViewOptions(defaults: .standard)
 
     // The struct is @MainActor, so this init may touch the DGT objects' main-actor members; the
@@ -76,13 +76,13 @@ struct DGTStudioProApp: App {
             connection.requestBoardResync()
         }
 
-        // M7.3 — mid-game vanish auto-reconnects. "Mid-game" is any game-bearing mode.
+        // M7.3 - mid-game vanish auto-reconnects. "Mid-game" is any game-bearing mode.
         connection.shouldAutoReconnect = { [weak session] in
             session?.liveGame != nil
         }
         
         // The illegal-move cue, fired once per desync entry. `NSSound.beep` respects the user's
-        // alert sound (AppKit — SwiftUI has no sound API). The `?? true` is the Settings twin default.
+        // alert sound (AppKit - SwiftUI has no sound API). The `?? true` is the Settings twin default.
         session.onDesync = {
             let enabled = UserDefaults.standard
                 .object(forKey: StorageKeys.illegalMoveSoundEnabled) as? Bool ?? true
@@ -118,7 +118,7 @@ struct DGTStudioProApp: App {
         let inhibitor = SleepInhibitor()
         inhibitor.observe(session: session, connection: connection, analysis: analysis)
         
-        // M7.2 — launch auto-connect in a Task so first render isn't held hostage to IOKit + handshake.
+        // M7.2 - launch auto-connect in a Task so first render isn't held hostage to IOKit + handshake.
         // Guarded by `TestHost.isActive`: a real board must not feed the unit suite hardware events (hermetic host).
         if !TestHost.isActive {
             Task { await connection.autoConnectAtLaunch() }
@@ -150,17 +150,17 @@ struct DGTStudioProApp: App {
         .defaultLaunchBehavior(.presented)
         // Game tabs are session-only: a relaunch opens one fresh Library window rather than the set
         // that happened to be open at quit. `.defaultLaunchBehavior(.presented)` above is what still
-        // supplies that one window — the two modifiers answer different questions (what opens at
+        // supplies that one window - the two modifiers answer different questions (what opens at
         // launch vs. whether the previous set comes back), so disabling restoration alone would
         // launch to nothing. Reviewing a game is a thing you start, not a thing you resume, and the
         // draft sidecar already carries the only session state worth surviving a quit.
         .restorationBehavior(.disabled)
-        // M8.1 Game menu (←/→/Home/End) — the scene half of `.focusedSceneValue(\.activeGame, …)`.
+        // M8.1 Game menu (←/→/Home/End) - the scene half of `.focusedSceneValue(\.activeGame, …)`.
         // Diagnostics rides in the same block; commands are app-scoped, not per-tab.
         .commands {
             GameNavigationCommands()
             DiagnosticsCommands(connection: dgtConnection, sessionLog: sessionLog)
-            // File ▸ New Smart Tag… — the AX-reachable door (the sidebar's + is pointer-only).
+            // File ▸ New Smart Tag… - the AX-reachable door (the sidebar's + is pointer-only).
             SmartTagCommands()
             // View ▸ Show View Options (⌘J); enabled only when a collection tab publishes the subject.
             CollectionViewOptionsCommands()
@@ -168,21 +168,21 @@ struct DGTStudioProApp: App {
         
         // The evaluation graph. A separate group: macOS only tabs windows from the same group,
         // which this one must NOT do with the game windows. Keyed on `EvaluationGraphRequest`, not
-        // `PersistentIdentifier` — `openWindow(value:)` routes by type, and a second group over the same
+        // `PersistentIdentifier` - `openWindow(value:)` routes by type, and a second group over the same
         // type makes existing calls unspecified.
         WindowGroup("Evaluation", for: EvaluationGraphRequest.self) { $request in
             EvaluationGraphWindow(request: request)
         }
         .modelContainer(sharedContainer)
         .defaultSize(width: 720, height: 420)
-        // Floating (Bera's call): the graph hovers in front — a popover dismisses on the first board click.
+        // Floating (Bera's call): the graph hovers in front - a popover dismisses on the first board click.
         .windowLevel(.floating)
         // Companions JOIN a full-screen space rather than claiming one. Scene-level, so the
         // role is set BEFORE placement; the AppKit configurator wrote it after, and never could work.
         .windowManagerRole(.associated)
         // Session-only, and the companions' reason is the stronger one: this window describes a
         // subject held by a board tab, and those no longer come back. A restored graph would open
-        // beside nothing — worse than the game tabs' case, which at least restored something real.
+        // beside nothing - worse than the game tabs' case, which at least restored something real.
         // The three companion groups and the two singleton windows below all take this for the
         // same reason; it is stated here once rather than five times.
         .restorationBehavior(.disabled)
@@ -194,9 +194,9 @@ struct DGTStudioProApp: App {
         }
         .modelContainer(sharedContainer)
         .defaultSize(width: 460, height: 520)
-.windowManagerRole(.associated)        .restorationBehavior(.disabled) // companion — see the graph above
+.windowManagerRole(.associated)        .restorationBehavior(.disabled) // companion - see the graph above
 
-        // M10 Get Info — one group for all three subjects, so info windows tab with *each other*, never
+        // M10 Get Info - one group for all three subjects, so info windows tab with *each other*, never
         // behind a board. Not floating.
         WindowGroup("Info", for: GetInfoRequest.self) { $request in
             GetInfoWindow(request: request)
@@ -204,9 +204,19 @@ struct DGTStudioProApp: App {
         }
         .modelContainer(sharedContainer)
         .defaultSize(width: 460, height: 520)
-.windowManagerRole(.associated)        .restorationBehavior(.disabled) // companion — see the graph above
+.windowManagerRole(.associated)        .restorationBehavior(.disabled) // companion - see the graph above
 
-        // The analysis queue's window — a `Window`, not a `WindowGroup`: exactly one queue, opened by
+        // The smart-tag editor as its own window (16 Aug 2026; was ContentView's sheet). Sixth
+        // wrapper in the `openWindow(value:)` family. Not floating; sized by its own fixed frame.
+        WindowGroup("Smart Tag", for: SmartTagEditorRequest.self) { $request in
+            SmartTagEditorWindow(request: request)
+        }
+        .modelContainer(sharedContainer)
+        .windowResizability(.contentSize)
+        .windowManagerRole(.associated)
+        .restorationBehavior(.disabled) // companion - see the graph above
+
+        // The analysis queue's window - a `Window`, not a `WindowGroup`: exactly one queue, opened by
         // `openWindow(id:)`, so the wrapper-type trap is sidestepped rather than paid.
         Window("Analysis", id: AnalysisQueueStatusWindowView.sceneID) {
             AnalysisQueueStatusWindowView()
@@ -220,7 +230,7 @@ struct DGTStudioProApp: App {
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
 .windowManagerRole(.associated)
-        // View Options (⌘J) — a `Window` for the queue scene's reason: one panel, opened by id.
+        // View Options (⌘J) - a `Window` for the queue scene's reason: one panel, opened by id.
         Window("View Options", id: CollectionViewOptionsWindow.sceneID) {
             CollectionViewOptionsWindow()
                 .environment(viewOptions)

@@ -3,15 +3,15 @@ import Foundation
 @testable import DGTStudioPro
 
 /// Hermetic `DGTConnection` coverage via three injected seams (F9): scripted port, scripted
-/// discovery, throwaway defaults. What these cannot prove — termios, EOF on a real fd — stays
+/// discovery, throwaway defaults. What these cannot prove - termios, EOF on a real fd - stays
 /// on the hardware checklist.
 @MainActor
-@Suite("DGT Connection — Fake Port")
+@Suite("DGT Connection - Fake Port")
 struct DGTConnectionTests {
 
     // MARK: Fake Port
 
-    /// Scripted port: `emit` yields in order; `vanish` finishes the stream without `close()` —
+    /// Scripted port: `emit` yields in order; `vanish` finishes the stream without `close()` -
     /// the device disappearing under an open port.
     private actor FakePort: DGTPortProviding {
         private(set) var openedPaths: [String] = []
@@ -42,7 +42,7 @@ struct DGTConnectionTests {
 
         func send(_ command: DGTCommand) throws {
             sentCommands.append(command)
-            // The real board answers `sendBoard` with a dump — loop tests need that fidelity.
+            // The real board answers `sendBoard` with a dump - loop tests need that fidelity.
             if command == .sendBoard, let autoDumpPosition {
                 continuation?.yield(.boardDump(autoDumpPosition))
             }
@@ -117,7 +117,7 @@ struct DGTConnectionTests {
         #expect(sent.first == .sendReset)
         #expect(sent.contains(.sendBoard))
         #expect(sent.contains(.sendUpdateBoard))
-        // Still only connecting — no dump yet.
+        // Still only connecting - no dump yet.
         #expect(connection.isConnected == false)
 
         await port.emit(.boardDump(.starting))
@@ -127,7 +127,7 @@ struct DGTConnectionTests {
     }
 
     /// Field updates flow through to `physicalBoard` and `onBoardChanged`
-    /// in emission order — the connection-level half of the F2 ordering
+    /// in emission order - the connection-level half of the F2 ordering
     /// fix (the handler-queue half lives in `DGTSerialPort`'s pipeline
     /// design and on the hardware checklist).
     @Test func fieldUpdatesFlowToTheBoardHookInOrder() async throws {
@@ -167,7 +167,7 @@ struct DGTConnectionTests {
     // MARK: Stream End Routing (F1 consumer side)
 
     /// Unplug with no game active: `shouldAutoReconnect` is unwired, so the
-    /// stream ending routes to the failure banner and clears the mirror —
+    /// stream ending routes to the failure banner and clears the mirror -
     /// stale squares must not masquerade as a live board.
     @Test func streamEndWithoutAGameShowsFailureAndClearsTheMirror() async throws {
         let port = FakePort()
@@ -206,7 +206,7 @@ struct DGTConnectionTests {
         #expect(connection.status == .disconnected)
     }
 
-    /// The loop stands itself down when the game goes away between laps —
+    /// The loop stands itself down when the game goes away between laps -
     /// the policy's `.stop` verdict path.
     @Test func reconnectLoopStopsWhenTheGameGoesAway() async throws {
         let port = FakePort()

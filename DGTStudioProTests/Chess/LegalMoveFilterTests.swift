@@ -9,7 +9,7 @@ struct LegalMoveFilterTests {
 
     // MARK: Pins
     @Test func absolutelyPinnedKnightCannotMove() {
-        // White king e1, white knight e2, black rook e8 — knight pinned along file.
+        // White king e1, white knight e2, black rook e8 - knight pinned along file.
         let pos = Position.make {
             $0[Squares.e1] = .whiteKing
             $0[Squares.e2] = .whiteKnight
@@ -22,7 +22,7 @@ struct LegalMoveFilterTests {
     }
 
     @Test func pinnedQueenCanMoveAlongPinLine() {
-        // White king e1, white queen e2, black rook e8 — queen pinned but can slide on file.
+        // White king e1, white queen e2, black rook e8 - queen pinned but can slide on file.
         let pos = Position.make {
             $0[Squares.e1] = .whiteKing
             $0[Squares.e2] = .whiteQueen
@@ -55,7 +55,7 @@ struct LegalMoveFilterTests {
         // King escapes to d1, d2, f1, f2 (e2 still on the rook's file, illegal)
         let kingMoves = allMoves.filter { $0.from == Squares.e1 }
         #expect(Set(kingMoves.map(\.to)) == [Squares.d1, Squares.d2, Squares.f1, Squares.f2])
-        // Rook on b1 has no legal move — none can interpose on the e-file or capture e8
+        // Rook on b1 has no legal move - none can interpose on the e-file or capture e8
         let rookMoves = allMoves.filter { $0.from == Squares.b1 }
         #expect(rookMoves.isEmpty)
     }
@@ -97,7 +97,7 @@ struct LegalMoveFilterTests {
     @Test func doubleCheckForcesKingMovesOnly() {
         // Black rook e8 and black knight f3 check the e1 king at once. No
         // single block or capture answers two checkers, so every legal move
-        // must be a king move — the white a1 rook, which could block or
+        // must be a king move - the white a1 rook, which could block or
         // capture either checker *alone*, must generate nothing. The classic
         // filter bug (answering checks one at a time) passes every
         // single-check test above and fails only here.
@@ -118,7 +118,7 @@ struct LegalMoveFilterTests {
 
     // MARK: King Safety
     @Test func kingCannotMoveIntoCheck() {
-        // White king e1, black rook d8 — king cannot step to d1 or d2.
+        // White king e1, black rook d8 - king cannot step to d1 or d2.
         let pos = Position.make {
             $0[Squares.e1] = .whiteKing
             $0[Squares.d8] = .blackRook
@@ -168,7 +168,7 @@ struct LegalMoveFilterTests {
         #expect(!pawnMoves.contains { $0.isEnPassant })
     }
 
-    // MARK: Game Status — Checkmate
+    // MARK: Game Status - Checkmate
     @Test func backRankMateIsCheckmate() {
         // Classic back-rank mate: black king h8 boxed in by own pawns, white rook a8.
         let pos = Position.make {
@@ -186,7 +186,7 @@ struct LegalMoveFilterTests {
     }
 
     @Test func foolsMateIsCheckmate() {
-        // After 1.f3 e5 2.g4?? Qh4# — constructed by editing the starting
+        // After 1.f3 e5 2.g4?? Qh4# - constructed by editing the starting
         // position rather than replaying, so the test doesn't depend on SAN.
         var pos = Position.starting
         pos[Squares.f2] = .empty; pos[Squares.f3] = .whitePawn
@@ -199,7 +199,7 @@ struct LegalMoveFilterTests {
         #expect(state.isCheckmate)
     }
 
-    // MARK: Game Status — Stalemate
+    // MARK: Game Status - Stalemate
     @Test func classicCornerStalemate() {
         // Black king a8, white king c7, white queen b6. Black to move, not in check, no legal moves.
         let pos = Position.make {
@@ -215,7 +215,7 @@ struct LegalMoveFilterTests {
         #expect(state.legalMoves().isEmpty)
     }
 
-    // MARK: Game Status — Normal
+    // MARK: Game Status - Normal
     @Test func startingPositionIsNeitherCheckNorMate() {
         let state: GameState = .starting
         #expect(!state.isInCheck)

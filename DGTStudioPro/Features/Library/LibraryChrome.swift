@@ -5,7 +5,7 @@ import SwiftUI
 
 // The Library's self-contained furniture, split out of the destination: the filter menu, the
 // filter chip bar, the empty states, and the two small labels. Everything here is a pure function
-// of its parameters — no destination state.
+// of its parameters - no destination state.
 
 /// The search-independent filter half; stays a menu (the discoverable entry point).
 /// Toggles, not a picker: the state stopped being single-valued ("1-0 and 0-1" must be expressible).
@@ -52,7 +52,7 @@ struct LibraryFilterMenu: View {
     }
 }
 
-/// One token rendering for chip and menu row, so the two cannot drift. State arrives as a literal —
+/// One token rendering for chip and menu row, so the two cannot drift. State arrives as a literal -
 /// a facet never consults the queue.
 struct LibrarySearchTokenLabel: View {
 
@@ -67,7 +67,7 @@ struct LibrarySearchTokenLabel: View {
     }
 }
 
-/// Clearable filter chip. For a programmatic player filter it is the whole UI — the state's one face and exit.
+/// Clearable filter chip. For a programmatic player filter it is the whole UI - the state's one face and exit.
 struct LibraryFilterChipBar: View {
 
     let filter: LibraryFilter
@@ -125,7 +125,7 @@ struct LibraryEmptyStateView: View {
     }
 }
 
-/// Gear + count while live; warning + counts after a failed drain, until Clear acknowledges — an error is
+/// Gear + count while live; warning + counts after a failed drain, until Clear acknowledges - an error is
 /// never swallowed by the batch ending. A clean drain hides it. Drawn through `AnalyzingGear` with `AnalysisLabel`.
 struct LibraryQueueStatusLabel: View {
 
@@ -138,7 +138,7 @@ struct LibraryQueueStatusLabel: View {
             } else {
                 Image(systemName: "exclamationmark.triangle")
             }
-            // `batchPosition`, not `completedCount` — the queue owns the arithmetic; both surfaces read it.
+            // `batchPosition`, not `completedCount` - the queue owns the arithmetic; both surfaces read it.
             Text("\(queue.batchPosition)/\(queue.totalCount)")
                 .monospacedDigit()
         }

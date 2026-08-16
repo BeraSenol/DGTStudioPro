@@ -9,7 +9,7 @@ struct IconGridSelectionTests {
 
     // MARK: Arrows
 
-    /// Left/right step reading order, so they wrap across row boundaries —
+    /// Left/right step reading order, so they wrap across row boundaries -
     /// right from a row's last card lands on the next row's first.
     @Test func horizontalStepsWrapRows() {
         #expect(IconGridSelection.destination(from: 5, direction: .right, columnCount: columns, count: 14) == 6)
@@ -37,11 +37,11 @@ struct IconGridSelectionTests {
         #expect(IconGridSelection.destination(from: 13, direction: .down, columnCount: columns, count: 14) == 13)
     }
 
-    /// ↓ holds across the *whole* last row — the pre-fix formula slid 12 → 13: a vertical key
+    /// ↓ holds across the *whole* last row - the pre-fix formula slid 12 → 13: a vertical key
     /// performing a horizontal move.
     @Test func downHoldsAcrossTheWholeLastRow() {
         #expect(IconGridSelection.destination(from: 12, direction: .down, columnCount: columns, count: 14) == 12)
-        // A *full* last row holds too — 12 of 12 at 6 columns has no hole
+        // A *full* last row holds too - 12 of 12 at 6 columns has no hole
         // anywhere, and ↓ from its middle must not walk to the corner.
         #expect(IconGridSelection.destination(from: 9, direction: .down, columnCount: columns, count: 12) == 9)
     }
@@ -72,7 +72,7 @@ struct IconGridSelectionTests {
 
     // MARK: Rubber Band
 
-    /// All four sweep directions produce the same normalized band — a
+    /// All four sweep directions produce the same normalized band - a
     /// drag up-and-left is the mirror of down-and-right, not a negative
     /// rectangle.
     @Test func selectionRectNormalizesEveryQuadrant() {

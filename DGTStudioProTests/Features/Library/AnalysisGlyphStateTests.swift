@@ -4,9 +4,9 @@ import SwiftData
 import SwiftUI
 @testable import DGTStudioPro
 
-/// Pins `AnalysisGlyph.State` and the rule that produces it — closes the register's written waiver.
+/// Pins `AnalysisGlyph.State` and the rule that produces it - closes the register's written waiver.
 @MainActor
-@Suite("Analysis Glyph — State")
+@Suite("Analysis Glyph - State")
 struct AnalysisGlyphStateTests {
 
     // MARK: Helpers
@@ -56,7 +56,7 @@ struct AnalysisGlyphStateTests {
 
     /// The same at the far end of the walk: a fully scored game still on the
     /// engine has not finished until the queue says so. Without this, the badge
-    /// would flip green on the last ply instead of at the drain — a smaller
+    /// would flip green on the last ply instead of at the drain - a smaller
     /// version of the same lie.
     @Test("A fully scored game still on the engine reads analyzing")
     func runningBeatsAFullArray() throws {
@@ -69,7 +69,7 @@ struct AnalysisGlyphStateTests {
     }
 
     /// Running is about *this* game, not about the engine being busy. A game
-    /// waiting in line while another runs reads unanalyzed — D-less by
+    /// waiting in line while another runs reads unanalyzed - D-less by
     /// decision, and the case the type doc declines to give a fourth state.
     @Test("Another game running leaves this one alone")
     func aDifferentRunningGameDoesNotClaimThisOne() throws {
@@ -94,7 +94,7 @@ struct AnalysisGlyphStateTests {
     }
 
     /// A non-empty all-nil array is the case `!evaluations.isEmpty` answers
-    /// wrongly — the latent fork this type was extracted to close, still closed.
+    /// wrongly - the latent fork this type was extracted to close, still closed.
     @Test("A non-empty all-nil array reads unanalyzed")
     func allNilReadsUnanalyzed() throws {
         let context = try Self.makeContext()
@@ -104,7 +104,7 @@ struct AnalysisGlyphStateTests {
         #expect(AnalysisGlyph.state(of: [pgn], runningID: nil) == .unanalyzed)
     }
 
-    /// A partial array with nothing running still reads analyzed — the skipped
+    /// A partial array with nothing running still reads analyzed - the skipped
     /// or cancelled batch. Deliberate rather than overlooked: coverage is Get
     /// Info's "48 of 58" row, not the glyph's. Pinned so a future pass that
     /// wants to change it has to say so out loud.
@@ -145,7 +145,7 @@ struct AnalysisGlyphStateTests {
     }
 
     /// The emptiness guard that used to live at the toolbar and be absent from
-    /// the context menu — safe there only because a branch above established
+    /// the context menu - safe there only because a branch above established
     /// non-emptiness. Folded into the rule, so both sites now get it whether or
     /// not they remember to.
     @Test("An empty selection reads unanalyzed rather than vacuously analyzed")
@@ -156,7 +156,7 @@ struct AnalysisGlyphStateTests {
     // MARK: Membership Is Asked Of The Games Passed In
 
     /// **The shipped bug, kept as a pin**: the toolbar once resolved its selection through
-    /// `filteredGames`, so the Not Analyzed chip emptied the set out from under the running check —
+    /// `filteredGames`, so the Not Analyzed chip emptied the set out from under the running check -
     /// membership must be asked of the caller's real subject.
     @Test("A running game absent from the games passed in does not read analyzing")
     func membershipIsDecidedByTheGamesPassedIn() throws {
@@ -180,7 +180,7 @@ struct AnalysisGlyphStateTests {
 
     // MARK: Presentation
 
-    /// Three states, three symbols. The distinctness is the claim — a state
+    /// Three states, three symbols. The distinctness is the claim - a state
     /// sharing a silhouette with another is invisible on the surfaces where
     /// neither colour nor motion survives (menus), which is exactly where the
     /// glyph is most often read.
@@ -194,7 +194,7 @@ struct AnalysisGlyphStateTests {
     }
 
     /// The badge vocabulary: plain marks, distinct, and the
-    /// running state is the **same bare gear** as the action vocabulary — one
+    /// running state is the **same bare gear** as the action vocabulary - one
     /// silhouette for "the engine has this one" everywhere it appears, which
     /// is the sentence that keeps two vocabularies from being two opinions.
     @Test("Badge symbols are plain marks sharing only the running gear")
@@ -228,7 +228,7 @@ struct AnalysisGlyphStateTests {
     }
 
     /// The badge's passive vocabulary, distinct per state like the action
-    /// titles — and "Not Analyzed" verbatim, because it is the chip
+    /// titles - and "Not Analyzed" verbatim, because it is the chip
     /// (`LibrarySearchToken.unanalyzed`) that finds the games wearing it, and
     /// a badge and its filter drifting apart is two names for one state.
     @Test("Every state has its own status label, and the negative matches the chip")
@@ -242,7 +242,7 @@ struct AnalysisGlyphStateTests {
 
     // MARK: The Projection Overload
 
-    /// The projection overload is a cache, not a second opinion — both overloads answer identically
+    /// The projection overload is a cache, not a second opinion - both overloads answer identically
     /// across scored/unscored, running or not.
     @Test("The projection overload agrees with the model overload")
     func theProjectionOverloadAgreesWithTheModelOverload() throws {
@@ -268,7 +268,7 @@ struct AnalysisGlyphStateTests {
     }
 
     /// Running wins in the projection overload too, whatever the projected
-    /// flag claims — the badge on a card mid-pass shows the gear, not the
+    /// flag claims - the badge on a card mid-pass shows the gear, not the
     /// verdict the half-written array would justify.
     @Test("Running beats the projected flag in the per-row overload")
     func runningBeatsTheProjectedFlag() throws {

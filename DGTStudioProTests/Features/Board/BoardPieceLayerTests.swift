@@ -3,7 +3,7 @@ import Testing
 
 /// The glide-duration guardrails (2 Aug 2026, when the duration became a
 /// preference). Nonisolated deliberately: the subject is the `static`
-/// clamp, plain value arithmetic — no view is rendered here.
+/// clamp, plain value arithmetic - no view is rendered here.
 struct BoardPieceLayerTests {
 
     @Test func inRangeValuesPassThrough() {
@@ -17,7 +17,7 @@ struct BoardPieceLayerTests {
     }
 
     /// The repair direction: below folds up to the floor, above folds down
-    /// to the ceiling — a hand-edited default is corrected, not obeyed.
+    /// to the ceiling - a hand-edited default is corrected, not obeyed.
     @Test func outOfRangeValuesFoldToTheNearestBound() {
         #expect(BoardPieceLayer.clampedDuration(0.0) == 0.1)
         #expect(BoardPieceLayer.clampedDuration(-3) == 0.1)

@@ -6,7 +6,7 @@ import SwiftData
 /// The M5 archive flow: the save fires on the `isFinished` transition itself; success retires
 /// the draft, failure keeps it. A genuine SwiftData save failure cannot be forced deterministically.
 @MainActor
-@Suite("DGT Live Session — Archive (M5)")
+@Suite("DGT Live Session - Archive (M5)")
 struct DGTLiveSessionArchiveTests {
 
     // MARK: Helpers
@@ -50,7 +50,7 @@ struct DGTLiveSessionArchiveTests {
         context: ModelContext
     ) -> (session: DGTLiveSession, drafts: LiveGameDraftStore) {
         let session = DGTLiveSession()
-        session.quiescence = .milliseconds(10)   // F7 — see the timing note
+        session.quiescence = .milliseconds(10)   // F7 - see the timing note
         let drafts = temporaryStore()
         session.draftStore = drafts
         let store = PGNStore(modelContext: context)
@@ -62,7 +62,7 @@ struct DGTLiveSessionArchiveTests {
         try context.fetchCount(FetchDescriptor<PGN>())
     }
 
-    /// Polls instead of sleeping a fixed interval — `Task.sleep` guarantees only a minimum, and a
+    /// Polls instead of sleeping a fixed interval - `Task.sleep` guarantees only a minimum, and a
     /// fixed ceiling is a guess a loaded machine eventually beats (F7).
     private static func poll(
         timeout: Duration = .seconds(5),
@@ -76,7 +76,7 @@ struct DGTLiveSessionArchiveTests {
         }
     }
 
-    /// Awaits the armed quiescence task — the negative-assertion tool: after this, "nothing
+    /// Awaits the armed quiescence task - the negative-assertion tool: after this, "nothing
     /// changed" finally means something.
     private static func settled(_ session: DGTLiveSession) async throws {
         let armed = try #require(session.quiescenceTask)
@@ -84,7 +84,7 @@ struct DGTLiveSessionArchiveTests {
     }
 
     /// A controllable archive door for the failure paths: throws while
-    /// `shouldFail`, otherwise delegates to the real store — so Retry can
+    /// `shouldFail`, otherwise delegates to the real store - so Retry can
     /// be tested as "the transient condition cleared".
     @MainActor
     private final class FlakyArchiveDoor {
@@ -102,7 +102,7 @@ struct DGTLiveSessionArchiveTests {
         context: ModelContext
     ) -> (session: DGTLiveSession, drafts: LiveGameDraftStore, door: FlakyArchiveDoor) {
         let session = DGTLiveSession()
-        session.quiescence = .milliseconds(10)   // F7 — see the timing note
+        session.quiescence = .milliseconds(10)   // F7 - see the timing note
         let drafts = temporaryStore()
         session.draftStore = drafts
         let door = FlakyArchiveDoor(store: PGNStore(modelContext: context))
@@ -110,7 +110,7 @@ struct DGTLiveSessionArchiveTests {
         return (session, drafts, door)
     }
 
-    // MARK: Finish Paths — Success
+    // MARK: Finish Paths - Success
 
     @Test func resignArchivesTheGameAndRetiresTheDraft() throws {
         let context = try Self.makeContext()
@@ -125,7 +125,7 @@ struct DGTLiveSessionArchiveTests {
         #expect(session.archivedPGN?.result == .blackWins)
         #expect(session.archivedPGN?.moves == ["e4"])
         #expect(try Self.libraryCount(in: context) == 1)
-        // The game is safe in the Library — the draft's job is done.
+        // The game is safe in the Library - the draft's job is done.
         #expect(try drafts.load() == nil)
         // The finished game stays on screen (mode is still game-bearing).
         #expect(session.liveGame?.isFinished == true)
@@ -146,7 +146,7 @@ struct DGTLiveSessionArchiveTests {
 
     /// End to end through the settle path: fool's mate on the board feed
     /// auto-detects the result, archives on the transition, retires the
-    /// draft — then piece handling doesn't trip recovery (the pre-M5 seam),
+    /// draft - then piece handling doesn't trip recovery (the pre-M5 seam),
     /// and the start position becomes the "play again" signal.
     @Test func mateArchivesAndTheStartPositionOffersTheNextGame() async throws {
         let context = try Self.makeContext()
@@ -163,7 +163,7 @@ struct DGTLiveSessionArchiveTests {
         for (index, reached) in states.enumerated() {
             session.boardChanged(reached.position)
             // Wait for THIS move to actually commit before feeding the
-            // next board — see `poll`'s doc for why a fixed sleep here is
+            // next board - see `poll`'s doc for why a fixed sleep here is
             // a load-dependent flake with this exact test's signature.
             try await Self.poll { session.liveGame?.sanMoves.count == index + 1 }
         }
@@ -208,7 +208,7 @@ struct DGTLiveSessionArchiveTests {
         #expect(try Self.libraryCount(in: context) == 1)
     }
 
-    // MARK: Finish Paths — Failure
+    // MARK: Finish Paths - Failure
 
     /// A failed archive keeps the draft *current* (it now carries the
     /// decided result, so a crash before Retry still self-heals at the next
@@ -229,7 +229,7 @@ struct DGTLiveSessionArchiveTests {
         #expect(try Self.libraryCount(in: context) == 0)
 
         // The start position must NOT offer a new game while unresolved.
-        // Awaiting the armed settle replaces the old 450 ms fixed sleep —
+        // Awaiting the armed settle replaces the old 450 ms fixed sleep -
         // the suppressed settle has provably run when the flag is read.
         session.boardChanged(.starting)
         try await Self.settled(session)
@@ -322,7 +322,7 @@ struct DGTLiveSessionArchiveTests {
         #expect(try drafts.load() == nil)
     }
 
-    /// If the self-heal's archive also fails, the draft survives on disk —
+    /// If the self-heal's archive also fails, the draft survives on disk -
     /// a finished game is never lost.
     @Test func selfHealFailureKeepsTheDraft() throws {
         let context = try Self.makeContext()
@@ -366,7 +366,7 @@ struct DGTLiveSessionArchiveTests {
     }
 
     /// A failure can only be cleared by a successful retry or an explicit
-    /// discard — never by evasion.
+    /// discard - never by evasion.
     @Test func acknowledgeDoesNotClearAFailure() throws {
         let context = try Self.makeContext()
         let (session, _, _) = Self.flakySession(context: context)
@@ -383,7 +383,7 @@ struct DGTLiveSessionArchiveTests {
 
     // MARK: Headless (nil hook)
 
-    /// With no `onGameFinished` wired — every pre-M5 unit test — finishing
+    /// With no `onGameFinished` wired - every pre-M5 unit test - finishing
     /// skips archiving and keeps the draft current: the safety net stands.
     @Test func headlessSessionKeepsTheDraft() throws {
         let session = DGTLiveSession()

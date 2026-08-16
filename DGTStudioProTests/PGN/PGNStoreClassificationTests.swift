@@ -8,14 +8,14 @@ import SwiftData
 /// without an engine, `applyMovetextEdit` **re-derives** rather than clears,
 /// and none of it touches the content hash.
 ///
-/// Runs against the real bundled table on purpose — the pure walk is already
+/// Runs against the real bundled table on purpose - the pure walk is already
 /// pinned on fixtures in `ECOClassifierTests`, so what is left to prove here
 /// is that the store, the table and the model agree end to end.
 ///
 /// `@MainActor`: fronts `PGNStore` and realized `@Model`s, same as the other
 /// store suites.
 @MainActor
-@Suite("PGN Store — Classification")
+@Suite("PGN Store - Classification")
 struct PGNStoreClassificationTests {
 
     // MARK: Helpers
@@ -62,7 +62,7 @@ struct PGNStoreClassificationTests {
         #expect(game.ecoCode == "C60")
         #expect(game.ecoFamily == "Ruy Lopez")
         #expect(game.ecoVariation == nil)
-        // The whole line is book, and the stamp says so — the analysis skip's input.
+        // The whole line is book, and the stamp says so - the analysis skip's input.
         #expect(game.ecoDepth == 5)
         #expect(game.specialCheckmate == nil)
     }
@@ -105,7 +105,7 @@ struct PGNStoreClassificationTests {
     }
 
     /// The only row shape that classifies to nothing. The bundled table names
-    /// all twenty legal first moves — a4 is the Ware Opening, h4 the Kádas —
+    /// all twenty legal first moves - a4 is the Ware Opening, h4 the Kádas -
     /// so a game with any move at all comes back named, and "unclassified"
     /// in practice means "no moves yet".
     @Test("A game with no moves classifies as nothing rather than as a half-opening")
@@ -141,7 +141,7 @@ struct PGNStoreClassificationTests {
     func backfillHealsAndCountsOnce() throws {
         let store = PGNStore(modelContext: try Self.makeContext())
         let game = try store.importPGN(text: Self.pgnText(moves: "1. e4 e5 2. Nf3 Nc6 3. Bb5"))
-        // Import does not classify — the backfill is the door for existing rows.
+        // Import does not classify - the backfill is the door for existing rows.
         #expect(game.ecoCode == nil)
 
         #expect(try store.backfillClassifications() == 1)
@@ -197,7 +197,7 @@ struct PGNStoreClassificationTests {
         }
         #expect(game.ecoCode == "C60")
         #expect(game.ecoFamily == "Ruy Lopez")
-        // Evaluations still clear — recomputing those *does* need the engine.
+        // Evaluations still clear - recomputing those *does* need the engine.
         #expect(game.evaluations.isEmpty)
     }
 
@@ -207,7 +207,7 @@ struct PGNStoreClassificationTests {
     /// or a re-classification would silently fork it from its own twin.
     @Test("Classification is outside the content hash")
     func classificationDoesNotChangeTheHash() throws {
-        // The context is held locally, not reached for through the store —
+        // The context is held locally, not reached for through the store -
         // `PGNStore.modelContext` is private by design.
         let context = try Self.makeContext()
         let store = PGNStore(modelContext: context)
@@ -219,8 +219,8 @@ struct PGNStoreClassificationTests {
         #expect(game.contentHash == hashBefore)
 
         // And dedupe still recognises the classified row as the same game.
-        // Import treats a hash match as an *error*, not a silent merge — the
-        // user is telling it to add a game it already has — so the throw is
+        // Import treats a hash match as an *error*, not a silent merge - the
+        // user is telling it to add a game it already has - so the throw is
         // the assertion, and the row count is the corroboration.
         #expect(throws: PGNStore.Error.self) {
             _ = try store.importPGN(text: text)

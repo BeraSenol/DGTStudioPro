@@ -8,7 +8,7 @@ import SwiftData
 /// The half that must not change rides alongside: the displaced row still goes, in the same
 /// transaction, which is what keeps rename an honest merge replacement.
 @MainActor
-@Suite("PGN Store — Scoped Orphan Collection")
+@Suite("PGN Store - Scoped Orphan Collection")
 struct PGNStoreScopedCollectionTests {
 
     // MARK: Helpers

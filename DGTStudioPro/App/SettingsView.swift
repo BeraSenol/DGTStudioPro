@@ -9,11 +9,11 @@ struct SettingsView: View {
     
     // MARK: Private Properties
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
-    /// Twin default with `autoConnectAtLaunch()`'s `?? true` — unavoidable (`@AppStorage` initials
+    /// Twin default with `autoConnectAtLaunch()`'s `?? true` - unavoidable (`@AppStorage` initials
     /// live at the read site). `StorageKeys` documents the contract.
     @AppStorage(StorageKeys.autoConnectOnLaunch) private var autoConnectOnLaunch = true
     
-    /// Twin default with the App's `onDesync` closure — same unavoidable pairing.
+    /// Twin default with the App's `onDesync` closure - same unavoidable pairing.
     @AppStorage(StorageKeys.illegalMoveSoundEnabled) private var illegalMoveSoundEnabled = true
     
     // Engine values bind to the keys `EngineConfiguration.current` reads; initials come from
@@ -27,7 +27,7 @@ struct SettingsView: View {
     /// Twin default with `BoardView`'s own read (absent reads true).
     @AppStorage(StorageKeys.showBoardCoordinates) private var showsBoardCoordinates = true
     
-    /// Glide duration — initial value and bounds from `BoardPieceLayer`, so the numbers live once;
+    /// Glide duration - initial value and bounds from `BoardPieceLayer`, so the numbers live once;
     /// the slider's range makes out-of-bounds unrepresentable from here.
     @AppStorage(StorageKeys.pieceAnimationDuration) private var pieceAnimationDuration
     = BoardPieceLayer.defaultDuration
@@ -46,7 +46,7 @@ struct SettingsView: View {
     // MARK: Body
 
     /// Five tabs, split out of three on 12 Aug 2026 by request. General had grown to six sections
-    /// — connection, an alert, the board cues, engine options, tablebases and the sleep gates —
+    /// - connection, an alert, the board cues, engine options, tablebases and the sleep gates -
     /// which is a drawer rather than a category.
     ///
     /// The split is **pure relocation**: not one control, default, storage key or identifier
@@ -83,7 +83,7 @@ struct SettingsView: View {
 
     /// What is left once sounds and the engine have their own tabs: the board connection and the
     /// sleep gates. Energy stays here rather than following the engine, because only *half* of it
-    /// is engine-shaped — one gate is about analysis and one about live play, under a single
+    /// is engine-shaped - one gate is about analysis and one about live play, under a single
     /// footer that deliberately covers both causes at once. Splitting it to satisfy a tab
     /// would mean splitting that footer.
     private var generalTab: some View {
@@ -100,9 +100,15 @@ struct SettingsView: View {
             } header: {
                 Text("DGT Board")
             } footer: {
+                // One multiline literal per footer, never literal `+` chains: the canvas thunk wraps
+                // each literal in `__designTimeString`, and a `+` chain of those against `Text`'s
+                // overloads is un-type-checkable in reasonable time (16 Aug 2026, canvas-only failure
+                // - the app target compiled fine). The `\` continuations keep the bytes identical.
                 Text(
-                    "At launch, silently connects to your board, if it's "
-                    + "attached. Mid-game reconnection is always on."
+                    """
+                    At launch, silently connects to your board, if it's \
+                    attached. Mid-game reconnection is always on.
+                    """
                 )
             }
             
@@ -124,11 +130,13 @@ struct SettingsView: View {
                 // One footer for two toggles, naming each cause's own consequence; the display sentence is last
                 // because it is true of both (the non-goal, still structural).
                 Text(
-                    "During play, keeps the Mac from sleeping and dropping the "
-                    + "board connection mid-think. During analysis, keeps a "
-                    + "batch from stalling part-way through — a long queue can "
-                    + "outlast the idle timer. The display is still allowed to "
-                    + "dim either way."
+                    """
+                    During play, keeps the Mac from sleeping and dropping the \
+                    board connection mid-think. During analysis, keeps a \
+                    batch from stalling part-way through - a long queue can \
+                    outlast the idle timer. The display is still allowed to \
+                    dim either way.
+                    """
                 )
             }
         }
@@ -144,7 +152,7 @@ struct SettingsView: View {
     /// the one non-mechanical edit in the whole split and is worth its sentence: "Live Play"
     /// describes *when* a sound happens, which was a useful label while the section sat beside
     /// connection settings, and is the wrong axis beside a section describing *what* a sound is.
-    /// "Alerts" also puts the distinction on screen — an alert about the board contradicting
+    /// "Alerts" also puts the distinction on screen - an alert about the board contradicting
     /// the game, at the system alert volume, against feedback that a move landed, at app volume.
     private var soundsTab: some View {
         // An owning type, not `@AppStorage`: playback and this form must agree about the
@@ -154,7 +162,7 @@ struct SettingsView: View {
         return Form {
             Section {
                 // Picking plays the set's move cue, so the list is auditioned rather than
-                // read — and it plays even with Move switched off, because you are choosing a set,
+                // read - and it plays even with Move switched off, because you are choosing a set,
                 // not a cue. A menu picker rather than segmented, the reason: the view-mode
                 // control elsewhere is segmented, and two of those read as one broken one.
                 Picker("Sound Set", selection: $sounds.soundSet) {
@@ -182,12 +190,14 @@ struct SettingsView: View {
                 // is not obvious from the labels and the one that reads as a bug when unexplained:
                 // turning Move off does not silence a capture, and a checking capture is one sound.
                 Text(
-                    "Plays as moves land on the live board and as you step "
-                    + "through a game with the arrow keys. Felt is muted, wood "
-                    + "is the default knock, marble is higher and harder; "
-                    + "choosing one plays it. Each move makes one sound, the "
-                    + "most specific one that fits — a capture that gives check "
-                    + "is a check. Jumping to the start or end of a game is silent."
+                    """
+                    Plays as moves land on the live board and as you step \
+                    through a game with the arrow keys. Felt is muted, wood \
+                    is the default knock, marble is higher and harder; \
+                    choosing one plays it. Each move makes one sound, the \
+                    most specific one that fits - a capture that gives check \
+                    is a check. Jumping to the start or end of a game is silent.
+                    """
                 )
             }
 
@@ -198,10 +208,12 @@ struct SettingsView: View {
                 Text("Alerts")
             } footer: {
                 Text(
-                    "Plays the system alert sound when the pieces on the "
-                    + "board can't be explained by any legal move. Unlike the "
-                    + "board sounds above, this one follows your system alert "
-                    + "volume."
+                    """
+                    Plays the system alert sound when the pieces on the \
+                    board can't be explained by any legal move. Unlike the \
+                    board sounds above, this one follows your system alert \
+                    volume.
+                    """
                 )
             }
         }
@@ -211,7 +223,7 @@ struct SettingsView: View {
     // MARK: Engine
 
     /// The engine's own settings and the tablebases it probes. Syzygy follows the steppers here
-    /// rather than staying in General because it is engine configuration in every sense — it sets
+    /// rather than staying in General because it is engine configuration in every sense - it sets
     /// probe depth and limits, and it verifies by *launching an engine*.
     private var engineTab: some View {
         Form {
@@ -237,13 +249,15 @@ struct SettingsView: View {
                 Text("Engine")
             } footer: {
                 Text(
-                    "Applies to the next analysis. Depth trades time for "
-                    + "precision; hash and threads take effect when the "
-                    + "engine next launches."
+                    """
+                    Applies to the next analysis. Depth trades time for \
+                    precision; hash and threads take effect when the \
+                    engine next launches.
+                    """
                 )
             }
 
-            // Syzygy is its own file: unlike the steppers it carries a state machine — a folder
+            // Syzygy is its own file: unlike the steppers it carries a state machine - a folder
             // re-openable across launches and a verification that starts an engine.
             SyzygySettingsSection()
         }
@@ -252,7 +266,7 @@ struct SettingsView: View {
 
     // MARK: Board
 
-    /// The Board tab in the grouped-form language of the other tabs. Swatches stay the control — a
+    /// The Board tab in the grouped-form language of the other tabs. Swatches stay the control - a
     /// visual style is picked visually.
     private var boardTab: some View {
         Form {
@@ -265,8 +279,10 @@ struct SettingsView: View {
                 Text("Board Style")
             } footer: {
                 Text(
-                    "Applies everywhere a board is drawn, the live mirror "
-                    + "and game replays."
+                    """
+                    Applies everywhere a board is drawn, the live mirror \
+                    and game replays.
+                    """
                 )
             }
             
@@ -290,9 +306,11 @@ struct SettingsView: View {
                 Text("Animation")
             } footer: {
                 Text(
-                    "How long a piece takes to glide to its square, in the "
-                    + "live mirror and in replays. Reduce Motion disables "
-                    + "the glide entirely."
+                    """
+                    How long a piece takes to glide to its square, in the \
+                    live mirror and in replays. Reduce Motion disables \
+                    the glide entirely.
+                    """
                 )
             }
             
@@ -303,8 +321,10 @@ struct SettingsView: View {
                 Text("Coordinates")
             } footer: {
                 Text(
-                    "Draws file letters and rank numbers on the board's "
-                    + "frame. Off keeps the frame, only the labels go."
+                    """
+                    Draws file letters and rank numbers on the board's \
+                    frame. Off keeps the frame, only the labels go.
+                    """
                 )
             }
         }
@@ -396,16 +416,16 @@ struct SettingsView: View {
     
     // MARK: Actions
     
-    /// Batch-deletes every `PGN` in one transaction. Open tabs aren't closed — each `loadIfNeeded`
+    /// Batch-deletes every `PGN` in one transaction. Open tabs aren't closed - each `loadIfNeeded`
     /// fails its next lookup and falls back to the mirror; acceptable for a nuclear reset.
     private func eraseLibrary() {
         do {
             try modelContext.delete(model: PGN.self)
             // The registry goes too: this is the one deletion path outside `PGNStore.delete` and gets no
-            // orphan cascade — a bulk `delete(model:)` never materializes rows, which is its point.
+            // orphan cascade - a bulk `delete(model:)` never materializes rows, which is its point.
             try modelContext.delete(model: Player.self)
             try modelContext.save()
-            // The converged stamp described the store this just emptied — a fresh library
+            // The converged stamp described the store this just emptied - a fresh library
             // earns its own clean pass.
             UserDefaults.standard.set(false, forKey: StorageKeys.playerBackfillsConverged)
             Self.logger?.info("Library and player registry erased via Settings")

@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - Menu Item
 
-/// The Get Info menu item, everywhere it appears — one type so the label, symbol and key
+/// The Get Info menu item, everywhere it appears - one type so the label, symbol and key
 /// cannot drift across hosts (a `Commands` scene can only *ask* a view to open the window).
 struct GetInfoMenuItem: View {
 

@@ -31,7 +31,7 @@ extension GameState {
         GameState(try FEN(parsing: fen))
     }
 
-    /// Pseudo-legal moves originating from a single square — the per-piece
+    /// Pseudo-legal moves originating from a single square - the per-piece
     /// filter every move-generation suite applies. Overloads the no-argument
     /// `pseudoLegalMoves()` rather than introducing a new name, so call sites
     /// read naturally: `state.pseudoLegalMoves(from: Squares.e4)`.
@@ -51,7 +51,7 @@ extension GameState {
 
 extension Position {
 
-    /// Builds a position from `.empty` via an in-out closure — the dance every core suite repeated.
+    /// Builds a position from `.empty` via an in-out closure - the dance every core suite repeated.
     static func make(_ build: (inout Position) -> Void) -> Position {
         var pos = Position.empty
         build(&pos)
@@ -71,7 +71,7 @@ extension Position {
 // MARK: Perft & Canonical Reference Positions
 
 /// Shared fixtures: canonical perft positions + the recursive counter. `PerftDeepTests` keeps
-/// its own private copy deliberately — reference counts must not drift by a shared edit.
+/// its own private copy deliberately - reference counts must not drift by a shared edit.
 enum Chess {
 
     // The six canonical perft positions (chessprogramming.org).
@@ -81,7 +81,7 @@ enum Chess {
     "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -"
     static let position4 =
     "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq -"
-    /// Position 4's colour-mirror with identical counts — the free colour-asymmetry localizer.
+    /// Position 4's colour-mirror with identical counts - the free colour-asymmetry localizer.
     static let position4Mirror =
     "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1"
     static let position5 =

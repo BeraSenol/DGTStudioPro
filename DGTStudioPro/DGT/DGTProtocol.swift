@@ -40,7 +40,7 @@ enum DGTPiece: UInt8, Sendable {
     // MARK: Computed Properties
     /// Converts this DGT piece to the app's `Piece` type. A `switch`, not a
     /// raw-value-indexed table: a new DGT case would have compiled against the
-    /// table and trapped out of range at the decode boundary — here it's a
+    /// table and trapped out of range at the decode boundary - here it's a
     /// build error, which is the only witness a wire enum can rely on.
     var piece: Piece {
         switch self {

@@ -21,7 +21,7 @@ enum TagColor: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 }
 
-/// A user-editable smart tag — the Apple Music smart-playlist shape; the old built-ins
+/// A user-editable smart tag - the Apple Music smart-playlist shape; the old built-ins
 /// live on as seeded, fully editable defaults.
 @Model
 final class SmartTag: Identifiable {
@@ -35,6 +35,10 @@ final class SmartTag: Identifiable {
     /// The `PGN.evaluations` precedent: a Codable value array on the model.
     var rules: [TagRule]
     var createdAt: Date
+    /// Sidebar position (16 Aug 2026, drag-to-reorder). Pre-schema rows migrate in at 0 and the
+    /// sidebar's `createdAt` tiebreak reproduces exactly the order they already stood in; the
+    /// first drag rewrites the run 0..n and owns the order from then on.
+    var sortIndex: Int = 0
     
     // MARK: Computed Properties
     
@@ -47,13 +51,15 @@ final class SmartTag: Identifiable {
         name: String,
         colorName: TagColor = .blue,
         matchAll: Bool = false,
-        rules: [TagRule] = []
+        rules: [TagRule] = [],
+        sortIndex: Int = 0
     ) {
         self.name = name
         self.colorName = colorName
         self.matchAll = matchAll
         self.rules = rules
         self.createdAt = .now
+        self.sortIndex = sortIndex
     }
     
     // MARK: Matching
@@ -64,7 +70,7 @@ final class SmartTag: Identifiable {
     
     // MARK: Defaults
     
-    /// The former enum cases as editable rule sets — the one factory behind the first-run seed.
+    /// The former enum cases as editable rule sets - the one factory behind the first-run seed.
     static func defaultTags() -> [SmartTag] {
         [
             SmartTag(
@@ -83,7 +89,7 @@ final class SmartTag: Identifiable {
                 rules: [TagRule(field: .round, comparison: .equals, number: 1)]
             ),
             // The seed fires once ever (flag-guarded), so an already-seeded install will not grow this tag
-            // — deleting defaults must stick, and that rule outranks completeness.
+            // - deleting defaults must stick, and that rule outranks completeness.
             SmartTag(
                 name: "Smothered Mates",
                 colorName: .purple,
@@ -113,7 +119,7 @@ final class SmartTag: Identifiable {
             try context.save()
             defaults.set(true, forKey: StorageKeys.didSeedDefaultSmartTags)
         } catch {
-            // The assertion is the debug witness; the log line the release breadcrumb — a silent failed
+            // The assertion is the debug witness; the log line the release breadcrumb - a silent failed
             // seed leaves the sidebar inexplicably empty.
             AppLog.logger(.smarttags)?
                 .error("Default smart-tag seed failed: \(error.localizedDescription, privacy: .public)")

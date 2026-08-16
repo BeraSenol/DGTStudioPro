@@ -6,7 +6,7 @@ import Testing
 /// a1→h8 ordering, and the live-shrinking behavior the overlay depends on.
 /// Pure value types throughout, so the suite runs nonisolated (working
 /// agreement: `@MainActor` only where the types demand it).
-@Suite("Recovery Guidance — Restore Instructions")
+@Suite("Recovery Guidance - Restore Instructions")
 struct RecoveryGuidanceTests {
     
     @Test func matchingBoardsNeedNothing() {
@@ -62,7 +62,7 @@ struct RecoveryGuidanceTests {
     }
     
     /// A realistic desync: the knight physically went to h3 while the game
-    /// recorded Nf3 — one place, one remove, sorted by square (a1 → h8).
+    /// recorded Nf3 - one place, one remove, sorted by square (a1 → h8).
     @Test func misplacedKnightYieldsPlaceThenRemoveInSquareOrder() {
         var target = Position.starting
         target[Squares.g1] = .empty
@@ -84,7 +84,7 @@ struct RecoveryGuidanceTests {
     
     /// The whole point of live recomputation: fixing a square shrinks the
     /// list, and restoring the last one empties it (the session's settle
-    /// then exits recovery — that transition is covered in the session
+    /// then exits recovery - that transition is covered in the session
     /// suite; this pins the formatter's side of the contract).
     @Test func guidanceShrinksAsSquaresAreFixed() {
         var target = Position.starting

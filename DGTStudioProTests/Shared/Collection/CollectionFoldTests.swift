@@ -1,13 +1,13 @@
 import Testing
 import Foundation
 // `MemberImportVisibility` is on, so the container the link test builds
-// needs this here — a transitive import through `@testable` does not carry
+// needs this here - a transitive import through `@testable` does not carry
 // members. The value-level suite below still touches no SwiftData type.
 import SwiftData
 @testable import DGTStudioPro
 
-/// `CollectionFoldKey`'s algebra, over values. Nonisolated — load-bearing, not stylistic.
-@Suite("Collection Fold — Key")
+/// `CollectionFoldKey`'s algebra, over values. Nonisolated - load-bearing, not stylistic.
+@Suite("Collection Fold - Key")
 struct CollectionFoldKeyTests {
 
     /// Mirrors `Row`'s own defaulting, so a test names only the field it is
@@ -29,7 +29,7 @@ struct CollectionFoldKeyTests {
     }
 
     /// `ECOOpening`'s rehydrating initializer takes `variation` without a
-    /// default — deliberately: nil is the one spelling of "no
+    /// default - deliberately: nil is the one spelling of "no
     /// variation" and a default would let a caller mean it by omission.
     private static func opening(
         _ code: String,
@@ -59,7 +59,7 @@ struct CollectionFoldKeyTests {
     }
 
     /// The field easiest to drop: classification lives *outside* the content hash, so a backfill
-    /// changes what `PlayerStats` counts while every hash stays byte-identical — a key built from
+    /// changes what `PlayerStats` counts while every hash stays byte-identical - a key built from
     /// `contentHash` alone misses it.
     @Test("A stamped mate motif moves the key with no hash change")
     func aChangedCheckmateMovesTheKey() {
@@ -83,7 +83,7 @@ struct CollectionFoldKeyTests {
             ])
         )
         // Variation too, because `TagRule.opening` matches `fullName` rather
-        // than the code — a key watching `ecoCode` alone would pass the line
+        // than the code - a key watching `ecoCode` alone would pass the line
         // above and still freeze a `contains Smith-Morra` rule.
         #expect(
             CollectionFoldKey(rows: [
@@ -132,10 +132,10 @@ struct CollectionFoldKeyTests {
     }
 }
 
-/// The memo box over real models. `@MainActor` for the `PGN`s, not the cache — nothing here
+/// The memo box over real models. `@MainActor` for the `PGN`s, not the cache - nothing here
 /// asserts the cache's isolation.
 @MainActor
-@Suite("Collection Fold — Cache")
+@Suite("Collection Fold - Cache")
 struct CollectionFoldCacheTests {
 
     // MARK: Key over models
@@ -164,7 +164,7 @@ struct CollectionFoldCacheTests {
         #expect(CollectionFoldKey(games: [game]) != before)
     }
 
-    /// The ECO half over models — `classify` writes three columns beside the motif.
+    /// The ECO half over models - `classify` writes three columns beside the motif.
     @Test("An ECO stamp moves the key, over models")
     func ecoStampMovesTheKeyOverModels() {
         let game = PGN(moves: ["e4", "c5"], contentHash: "fixed")
@@ -269,7 +269,7 @@ struct CollectionFoldCacheTests {
     }
 
     /// A cache that only ever grew would answer the previous question
-    /// correctly and still return a stale fold after the key moved back — the
+    /// correctly and still return a stale fold after the key moved back - the
     /// one-entry contract stated as a test rather than as a comment.
     @Test("Returning to an evicted key recomputes rather than resurrecting")
     func areturnedKeyRecomputes() {

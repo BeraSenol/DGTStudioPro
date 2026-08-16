@@ -6,7 +6,7 @@ struct MoveHistoryView: View {
     let moves: [String]
     let currentMoveIndex: Int?
     let onMoveTapped: ((Int) -> Void)?
-    /// Whether this view brings its own `ScrollView` — `false` lets a host `List` own scrolling
+    /// Whether this view brings its own `ScrollView` - `false` lets a host `List` own scrolling
     /// (a nested scroll view is a fixed-size box inside an infinite proposal).
     var scrollsIndependently: Bool = true
     
@@ -38,7 +38,7 @@ struct MoveHistoryView: View {
             .padding(.vertical, 16)
     }
     
-    /// The self-contained pane. Same scroll-sync as the embedded form —
+    /// The self-contained pane. Same scroll-sync as the embedded form -
     /// applied to whichever view owns the scrolling.
     private var pane: some View {
         ScrollView(.vertical) {
@@ -111,7 +111,7 @@ struct MoveHistoryView: View {
 
 extension View {
     
-    /// Pins the applied container to the current ply — lives here because `ScrollViewReader` must
+    /// Pins the applied container to the current ply - lives here because `ScrollViewReader` must
     /// wrap the container that actually scrolls.
     func scrollsToCurrentMove(_ index: Int?) -> some View {
         modifier(CurrentMoveScrollSync(currentMoveIndex: index))
@@ -131,7 +131,7 @@ private struct CurrentMoveScrollSync: ViewModifier {
     }
     
     /// Targets the `.id(index)` on each move cell. Animated on a scrub or a
-    /// new ply, instant on first appearance — a game opened mid-scrub
+    /// new ply, instant on first appearance - a game opened mid-scrub
     /// shouldn't animate from move 1.
     private func scroll(_ proxy: ScrollViewProxy, animated: Bool) {
         guard let currentMoveIndex else { return }

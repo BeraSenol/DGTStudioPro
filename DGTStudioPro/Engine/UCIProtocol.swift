@@ -1,6 +1,6 @@
 import Foundation
 
-/// Parses line-based UCI output. Parsing only — sending and subprocess management are the engine's.
+/// Parses line-based UCI output. Parsing only - sending and subprocess management are the engine's.
 enum UCIProtocol {
     
     // MARK: Entry Point
@@ -31,7 +31,7 @@ enum UCIProtocol {
 
     // MARK: Two Kinds of nil
 
-    /// Keywords understood and deliberately not acted on — `option` is the recorded invariant.
+    /// Keywords understood and deliberately not acted on - `option` is the recorded invariant.
     static let deliberatelyIgnoredKeywords: Set<String> = [
         "option", "copyprotection", "registration"
     ]
@@ -79,7 +79,7 @@ enum UCIProtocol {
                 // Aspiration-window qualifiers on `score`; no payload.
                 break
             case "string":
-                // `string` runs to end of line — engine debug text.
+                // `string` runs to end of line - engine debug text.
                 i = tokens.count
             default:
                 // Unknown keyword: best-effort skip one token in case it had a payload.
@@ -109,7 +109,7 @@ enum UCIProtocol {
     
     // MARK: bestmove Line Parsing
     
-    /// `bestmove <move> [ponder <move>]` — UCI long algebraic (`e7e8q` for promotions).
+    /// `bestmove <move> [ponder <move>]` - UCI long algebraic (`e7e8q` for promotions).
     private static func parseBestMove(_ tokens: [String]) -> UCIResponse? {
         guard let move = tokens.first else { return nil }
         var ponder: String? = nil
@@ -187,6 +187,6 @@ enum UCIScore: Equatable, Sendable {
 struct UCIBestMove: Equatable, Sendable {
     /// Move in UCI long algebraic notation, e.g. `"e2e4"` or `"e7e8q"`.
     let move: String
-    /// Pondered reply, optional — most engines emit it only when enabled.
+    /// Pondered reply, optional - most engines emit it only when enabled.
     let ponder: String?
 }

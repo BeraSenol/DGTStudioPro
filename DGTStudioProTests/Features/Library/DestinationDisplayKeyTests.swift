@@ -4,7 +4,7 @@ import Foundation
 
 /// The only defence: a memo key is correct iff it covers every input, and a missed input is
 /// stale rows on screen with a green build. Each assertion moves ONE field and expects
-/// inequality — a field the key stops covering goes red here before it goes stale there.
+/// inequality - a field the key stops covering goes red here before it goes stale there.
 @MainActor
 @Suite("Display memo keys")
 struct DestinationDisplayKeyTests {
@@ -44,7 +44,7 @@ struct DestinationDisplayKeyTests {
     }
 
     /// The live-model input: a tag's rules are editable without any game's content moving, and a
-    /// rule edit must invalidate the memo — the one input `CollectionFoldKey` cannot see.
+    /// rule edit must invalidate the memo - the one input `CollectionFoldKey` cannot see.
     @Test("A tag rule edit moves the filter signature")
     func ruleEditsMoveTheSignature() {
         let quiet = LibraryFilter.Signature(

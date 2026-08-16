@@ -82,7 +82,7 @@ struct EvaluationGraphView: View {
         }
         .background {
             // The triple wash, final form (Bera's design after four iterations): native window ground at
-            // both poles — melts into whatever the window is — and the board's grid-border colour at the
+            // both poles - melts into whatever the window is - and the board's grid-border colour at the
             // seam, backing the near-equality slivers; extreme advantages carry themselves on fill mass.
             LinearGradient(
                 colors: [
@@ -99,7 +99,7 @@ struct EvaluationGraphView: View {
     }
     
     // MARK: Instance Methods
-    /// Horizontal placement comes from `EvaluationGraphGeometry` — the same arithmetic
+    /// Horizontal placement comes from `EvaluationGraphGeometry` - the same arithmetic
     /// gained a second consumer pointing the other way.
     private func evaluationPoints(in rect: CGRect) -> [CGPoint] {
         let geometry = EvaluationGraphGeometry(
@@ -132,7 +132,7 @@ struct EvaluationGraphView: View {
         }
     }
     
-    /// `curve` already opens with `move(to:)`, so it *is* the leading edge — an explicit move+line
+    /// `curve` already opens with `move(to:)`, so it *is* the leading edge - an explicit move+line
     /// opened a second degenerate subpath and the fill leaked.
     private func closedAreaPath(curve: Path, start: CGPoint, end: CGPoint, baseY: CGFloat) -> Path {
         var area = curve

@@ -110,7 +110,7 @@ struct KnightMoveGenerationTests {
     @Test func knightOnStartingPositionB1HasTwoMoves() {
         let moves = GameState.starting.pseudoLegalMoves(from: Squares.b1)
         
-        // a3 and c3 — both empty in starting position. d2 blocked by own pawn.
+        // a3 and c3 - both empty in starting position. d2 blocked by own pawn.
         #expect(moves.count == 2)
         #expect(Set(moves.map(\.to)) == [Squares.a3, Squares.c3])
     }

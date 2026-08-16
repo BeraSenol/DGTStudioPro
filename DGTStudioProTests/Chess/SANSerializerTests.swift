@@ -5,7 +5,7 @@ import Testing
 struct SANSerializerTests {
 
     // State and position construction (`GameState.test`, `Position.make`,
-    // and `Position.minimal` — the two-kings-on-e1/e8 scaffold) lives in
+    // and `Position.minimal` - the two-kings-on-e1/e8 scaffold) lives in
     // Support/ChessTestSupport.swift. Promotion and back-rank tests that
     // need e8 free build with `Position.make` directly.
 
@@ -96,7 +96,7 @@ struct SANSerializerTests {
     }
 
     @Test func knightFullSquareDisambiguator() {
-        // Three knights at b1, b5, d1 all attack c3 — need full square for b1 → c3.
+        // Three knights at b1, b5, d1 all attack c3 - need full square for b1 → c3.
         let pos = Position.minimal {
             $0[Squares.b1] = .whiteKnight
             $0[Squares.b5] = .whiteKnight
@@ -113,7 +113,7 @@ struct SANSerializerTests {
 
     @Test func pinnedSiblingRequiresNoDisambiguator() {
         // Knights on g1 and e5 both *pseudo-legally* reach f3, but the e5
-        // knight is absolutely pinned by the e8 rook against the e1 king —
+        // knight is absolutely pinned by the e8 rook against the e1 king -
         // so exactly one legal move reaches f3, and SAN disambiguation
         // (legality-based, per the standard) emits bare `Nf3`.
         //
@@ -136,7 +136,7 @@ struct SANSerializerTests {
 
     @Test func fileDisambiguatorPreferredWhenFileAndRankBothDiffer() {
         // Knights on b1 and d5 both reach c3, differing in file *and* rank.
-        // FIDE preference order: file first — `Nbc3`, never `N1c3`.
+        // FIDE preference order: file first - `Nbc3`, never `N1c3`.
         let pos = Position.minimal {
             $0[Squares.b1] = .whiteKnight
             $0[Squares.d5] = .whiteKnight
@@ -243,7 +243,7 @@ struct SANSerializerTests {
             capturedPieceType: .rook,
             promotionType: .queen
         )
-        // Whether the resulting position is check/mate is incidental — we
+        // Whether the resulting position is check/mate is incidental - we
         // just verify the body of the SAN is correct.
         let san = GameState.test(pos).san(for: move)
         #expect(san.hasPrefix("exf8=Q"))
@@ -251,7 +251,7 @@ struct SANSerializerTests {
 
     @Test func promotionMateCombinesPromoAndMateSuffix() {
         // The promotion tests above assert with `hasPrefix` to stay agnostic
-        // about the suffix; this one pins the combined grammar — `=Q` and
+        // about the suffix; this one pins the combined grammar - `=Q` and
         // `#` composing in that order. Kd6 covers every flight square the
         // new b8 queen doesn't (c7/d7/e7), and rank 8 belongs to the queen.
         let pos = Position.make {
@@ -271,7 +271,7 @@ struct SANSerializerTests {
 
     @Test func checkAddsPlusSuffix() {
         // Black king on h8 (not e8): after Ra8 the rook attacks h8 along
-        // rank 8, so the move delivers check — the king can still escape
+        // rank 8, so the move delivers check - the king can still escape
         // via g7/h7, so it's `+`, not `#`.
         let pos = Position.make {
             $0[Squares.e1] = .whiteKing
@@ -351,7 +351,7 @@ struct SANSerializerTests {
         for san in moves {
             let move = try state.parseSAN(san)
             let serialized = state.san(for: move)
-            #expect(serialized == san, "Round-trip failed at \(san) — got \(serialized)")
+            #expect(serialized == san, "Round-trip failed at \(san) - got \(serialized)")
             state = state.applying(move)
         }
 
@@ -367,13 +367,13 @@ struct SANSerializerTests {
         for san in moves {
             let move = try state.parseSAN(san)
             let serialized = state.san(for: move)
-            #expect(serialized == san, "Round-trip failed at \(san) — got \(serialized)")
+            #expect(serialized == san, "Round-trip failed at \(san) - got \(serialized)")
             state = state.applying(move)
         }
     }
 
     @Test func roundTripWithEnPassant() throws {
-        // 1. e4 a6 2. e5 d5 — black plays d7-d5; white can capture EP via 3. exd6
+        // 1. e4 a6 2. e5 d5 - black plays d7-d5; white can capture EP via 3. exd6
         let setupMoves = ["e4", "a6", "e5", "d5"]
         var state: GameState = .starting
         for san in setupMoves {

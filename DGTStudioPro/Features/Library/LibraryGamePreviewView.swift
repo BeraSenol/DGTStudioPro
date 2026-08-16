@@ -5,7 +5,7 @@ struct LibraryGamePreviewView: View {
     
     // MARK: Stored Properties
     
-    /// Optional so the no-selection state is *this* view with no game — the two states swap without
+    /// Optional so the no-selection state is *this* view with no game - the two states swap without
     /// the board moving.
     let game: PGN?
     let boardStyle: BoardStyle
@@ -25,7 +25,7 @@ struct LibraryGamePreviewView: View {
     // MARK: Instance Methods
     
     /// Two lines in both states, and the no-game arm reuses the roster
-    /// header's exact typography rather than picking its own — the header's
+    /// header's exact typography rather than picking its own - the header's
     /// height is what keeps the board from shifting on selection, so it's
     /// metrics first and copy second.
     @ViewBuilder
@@ -69,7 +69,7 @@ struct LibraryGamePreviewView: View {
             checkSquare: preview?.checkSquare
         )
         // The walk hops off the main actor (`parseSAN` generates every legal move per ply). The
-        // cancellation check is load-bearing — `Task.detached` is not auto-cancelled by `.task`'s exit.
+        // cancellation check is load-bearing - `Task.detached` is not auto-cancelled by `.task`'s exit.
         .task(id: game?.moves) {
             guard let moves = game?.moves else {
                 preview = nil

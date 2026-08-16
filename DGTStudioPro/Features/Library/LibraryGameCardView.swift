@@ -7,12 +7,12 @@ struct LibraryGameCardView: View {
     let game: PGN
     
     /// Document-sheet width. A parameter, not an environment read, so the gallery filmstrip keeps
-    /// its own size while the icons grid follows View Options. A `var` with a default — hosts that
+    /// its own size while the icons grid follows View Options. A `var` with a default - hosts that
     /// pass nothing render as before.
     var glyphWidth: CGFloat = 60
     
     /// The analysis badge's subject, bottom-trailing on the sheet in every host. Both
-    /// production hosts pass state, never the model — no blob decode per card.
+    /// production hosts pass state, never the model - no blob decode per card.
     var analysisState: AnalysisGlyph.State = .unanalyzed
     
     let isSelected: Bool
@@ -38,7 +38,7 @@ struct LibraryGameCardView: View {
         // mouse-down; only open waits.
         .onTapGesture(count: 2, perform: onOpen)
         .simultaneousGesture(TapGesture().onEnded { onSelect() })
-        // The card's closures are argument-free — it draws one game its hosts close over. Item order
+        // The card's closures are argument-free - it draws one game its hosts close over. Item order
         // comes from `GameActionsMenu`, no longer from here.
         .contextMenu {
             GameActionsMenu(
@@ -49,7 +49,7 @@ struct LibraryGameCardView: View {
                 onDelete: { _ in onDelete() }
             )
         }
-        // Collapse into one addressable element — without `.combine`, macOS exposes only the inner
+        // Collapse into one addressable element - without `.combine`, macOS exposes only the inner
         // static texts and the identifier never lands on a tappable element.
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier(AccessibilityID.gameCard(game.name))
@@ -65,11 +65,11 @@ struct LibraryGameCardView: View {
                 .foregroundStyle(.white)
                 .frame(width: glyphWidth)
             // Rigid, not merely width-pinned: a resizable image under `fit` was the card's one compressible
-            // element — the filmstrip squeezed the glyph to half height.
+            // element - the filmstrip squeezed the glyph to half height.
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.leading, 6)
             
-            // `.black` is ink on the explicitly-`.white` sheet — the pair must be stated together or Light
+            // `.black` is ink on the explicitly-`.white` sheet - the pair must be stated together or Light
             // Mode gets white on white. 14/60 is the pre-slider pair, so the default renders byte-identically.
             Text(displayIndex)
                 .font(
@@ -81,7 +81,7 @@ struct LibraryGameCardView: View {
                 )
                 .foregroundStyle(.black)
                 .lineLimit(1)
-            // An ordinal is unbounded — shrink rather than clip: a clipped number is a *wrong* number.
+            // An ordinal is unbounded - shrink rather than clip: a clipped number is a *wrong* number.
                 .minimumScaleFactor(0.6)
                 .frame(maxWidth: glyphWidth * (42.0 / 60.0))
                 .offset(x: glyphWidth * (3.0 / 60.0), y: glyphWidth * (4.0 / 60.0))
@@ -114,8 +114,8 @@ struct LibraryGameCardView: View {
             .foregroundStyle(isSelected ? Color.white : .primary)
     }
     
-    /// The file's ordinal, written on the sheet. The em dash renders a state that is meant
-    /// to be unreachable — not a fourth vocabulary. The `#` prefix and the result went 7 Aug 2026
+    /// The file's ordinal, written on the sheet. The placeholder glyph renders a state that is meant
+    /// to be unreachable - not a fourth vocabulary. The `#` prefix and the result went 7 Aug 2026
     /// by request; the result still lives in the list's cell.
     private var displayIndex: String {
         game.libraryIndex.map(String.init) ?? RosterSummary.displayUnknown
@@ -142,7 +142,7 @@ private func sampleGame(
     return pgn
 }
 
-/// Ordinal widths — what varies is what the card shows; the em dash is a state, not a width,
+/// Ordinal widths - what varies is what the card shows; the placeholder is a state, not a width,
 /// and lives in the next preview.
 #Preview("Ordinal Widths") {
     HStack(spacing: 12) {
@@ -163,7 +163,7 @@ private func sampleGame(
     .modelContainer(for: PGN.self, inMemory: true)
 }
 
-/// The unnumbered card, previewed **because** it is meant to be unreachable — the branch with
+/// The unnumbered card, previewed **because** it is meant to be unreachable - the branch with
 /// no fixture of its own.
 #Preview("No Ordinal") {
     HStack(spacing: 12) {

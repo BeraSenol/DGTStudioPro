@@ -2,7 +2,7 @@ import Testing
 @testable import DGTStudioPro
 
 /// The checkmate-type classifier (ten motifs). Pure, nonisolated, one FEN per pattern.
-@Suite("Special Checkmate — Classification")
+@Suite("Special Checkmate - Classification")
 struct SpecialCheckmateTests {
 
     private static func state(_ fen: String) throws -> GameState {
@@ -42,7 +42,7 @@ struct SpecialCheckmateTests {
         #expect(SpecialCheckmate.hook.displayName      == "Hook")
     }
 
-    /// Raw values ride stored state and rule blobs — a rename is a silent migration.
+    /// Raw values ride stored state and rule blobs - a rename is a silent migration.
     /// Asserted on literals, rare and correct.
     @Test func rawValuesAreStoredState() {
         #expect(SpecialCheckmate.smothered.rawValue == "smothered")
@@ -78,7 +78,7 @@ struct SpecialCheckmateTests {
 
     @Test func centralSmotheredMate() throws {
         // Ke4 walled on all eight sides by its own pawns; Nd6#. The corner
-        // form is in `fixtures` — this one has no board edge helping.
+        // form is in `fixtures` - this one has no board edge helping.
         let state = try Self.state("8/8/3N4/3ppp2/3pkp2/3ppp2/8/K7 b - - 0 1")
         #expect(SpecialCheckmate.classify(state) == .smothered)
     }
@@ -92,10 +92,10 @@ struct SpecialCheckmateTests {
         #expect(SpecialCheckmate.classify(state) == .backRank)
     }
 
-    // MARK: Precedence — the overlapping pairs
+    // MARK: Precedence - the overlapping pairs
 
     /// A corner hook satisfies both `arabian` and `hook`; the corner wins on `precedence`'s
-    /// tie-break — the only place the choice is observable.
+    /// tie-break - the only place the choice is observable.
     @Test func aCornerHookIsCalledArabian() throws {
         // Kh8, Rh7 defended by Nf6, which the g5 pawn defends in turn.
         let state = try Self.state("7k/6pR/5N2/6P1/8/8/8/K7 b - - 0 1")
@@ -103,7 +103,7 @@ struct SpecialCheckmateTests {
     }
 
     /// A bishop-supported rook beside the king on the back rank, with the king
-    /// *also* walled by its own pawns — `opera` and `backRank` both hold, and
+    /// *also* walled by its own pawns - `opera` and `backRank` both hold, and
     /// the narrower name wins.
     @Test func aWalledOperaMateIsCalledOpera() throws {
         // Kg8 behind f7/g7/h7; Rf8 adjacent on the rank, defended by Bc5.
@@ -112,7 +112,7 @@ struct SpecialCheckmateTests {
     }
 
     /// The `gueridon`/`epaulette` boundary, which is one square wide. Ke8
-    /// flanked by its own rooks *and* checked by an adjacent defended queen —
+    /// flanked by its own rooks *and* checked by an adjacent defended queen -
     /// so `gueridon` is tested first and asks for the two squares diagonally
     /// behind the king, which here are off the board. A wall is not a tail.
     @Test func aFlankedKingWithAnAdjacentQueenIsEpaulette() throws {
@@ -130,7 +130,7 @@ struct SpecialCheckmateTests {
     }
 
     @Test func foolsMateIsNotSpecial() throws {
-        // A diagonal queen mate — not a knight (so not smothered), not along
+        // A diagonal queen mate - not a knight (so not smothered), not along
         // the king's rank (so not back-rank), and the checker is a queen
         // rather than a bishop (so not Boden's).
         let state = try GameState.starting.replay(["f3", "e5", "g4", "Qh4#"])
@@ -142,14 +142,14 @@ struct SpecialCheckmateTests {
     }
 
     @Test func backRankShapeThatIsNotMateIsNil() throws {
-        // Re8 checks, but with h7 empty the king escapes to h7 — not mate, so
+        // Re8 checks, but with h7 empty the king escapes to h7 - not mate, so
         // no classification despite the back-rank shape (the `isCheckmate`
         // guard earns its keep).
         let state = try Self.state("4R1k1/5pp1/8/8/8/8/8/6K1 b - - 0 1")
         #expect(SpecialCheckmate.classify(state) == nil)
     }
 
-    /// An edge-file king, a rook down the file, its own pawn beside it — an
+    /// An edge-file king, a rook down the file, its own pawn beside it - an
     /// Anastasia's in every respect but the knight, which is the discriminant.
     /// Bf7 covers g8 and g6 exactly as Ne7 would, so the mate stands and the
     /// motif does not.

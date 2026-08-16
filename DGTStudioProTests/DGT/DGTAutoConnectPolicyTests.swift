@@ -8,7 +8,7 @@ struct DGTAutoConnectPolicyTests {
 
     // MARK: Fixtures
 
-    /// The board, on the production path (`DGTConnection.onlyBoardPath`) —
+    /// The board, on the production path (`DGTConnection.onlyBoardPath`) -
     /// asserted below so the fixture can't drift from the constant it
     /// stands in for.
     private let board = DGTSerialDevice(
@@ -16,7 +16,7 @@ struct DGTAutoConnectPolicyTests {
         name: "usbmodem01"
     )
 
-    /// Some other attached serial device — likely-looking on purpose.
+    /// Some other attached serial device - likely-looking on purpose.
     private let stranger = DGTSerialDevice(
         path: "/dev/cu.usbserial-DGT01",
         name: "usbserial-DGT01"
@@ -67,7 +67,7 @@ struct DGTAutoConnectPolicyTests {
         #expect(target == nil)
     }
 
-    /// The board absent produces no attempt at all — no matter what else
+    /// The board absent produces no attempt at all - no matter what else
     /// is attached, however board-like it looks (contract 1).
     @Test func launchNeverSettlesForAnotherDevice() {
         let target = DGTAutoConnectPolicy.launchTarget(
@@ -78,7 +78,7 @@ struct DGTAutoConnectPolicyTests {
         #expect(target == nil)
     }
 
-    /// Matching is by `path` — the stable identity — so a device whose
+    /// Matching is by `path` - the stable identity - so a device whose
     /// display name drifted between sessions is still recognized.
     @Test func launchMatchesByPathNotName() {
         let renamed = DGTSerialDevice(path: board.path, name: "renamed-by-driver")
@@ -122,7 +122,7 @@ struct DGTAutoConnectPolicyTests {
         #expect(lap == .stop)
     }
 
-    /// Contract 2: `stop` outranks `attempt` — the game being discarded
+    /// Contract 2: `stop` outranks `attempt` - the game being discarded
     /// ends the loop even in the very lap the device came back.
     @Test func stopOutranksAttempt() {
         let lap = DGTAutoConnectPolicy.reconnectLap(

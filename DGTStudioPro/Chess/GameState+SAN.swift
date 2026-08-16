@@ -10,7 +10,7 @@ extension GameState {
         var s = san.trimmingCharacters(in: .whitespaces)
         guard !s.isEmpty else { throw SANParseError.empty }
         
-        // Drops all four suffixes; `PGNParser.stripAnnotations` keeps `+`/`#` — the app's two strippers
+        // Drops all four suffixes; `PGNParser.stripAnnotations` keeps `+`/`#` - the app's two strippers
         // differ on purpose (the movetext validator turns on which is which).
         while let last = s.last, "+#!?".contains(last) {
             s.removeLast()
@@ -72,7 +72,7 @@ extension GameState {
         return try Self.unique(candidates, original: original)
     }
     
-    /// Zero matches = parse failure, one = answer, more = ambiguity — both matchers ended in this
+    /// Zero matches = parse failure, one = answer, more = ambiguity - both matchers ended in this
     /// exact switch, free to drift.
     private static func unique(
         _ candidates: [Move], original: String
@@ -121,18 +121,18 @@ extension GameState {
     private func checkOrMateSuffix(after move: Move) -> String {
         let next = applying(move)
         // `isCheckmate` recomputes `isInCheck` (two full scans). Ask once; pay `legalMoves()` only when
-        // there is a check to resolve — every serialized ply pays this.
+        // there is a check to resolve - every serialized ply pays this.
         guard next.isInCheck else { return "" }
         return next.legalMoves().isEmpty ? "#" : "+"
     }
     
     // MARK: Tokenization (parser)
     
-    /// Back-to-front tokenizer over cleaned SAN — the target square is always the trailing information.
+    /// Back-to-front tokenizer over cleaned SAN - the target square is always the trailing information.
     private static func tokenize(_ input: String, original: String) throws(SANParseError) -> SANTokens {
         var s = input
         
-        // Promotion, most specific first: `(X)`, `=X`, bare trailing letter (unambiguous — non-promotion
+        // Promotion, most specific first: `(X)`, `=X`, bare trailing letter (unambiguous - non-promotion
         // SAN ends in a rank digit).
         var promotion: PieceType? = nil
         

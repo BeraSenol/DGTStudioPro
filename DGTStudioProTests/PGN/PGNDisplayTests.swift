@@ -4,16 +4,16 @@ import Testing
 /// Coverage for the pure presentation logic on `PGN` that needs no persisted
 /// instance: the `GameResult` raw-value mapping to PGN result notation and the
 /// `nameIsStaleDefault` backfill predicate. The name transform itself left this
-/// file — it lives on `PlayerName` now, suited by `PlayerNameTests`.
+/// file - it lives on `PlayerName` now, suited by `PlayerNameTests`.
 /// The `@Model`-bound instance accessors and the import/dedup path are covered
 /// with a real container in `PGNStoreTests`; everything here is instance-free,
 /// so the suite is neither container-dependent nor `@MainActor`.
-@Suite("PGN — Display Names & Result")
+@Suite("PGN - Display Names & Result")
 struct PGNDisplayTests {
 
     // MARK: GameResult
     
-    /// The raw values are the literal PGN result strings — the on-disk and
+    /// The raw values are the literal PGN result strings - the on-disk and
     /// `Result` tag encoding.
     @Test func gameResultRawValuesArePGNNotation() {
         #expect(GameResult.whiteWins.rawValue == "1-0")
@@ -33,7 +33,7 @@ struct PGNDisplayTests {
     
     // MARK: nameIsStaleDefault (Library name backfill)
     
-    /// An empty stored name is always stale — it heals to the display form.
+    /// An empty stored name is always stale - it heals to the display form.
     @Test func emptyNameIsStale() {
         #expect(PGN.nameIsStaleDefault(
             storedName: "", white: "Carlsen, Magnus", black: "Nepomniachtchi, Ian"))
@@ -47,7 +47,7 @@ struct PGNDisplayTests {
             white: "Carlsen, Magnus", black: "Nepomniachtchi, Ian"))
     }
     
-    /// A name already in display form is not stale — no rewrite.
+    /// A name already in display form is not stale - no rewrite.
     @Test func displayFormNameIsNotStale() {
         #expect(!PGN.nameIsStaleDefault(
             storedName: "Magnus Carlsen vs Ian Nepomniachtchi",

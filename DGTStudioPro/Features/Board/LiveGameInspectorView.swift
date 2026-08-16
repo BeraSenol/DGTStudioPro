@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The Board inspector's live variant: roster (with Edit Details), SAN history, result
-/// controls — `BoardInspectorView`'s sidebar-list shape.
+/// controls - `BoardInspectorView`'s sidebar-list shape.
 struct LiveGameInspectorView: View {
     
     // MARK: Stored Properties
@@ -86,8 +86,8 @@ struct LiveGameInspectorView: View {
         }
     }
     
-    /// The last committed ply. A live game is always *at* its final move —
-    /// it never scrubs — and both the scroll sync and the transcript need
+    /// The last committed ply. A live game is always *at* its final move -
+    /// it never scrubs - and both the scroll sync and the transcript need
     /// that, each having open-coded the empty check.
     private var currentMoveIndex: Int? {
         game.sanMoves.isEmpty ? nil : game.sanMoves.count - 1
@@ -105,7 +105,7 @@ struct LiveGameInspectorView: View {
         )
     }
     
-    /// Shares `.moves` with the review inspector's move list — same section,
+    /// Shares `.moves` with the review inspector's move list - same section,
     /// two states of the same game, and the review side is where a reader who
     /// folded it away would expect it still folded.
     private var movesSection: some View {
@@ -121,7 +121,7 @@ struct LiveGameInspectorView: View {
         }
     }
     
-    /// `.lifecycle`, **not** `.roster`, despite the title "Game" — the section that made
+    /// `.lifecycle`, **not** `.roster`, despite the title "Game" - the section that made
     /// `InspectorSection` an enum: Resign/Draw/Discard is a set of verbs, not the game.
     private var lifecycleSection: some View {
         CollapsibleSection(.lifecycle, title: "Game") {

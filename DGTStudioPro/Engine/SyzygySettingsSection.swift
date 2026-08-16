@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// The Tablebases section: pick a folder, tune the probes, and — the reason it exists —
+/// The Tablebases section: pick a folder, tune the probes, and - the reason it exists -
 /// **verify the engine can read it**. Sandbox inheritance covers only static entitlements, so
 /// `SyzygyPath` can point somewhere real while Stockfish loads nothing; the check starts an
 /// engine and quotes what it says.
@@ -111,14 +111,14 @@ struct SyzygySettingsSection: View {
                 return "The app sees no .rtbw or .rtbz files here. Wrong folder, or the download is incomplete."
             }
             if census.wdl == 0 {
-                return "\(census.summary) — DTZ only. Probing needs the WDL (.rtbw) files."
+                return "\(census.summary) - DTZ only. Probing needs the WDL (.rtbw) files."
             }
             guard let report else {
                 return "The app sees \(census.summary), but the engine loaded nothing. "
                 + "That is the sandbox: a folder you pick is granted after launch, "
                 + "and the engine subprocess inherits only the app's static rights."
             }
-            return "\(census.summary) — engine says: \(report)"
+            return "\(census.summary) - engine says: \(report)"
         }
     }
 
@@ -130,7 +130,7 @@ struct SyzygySettingsSection: View {
     }
 
     /// A throwaway engine (the queue's exists only while a batch runs). **The report is read before
-    /// `shutdown()`** — teardown clears it, deliberately: a report describes a live engine.
+    /// `shutdown()`** - teardown clears it, deliberately: a report describes a live engine.
     private func verify() async {
         verification = .running
 
@@ -174,7 +174,7 @@ struct SyzygySettingsSection: View {
             return
         }
         displayPath = SyzygyLocation.displayPath()
-        // Stale by construction the moment the folder changes — a stale "working" line is worse than none.
+        // Stale by construction the moment the folder changes - a stale "working" line is worse than none.
         verification = .idle
     }
 
@@ -196,7 +196,7 @@ struct SyzygySettingsSection: View {
 
 // MARK: Previews
 
-/// Both arms a canvas can reach. The verification states need Stockfish and a real folder —
+/// Both arms a canvas can reach. The verification states need Stockfish and a real folder -
 /// the boardless checklist's; faking "engine says…" would preview the one thing this section
 /// exists to report honestly.
 #Preview("No Folder") {

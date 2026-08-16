@@ -7,19 +7,19 @@ extension LiveGame {
     // MARK: Errors
     
     /// Why a draft could not be resumed. Every case means the file does not
-    /// describe a game this build's rules can reproduce — the UI's only
+    /// describe a game this build's rules can reproduce - the UI's only
     /// offer for such a draft is deletion (resume or delete,
     /// nothing else).
     enum ResumeError: Error, Equatable {
         /// `startFEN` failed to parse into a legal starting state.
         case invalidStart(fen: String)
         /// A SAN string failed to parse against the state reached after the
-        /// prior moves — same diagnostic shape as `Game.BuildError`.
+        /// prior moves - same diagnostic shape as `Game.BuildError`.
         case invalidMove(index: Int, san: String)
         /// A SAN parsed but the model refused to commit it (e.g. moves
         /// continue after a position the rules say is already terminal).
         case moveRejected(index: Int, san: String)
-        /// The replayed transcript doesn't reproduce the draft's — the file
+        /// The replayed transcript doesn't reproduce the draft's - the file
         /// was edited or written by diverging rules.
         case transcriptMismatch
         /// The draft's stored result contradicts what the replay derived
@@ -31,7 +31,7 @@ extension LiveGame {
     // MARK: Snapshot
     
     /// The game's current on-disk form. `updatedAt` is stamped at snapshot
-    /// time — the session takes one of these after every committed ply and
+    /// time - the session takes one of these after every committed ply and
     /// every result/roster change.
     var draftSnapshot: LiveGameDraft {
         LiveGameDraft(
@@ -54,7 +54,7 @@ extension LiveGame {
     
     // MARK: Resume
     
-    /// Rebuilds by replaying through the normal `commit` path — legality, SAN re-serialization,
+    /// Rebuilds by replaying through the normal `commit` path - legality, SAN re-serialization,
     /// tracker walk and auto-result all come free; a replay-derived terminal result must equal the
     /// draft's or the file is corrupt.
     convenience init(resuming draft: LiveGameDraft) throws(ResumeError) {

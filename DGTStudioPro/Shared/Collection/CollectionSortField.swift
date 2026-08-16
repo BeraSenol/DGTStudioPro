@@ -1,19 +1,19 @@
 import SwiftUI
 
 /// A destination's sortable columns, named so something other than a table header can choose
-/// one — a `Picker` cannot hold a `KeyPathComparator`. The round trip (panel sets, header shows,
+/// one - a `Picker` cannot hold a `KeyPathComparator`. The round trip (panel sets, header shows,
 /// header sets, panel shows) is the hard half.
 protocol CollectionSortField: RawRepresentable, CaseIterable, Hashable, Sendable
 where RawValue == String {
 
-    /// The row type. Unconstrained on purpose — `PGN` is a `@Model` class, `RankedPlayer` a value.
+    /// The row type. Unconstrained on purpose - `PGN` is a `@Model` class, `RankedPlayer` a value.
     associatedtype Row
 
-    /// The column header's own label — a panel must not call the same sort something else.
+    /// The column header's own label - a panel must not call the same sort something else.
     var displayName: String { get }
 
     /// The identity `matching(_:)` compares on. Separate from `comparator`, which also carries an
-    /// *order* — "which field" must not depend on direction.
+    /// *order* - "which field" must not depend on direction.
     var keyPath: PartialKeyPath<Row> { get }
 
     var comparator: KeyPathComparator<Row> { get }
@@ -25,7 +25,7 @@ where RawValue == String {
 
 extension CollectionSortField {
 
-    /// Which field a header chose, or nil for a column this enum does not name — **nil is a real
+    /// Which field a header chose, or nil for a column this enum does not name - **nil is a real
     /// answer** (the Analysis column is deliberately unmapped). Pinned.
     static func matching(_ keyPath: PartialKeyPath<Row>) -> Self? {
         allCases.first { $0.keyPath == keyPath }
@@ -65,7 +65,7 @@ struct CollectionSort<Field: CollectionSortField>: Equatable, Sendable {
 
     // MARK: Persistence
 
-    /// One string per destination (field + direction, colon-separated — no raw value contains one,
+    /// One string per destination (field + direction, colon-separated - no raw value contains one,
     /// pinned). Four keys for two values would double the dead-key risk `StorageKeys` records.
     var storedValue: String {
         "\(field.rawValue):\(isReverse ? "reverse" : "forward")"
@@ -88,7 +88,7 @@ struct CollectionSort<Field: CollectionSortField>: Equatable, Sendable {
 // MARK: - Library
 
 /// The Library table's sortable columns. Raw values are **hand-written persistence contracts**
-/// (`StorageKeys.librarySort`) — the trap; pinned on literals.
+/// (`StorageKeys.librarySort`) - the trap; pinned on literals.
 enum LibrarySortField: String, CollectionSortField {
     case index         = "index"
     case white         = "white"
@@ -102,7 +102,7 @@ enum LibrarySortField: String, CollectionSortField {
 
     typealias Row = PGN
 
-    /// The column headers verbatim — `#`, not "Index": two names for one column otherwise.
+    /// The column headers verbatim - `#`, not "Index": two names for one column otherwise.
     var displayName: String {
         switch self {
         case .index:         "#"
@@ -145,7 +145,7 @@ enum LibrarySortField: String, CollectionSortField {
         }
     }
 
-    /// `#` descending — the shipped launch order; `theLibraryDefaultMatchesTheDestination` goes red
+    /// `#` descending - the shipped launch order; `theLibraryDefaultMatchesTheDestination` goes red
     /// if this and `LibraryDestination.defaultSortOrder` diverge.
     static var defaultField: Self { .index }
     static var defaultIsReverse: Bool { true }
@@ -153,7 +153,7 @@ enum LibrarySortField: String, CollectionSortField {
 
 // MARK: - Players
 
-/// The Players table's columns — same persistence contract. **`rank` is a sort, not the ranking
+/// The Players table's columns - same persistence contract. **`rank` is a sort, not the ranking
 /// method** (the ranking method decides what rank 1 means; this decides row order).
 enum PlayersSortField: String, CollectionSortField {
     case rank         = "rank"
@@ -214,7 +214,7 @@ enum PlayersSortField: String, CollectionSortField {
         }
     }
 
-    /// Rank ascending — the ladder; `defaultSortReproducesTheLadder` pins it.
+    /// Rank ascending - the ladder; `defaultSortReproducesTheLadder` pins it.
     static var defaultField: Self { .rank }
     static var defaultIsReverse: Bool { false }
 }

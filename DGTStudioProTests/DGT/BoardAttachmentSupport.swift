@@ -7,7 +7,7 @@ import Testing
 @MainActor
 enum BoardAttachmentSupport {
 
-    /// White on the bottom, a1 lower-left — the mirror's orientation.
+    /// White on the bottom, a1 lower-left - the mirror's orientation.
     static func pngData(for position: Position) -> Data? {
         let side: CGFloat = 44
         let size = NSSize(width: side * 8, height: side * 8)
@@ -50,7 +50,7 @@ enum BoardAttachmentSupport {
     }
 
     /// Records a rendered board as a PNG attachment. Call on the failure
-    /// path only — a green run should attach nothing.
+    /// path only - a green run should attach nothing.
     static func attach(_ position: Position, named name: String) {
         guard let png = pngData(for: position) else { return }
         Attachment.record(png, named: name)

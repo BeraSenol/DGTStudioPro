@@ -2,7 +2,7 @@ import Testing
 @testable import DGTStudioPro
 
 /// The pure half of batch analysis: FIFO with dedupe, fresh-batch log reset,
-/// `removeWaiting`/`clearWaiting` never touch `current`. Not @MainActor — a pure `Sendable` value.
+/// `removeWaiting`/`clearWaiting` never touch `current`. Not @MainActor - a pure `Sendable` value.
 @Suite("Analysis Queue")
 struct AnalysisQueueTests {
     
@@ -87,7 +87,7 @@ struct AnalysisQueueTests {
     
     // MARK: Fresh Batch vs Extended Batch
     
-    /// Enqueueing onto a fully-idle queue starts a fresh batch — the old
+    /// Enqueueing onto a fully-idle queue starts a fresh batch - the old
     /// log would otherwise make new progress read "2 of 3" at the start.
     @Test func enqueueFromIdleResetsTheFinishedLog() {
         var queue = AnalysisQueue<String>()
@@ -102,7 +102,7 @@ struct AnalysisQueueTests {
         #expect(queue.status(of: "a") == .notQueued)
     }
     
-    /// `enqueue([])` on a drained queue is a no-op — it must not erase
+    /// `enqueue([])` on a drained queue is a no-op - it must not erase
     /// the history a popover may still be showing.
     @Test func emptyEnqueueOnIdleKeepsTheLog() {
         var queue = AnalysisQueue<String>()
@@ -117,7 +117,7 @@ struct AnalysisQueueTests {
     }
     
     /// Enqueueing during a run extends the batch: totals grow, the log
-    /// stays — more work was added to the same run.
+    /// stays - more work was added to the same run.
     @Test func enqueueDuringARunExtendsTheBatch() {
         var queue = AnalysisQueue<String>()
         queue.enqueue(["a", "b"])
@@ -140,14 +140,14 @@ struct AnalysisQueueTests {
         queue.enqueue(["a", "b", "c"])
         _ = queue.startNext()
         
-        queue.removeWaiting("a")    // running — untouched
-        queue.removeWaiting("c")    // waiting — gone
+        queue.removeWaiting("a")    // running - untouched
+        queue.removeWaiting("c")    // waiting - gone
         
         #expect(queue.current == "a")
         #expect(queue.waiting == ["b"])
     }
     
-    /// `clearWaiting` empties the line and nothing else — the running
+    /// `clearWaiting` empties the line and nothing else - the running
     /// pass keeps going until the controller stops it.
     @Test func clearWaitingKeepsCurrentAndTheLog() {
         var queue = AnalysisQueue<String>()
@@ -164,7 +164,7 @@ struct AnalysisQueueTests {
         #expect(queue.isActive)
     }
     
-    /// Finishing with nothing running is a defensive no-op — teardown
+    /// Finishing with nothing running is a defensive no-op - teardown
     /// races call it after the loop already drained.
     @Test func finishCurrentWithoutCurrentIsANoOp() {
         var queue = AnalysisQueue<String>()
@@ -235,7 +235,7 @@ struct AnalysisQueueTests {
     // MARK: Batch Position (8 Aug 2026)
 
     /// The numerator both progress surfaces share. The defect this pins: the
-    /// window said "Analyzing 1 of 110" while the toolbar said "0/110" —
+    /// window said "Analyzing 1 of 110" while the toolbar said "0/110" -
     /// `completedCount + 1` against `completedCount`, two spellings of one
     /// number on screen at once. A batch on its first game is on game **1**.
     @Test func batchPositionIsOneBasedWhileActive() {
@@ -261,7 +261,7 @@ struct AnalysisQueueTests {
         queue.finishCurrent(.done)
         _ = queue.startNext()
         queue.finishCurrent(.done)
-        // Line empty, nothing running — but re-enqueue mid-drain is the lap
+        // Line empty, nothing running - but re-enqueue mid-drain is the lap
         // the clamp exists for; simulate it by extending a live batch.
         queue.enqueue(["c"])
 
@@ -269,7 +269,7 @@ struct AnalysisQueueTests {
         #expect(queue.batchPosition <= queue.totalCount)
     }
 
-    /// Drained, the position settles on the completed count — "5/5" beside
+    /// Drained, the position settles on the completed count - "5/5" beside
     /// "Analysis finished", never a claim about a game that does not exist.
     @Test func batchPositionSettlesOnCompletionWhenDrained() {
         var queue = AnalysisQueue<String>()

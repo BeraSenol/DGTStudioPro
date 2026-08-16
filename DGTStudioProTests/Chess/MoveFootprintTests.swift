@@ -3,14 +3,14 @@ import Testing
 
 /// The two chess-core facts the board tracker depends on, framed as physical squares:
 /// **footprint** (the exact set of squares a legal move changes) and **coordinate uniqueness**
-/// (`(from, to, promotion?)` resolves to one legal move — else board observation could not
+/// (`(from, to, promotion?)` resolves to one legal move - else board observation could not
 /// disambiguate).
 @Suite("Move Footprint & Coordinate Identity")
 struct MoveFootprintTests {
 
     // MARK: Footprint Helper
 
-    /// The set of squares whose contents differ between two positions —
+    /// The set of squares whose contents differ between two positions -
     /// i.e. the lifts and places a board would register for the transition.
     /// (Position construction via `Position.make` lives in
     /// Support/ChessTestSupport.swift.)
@@ -45,7 +45,7 @@ struct MoveFootprintTests {
             capturedPieceType: .pawn
         )
         let after = before.applying(move)
-        // Capture footprint is the same two squares as a quiet move — the
+        // Capture footprint is the same two squares as a quiet move - the
         // board distinguishes them only by what was on `to` beforehand.
         #expect(changedSquares(before, after) == [Squares.a1, Squares.a7])
         #expect(after[Squares.a7] == .whiteRook)
@@ -67,7 +67,7 @@ struct MoveFootprintTests {
         )
         let after = before.applying(move)
 
-        // Three squares change, and the captured pawn lifts from d5 — NOT
+        // Three squares change, and the captured pawn lifts from d5 - NOT
         // from the destination d6. A tracker keying captures off `to` would
         // miss this; it must consult move.capturedSquare.
         #expect(changedSquares(before, after) == [Squares.e5, Squares.d5, Squares.d6])
@@ -92,7 +92,7 @@ struct MoveFootprintTests {
         )
         let after = before.applying(move)
 
-        // Four squares, two pieces in motion — the board sees two lifts and
+        // Four squares, two pieces in motion - the board sees two lifts and
         // two places, and the rook squares come from move.rookFrom/rookTo.
         #expect(changedSquares(before, after) == [Squares.e1, Squares.g1, Squares.h1, Squares.f1])
         #expect(move.rookFrom == Squares.h1)
@@ -127,7 +127,7 @@ struct MoveFootprintTests {
             promotionType: .queen
         )
         let after = before.applying(move)
-        // Only two squares move, but a pawn lifts and a queen is placed —
+        // Only two squares move, but a pawn lifts and a queen is placed -
         // the tracker can't infer the promoted piece from geometry alone;
         // it reads it from the piece physically placed on e8.
         #expect(changedSquares(before, after) == [Squares.e7, Squares.e8])
@@ -154,7 +154,7 @@ struct MoveFootprintTests {
     // MARK: Coordinate Identity Invariant
 
     /// Reference positions spanning castling, pins, en passant and dense
-    /// promotion fan-out — read from the shared `Chess` fixtures
+    /// promotion fan-out - read from the shared `Chess` fixtures
     /// (Support/ChessTestSupport.swift) rather than re-stating the FENs here.
     private static let referenceFENs: [(name: String, fen: String)] = [
         ("Starting",   FEN.startingString),
@@ -189,7 +189,7 @@ struct MoveFootprintTests {
     }
 
     @Test func onlyPromotionsCauseFromToCollisions() throws {
-        // Without the promotion component, (from,to) collisions may exist —
+        // Without the promotion component, (from,to) collisions may exist -
         // but every colliding move must be a promotion. This pins WHY the
         // tracker only needs to ask "which piece?" on the back rank, never
         // elsewhere.

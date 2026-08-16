@@ -5,7 +5,7 @@ import SwiftData
 
 // MARK: PGN Store
 
-/// All Library persistence — import, archive, delete, one-hash/two-doors `refreshHash`.
+/// All Library persistence - import, archive, delete, one-hash/two-doors `refreshHash`.
 /// `@MainActor` as a whole: every method fronts the app's main-context `ModelContext`.
 @MainActor
 struct PGNStore {
@@ -21,7 +21,7 @@ struct PGNStore {
     }()
     
     /// **Persistence contract**: every stored `contentHash` was computed against this exact
-    /// "yyyy.MM.dd"-in-UTC rendering — it must stay byte-identical forever or dedupe rots.
+    /// "yyyy.MM.dd"-in-UTC rendering - it must stay byte-identical forever or dedupe rots.
     /// Internal (not private) so the pin can reach it.
     static func hashDateString(from date: Date) -> String {
         let parts = hashCalendar.dateComponents([.year, .month, .day], from: date)
@@ -30,19 +30,19 @@ struct PGNStore {
     
     // MARK: Errors
     enum Error: Swift.Error {
-        /// Hash matches an existing game. Carries id + name, never the model — `Swift.Error`
+        /// Hash matches an existing game. Carries id + name, never the model - `Swift.Error`
         /// refines `Sendable`, and a live `@Model` never is.
         case duplicate(existingID: PersistentIdentifier, existingName: String)
         case missingRequiredTags(Set<String>)
         case malformedPGN(reason: String)
         case fileReadFailed(URL, underlying: Swift.Error)
-        /// `archive(_:)` got a `*` result — no ongoing game reaches the Library.
+        /// `archive(_:)` got a `*` result - no ongoing game reaches the Library.
         case ongoingGame
     }
     
     /// Archive outcome: a hash match here is *success* (game is in the Library), not the error import throws.
     struct ArchiveResult {
-        /// The Library row the game landed on — fresh or pre-existing.
+        /// The Library row the game landed on - fresh or pre-existing.
         let pgn: PGN
         /// True when an identical game was already stored.
         let deduplicated: Bool
@@ -58,7 +58,7 @@ struct PGNStore {
     
     // MARK: Instance Methods
     /// The text import door: parse, dedupe by content hash, insert.
-    /// **Throws `Error.duplicate` naming the existing game — it does not return it.**
+    /// **Throws `Error.duplicate` naming the existing game - it does not return it.**
     @discardableResult
     func importPGN(text: String, libraryIndex: Int? = nil) throws -> PGN {
         let pgn = try parse(text)
@@ -110,17 +110,17 @@ struct PGNStore {
         return try modelContext.fetch(descriptor).first?.libraryIndex
     }
     
-    /// Folder-scan report (counts and filenames only — no models cross this boundary, the `HashCollision` rule).
+    /// Folder-scan report (counts and filenames only - no models cross this boundary, the `HashCollision` rule).
     struct LibraryIndexBackfill: Sendable, Equatable {
         /// Rows that had no ordinal and now carry the one their file named.
         var stamped: Int = 0
-        /// Matched a row that already had an ordinal — left alone, see below.
+        /// Matched a row that already had an ordinal - left alone, see below.
         var alreadyNumbered: Int = 0
-        /// Parsed cleanly, matched no row — a finding, not an error: the folder holds a game the Library does not.
+        /// Parsed cleanly, matched no row - a finding, not an error: the folder holds a game the Library does not.
         var unmatched: [String] = []
         /// No `<digits>.` ordinal in the filename; skipped before parsing.
         var unnumbered: [String] = []
-        /// Unreadable or unparseable — separate from `unmatched` because the remedies differ.
+        /// Unreadable or unparseable - separate from `unmatched` because the remedies differ.
         var skipped: [String] = []
 
         var scanned: Int {
@@ -128,14 +128,14 @@ struct PGNStore {
         }
     }
 
-    /// Whether any game still lacks an ordinal — gates the backfill affordance. Predicated + limit 1.
+    /// Whether any game still lacks an ordinal - gates the backfill affordance. Predicated + limit 1.
     func hasUnnumberedGames() throws -> Bool {
         var descriptor = FetchDescriptor<PGN>(predicate: #Predicate { $0.libraryIndex == nil })
         descriptor.fetchLimit = 1
         return try !modelContext.fetch(descriptor).isEmpty
     }
 
-    /// Matches PGN files in `folder` to rows by **content hash** (never by filename — the folder uses full
+    /// Matches PGN files in `folder` to rows by **content hash** (never by filename - the folder uses full
     /// names, the serializer given names) and stamps each match with the filename's ordinal.
     /// An existing ordinal is never overwritten; one bad file does not cost the rest.
     func backfillLibraryIndices(from folder: URL) throws -> LibraryIndexBackfill {
@@ -175,7 +175,7 @@ struct PGNStore {
             report.stamped += 1
         }
 
-        // One save outside the loop — N saves leave a half-stamped archive behind a mid-loop failure.
+        // One save outside the loop - N saves leave a half-stamped archive behind a mid-loop failure.
         // `libraryIndex` is outside the content hash, so no `refreshHash` needed.
         if report.stamped > 0 { try modelContext.save() }
 
@@ -190,8 +190,8 @@ struct PGNStore {
         return report
     }
 
-    /// The second door (M5): archives a finished live game. Shares `contentHash` with import —
-    /// one hash, two doors — so a game imported and archived deduplicates.
+    /// The second door (M5): archives a finished live game. Shares `contentHash` with import -
+    /// one hash, two doors - so a game imported and archived deduplicates.
     @discardableResult
     func archive(_ game: LiveGame) throws -> ArchiveResult {
         guard game.isFinished, game.result != .ongoing else {
@@ -210,9 +210,9 @@ struct PGNStore {
             // Board stamped at game start; outside the content hash so dedupe is unperturbed.
             board: game.roster.board
         )
-        // A played game takes `max + 1` — the number its exported file will carry. Cost: delete the
+        // A played game takes `max + 1` - the number its exported file will carry. Cost: delete the
         // newest game and the number is reused (the folder is the authority). `?? 0` inside the `do`:
-        // an empty Library is index 1, but *fetch failed* must not stamp 1 — caught, never thrown;
+        // an empty Library is index 1, but *fetch failed* must not stamp 1 - caught, never thrown;
         // an ordinal must never fail an archive (archive-first, exactly once, never lost).
         do {
             pgn.libraryIndex = (try highestLibraryIndex() ?? 0) + 1
@@ -240,7 +240,7 @@ struct PGNStore {
         return ArchiveResult(pgn: pgn, deduplicated: false)
     }
     
-    /// Recomputes and persists `contentHash` after an in-place edit — skipping it lets dedupe rot
+    /// Recomputes and persists `contentHash` after an in-place edit - skipping it lets dedupe rot
     /// against stale hashes ("any in-place edit must call `refreshHash`").
     func refreshHash(of pgn: PGN) throws {
         pgn.contentHash = Self.contentHash(for: pgn)
@@ -252,19 +252,19 @@ struct PGNStore {
     /// and rehash cannot be separated by a forgetful caller. Re-resolves both seats unconditionally.
     func applyEdit(to pgn: PGN, _ edit: (PGN) -> Void) throws {
         // The only rows this edit can strand are the two it is about to re-resolve away
-        // from — captured before the edit, checked after (the rule, scoped).
+        // from - captured before the edit, checked after (the rule, scoped).
         let displaced = [pgn.whitePlayer, pgn.blackPlayer].compactMap { $0 }
         edit(pgn)
         try resolvePlayers(for: pgn)
         collectOrphanedPlayers(among: displaced)
-        try refreshHash(of: pgn)   // saves — one transaction covers all three
+        try refreshHash(of: pgn)   // saves - one transaction covers all three
     }
     
     // MARK: Movetext Edit (M-lib.3)
     
     /// Applies edited movetext, validated by full replay (`MovetextEdit`). `.failure` names the
     /// first offending ply and nothing mutates; `.success` stores canonical moves, invalidates stored
-    /// evaluations, re-classifies, rehashes — one transaction. Seats untouched: movetext cannot edit them.
+    /// evaluations, re-classifies, rehashes - one transaction. Seats untouched: movetext cannot edit them.
     /// `throws` is reserved for the SwiftData save.
     func applyMovetextEdit(
         to pgn: PGN,
@@ -278,8 +278,8 @@ struct PGNStore {
             pgn.moves = accepted.moves
             pgn.evaluations = []
             pgn.analysisDepths = []    // travels with `evaluations`, always
-            classify(pgn)              // re-derived, not cleared — see the note above
-            try refreshHash(of: pgn)   // recompute hash + save — one transaction
+            classify(pgn)              // re-derived, not cleared - see the note above
+            try refreshHash(of: pgn)   // recompute hash + save - one transaction
             Self.logger?.info(
                 "Applied movetext edit to '\(pgn.name, privacy: .public)' plies=\(accepted.moves.count)"
             )
@@ -287,12 +287,12 @@ struct PGNStore {
         }
     }
     
-    /// Forwards to the batch door — the orphan cascade and transaction shape have exactly one implementation.
+    /// Forwards to the batch door - the orphan cascade and transaction shape have exactly one implementation.
     func delete(_ pgn: PGN) throws {
         try delete([pgn])
     }
 
-    /// Deletes games in one transaction. Players stranded by the deletion go with it — computed
+    /// Deletes games in one transaction. Players stranded by the deletion go with it - computed
     /// **before** the first delete: `.nullify` propagation cannot be relied on afterwards.
     func delete(_ pgns: [PGN]) throws {
         guard !pgns.isEmpty else { return }
@@ -319,9 +319,9 @@ struct PGNStore {
     }
     
     /// The single creation door for `Player`. Tags fold through `PlayerName.displayForm` then match on
-    /// `normalizedName`; `"?"` and empty resolve to nil — the *absence* of a player, never a player named "?".
+    /// `normalizedName`; `"?"` and empty resolve to nil - the *absence* of a player, never a player named "?".
     func resolvePlayer(named rawTag: String) throws -> Player? {
-        // Placeholder rule + identity fold live on `Player.identity(forTag:)` — one spelling.
+        // Placeholder rule + identity fold live on `Player.identity(forTag:)` - one spelling.
         guard let key = Player.identity(forTag: rawTag) else { return nil }
         let display = PlayerName.displayForm(of: rawTag)
 
@@ -329,14 +329,14 @@ struct PGNStore {
             return existing
         }
 
-        // First-seen tag form, whitespace-folded only — comma structure, casing, diacritics verbatim.
+        // First-seen tag form, whitespace-folded only - comma structure, casing, diacritics verbatim.
         let player = Player(name: display, tagName: PlayerName.folded(rawTag))
         modelContext.insert(player)
         Self.logger?.info("Created player '\(display, privacy: .public)'")
         return player
     }
     
-    /// Read-only bridge from `PlayerStats.ID` (= `normalizedName`) to the model — **never creates**.
+    /// Read-only bridge from `PlayerStats.ID` (= `normalizedName`) to the model - **never creates**.
     func player(withNormalizedKey key: String) throws -> Player? {
         try first(#Predicate { $0.normalizedName == key })
     }
@@ -344,14 +344,14 @@ struct PGNStore {
     /// The two player backfills behind the converged stamp: once one pass heals zero rows
     /// the stamp is set and every later appearance skips the app's most-run full-table scan.
     /// Safe to gate because imports link at the door, so no door can re-create the work; the one
-    /// residual risk — a save that failed after an in-memory link — is priced in the anchor, and
+    /// residual risk - a save that failed after an in-memory link - is priced in the anchor, and
     /// the recovery is deleting the default. `defaults` injectable for the suite.
     func healPlayersIfNeeded(defaults: UserDefaults = .standard) throws {
         guard !defaults.bool(forKey: StorageKeys.playerBackfillsConverged) else { return }
         let healed = try backfillPlayerLinks() + backfillPlayerTagNames()
         if healed == 0 {
             defaults.set(true, forKey: StorageKeys.playerBackfillsConverged)
-            Self.logger?.info("Player backfills converged — stamped; the per-appearance scan retires")
+            Self.logger?.info("Player backfills converged - stamped; the per-appearance scan retires")
         }
     }
 
@@ -373,7 +373,7 @@ struct PGNStore {
             }
             if changed { relinked += 1 }
         }
-        // The healing arm for orphans predating the rule — nothing else ever touches them.
+        // The healing arm for orphans predating the rule - nothing else ever touches them.
         // Deliberately **after** the relink loop: before it, this would delete rows the loop is about to link.
         let collected = collectOrphanedPlayers()
         if relinked > 0 || collected > 0 {
@@ -389,7 +389,7 @@ struct PGNStore {
     }
 
     /// Heals `Player.tagName` on pre-schema rows: "first seen" reconstructed as the seat tag of the
-    /// earliest linked game (chronological-order philosophy) — deterministic.
+    /// earliest linked game (chronological-order philosophy) - deterministic.
     @discardableResult
     func backfillPlayerTagNames() throws -> Int {
         let players = try modelContext.fetch(FetchDescriptor<Player>())
@@ -415,7 +415,7 @@ struct PGNStore {
     }
     
     // MARK: Classification
-    /// Stamps derived classification — opening and mate motif — from stored moves. Save-free by
+    /// Stamps derived classification - opening and mate motif - from stored moves. Save-free by
     /// contract (`resolvePlayers` precedent). Both columns stamped together or not at all (`PGN.opening`'s invariant).
     @discardableResult
     func classify(_ pgn: PGN, using table: ECOClassifier = ECOTable.bundled) -> Bool {
@@ -431,7 +431,7 @@ struct PGNStore {
         return true
     }
 
-    /// Classifies rows with `ecoCode == nil` — deliberately conflating "not yet classified" with
+    /// Classifies rows with `ecoCode == nil` - deliberately conflating "not yet classified" with
     /// "classified, unnamed"; cheap because the table names all twenty first moves
     /// (`everyPlayedGameGetsAName`). Library `onAppear` only; predicated, unlike the link backfill.
     @discardableResult
@@ -463,7 +463,7 @@ struct PGNStore {
     }
 
     /// A game and the row its rewritten hash would collide with. Identifiers and names, never models
-    /// (`Error.duplicate` precedent — `Swift.Error` refines `Sendable`).
+    /// (`Error.duplicate` precedent - `Swift.Error` refines `Sendable`).
     struct HashCollision: Sendable {
         /// The game being retagged.
         let gameID: PersistentIdentifier
@@ -477,11 +477,11 @@ struct PGNStore {
     enum RetagRejection: Swift.Error {
         /// The rewrite would hand a game a hash another row already owns.
         case wouldCollide([HashCollision])
-        /// A retag to `"?"`/empty is a deletion wearing a rename's clothes — refused.
+        /// A retag to `"?"`/empty is a deletion wearing a rename's clothes - refused.
         case emptyTag
     }
 
-    /// Rewrites every game `player` appears in to carry `newTag` in that seat, re-resolves, rehashes —
+    /// Rewrites every game `player` appears in to carry `newTag` in that seat, re-resolves, rehashes -
     /// the single door through which a stored seat tag changes identity. `newTag` is **tag
     /// form**. Pre-flight and all-or-nothing: a refusal leaves the archive untouched.
     /// Cost, accepted: seat tags are inside the hash, so pre-rename exports no longer dedupe.
@@ -498,12 +498,12 @@ struct PGNStore {
         for rewrite in rewrites {
             if rewrite.isWhite { rewrite.game.white = newTag }
             if rewrite.isBlack { rewrite.game.black = newTag }
-            // Re-resolve then rehash, the `applyEdit` order — but one transaction over the whole rewrite.
+            // Re-resolve then rehash, the `applyEdit` order - but one transaction over the whole rewrite.
             try resolvePlayers(for: rewrite.game)
             rewrite.game.contentHash = Self.contentHash(for: rewrite.game)
         }
         // The renamed-from row is the rename's whole residue, collected in the same
-        // transaction — scoped to it. This is what makes rename the merge replacement
+        // transaction - scoped to it. This is what makes rename the merge replacement
         // it was designed to be.
         collectOrphanedPlayers(among: [player])
         try modelContext.save()
@@ -513,7 +513,7 @@ struct PGNStore {
         return rewrites.count
     }
 
-    /// Every game `player` appears in, once — union of both relationship arrays; both-seat rows get one `Rewrite`.
+    /// Every game `player` appears in, once - union of both relationship arrays; both-seat rows get one `Rewrite`.
     private static func rewrites(for player: Player) -> [Rewrite] {
         var byGame: [PersistentIdentifier: Rewrite] = [:]
         for game in player.whiteGames {
@@ -530,11 +530,11 @@ struct PGNStore {
         return Array(byGame.values)
     }
 
-    /// Deletes every registry row nothing points at — the PGN files are the source of truth.
+    /// Deletes every registry row nothing points at - the PGN files are the source of truth.
     /// Safe because `resolvePlayer`'s two callers both link immediately, so a linkless row is always a
     /// leftover, never in transit (a future create-then-link-later door trips this loudly). Save-free.
     /// Fetch-all-and-scan: `isOrphaned` reads relationships, which `#Predicate` cannot. The
-    /// backfill's arm — the editing doors pass only the rows they displaced.
+    /// backfill's arm - the editing doors pass only the rows they displaced.
     @discardableResult
     func collectOrphanedPlayers() -> Int {
         guard let players = try? modelContext.fetch(FetchDescriptor<Player>()) else {
@@ -546,7 +546,7 @@ struct PGNStore {
     }
 
     /// The scoped core: the same rule over only `candidates`. A self-play edit passes one
-    /// row twice — the `isDeleted` guard makes the second visit a no-op, never a double delete.
+    /// row twice - the `isDeleted` guard makes the second visit a no-op, never a double delete.
     @discardableResult
     func collectOrphanedPlayers(among candidates: [Player]) -> Int {
         var collected = 0
@@ -560,12 +560,12 @@ struct PGNStore {
         return collected
     }
 
-    /// The one spelling of "nothing points at this row" — a second spelling is the twin-read-site pattern.
+    /// The one spelling of "nothing points at this row" - a second spelling is the twin-read-site pattern.
     static func isOrphaned(_ player: Player) -> Bool {
         player.whiteGames.isEmpty && player.blackGames.isEmpty
     }
 
-    /// `isOrphaned`'s **prospective twin** — the players `pgns` would strand, asked before any delete
+    /// `isOrphaned`'s **prospective twin** - the players `pgns` would strand, asked before any delete
     /// (`.nullify` propagation cannot be relied on afterwards; "the array still looks fine" is the trap).
     static func playersOrphaned(byDeleting pgns: [PGN]) -> [Player] {
         let doomed = Set(pgns.map(\.persistentModelID))
@@ -632,7 +632,7 @@ struct PGNStore {
         do {
             return try PGNParser.parse(text)
         } catch {
-            // `throws(PGNParser.Error)` — the switch is exhaustive by the compiler, no cast needed.
+            // `throws(PGNParser.Error)` - the switch is exhaustive by the compiler, no cast needed.
             switch error {
             case .missingRequiredTags(let tags):
                 throw Error.missingRequiredTags(tags)
@@ -660,7 +660,7 @@ struct PGNStore {
     }
     
     // MARK: Static Methods
-    /// Model-typed spelling — a thin forward to the field-typed twin, which exists so the collision pre-flight can ask
+    /// Model-typed spelling - a thin forward to the field-typed twin, which exists so the collision pre-flight can ask
     /// "what hash *would* this row carry" without mutate-and-revert or a second copy of the recipe.
     private static func contentHash(for pgn: PGN) -> String {
         contentHash(
@@ -675,7 +675,7 @@ struct PGNStore {
         )
     }
 
-    /// The recipe: MD5 of the eight fields joined by `|`, in this order, **forever** — every stored
+    /// The recipe: MD5 of the eight fields joined by `|`, in this order, **forever** - every stored
     /// hash depends on it. `timeControl`, `board`, classification, `libraryIndex` deliberately absent.
     private static func contentHash(
         event: String,
@@ -703,7 +703,7 @@ struct PGNStore {
         return digest.map { String(format: "%02x", $0) }.joined()
     }
 
-    /// The hash after every touched seat becomes `newTag` — asked without writing. Both flags
+    /// The hash after every touched seat becomes `newTag` - asked without writing. Both flags
     /// substituted in one call (per-seat asking yields two hashes the game will never have).
     private static func prospectiveHash(for rewrite: Rewrite, becoming newTag: String) -> String {
         let game = rewrite.game

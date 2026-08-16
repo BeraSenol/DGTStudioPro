@@ -4,9 +4,9 @@ import Testing
 /// The movetext-edit validator: legality by full replay from the start
 /// position, canonicalized output, and the position-forced result rules
 /// (checkmate ⇒ mating side wins; a `#` must mate; stalemate ⇒ draw; `*` is
-/// never finished). Pure over `GameState` — nonisolated, no fixtures beyond
+/// never finished). Pure over `GameState` - nonisolated, no fixtures beyond
 /// SAN sequences and one FEN for the stalemate/promotion edges.
-@Suite("Movetext Edit — Validation")
+@Suite("Movetext Edit - Validation")
 struct MovetextEditTests {
     
     // MARK: Legality
@@ -17,7 +17,7 @@ struct MovetextEditTests {
     }
     
     @Test func firstIllegalPlyIsNamed() {
-        // Qh6 is unreachable on move 2 — the first (and only) illegal ply.
+        // Qh6 is unreachable on move 2 - the first (and only) illegal ply.
         let result = MovetextEdit.validate(["e4", "e5", "Qh6"], claimedResult: .whiteWins)
         #expect(result == .failure(.illegalMove(index: 2, san: "Qh6", reason: .noMatchingMove("Qh6"))))
     }
@@ -39,7 +39,7 @@ struct MovetextEditTests {
     }
     
     @Test func mateSuffixIsAppendedEvenWhenOmitted() throws {
-        // Fool's mate typed without the `#` — storage must still carry it
+        // Fool's mate typed without the `#` - storage must still carry it
         // (GameRecord.endedInMate depends on the trailing `#`).
         let accepted = try MovetextEdit.validate(
             ["f3", "e5", "g4", "Qh4"],
@@ -95,7 +95,7 @@ struct MovetextEditTests {
     }
     
     @Test func nonTerminalDecisiveResultIsAccepted() {
-        // Resignation from a non-terminal position — the board can't refute it.
+        // Resignation from a non-terminal position - the board can't refute it.
         #expect((try? MovetextEdit.validate(["e4", "e5"], claimedResult: .blackWins).get()) != nil)
     }
     
@@ -136,14 +136,14 @@ struct MovetextEditTests {
 
     @Test func doubledTrailingResultIsRefusedAsSplice() {
         // The first `1-0` has a token after it (the second), so it reads as
-        // mid-text — refusal, not silent double-drop.
+        // mid-text - refusal, not silent double-drop.
         #expect(throws: MovetextEdit.Rejection.splicedGames(token: "1-0")) {
             try MovetextEdit.tokenize("e4 e5 1-0 1-0")
         }
     }
 
     @Test func loneResultTokenTokenizesEmpty() throws {
-        // A result with no moves is a trailing result — dropped, not a splice.
+        // A result with no moves is a trailing result - dropped, not a splice.
         #expect(try MovetextEdit.tokenize("1/2-1/2") == [])
     }
 }

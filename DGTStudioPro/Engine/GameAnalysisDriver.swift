@@ -3,9 +3,9 @@ import os
 import SwiftData
 
 /// Drives a full-game engine pass: walks each ply, asks Stockfish for an evaluation at the
-/// requested depth, records **one** evaluation per ply, saves **once per exit** — never per ply.
+/// requested depth, records **one** evaluation per ply, saves **once per exit** - never per ply.
 /// The pass is a *plan*, not the whole game: the classified book prefix is skipped and
-/// a ply already scored at ≥ the target depth is kept — re-analysis deepens instead of restarting.
+/// a ply already scored at ≥ the target depth is kept - re-analysis deepens instead of restarting.
 @Observable
 @MainActor
 final class GameAnalysisDriver {
@@ -14,7 +14,7 @@ final class GameAnalysisDriver {
     private static let logger = AppLog.logger(.analysis)
     
     // MARK: Status
-    /// Coarse pass state, read only by `AnalysisQueueController` — no view reads it.
+    /// Coarse pass state, read only by `AnalysisQueueController` - no view reads it.
     enum Status: Equatable {
         case idle
         case analyzing(progress: Double)
@@ -24,7 +24,7 @@ final class GameAnalysisDriver {
     
     // MARK: Live Search
 
-    /// What the engine is doing right now, for the queue window. Here and not on the model — the
+    /// What the engine is doing right now, for the queue window. Here and not on the model - the
     /// whole point of write-coalescing: per-ply model writes invalidated every `@Query` in the app.
     struct Search: Equatable, Sendable {
         /// 0-based ply index within the game.
@@ -34,7 +34,7 @@ final class GameAnalysisDriver {
         let san: String
         let progress: EngineProgress
 
-        /// The requested depth (the `18` in `go depth 18`) — what the window's Depth fact shows, by request.
+        /// The requested depth (the `18` in `go depth 18`) - what the window's Depth fact shows, by request.
         let targetDepth: Int
     }
 
@@ -129,7 +129,7 @@ final class GameAnalysisDriver {
         defer { search = nil }
 
         // Classification now precedes the engine: the plan below reads the freshly stamped
-        // book depth, and a fully satisfied game never spawns a subprocess. `warmed()` — this
+        // book depth, and a fully satisfied game never spawns a subprocess. `warmed()` - this
         // method is async and must not block on the table parse.
         PGNStore(modelContext: modelContext)
             .classify(pgn, using: await ECOTable.warmed())
@@ -144,7 +144,7 @@ final class GameAnalysisDriver {
         )
 
         guard !plan.searchable.isEmpty else {
-            // Book-only, or already at depth. The save still runs — classify may have stamped.
+            // Book-only, or already at depth. The save still runs - classify may have stamped.
             Self.logger?.info(
                 "Analysis satisfied without searching: pgn='\(pgn.name, privacy: .public)'"
             )
@@ -158,7 +158,7 @@ final class GameAnalysisDriver {
         do {
             try await engine.start()
         } catch StockfishEngine.EngineError.alreadyStarted {
-            // Reused engine — already warm, proceed.
+            // Reused engine - already warm, proceed.
             Self.logger?.info("Reusing warm engine")
         } catch {
             Self.logger?.error(
@@ -168,7 +168,7 @@ final class GameAnalysisDriver {
             return
         }
 
-        // Storage rebuilds only when the arrays don't fit — narrower than the old blanket reset:
+        // Storage rebuilds only when the arrays don't fit - narrower than the old blanket reset:
         // a fitting pass keeps every evaluation the plan is about to skip. Still after a
         // successful start, so a broken binary costs nothing stored.
         if plan.resetsStorage {
@@ -187,12 +187,12 @@ final class GameAnalysisDriver {
         for (index, san) in pgn.moves.enumerated() {
             if Task.isCancelled { break }
 
-            // Unparseable SAN stops the walk — partial analysis beats crashing on corrupt PGN.
+            // Unparseable SAN stops the walk - partial analysis beats crashing on corrupt PGN.
             guard let move = try? state.parseSAN(san) else {
                 Self.logger?.error(
                     """
                     SAN walk broke at index \(index) san='\(san, privacy: .public)' \
-                    pgn='\(pgn.name, privacy: .public)' — partial analysis stops here, \
+                    pgn='\(pgn.name, privacy: .public)' - partial analysis stops here, \
                     \(total - index) plies left unevaluated
                     """
                 )
@@ -203,7 +203,7 @@ final class GameAnalysisDriver {
                     message: "\(Self.moveLabel(plyIndex: index, san: san)) won't parse, "
                     + "analysis stopped there"
                     + (saved ? "; earlier evaluations were kept."
-                             : ", and the library refused the save — earlier evaluations were lost.")
+                             : ", and the library refused the save - earlier evaluations were lost.")
                 )
                 return
             }
@@ -228,17 +228,17 @@ final class GameAnalysisDriver {
                 )
             }
 
-            // Cancellation exit persists what stands below — skip the write to avoid a "still analyzing" flicker.
+            // Cancellation exit persists what stands below - skip the write to avoid a "still analyzing" flicker.
             if Task.isCancelled { break }
 
-            // Nil only when the stream yielded nothing — engine died mid-ply; leaving the slot nil keeps
-            // "this ply was never scored" readable (the Analysis Data window's em-dash rows).
+            // Nil only when the stream yielded nothing - engine died mid-ply; leaving the slot nil keeps
+            // "this ply was never scored" readable (the Analysis Data window's placeholder rows).
             if let deepest {
                 pgn.evaluations[index] = deepest
                 pgn.analysisDepths[index] = depth   // what makes the next pass incremental
             }
 
-            // A dead engine finishes every remaining stream instantly — the old loop raced to `.done` with
+            // A dead engine finishes every remaining stream instantly - the old loop raced to `.done` with
             // nothing evaluated (M1 9b). One actor hop per ply is nothing next to the search.
             guard await engine.isRunning else {
                 Self.logger?.error(
@@ -250,28 +250,28 @@ final class GameAnalysisDriver {
                     message: "The engine quit at \(Self.moveLabel(plyIndex: index, san: san)) "
                     + "(ply \(index + 1) of \(total))"
                     + (saved ? "; evaluations up to there were kept."
-                             : ", and the library refused the save — evaluations were lost.")
+                             : ", and the library refused the save - evaluations were lost.")
                 )
                 return
             }
 
             searched += 1
-            // Denominated in *searchable* plies — over the full count, a skipped book would
+            // Denominated in *searchable* plies - over the full count, a skipped book would
             // freeze the fraction below 1 forever.
             status = .analyzing(
                 progress: Double(searched) / Double(max(plan.searchable.count, 1))
             )
 
             // **No save here, and the absence is the decision**: a per-ply save invalidated every
-            // `@Query` in every open window — the app's last per-ply fan-out.
+            // `@Query` in every open window - the app's last per-ply fan-out.
         }
 
         // The three ordinary exits, each persisting what the walk wrote; `.done` only if the store took
-        // the result — a failed save on the done path is `.failed`, not `.done`-with-Console.
+        // the result - a failed save on the done path is `.failed`, not `.done`-with-Console.
         if Task.isCancelled {
             if !persist(modelContext, of: pgn) {
                 Self.logger?.error(
-                    "Cancelled pass could not persist its partial evaluations for pgn='\(pgn.name, privacy: .public)' — the cancelled row's 'were kept' does not hold this once"
+                    "Cancelled pass could not persist its partial evaluations for pgn='\(pgn.name, privacy: .public)' - the cancelled row's 'were kept' does not hold this once"
                 )
             }
             Self.logger?.info("Analysis cancelled: pgn='\(pgn.name, privacy: .public)'")
@@ -298,7 +298,7 @@ final class GameAnalysisDriver {
             return true
         } catch {
             Self.logger?.error(
-                "Evaluation save failed for pgn='\(pgn.name, privacy: .public)': \(error.localizedDescription, privacy: .public) — in-memory results still render until relaunch"
+                "Evaluation save failed for pgn='\(pgn.name, privacy: .public)': \(error.localizedDescription, privacy: .public) - in-memory results still render until relaunch"
             )
             return false
         }

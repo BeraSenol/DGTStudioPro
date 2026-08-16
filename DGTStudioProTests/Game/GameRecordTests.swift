@@ -3,11 +3,11 @@ import Foundation
 import SwiftData
 @testable import DGTStudioPro
 
-/// The chronology contract (nonisolated — pure values): `effectiveDate`
+/// The chronology contract (nonisolated - pure values): `effectiveDate`
 /// falls back to `importedAt`, and `chronologicalOrder` runs the full
 /// deterministic chain (effective date → importedAt → contentHash). Every
 /// fold's determinism rests on this being total.
-@Suite("Game Record — Chronology")
+@Suite("Game Record - Chronology")
 struct GameRecordChronologyTests {
 
     private func record(
@@ -32,7 +32,7 @@ struct GameRecordChronologyTests {
 
     @Test func ordersByEffectiveDateFirst() {
         let earlier = record(date: Date(timeIntervalSince1970: 100))
-        // Undated, but imported before the dated game's date — the
+        // Undated, but imported before the dated game's date - the
         // fallback puts it later anyway.
         let later = record(importedAt: Date(timeIntervalSince1970: 900))
 
@@ -54,11 +54,11 @@ struct GameRecordChronologyTests {
     }
 }
 
-/// The projection seam (`@MainActor` — realizes `@Model`s through the
+/// The projection seam (`@MainActor` - realizes `@Model`s through the
 /// store): resolved links become `Side`s, `"?"` sides project nil, and
 /// the mate flag keys off the last SAN's `#`.
 @MainActor
-@Suite("Game Record — Projection")
+@Suite("Game Record - Projection")
 struct GameRecordProjectionTests {
 
     private static func makeContext() throws -> ModelContext {
@@ -133,7 +133,7 @@ struct GameRecordProjectionTests {
         #expect(record.plyCount == 2)
         #expect(record.isTimed)
         // Was `#expect(record.hasAnalysis, "a non-empty evaluations array
-        // means a pass ran")`, against `evaluations = [nil, nil]` — a pin on
+        // means a pass ran")`, against `evaluations = [nil, nil]` - a pin on
         // the exact sentence later repealed, and its message is the belief
         // itself written out. A pass that scored nothing did run; what it did
         // not do is produce analysis, which is what this flag is read for.
@@ -155,7 +155,7 @@ struct GameRecordProjectionTests {
         #expect(!record.endedInMate)
     }
 
-    /// A row inserted around the store — pre-backfill shape — projects
+    /// A row inserted around the store - pre-backfill shape - projects
     /// linkless rather than inventing identity from raw tags.
     @Test func unlinkedRowProjectsNoSides() throws {
         let context = try Self.makeContext()

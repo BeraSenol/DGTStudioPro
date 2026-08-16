@@ -1,7 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// Coverage for the base `Square` (an `Int`) notation layer — the a1-origin
+/// Coverage for the base `Square` (an `Int`) notation layer - the a1-origin
 /// coordinate vocabulary the whole chess core speaks. `SquareDGTFieldTests`
 /// already covers the a8↔a1 hardware transform; this suite pins the plain
 /// algebraic-notation bijection, the file/rank decomposition, and the

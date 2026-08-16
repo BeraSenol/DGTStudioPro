@@ -10,7 +10,7 @@ private final class ActivityToken {
 
     fileprivate init(reason: String) {
         // `.userInitiated` = idle system sleep + auto/sudden termination disabled. Deliberately NOT
-        // `.idleDisplaySleepDisabled` — "let the panel dim" is preserved by construction.
+        // `.idleDisplaySleepDisabled` - "let the panel dim" is preserved by construction.
         token = ProcessInfo.processInfo.beginActivity(
             options: .userInitiated,
             reason: reason
@@ -22,10 +22,10 @@ private final class ActivityToken {
 
 /// Holds one `ProcessInfo` activity while user-started work runs (preference-gated).
 /// Two causes, two independent gates: a live game/recording needs the serial link; a
-/// batch needs the engine — see `activityReason`, the one testable part.
-/// Non-goals: display sleep is never inhibited (structural — it would take naming a second
+/// batch needs the engine - see `activityReason`, the one testable part.
+/// Non-goals: display sleep is never inhibited (structural - it would take naming a second
 /// option); logout/shutdown is not vetoed (draft sidecar + archive-first make it safe).
-/// A preference is an observable property here, not `@AppStorage` — the gate must
+/// A preference is an observable property here, not `@AppStorage` - the gate must
 /// participate in the tracking loop so flipping it mid-run releases the token on that edge.
 @MainActor
 @Observable
@@ -35,7 +35,7 @@ final class SleepInhibitor {
     @ObservationIgnored
     private static let logger = AppLog.logger(.power)
 
-    /// The two halves of the `pmset -g assertions` reason string — separate because when both causes
+    /// The two halves of the `pmset -g assertions` reason string - separate because when both causes
     /// hold they are joined, not replaced.
     @ObservationIgnored
     private static let playReason = "Live chess game or board recording in progress"
@@ -45,7 +45,7 @@ final class SleepInhibitor {
 
     // MARK: Preferences
 
-    /// The play gate. Observed, so Settings re-arms the loop; persisted on write — the `?? true` in
+    /// The play gate. Observed, so Settings re-arms the loop; persisted on write - the `?? true` in
     /// `init` is the only place the default is stated. The storage key deliberately kept its old
     /// name: renaming would silently reset the preference.
     var preventsSleepDuringPlay: Bool {
@@ -57,7 +57,7 @@ final class SleepInhibitor {
         }
     }
 
-    /// The analysis gate. Same shape, separate value — overnight batches and instant sleep
+    /// The analysis gate. Same shape, separate value - overnight batches and instant sleep
     /// are the same person on different evenings.
     var preventsSleepDuringAnalysis: Bool {
         didSet {
@@ -75,7 +75,7 @@ final class SleepInhibitor {
     @ObservationIgnored private var token: ActivityToken?
 
     /// The reason the current token was opened with, so a change of *cause* while continuously held
-    /// is noticed — otherwise the idempotence guard leaves a stale reason on the one diagnostic surface.
+    /// is noticed - otherwise the idempotence guard leaves a stale reason on the one diagnostic surface.
     @ObservationIgnored private var heldReason: String?
 
     /// Guards `observe` against a second call: each would arm an independent loop forever.
@@ -101,7 +101,7 @@ final class SleepInhibitor {
     // MARK: The predicate
 
     /// The whole decision as a pure function: which reason to hold, or nil. Extracted because two
-    /// gates over two causes is a crossable wiring — this is the one part worth testing.
+    /// gates over two causes is a crossable wiring - this is the one part worth testing.
     static func activityReason(
         playing: Bool,
         analyzing: Bool,
@@ -119,7 +119,7 @@ final class SleepInhibitor {
 
     /// Self-rescheduling Observation loop. `onChange` fires at *willSet*; the re-arm runs as a
     /// queued main-actor task, after the mutation, so `setInhibited` reads settled state.
-    /// Strong captures, deliberately: the closures capture the observables, not `self` — no cycle,
+    /// Strong captures, deliberately: the closures capture the observables, not `self` - no cycle,
     /// and the App owns everything for the process lifetime.
     func observe(
         session: DGTLiveSession,
@@ -156,7 +156,7 @@ final class SleepInhibitor {
 
     // MARK: Private Methods
 
-    /// Idempotent on the *reason* — same answer is a no-op; a changed cause swaps the token without
+    /// Idempotent on the *reason* - same answer is a no-op; a changed cause swaps the token without
     /// a gap (new before old, so the process never sits un-inhibited between two holds).
     private func setInhibited(reason: String?) {
         guard reason != heldReason else { return }
@@ -172,7 +172,7 @@ final class SleepInhibitor {
 
 extension SleepInhibitor {
 
-    /// The instance previews inject — force-unwrap plus the wipe, because a preview reading the
+    /// The instance previews inject - force-unwrap plus the wipe, because a preview reading the
     /// developer's real defaults leaks last state into the canvas (S4).
     static var preview: SleepInhibitor {
         let name = "preview"

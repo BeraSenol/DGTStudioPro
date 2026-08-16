@@ -2,7 +2,7 @@ import Testing
 @testable import DGTStudioPro
 
 /// The M3 bar mapping: fraction identical to the graph's projection,
-/// nil folding to `.drawn`, and the label grammar — signed pawns to one
+/// nil folding to `.drawn`, and the label grammar - signed pawns to one
 /// decimal, unsigned zero, `evalTagContent`-spelled mates. Pure value type,
 /// nonisolated.
 @Suite("Evaluation Bar Reading")
@@ -10,7 +10,7 @@ struct EvaluationBarReadingTests {
 
     // MARK: The Graph Agreement (the gate, as identity)
 
-    /// The bar's fraction is `whiteWinProbability` verbatim — not a second
+    /// The bar's fraction is `whiteWinProbability` verbatim - not a second
     /// sigmoid that could drift. Pinned across the shapes the graph plots:
     /// even, advantage both ways, mate both ways.
     @Test(arguments: [
@@ -22,10 +22,10 @@ struct EvaluationBarReadingTests {
         #expect(EvaluationBarReading(evaluation).whiteFraction == evaluation.whiteWinProbability)
     }
 
-    // MARK: Nil — the `.drawn` Fold
+    // MARK: Nil - the `.drawn` Fold
 
     /// Ply 0 and unanalysed plies read neutral, exactly like the graph's
-    /// `?? 0.5` — and this is `Evaluation.drawn`'s named consumer finally
+    /// `?? 0.5` - and this is `Evaluation.drawn`'s named consumer finally
     /// consuming it.
     @Test func nilFoldsToDrawn() {
         #expect(EvaluationBarReading(nil) == EvaluationBarReading(.drawn))
@@ -42,7 +42,7 @@ struct EvaluationBarReadingTests {
         #expect(EvaluationBarReading(.centipawns(999)).label == "+10.0")
     }
 
-    /// Anything that *rounds* to zero shows the unsigned "0.0" — a signed
+    /// Anything that *rounds* to zero shows the unsigned "0.0" - a signed
     /// zero would claim a direction the number no longer shows.
     @Test func nearZeroRoundsToUnsignedZero() {
         #expect(EvaluationBarReading(.centipawns(0)).label == "0.0")

@@ -1,10 +1,10 @@
 /// One rendered piece: what, where, and the identity it animates under (M6's currency).
-/// The layer keys its `ForEach` on `key` — a persisting key glides, a churned key fades; there
+/// The layer keys its `ForEach` on `key` - a persisting key glides, a churned key fades; there
 /// is no third behaviour, because an unproven piece never gets a key that can persist.
 struct ResolvedPiece: Equatable, Hashable, Sendable, Identifiable {
 
     /// A proven tracker identity or a square-bound anonymous one. `anonymous` carries the `Piece`
-    /// too: a replaced occupant must produce a fresh key (a fade, never a morph — morphing is
+    /// too: a replaced occupant must produce a fresh key (a fade, never a morph - morphing is
     /// promotion's grammar alone).
     enum Key: Equatable, Hashable, Sendable {
         case tracked(PieceID)
@@ -19,7 +19,7 @@ struct ResolvedPiece: Equatable, Hashable, Sendable, Identifiable {
 }
 
 /// Resolves every rendered piece's identity. **Output occupancy is the rendered position
-/// verbatim, always** — the resolver decides keys, never presence (the mirror invariant as a
+/// verbatim, always** - the resolver decides keys, never presence (the mirror invariant as a
 /// pure function, pinned across every fixture). Identity is proven or absent, never guessed:
 /// parity per square, then the reconstructor's own verified move, then anonymous.
 enum PieceIdentity {
@@ -40,7 +40,7 @@ enum PieceIdentity {
         }
     }
 
-    /// The mirror arm; nil game/tracker means all anonymous, nothing glides — the pre-M6 mirror exactly.
+    /// The mirror arm; nil game/tracker means all anonymous, nothing glides - the pre-M6 mirror exactly.
     static func resolved(
         physical: Position,
         game: GameState?,
@@ -50,7 +50,7 @@ enum PieceIdentity {
             return resolved(position: physical, tracker: .empty)
         }
 
-        // Source 2, computed once per resolve — only consulted for squares parity couldn't explain.
+        // Source 2, computed once per resolve - only consulted for squares parity couldn't explain.
         let proven = provenPlacements(game: game, physical: physical)
 
         return Square.all.compactMap { square in
@@ -81,7 +81,7 @@ enum PieceIdentity {
     }
 
     /// The landing squares a recognized move explains. `.move` and `.correctable` prove theirs;
-    /// `.unresolved` and `.noChange` prove nothing, deliberately — mid-thought and mid-desync get
+    /// `.unresolved` and `.noChange` prove nothing, deliberately - mid-thought and mid-desync get
     /// parity and anonymity only.
     private static func provenPlacements(
         game: GameState,
@@ -96,8 +96,8 @@ enum PieceIdentity {
         }
     }
 
-    /// The move's landing square — promotion lands the promoted piece under the pawn's identity
-    /// (`PieceTracker.applyMove`'s rule) — plus the rook's for a castle.
+    /// The move's landing square - promotion lands the promoted piece under the pawn's identity
+    /// (`PieceTracker.applyMove`'s rule) - plus the rook's for a castle.
     private static func placements(for move: Move) -> [Placement] {
         var result = [
             Placement(

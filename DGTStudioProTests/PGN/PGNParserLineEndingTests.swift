@@ -5,10 +5,10 @@ import Testing
 /// Regression tests for line-ending handling. PGN files exported on Windows
 /// (and by some DGT eBoard tooling) use CRLF; a `CharacterSet.newlines` split
 /// turns each CRLF into two separators, injecting a spurious empty line that
-/// the section splitter mistook for the end of the tag block — so every tag
+/// the section splitter mistook for the end of the tag block - so every tag
 /// after `Event` went missing. These pin that all three common line endings
 /// parse identically.
-@Suite("PGN Parser — Line Endings")
+@Suite("PGN Parser - Line Endings")
 struct PGNParserLineEndingTests {
 
     /// A complete game with LF endings, used as the reference.

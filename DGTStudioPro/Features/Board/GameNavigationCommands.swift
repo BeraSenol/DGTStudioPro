@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: Focused Value
 
-/// The frontmost tab's `Game`, published via `.focusedSceneValue` — the menu drives whichever
+/// The frontmost tab's `Game`, published via `.focusedSceneValue` - the menu drives whichever
 /// game is in front, nothing when the active tab has none.
 private struct ActiveGameKey: FocusedValueKey {
     typealias Value = Game
@@ -15,7 +15,7 @@ extension FocusedValues {
     }
 }
 
-/// The Board's Get Info trigger — a trigger binding, not the request value: a `Commands` scene
+/// The Board's Get Info trigger - a trigger binding, not the request value: a `Commands` scene
 /// cannot open a window, so the destination acts and the menu only asks.
 private struct GetInfoRequestKey: FocusedValueKey {
     typealias Value = Binding<Bool>
@@ -30,7 +30,7 @@ extension FocusedValues {
 
 // MARK: Commands
 
-/// First/Previous/Next/Last with ←/→/Home/End. Gated on `game == nil` only — a bounds-based
+/// First/Previous/Next/Last with ←/→/Home/End. Gated on `game == nil` only - a bounds-based
 /// `disabled(_:)` doesn't re-evaluate until focus changes; with no game the items disable and
 /// the bare arrows are NOT consumed (the collection grids keep them).
 struct GameNavigationCommands: Commands {
@@ -61,7 +61,7 @@ struct GameNavigationCommands: Commands {
 
             Divider()
 
-            // The Board's only Get Info door — a Board tab has no row to right-click. The live case carries
+            // The Board's only Get Info door - a Board tab has no row to right-click. The live case carries
             // nothing (a live game has no identifier until it archives).
             GetInfoMenuItem(
                 requesting: getInfo,

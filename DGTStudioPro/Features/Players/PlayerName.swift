@@ -1,21 +1,21 @@
 import Foundation
 
 /// The one rendering of a player name: PGN carries "Last, First", surfaces show
-/// "First Last". Storage untouched — the hash covers tags and export round-trips them. No
+/// "First Last". Storage untouched - the hash covers tags and export round-trips them. No
 /// inverse exists: names travel tag → display only.
 enum PlayerName {
     
-    /// **Idempotent by construction** — the output never contains a comma, so double application is
+    /// **Idempotent by construction** - the output never contains a comma, so double application is
     /// a no-op; "apply exactly once" stopped being a rule callers must remember.
     static func displayForm(of raw: String) -> String {
         let parts = raw.split(
             separator: ",", maxSplits: 1, omittingEmptySubsequences: false
         )
-        // No comma: already display order — a fold, not a flip.
+        // No comma: already display order - a fold, not a flip.
         guard parts.count == 2 else { return folded(String(raw)) }
         
         let last = folded(String(parts[0]))
-        // Further commas fold to spaces ("Carlsen, Magnus, Jr" — PGN separates players with ":"), which
+        // Further commas fold to spaces ("Carlsen, Magnus, Jr" - PGN separates players with ":"), which
         // is what keeps the output comma-free and this function idempotent.
         let given = folded(parts[1].replacingOccurrences(of: ",", with: " "))
         
@@ -25,7 +25,7 @@ enum PlayerName {
     }
     
     /// **The** whitespace fold: trim + collapse runs. Identity and the content hash are this plus
-    /// `lowercased()`, and both call through here — a display name, its key and its hash input can
+    /// `lowercased()`, and both call through here - a display name, its key and its hash input can
     /// never disagree about "Magnus  Carlsen".
     static func folded(_ text: String) -> String {
         text

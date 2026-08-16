@@ -1,4 +1,4 @@
-/// One received DGT message. The framer is semantics-free — it carries the raw message byte
+/// One received DGT message. The framer is semantics-free - it carries the raw message byte
 /// (even unrecognized ones), which is what makes it resumable and testable.
 struct DGTFrame: Equatable, Sendable {
     /// The response byte that opened the frame (MSB set, e.g. `0x86`).
@@ -9,7 +9,7 @@ struct DGTFrame: Equatable, Sendable {
 
 /// Incremental receiver state machine per the DGT protocol pseudocode: byte 0 is the message
 /// byte (MSB set), then two 7-bit length bytes; MSB-based resync skips junk between frames.
-/// Holds partial progress across calls — chunk boundaries land anywhere.
+/// Holds partial progress across calls - chunk boundaries land anywhere.
 struct DGTFramer {
     
     // MARK: Configuration

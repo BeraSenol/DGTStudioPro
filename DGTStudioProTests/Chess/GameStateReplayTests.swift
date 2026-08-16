@@ -42,7 +42,7 @@ struct GameStateReplayTests {
     }
     
     @Test func enPassantSequence() throws {
-        // 1. e4 a6 2. e5 d5 3. exd6 — white captures EP on move 3.
+        // 1. e4 a6 2. e5 d5 3. exd6 - white captures EP on move 3.
         let moves = ["e4", "a6", "e5", "d5", "exd6"]
         let final = try GameState.starting.replay(moves)
         
@@ -77,7 +77,7 @@ struct GameStateReplayTests {
     }
     
     @Test func illegalMoveCarriesNoMatchUnderlying() {
-        // `e5` from the starting position — pawn on e2 cannot reach e5 in one move.
+        // `e5` from the starting position - pawn on e2 cannot reach e5 in one move.
         let expected = ReplayError.invalidMove(
             index: 0,
             san: "e5",

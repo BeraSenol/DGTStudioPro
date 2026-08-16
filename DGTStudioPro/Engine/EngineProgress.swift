@@ -1,4 +1,4 @@
-/// One `info` line's search state, white-relative — what `analyze` yields. `evaluation` is
+/// One `info` line's search state, white-relative - what `analyze` yields. `evaluation` is
 /// non-optional because the engine only constructs one from a scored line (the scoreless-chatter guard).
 struct EngineProgress: Equatable, Sendable {
 
@@ -9,7 +9,7 @@ struct EngineProgress: Equatable, Sendable {
     /// has always wanted, and the only one the model stores.
     let evaluation: Evaluation
 
-    /// Nominal search depth in plies — the iteration this line came from,
+    /// Nominal search depth in plies - the iteration this line came from,
     /// counting up to the requested depth.
     let depth: Int?
 

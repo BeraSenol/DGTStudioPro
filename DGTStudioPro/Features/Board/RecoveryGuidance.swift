@@ -19,10 +19,10 @@ struct RecoveryGuidance: Equatable, Sendable {
         let square: Square
         let action: Action
         
-        /// One item per square — the square doubles as stable identity.
+        /// One item per square - the square doubles as stable identity.
         var id: Square { square }
         
-        /// "c3 — remove the White Knight" / "g1 — place…" / "e4 — replace… with…".
+        /// "c3 - remove the White Knight" / "g1 - place…" / "e4 - replace… with…".
         var message: String {
             switch action {
             case .remove(let piece):
@@ -35,7 +35,7 @@ struct RecoveryGuidance: Equatable, Sendable {
             }
         }
         
-        /// Prose piece names live here — the chess core stays presentation-free.
+        /// Prose piece names live here - the chess core stays presentation-free.
         private static func name(of piece: Piece) -> String {
             guard let color = piece.color, let type = piece.type else {
                 return "piece"      // unreachable for occupied squares; kept total
@@ -58,7 +58,7 @@ struct RecoveryGuidance: Equatable, Sendable {
     
     // MARK: Stored Properties
     
-    /// Sorted by square index (a1 → h8) — deterministic for UI and tests.
+    /// Sorted by square index (a1 → h8) - deterministic for UI and tests.
     let items: [Item]
     
     // MARK: Computed Properties
@@ -73,7 +73,7 @@ struct RecoveryGuidance: Equatable, Sendable {
         })
     }
     
-    /// `.target`: a piece belongs on this empty square. Wrong-piece squares stay attention-only —
+    /// `.target`: a piece belongs on this empty square. Wrong-piece squares stay attention-only -
     /// stacking both styles reads as noise.
     var targetSquares: Set<Square> {
         Set(items.compactMap {
@@ -112,7 +112,7 @@ struct RecoveryGuidance: Equatable, Sendable {
 
 extension RecoveryGuidance {
     
-    /// The live checklist, or nil. Two consumers compute this independently by decision — two
+    /// The live checklist, or nil. Two consumers compute this independently by decision - two
     /// *computations* was the decision; two *spellings* was not, hence one static.
     @MainActor
     static func current(

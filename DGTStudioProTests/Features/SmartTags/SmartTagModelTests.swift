@@ -6,7 +6,7 @@ import SwiftData
 /// The model half: rules survive the store round-trip (the one thing the pure suite can't
 /// witness), and the reborn defaults match their enum ancestors.
 @MainActor
-@Suite("Smart Tag — Model")
+@Suite("Smart Tag - Model")
 struct SmartTagModelTests {
     
     private func makeContext() throws -> ModelContext {
@@ -39,7 +39,7 @@ struct SmartTagModelTests {
         #expect(fetched.matchAll)
     }
     
-    /// Each default semantically; "Smothered Mates" pinned on its own terms — this is the only
+    /// Each default semantically; "Smothered Mates" pinned on its own terms - this is the only
     /// place the seeded tag's *rule* is exercised.
     @Test func defaultTagsMatchTheirAncestors() {
         let tags = Dictionary(
@@ -76,7 +76,7 @@ struct SmartTagModelTests {
         #expect(tags["First Round"]?.matches(timed) == false)
         #expect(tags["Smothered Mates"]?.matches(smothered) == true)
         #expect(tags["Smothered Mates"]?.matches(backRank) == false)
-        // An ordinary mate carries no motif, so it isn't a smothered one —
+        // An ordinary mate carries no motif, so it isn't a smothered one -
         // and the Checkmate tag still catches it, which is the division of
         // labour between the two seeds.
         #expect(tags["Smothered Mates"]?.matches(mate) == false)

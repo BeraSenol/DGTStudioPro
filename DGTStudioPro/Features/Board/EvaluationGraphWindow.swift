@@ -3,7 +3,7 @@ import SwiftUI
 
 /// The magnifier's request. **The wrapper is the whole reason this type exists**:
 /// `openWindow(value:)` routes by type, and the main group already claims `PersistentIdentifier`
-/// — a second group over it would make every existing call unspecified.
+/// - a second group over it would make every existing call unspecified.
 struct EvaluationGraphRequest: Codable, Hashable, Sendable {
 
     let gameID: PersistentIdentifier
@@ -14,9 +14,9 @@ struct EvaluationGraphRequest: Codable, Hashable, Sendable {
 }
 
 /// The evaluation graph at full size with a pointer read-out. A window, not a popover or
-/// sheet — field-tested, not argued: the popover was built and reverted in one day (dismisses on
+/// sheet - field-tested, not argued: the popover was built and reverted in one day (dismisses on
 /// the first board click, killing the companion-while-scrubbing use). Hover read-outs are what
-/// 100 pt in a sidebar cannot afford — bigger makes a different question askable.
+/// 100 pt in a sidebar cannot afford - bigger makes a different question askable.
 struct EvaluationGraphWindow: View {
 
     // MARK: Static Constants
@@ -31,7 +31,7 @@ struct EvaluationGraphWindow: View {
     @Environment(\.modelContext) private var modelContext
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
 
-    /// Resolved once per request — a store lookup does not belong on a render path; the pointer
+    /// Resolved once per request - a store lookup does not belong on a render path; the pointer
     /// lives inside `EvaluationGraphContent`.
     @State private var pgn: PGN?
 
@@ -54,7 +54,7 @@ struct EvaluationGraphWindow: View {
 
     // MARK: Instance Methods
 
-    /// Cast paired with `isDeleted`, per the standing invariant — `model(for:)` hands back
+    /// Cast paired with `isDeleted`, per the standing invariant - `model(for:)` hands back
     /// tombstones, and every property read on one traps.
     private func resolve() {
         guard let request,
@@ -67,7 +67,7 @@ struct EvaluationGraphWindow: View {
     }
 
     private func graph(for pgn: PGN) -> some View {
-        // The curve maps *here*, once per resolved game — not per pointer move.
+        // The curve maps *here*, once per resolved game - not per pointer move.
         EvaluationGraphContent(
             moves: pgn.moves,
             evaluations: pgn.evaluations,
@@ -90,7 +90,7 @@ struct EvaluationGraphWindow: View {
 
 // MARK: Graph Content
 
-/// Graph + read-out, split from the window so the pointer invalidates only this subtree —
+/// Graph + read-out, split from the window so the pointer invalidates only this subtree -
 /// `hoveredPly` as window `@State` re-ran the whole body per mouse move, including the curve map.
 private struct EvaluationGraphContent: View {
 
@@ -146,7 +146,7 @@ private struct EvaluationGraphContent: View {
                 style: style
             )
             // `.onContinuousHover`: the question is *where*, which `onHover`'s Bool cannot answer. The
-            // ended case clears — a stale ply describes nothing.
+            // ended case clears - a stale ply describes nothing.
             .onContinuousHover(coordinateSpace: .local) { phase in
                 switch phase {
                 case .active(let location):
@@ -168,7 +168,7 @@ private struct EvaluationGraphContent: View {
 
 /// The header control that opens the window, both Evaluation sections. (Tried as a popover
 /// for a day; reverted.) Not an `InspectorEditButtonView`
-/// — that hardcodes the pencil on purpose; shares only `.font(.body)` + one label for both
+/// - that hardcodes the pencil on purpose; shares only `.font(.body)` + one label for both
 /// `.help` and `.accessibilityLabel`.
 struct EvaluationMagnifierButton: View {
 

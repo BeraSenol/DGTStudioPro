@@ -125,7 +125,7 @@ struct Move: Equatable, Hashable, Sendable {
 
 // MARK: - Last Move
 
-/// The two squares a board highlights after a move. **Deliberately not a `Move`** — the mirror
+/// The two squares a board highlights after a move. **Deliberately not a `Move`** - the mirror
 /// must highlight without claiming move-level knowledge it doesn't have.
 struct LastMove: Equatable, Sendable {
     let from: Square

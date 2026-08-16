@@ -96,7 +96,7 @@ struct LibraryGamePreviewStateTests {
     
     @Test func startingStaticMatchesEmptyCompute() {
         // The `.starting` constant is meant to be equivalent to computing
-        // from an empty move list — sanity check.
+        // from an empty move list - sanity check.
         let computed = LibraryGamePreviewState.compute(from: [])
         #expect(computed == LibraryGamePreviewState.starting)
     }

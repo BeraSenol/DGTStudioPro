@@ -1,7 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// `Player.identity(forTag:)` — is there a player in this seat tag, and which.
+/// `Player.identity(forTag:)` - is there a player in this seat tag, and which.
 @Suite("Player identity from a seat tag")
 struct PlayerIdentityTests {
 
@@ -28,7 +28,7 @@ struct PlayerIdentityTests {
         #expect(Player.identity(forTag: "Şenol, Bera") != Player.identity(forTag: "Senol, Bera"))
     }
 
-    /// Two genuinely different players stay different — the assertion that
+    /// Two genuinely different players stay different - the assertion that
     /// makes the ones above mean something.
     @Test func differentPlayersHaveDifferentIdentities() {
         #expect(Player.identity(forTag: "Carlsen, Magnus") != Player.identity(forTag: "Nepo"))
@@ -36,7 +36,7 @@ struct PlayerIdentityTests {
 
     // MARK: The Seat Guard
 
-    /// New with M12.2 — their absence was the finding: the guard shipped with no test of the
+    /// New with M12.2 - their absence was the finding: the guard shipped with no test of the
     /// predicate itself. Different spellings of one player must collide; a raw `!=` passes every
     /// other test in this suite.
     @Test func differentSpellingsOfOnePlayerCollide() {
@@ -49,7 +49,7 @@ struct PlayerIdentityTests {
         #expect(!Player.seatsNameOnePlayer("Şenol, Bera", "Senol, Bera"))
     }
 
-    /// Two absences are not one player — the exemption without which the
+    /// Two absences are not one player - the exemption without which the
     /// commonest imported shape, both seats `?`, would refuse every edit to
     /// either seat.
     @Test(arguments: [("?", "?"), ("", ""), ("?", ""), ("   ", "?")])
@@ -58,14 +58,14 @@ struct PlayerIdentityTests {
     }
 
     /// One known seat against an unknown one is a normal game, not a collision
-    /// — the arm that would break if the nil guard were written as "unknown
+    /// - the arm that would break if the nil guard were written as "unknown
     /// equals unknown".
     @Test func aKnownSeatAgainstAnUnknownOneDoesNotCollide() {
         #expect(!Player.seatsNameOnePlayer("Carlsen, Magnus", "?"))
         #expect(!Player.seatsNameOnePlayer("?", "Carlsen, Magnus"))
     }
 
-    /// The `Roster` accessor forwards rather than restates — asserted against the predicate, not a
+    /// The `Roster` accessor forwards rather than restates - asserted against the predicate, not a
     /// literal. Nonisolated, load-bearing: `Roster` does not inherit `LiveGame`'s isolation.
     @Test func theRosterAccessorAgreesWithThePredicate() {
         let collides = LiveGame.Roster(white: "Lopez, Ruy", black: "Ruy Lopez")
@@ -80,7 +80,7 @@ struct PlayerIdentityTests {
                 == Player.seatsNameOnePlayer(unknown.white, unknown.black))
 
         // The values themselves, so the agreement above can't be vacuous by
-        // both sides being wrong together — the M5 lesson about two guards
+        // both sides being wrong together - the M5 lesson about two guards
         // agreeing on a value neither could produce.
         #expect(collides.seatsNameOnePlayer)
         #expect(!distinct.seatsNameOnePlayer)
@@ -89,7 +89,7 @@ struct PlayerIdentityTests {
 
     // MARK: Agreement with the resolver
 
-    /// The identity matches the key a `Player` row actually carries — asserted against the
+    /// The identity matches the key a `Player` row actually carries - asserted against the
     /// initializer, not a re-derivation.
     @Test func identityMatchesTheKeyAPlayerRowCarries() throws {
         let tag = "Senol, Bera"

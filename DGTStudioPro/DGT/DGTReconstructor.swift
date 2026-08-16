@@ -1,7 +1,7 @@
 /// The outcome of trying to explain a settled physical board against the last
 /// known-legal game state.
 enum DGTReconstruction: Equatable {
-    /// The physical board matches the last legal position — nothing happened
+    /// The physical board matches the last legal position - nothing happened
     /// (e.g. a piece was lifted and put back).
     case noChange
     /// A single legal move fully explains the board. Commit it.
@@ -9,25 +9,25 @@ enum DGTReconstruction: Equatable {
     /// A castle underway: part of the gesture has landed. The model ghosts the airborne piece;
     /// commit waits for completion.
     case castlingInProgress(Move)
-    /// A legal move one physical correction away — the en-passant capture whose taken pawn wasn't
+    /// A legal move one physical correction away - the en-passant capture whose taken pawn wasn't
     /// lifted. `clear` lists the squares to fix. A nudge, NOT a desync.
     case correctable(move: Move, clear: [Square], expectedAfter: Position)
-    /// Pieces have been lifted but none placed yet — a move is in the player's
+    /// Pieces have been lifted but none placed yet - a move is in the player's
     /// hand. Keep waiting; this is NOT a desync.
     case inProgress
     /// The board has settled into a configuration that no single legal move
-    /// produces — an illegal move or a fumble. Hand off to recovery (D6).
+    /// produces - an illegal move or a fumble. Hand off to recovery (D6).
     case unresolved
 }
 
 /// Reconstructs moves from physical board states. Entirely pure; the session owns all mutable
-/// state. Legality comes **only** from `GameState.legalMoves()` — never an engine — and answers
+/// state. Legality comes **only** from `GameState.legalMoves()` - never an engine - and answers
 /// only when exactly one legal move explains the whole board.
 enum DGTReconstructor {
     
     // MARK: Coordinate Resolver
     
-    /// `(from, to, promotion?) → Move`: the unique legal move, or nil — relies on the uniqueness
+    /// `(from, to, promotion?) → Move`: the unique legal move, or nil - relies on the uniqueness
     /// invariant pinned by `MoveFootprintTests`.
     static func move(
         from: Square,
@@ -52,14 +52,14 @@ enum DGTReconstructor {
         let mover = lastLegal.activeColor
         let diff = DGTBoardDiff(from: before, to: physical)
         
-        // 0) Only removals → a move is in the player's hand; wait. Hoisted above move generation —
+        // 0) Only removals → a move is in the player's hand; wait. Hoisted above move generation -
         //    this settle fires most often and needs no legal-move walk.
         if diff.placed.isEmpty { return .inProgress }
         
         let vacatedByMover = diff.vacated.filter { $0.value.isColor(mover) }
         let placedByMover  = diff.placed.filter  { $0.value.isColor(mover) }
         
-        // One `legalMoves()` for every step below — regenerating per step doubles the 300 ms path's work.
+        // One `legalMoves()` for every step below - regenerating per step doubles the 300 ms path's work.
         let legal = lastLegal.legalMoves()
         
         // Endpoints are shared by steps 1 and 1b.
@@ -88,7 +88,7 @@ enum DGTReconstructor {
         }
         
         // 1b) En-passant near-miss: the EP diff looks exactly like a plain pawn push, so step 1's
-        //     `applying` check fails — surface a correctable nudge instead of a desync.
+        //     `applying` check fails - surface a correctable nudge instead of a desync.
         if let endpoints,
            let ep = legal.first(where: {
                $0.isEnPassant && $0.from == endpoints.from && $0.to == endpoints.to
@@ -104,7 +104,7 @@ enum DGTReconstructor {
         }
         
         // 2) Castle in progress: FIDE castling is king-first and usually two motions, so a quiescence
-        //    can fire mid-gesture — three interim boards are legitimate. (Rook-first with the king
+        //    can fire mid-gesture - three interim boards are legitimate. (Rook-first with the king
         //    untouched is deliberately absent: byte-identical to a completed legal rook move.)
         for castling in legal where castling.isCastling {
             guard let rookFrom = castling.rookFrom else { continue }
@@ -154,7 +154,7 @@ enum DGTReconstructor {
     }
     
     /// The promotion type if a pawn left `from` and a non-pawn of the mover's colour sits on `to`.
-    /// Read off the board, not assumed — under-promotions are legal.
+    /// Read off the board, not assumed - under-promotions are legal.
     private static func promotionType(
         from: Square,
         to: Square,
@@ -169,7 +169,7 @@ enum DGTReconstructor {
         return arrived
     }
     
-    /// `before` with only the king relocated — detects the king-moved-rook-not interim.
+    /// `before` with only the king relocated - detects the king-moved-rook-not interim.
     private static func kingOnlyApplied(
         _ castling: Move,
         mover: PieceColor,

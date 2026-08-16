@@ -66,7 +66,7 @@ struct PlayerRankingTests {
     // MARK: `.wins` is not a copy of it
 
     /// Asserted against `PlayerStats.rankingOrder` itself rather than a
-    /// hand-written expected order — the `EvaluationGraphReading` rule. A
+    /// hand-written expected order - the `EvaluationGraphReading` rule. A
     /// literal would keep passing if the chain changed and this case did
     /// not, which is the divergence delegation exists to prevent.
     @Test func winsReproducesTheD11Ladder() {
@@ -80,7 +80,7 @@ struct PlayerRankingTests {
 
     // MARK: Unrated players
 
-    /// A nil rating is "no opinion", not a low one, so it ranks **last** —
+    /// A nil rating is "no opinion", not a low one, so it ranks **last** -
     /// never sorted as if it were the 1500 starting value, which would drop an
     /// unplayed player into the middle of the ladder ahead of real players who
     /// have earned less.
@@ -106,12 +106,12 @@ struct PlayerRankingTests {
         #expect(PlayerRanking.rating.ranked(entries).map(\.stats.key) == ["alpha", "bravo"])
     }
 
-    // MARK: Totality — the rule
+    // MARK: Totality - the rule
 
-    /// Every method bottoms out in a tiebreak that cannot tie — reproducible across launches.
+    /// Every method bottoms out in a tiebreak that cannot tie - reproducible across launches.
     @Test(arguments: PlayerRanking.allCases)
     func everyMethodIsTotal(_ method: PlayerRanking) {
-        // Identical in every ranked column but the key — the only thing left to
+        // Identical in every ranked column but the key - the only thing left to
         // separate them.
         let entries = ["delta", "alpha", "charlie", "bravo"].map {
             entry($0, wins: 3, losses: 3, rating: 1500)
@@ -126,7 +126,7 @@ struct PlayerRankingTests {
 
     // MARK: Ranks
 
-    /// Ranks are 1-based, dense and distinct — the property the badge and
+    /// Ranks are 1-based, dense and distinct - the property the badge and
     /// `AccessibilityID.rankingRow` both assume.
     @Test(arguments: PlayerRanking.allCases)
     func ranksAreDenseAndOneBased(_ method: PlayerRanking) {

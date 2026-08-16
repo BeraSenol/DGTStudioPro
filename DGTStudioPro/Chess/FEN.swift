@@ -65,14 +65,14 @@ struct FEN: Equatable, Sendable {
 // MARK: Move Generation
 
 extension FEN {
-    /// Legal moves via `GameState` — the single source of legality. **Test-only by decision** (see
+    /// Legal moves via `GameState` - the single source of legality. **Test-only by decision** (see
     /// the waiver register).
     func legalMoves() -> [Move] {
         GameState(self).legalMoves()
     }
 }
 
-// MARK: - String Parsing (folded in from FEN+Parsing.swift at M13 — 80 lines of type, 209 of extension)
+// MARK: - String Parsing (folded in from FEN+Parsing.swift at M13 - 80 lines of type, 209 of extension)
 extension FEN {
     
     // MARK: String Parsing (7P prerequisite)
@@ -127,7 +127,7 @@ extension FEN {
             var file = 0
             
             for char in rankString {
-                // ASCII-only: `wholeNumberValue` is true for `٥`, `Ⅷ`, `五` — and the draft sidecar resumes
+                // ASCII-only: `wholeNumberValue` is true for `٥`, `Ⅷ`, `五` - and the draft sidecar resumes
                 // through this parser, so this is a real untrusted-file boundary.
                 if char.isASCII, let digit = char.wholeNumberValue, (1...8).contains(digit) {
                     file += digit
@@ -203,7 +203,7 @@ extension FEN {
     /// Parses the fullmove number. Must be a positive integer (FEN spec
     /// requires fullmove ≥ 1; the starting position has fullmove 1).
     private static func parseFullmoveNumber(_ field: String) throws(FENParseError) -> Int {
-        // Digits only — see `parseHalfmoveClock`.
+        // Digits only - see `parseHalfmoveClock`.
         guard field.allSatisfy(\.isASCII), field.allSatisfy(\.isNumber),
               let value = Int(field), value >= 1 else {
             throw FENParseError.malformedInteger(field)

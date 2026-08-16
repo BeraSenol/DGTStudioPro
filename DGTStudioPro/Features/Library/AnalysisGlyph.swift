@@ -14,12 +14,12 @@ enum AnalysisGlyph {
         case unanalyzed
         /// On the engine now. Beats the array, which is mid-write underneath.
         case analyzing
-        /// A pass left evaluations, nothing running. Says nothing about *coverage* — the Analysis Data
+        /// A pass left evaluations, nothing running. Says nothing about *coverage* - the Analysis Data
         /// window's per-ply rows are where that shows.
         case analyzed
     }
     
-    /// "Has been analyzed", spelled once — forwards to `PGN`, which owns the question.
+    /// "Has been analyzed", spelled once - forwards to `PGN`, which owns the question.
     static func isAnalyzed(_ game: PGN) -> Bool {
         game.hasScoredPly
     }
@@ -37,7 +37,7 @@ enum AnalysisGlyph {
         return !games.isEmpty && games.allSatisfy(isAnalyzed) ? .analyzed : .unanalyzed
     }
     
-    /// Per-row spelling off the memoized projection — exists so a row badge cannot cost a
+    /// Per-row spelling off the memoized projection - exists so a row badge cannot cost a
     /// blob decode. A cache, not a second opinion (`hasAnalysis` is the same predicate).
     static func state(
         of game: PGN,
@@ -58,7 +58,7 @@ enum AnalysisGlyph {
         }
     }
     
-    /// Corner-badge symbol — plain verdict marks, no gear (by request). The gear is
+    /// Corner-badge symbol - plain verdict marks, no gear (by request). The gear is
     /// shared for `.analyzing`, so "the engine has it" has one silhouette everywhere.
     static func badgeName(_ state: State) -> String {
         switch state {
@@ -70,7 +70,7 @@ enum AnalysisGlyph {
     
     // MARK: Badge Tint
     
-    /// Badge colour: green analyzed, red not, **nil while running** — no verdict to report. Here,
+    /// Badge colour: green analyzed, red not, **nil while running** - no verdict to report. Here,
     /// not at render sites: a colour decided per site is the twin-read-site pattern with a `Color`.
     static func tint(_ state: State) -> Color? {
         switch state {
@@ -80,7 +80,7 @@ enum AnalysisGlyph {
         }
     }
     
-    /// "Analyze", "Analyzing…", "Analyzed" — state over verb: the common reason to look is to find
+    /// "Analyze", "Analyzing…", "Analyzed" - state over verb: the common reason to look is to find
     /// out whether it has been done.
     static func actionTitle(_ state: State) -> String {
         switch state {
@@ -105,14 +105,14 @@ enum AnalysisGlyph {
 
 extension EnvironmentValues {
     
-    /// The game on the engine now, or nil — the app's first custom environment value. An id, not the
+    /// The game on the engine now, or nil - the app's first custom environment value. An id, not the
     /// controller: a leaf holding the controller could start work; a leaf holding an id can only compare.
     @Entry var analysisRunningGameID: PersistentIdentifier?
 }
 
 // MARK: Running Gear
 
-/// The badgeless turning gear — one spelling of "working now" for the queue toolbar item and
+/// The badgeless turning gear - one spelling of "working now" for the queue toolbar item and
 /// `AnalysisLabel`. `.rotate` is confirmed to turn `gear`; that it *repeats* is not.
 struct AnalyzingGear: View {
     
@@ -124,14 +124,14 @@ struct AnalyzingGear: View {
 
 // MARK: Label
 
-/// Glyph beside title — badge tinted, spinning where bare, **the text left alone** in every case.
+/// Glyph beside title - badge tinted, spinning where bare, **the text left alone** in every case.
 /// A view, not a modifier: the structure cannot be applied after the fact.
 struct AnalysisLabel: View {
     
     let title: String
     let state: AnalysisGlyph.State
     
-    /// Defaults to `actionTitle`; token chips pass their own — "Not Analyzed" is a filter's name, not a verb.
+    /// Defaults to `actionTitle`; token chips pass their own - "Not Analyzed" is a filter's name, not a verb.
     init(state: AnalysisGlyph.State, title: String? = nil) {
         self.state = state
         self.title = title ?? AnalysisGlyph.actionTitle(state)
@@ -153,7 +153,7 @@ struct AnalysisLabel: View {
 // MARK: Icon
 
 /// The glyph alone. Palette arrangement scoped to the `Image`; the running gear takes **no**
-/// foreground style — `.primary` would override a host supplying its own (prominent button, selected row).
+/// foreground style - `.primary` would override a host supplying its own (prominent button, selected row).
 struct AnalysisGlyphIcon: View {
     
     let state: AnalysisGlyph.State
@@ -171,7 +171,7 @@ struct AnalysisGlyphIcon: View {
 
 // MARK: Badge Icon
 
-/// The plain-mark icon behind both badge surfaces — one view so the two cannot pick different marks.
+/// The plain-mark icon behind both badge surfaces - one view so the two cannot pick different marks.
 struct AnalysisBadgeIcon: View {
     
     let state: AnalysisGlyph.State
@@ -189,7 +189,7 @@ struct AnalysisBadgeIcon: View {
 // MARK: Status Badge
 
 /// The corner badge, with a backing chip that is load-bearing: the card's white sheet would
-/// swallow a bare glyph in dark mode. Status, not a control — swallows no clicks.
+/// swallow a bare glyph in dark mode. Status, not a control - swallows no clicks.
 struct AnalysisStatusBadge: View {
     
     let state: AnalysisGlyph.State
@@ -205,11 +205,11 @@ struct AnalysisStatusBadge: View {
 
 // Rendering notes: `.symbolRenderingMode(.palette)` + `.foregroundStyle(tint, .foreground)` on
 // the `Image` is the only way to scope palette rendering; the badge is the FIRST layer in
-// `gear.badge.checkmark`. Palette, not multicolor — multicolor is the symbol's own colours, not ours.
+// `gear.badge.checkmark`. Palette, not multicolor - multicolor is the symbol's own colours, not ours.
 
 // MARK: Previews
 
-/// The defect this type prevents is visual and nothing else — a tint leaking onto the word — so
+/// The defect this type prevents is visual and nothing else - a tint leaking onto the word - so
 /// this preview is the only witness that can fail. The `.analyzing` row is the spin's only witness.
 #Preview("Every State, Both Titles") {
     VStack(alignment: .leading, spacing: 12) {
@@ -225,7 +225,7 @@ struct AnalysisStatusBadge: View {
 }
 
 /// Why `icon` leaves the gear unstyled: a prominent button paints its label white, and the gear
-/// must match the glyph beside it — only checkable side by side.
+/// must match the glyph beside it - only checkable side by side.
 #Preview("Running, In Hosts") {
     VStack(alignment: .leading, spacing: 16) {
         HStack(spacing: 12) {
@@ -248,7 +248,7 @@ struct AnalysisStatusBadge: View {
     .padding()
 }
 
-/// The badge over the card's worst case (white sheet, both appearances) — why the chip exists;
+/// The badge over the card's worst case (white sheet, both appearances) - why the chip exists;
 /// only a canvas can answer it.
 #Preview("Status Badge, Both Grounds") {
     HStack(spacing: 24) {

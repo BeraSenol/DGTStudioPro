@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The one "nothing selected" surface — nothing forces hosts to agree on an empty
-/// state's shape, so one type does. **Render outside the `List`** — inside, it is a top-aligned
+/// The one "nothing selected" surface - nothing forces hosts to agree on an empty
+/// state's shape, so one type does. **Render outside the `List`** - inside, it is a top-aligned
 /// row with sidebar chrome. The contract is about layout, so non-inspector hosts (the graph
 /// window) qualify.
 struct InspectorEmptyState: View {
@@ -30,7 +30,7 @@ struct InspectorEmptyState: View {
 
 // MARK: Previews
 
-/// All four side by side — the claim is they differ only in words, and a canvas is the only
+/// All four side by side - the claim is they differ only in words, and a canvas is the only
 /// witness that can say so.
 #Preview("Every Inspector") {
     HStack(spacing: 0) {
@@ -68,7 +68,7 @@ struct InspectorEmptyState: View {
     .frame(width: 4 * 325, height: 420)
 }
 
-/// One at the narrowest the column can be dragged to — where the description
+/// One at the narrowest the column can be dragged to - where the description
 /// wraps and the symbol/title spacing is actually under load.
 #Preview("Single, Minimum Width") {
     InspectorEmptyState(

@@ -16,7 +16,7 @@ struct ImportResult: Identifiable {
         /// The three buckets every consumer partitions into. The summary's
         /// counts, the row icon, and the row tint each open-coded this match,
         /// and each had to independently remember that a duplicate is *not*
-        /// a failure — it's the no-op the user asked for.
+        /// a failure - it's the no-op the user asked for.
         enum Category {
             case imported, duplicate, failed
         }
@@ -44,7 +44,7 @@ struct ImportProgress {
     var duplicateCount: Int { count(of: .duplicate) }
     var failedCount: Int    { count(of: .failed) }
     
-    /// `count(where:)`, not `filter { … }.count` — the old form built three
+    /// `count(where:)`, not `filter { … }.count` - the old form built three
     /// throwaway arrays to ask three questions about their sizes.
     private func count(of category: ImportResult.Outcome.Category) -> Int {
         results.count { $0.outcome.category == category }
@@ -228,7 +228,7 @@ private struct ImportResultRow: View {
 }
 
 /// The failure rows and the summary counts that partition them.
-/// `.ongoingGame` is the no-ongoing-archives rule arriving as an import result — a `*` game
+/// `.ongoingGame` is the no-ongoing-archives rule arriving as an import result - a `*` game
 /// is refused at the door, not stored and hidden.
 ///
 /// The `.duplicate` row is deliberately absent: its associated

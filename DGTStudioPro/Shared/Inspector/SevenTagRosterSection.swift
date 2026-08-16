@@ -7,7 +7,7 @@ struct SevenTagRosterSection<Actions: View>: View {
     
     // MARK: Static Constants
     
-    /// No game at all — distinct from "this game doesn't say". Preserves the Board's empty state.
+    /// No game at all - distinct from "this game doesn't say". Preserves the Board's empty state.
     private static var noGamePlaceholder: String { RosterSummary.displayUnknown }
     
     // MARK: Stored Properties
@@ -18,7 +18,7 @@ struct SevenTagRosterSection<Actions: View>: View {
     
     // MARK: Body
     
-    /// Collapses as `.roster` — one section shown three times, not three that resemble each other.
+    /// Collapses as `.roster` - one section shown three times, not three that resemble each other.
     var body: some View {
         CollapsibleSection(.roster, title: headline) {
             ForEach(SevenTagRoster.allCases, id: \.self) { tag in
@@ -47,7 +47,7 @@ extension SevenTagRosterSection where Actions == EmptyView {
 
 // MARK: Previews
 
-/// Tag form in, display form out — `subscript(_:)`'s boundary, visible only here.
+/// Tag form in, display form out - `subscript(_:)`'s boundary, visible only here.
 #Preview("Full Roster") {
     List {
         SevenTagRosterSection(
@@ -68,7 +68,8 @@ extension SevenTagRosterSection where Actions == EmptyView {
     .environment(InspectorSectionCollapse.preview)
 }
 
-/// PGN's own unknown vocabulary; all seven rows still render — a fixed set never drops a line.
+/// Every unknown folds to the one placeholder glyph (one glyph for every unknown - the stored `?`s are PGN vocabulary, never
+/// shown), and all seven rows still render: a fixed set never drops a line.
 #Preview("Unknown Tags") {
     List {
         SevenTagRosterSection(
@@ -89,8 +90,9 @@ extension SevenTagRosterSection where Actions == EmptyView {
     .environment(InspectorSectionCollapse.preview)
 }
 
-/// The em dash: *no game to ask* — worth opening beside "Unknown Tags"; the distinction exists
-/// nowhere but on screen.
+/// The nil-roster branch. Since the one-glyph collapse it renders identically to "Unknown Tags" - open them side
+/// by side to see the *collapse*, which is the decision, not a defect. (This comment claimed the
+/// two were distinguishable on screen until 16 Aug 2026; the collapse had ended that a week earlier.)
 #Preview("No Game") {
     List {
         SevenTagRosterSection(roster: nil, headline: "Game")
@@ -100,7 +102,7 @@ extension SevenTagRosterSection where Actions == EmptyView {
     .environment(InspectorSectionCollapse.preview)
 }
 
-/// The `@ViewBuilder` slot — why this type is generic: each host brings its own title and identifier.
+/// The `@ViewBuilder` slot - why this type is generic: each host brings its own title and identifier.
 #Preview("With Action") {
     List {
         SevenTagRosterSection(

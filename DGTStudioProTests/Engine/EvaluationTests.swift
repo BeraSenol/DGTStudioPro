@@ -2,15 +2,15 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// Coverage for `Evaluation` — the white-perspective engine score used
+/// Coverage for `Evaluation` - the white-perspective engine score used
 /// throughout analysis and storage. Four contracts are pinned: the
 /// `whiteWinProbability` sigmoid (the curve `EvaluationGraphView` draws), the
 /// `flipped` sign convention (how the UCI parser normalizes side-to-move output
 /// to white-relative), the PGN `[%eval ...]` parse/render pair (the on-disk
 /// interchange format), and `Codable`.
 ///
-/// `Evaluation` is `Sendable`; its synthesized `==` is nonisolated, so — like
-/// `PGNParserEvalTests`, which already compares it — this suite is not
+/// `Evaluation` is `Sendable`; its synthesized `==` is nonisolated, so - like
+/// `PGNParserEvalTests`, which already compares it - this suite is not
 /// `@MainActor`. Floating-point comparisons use an explicit epsilon; the
 /// decimal-rounding cases deliberately avoid exact `.5` boundaries so the
 /// expected centipawn value is unambiguous under binary floating point.
@@ -28,7 +28,7 @@ struct EvaluationTests {
     
     // MARK: White Win Probability
     
-    /// A dead-equal position is exactly 0.5 — the sigmoid's fixed point.
+    /// A dead-equal position is exactly 0.5 - the sigmoid's fixed point.
     @Test func probabilityIsOneHalfAtZero() {
         #expect(Evaluation.centipawns(0).whiteWinProbability == 0.5)
     }
@@ -63,7 +63,7 @@ struct EvaluationTests {
         #expect(Evaluation.centipawns(-30).flipped == .centipawns(30))
         #expect(Evaluation.mate(3).flipped == .mate(-3))
         #expect(Evaluation.mate(-7).flipped == .mate(7))
-        // Zero is its own mirror — the one value `flipped` fixes.
+        // Zero is its own mirror - the one value `flipped` fixes.
         #expect(Evaluation.drawn.flipped == .drawn)
     }
     
@@ -73,7 +73,7 @@ struct EvaluationTests {
         #expect(eval.flipped.flipped == eval)
     }
     
-    // MARK: Parsing — Tag Content
+    // MARK: Parsing - Tag Content
     
     @Test func parsesDecimalPawnContent() {
         #expect(Evaluation(parsingEvalTagContent: "0.23") == .centipawns(23))
@@ -108,7 +108,7 @@ struct EvaluationTests {
 
     /// Hostile numerics (M1 item 17): `Double(_:)` happily parses "inf",
     /// "nan" and overflow-to-infinity literals, and `Int(_: Double)`
-    /// traps on every one of them — so `{[%eval inf]}` in an imported
+    /// traps on every one of them - so `{[%eval inf]}` in an imported
     /// file crashed the import before the `isFinite` + magnitude guard
     /// landed. Each must fail the *annotation* (nil), never the process.
     @Test func rejectsNonFiniteAndOverflowingContent() {
@@ -124,7 +124,7 @@ struct EvaluationTests {
         #expect(Evaluation(parsingEvalTagContent: "-10000") == .centipawns(-1_000_000))
     }
     
-    // MARK: Parsing — Full Tag
+    // MARK: Parsing - Full Tag
     
     @Test func parsesFullEvalTag() {
         #expect(Evaluation(parsingEvalTag: "[%eval 0.23]") == .centipawns(23))

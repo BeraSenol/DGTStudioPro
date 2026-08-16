@@ -20,7 +20,7 @@ extension Square {
     static let all = (0..<Square.count)
     
     /// Board-geometry offsets, shared by movegen, attack scanning and mate classification. Every
-    /// use pairs one with a file-distance guard — an offset alone wraps the a/h seam.
+    /// use pairs one with a file-distance guard - an offset alone wraps the a/h seam.
     /// `queenDirections` is spelled out despite equalling `kingOffsets`: the coincidence is arithmetic.
     static let knightOffsets:    [Int] = [17, 15, 10, 6, -6, -10, -15, -17]
     static let kingOffsets:      [Int] = [1, 7, 8, 9, -1, -7, -8, -9]
@@ -36,7 +36,7 @@ extension Square {
         rankIndicatorTable[rank]
     }
     
-    /// Inverses of `fileCharacter`/`rankCharacter`, nil outside 0–7 — third home for arithmetic
+    /// Inverses of `fileCharacter`/`rankCharacter`, nil outside 0–7 - third home for arithmetic
     /// whose forward direction already lived here.
     static func file(from character: Character) -> Int? {
         index(of: character, base: "a", in: Square.files)
@@ -48,7 +48,7 @@ extension Square {
     
     /// `bounds` is passed rather than assumed: this helper serves both
     /// `file(from:)` and `rank(from:)`, and hardcoding `Square.files` made the
-    /// rank path bounds-check against the file range. Identical values today —
+    /// rank path bounds-check against the file range. Identical values today -
     /// which is the state a shared constant drifts out of.
     private static func index(
         of character: Character, base: Unicode.Scalar, in bounds: Range<Int>

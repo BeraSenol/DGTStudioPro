@@ -1,12 +1,12 @@
 import SwiftUI
 
-/// The Players icons grid — the Library grid's two Finder gestures; the shared grammar lives in
+/// The Players icons grid - the Library grid's two Finder gestures; the shared grammar lives in
 /// `IconGridSelection` (the half that must not fork).
 struct PlayersIconsView: View {
 
     // MARK: Static Constants
 
-    /// A coordinate-space name, not an identifier. `nonisolated` — `View` conformance infers
+    /// A coordinate-space name, not an identifier. `nonisolated` - `View` conformance infers
     /// @MainActor onto statics and the transform closure is `@Sendable`.
     private nonisolated static let gridSpace = "playersIconsGrid"
 
@@ -19,17 +19,17 @@ struct PlayersIconsView: View {
 
     @Environment(CollectionViewOptions.self) private var options
 
-    /// Card frames — a box, not observed state; **populated only while a band sweeps** (the Library
+    /// Card frames - a box, not observed state; **populated only while a band sweeps** (the Library
     /// grid's transform gate carries the account). Membership re-checked against `players`.
     @State private var cardFrames = IconGridFrameStore<PlayerStats.ID>()
     @State private var rubberBand: CGRect?
-    /// The card the last gesture touched — where an arrow steps from.
+    /// The card the last gesture touched - where an arrow steps from.
     @State private var anchorKey: PlayerStats.ID?
     @FocusState private var isFocused: Bool
 
     // MARK: Body
     var body: some View {
-        // One Bool for all transform closures — the Library grid's gate.
+        // One Bool for all transform closures - the Library grid's gate.
         let isSweeping = rubberBand != nil
         return GeometryReader { geometry in
             ScrollViewReader { proxy in
@@ -39,7 +39,7 @@ struct PlayersIconsView: View {
                         spacing: options.spacing
                     ) {
                         ForEach(players) { player in
-                            // Rank always rides the card — rank is a fact about the player, not the sort.
+                            // Rank always rides the card - rank is a fact about the player, not the sort.
                             PlayerCardView(
                                 stats: player.stats,
                                 isSelected: selectedKeys.contains(player.id),
@@ -49,7 +49,7 @@ struct PlayersIconsView: View {
                             )
                             .id(player.id)
                             .onGeometryChange(for: CGRect.self) { geometry in
-                                // Gated on the sweep — the fifth cycling correction, shared with the Library grid.
+                                // Gated on the sweep - the fifth cycling correction, shared with the Library grid.
                                 isSweeping
                                 ? IconGridSelection.stableFrame(
                                     geometry.frame(in: .named(Self.gridSpace))
@@ -65,16 +65,16 @@ struct PlayersIconsView: View {
                     .frame(maxWidth: .infinity)
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        // Empty space or gutters — a card's own tap wins first.
+                        // Empty space or gutters - a card's own tap wins first.
                         selectedKeys.removeAll()
                         anchorKey = nil
                         isFocused = true
                     }
-                    // Background menu on the same `contentShape` as the clear tap — covers the gutters (Finder's
+                    // Background menu on the same `contentShape` as the clear tap - covers the gutters (Finder's
                     // behaviour); a card's own menu wins over its bounds.
                     .contextMenu { ShowViewOptionsButton() }
                     .gesture(rubberBandGesture)
-                    // Content-anchored — see the type doc.
+                    // Content-anchored - see the type doc.
                     .coordinateSpace(name: Self.gridSpace)
                     .overlay(alignment: .topLeading) {
                         if let band = rubberBand {
@@ -167,7 +167,7 @@ struct PlayersIconsView: View {
     .environment(PreviewFixtures.viewOptions())
 }
 
-/// Wide enough for a full row — the 860 is load-bearing (column count derives from it), making
+/// Wide enough for a full row - the 860 is load-bearing (column count derives from it), making
 /// two rows. Preselected with *two* cards, the state single-select could never render.
 #Preview("Wraps To Two Rows, Multi") {
     @Previewable @State var selection: Set<PlayerStats.ID> = Set(

@@ -1,4 +1,4 @@
-/// Pure decisions behind batch analysis — ordering, dedupe, advancement, outcomes — extracted
+/// Pure decisions behind batch analysis - ordering, dedupe, advancement, outcomes - extracted
 /// so the interesting choices are suited without an engine. FIFO; enqueue dedupes against line
 /// and running; a fresh batch clears the finished log; the running item is the controller's to stop.
 struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
@@ -57,7 +57,7 @@ struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
     /// The batch size as the user sees it.
     var totalCount: Int { completedCount + remainingCount }
 
-    /// The 1-based position the batch is on — one spelling, because there were two: the window and
+    /// The 1-based position the batch is on - one spelling, because there were two: the window and
     /// the toolbar once disagreed by one.
     var batchPosition: Int {
         isActive ? min(completedCount + 1, totalCount) : completedCount
@@ -68,7 +68,7 @@ struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
         finished.filter(\.outcome.isFailure)
     }
     
-    /// `contains`, not `!failures.isEmpty` — the array form built the whole list to ask if it was empty.
+    /// `contains`, not `!failures.isEmpty` - the array form built the whole list to ask if it was empty.
     var hasFailures: Bool {
         finished.contains { $0.outcome.isFailure }
     }
@@ -108,7 +108,7 @@ struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
         self.current = nil
     }
     
-    /// Waiting line only — the running item is the controller's to stop.
+    /// Waiting line only - the running item is the controller's to stop.
     mutating func removeWaiting(_ id: ID) {
         waiting.removeAll { $0 == id }
     }
@@ -118,14 +118,14 @@ struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
         waiting.removeAll()
     }
     
-    /// Drops the finished log — the drained popover's Dismiss.
+    /// Drops the finished log - the drained popover's Dismiss.
     mutating func clearFinished() {
         finished.removeAll()
     }
     
     // MARK: Queries
     
-    /// The most recent word on `id` — a re-queued game reports its place in line, never its dropped outcome.
+    /// The most recent word on `id` - a re-queued game reports its place in line, never its dropped outcome.
     func status(of id: ID) -> ItemStatus {
         if current == id { return .running }
         if let index = waiting.firstIndex(of: id) {

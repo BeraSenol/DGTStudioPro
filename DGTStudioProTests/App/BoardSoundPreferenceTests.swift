@@ -9,14 +9,14 @@ import Testing
 /// reads the capture flag compiles, renders a correct-looking Settings pane, and is caught only by
 /// turning one toggle off and noticing the wrong sound stopped.
 ///
-/// The playback half stays waived — `AVAudioPlayer` over a bundled file is transport, and the
+/// The playback half stays waived - `AVAudioPlayer` over a bundled file is transport, and the
 /// audible manual check is its witness. What is tested is every decision made before a sample is
 /// asked for.
 @MainActor
 @Suite("Board sound preferences")
 struct BoardSoundPreferenceTests {
 
-    /// A throwaway suite per test — `.standard` would edit the developer's own settings and a
+    /// A throwaway suite per test - `.standard` would edit the developer's own settings and a
     /// fixed name would race under parallel execution.
     private func withScratchDefaults(_ body: (UserDefaults) throws -> Void) throws {
         let name = "com.berasenol.dgtstudiopro.tests.\(UUID().uuidString)"
@@ -28,7 +28,7 @@ struct BoardSoundPreferenceTests {
     /// Always inaudible: a suite that reached a speaker would be the console noise with a worse
     /// failure mode. The `audible:` seam exists for exactly this.
     ///
-    /// Named `makeSounds` rather than `sounds` deliberately — every caller below binds `let sounds
+    /// Named `makeSounds` rather than `sounds` deliberately - every caller below binds `let sounds
     /// = …`, and a local shadowing a same-named method on its own initialising line is a
     /// use-before-declaration error, not a shadow.
     private func makeSounds(_ defaults: UserDefaults) -> BoardSounds {
@@ -88,7 +88,7 @@ struct BoardSoundPreferenceTests {
         }
     }
 
-    /// A value no case matches falls back rather than trapping — which is what makes **retiring**
+    /// A value no case matches falls back rather than trapping - which is what makes **retiring**
     /// a set safe. Without it, dropping a set would leave anyone who had chosen it unable to
     /// launch, and the failure would arrive on their machine rather than in this suite.
     @Test("An unknown stored set falls back to the default")
@@ -108,7 +108,7 @@ struct BoardSoundPreferenceTests {
         }
     }
 
-    /// Construction must not write here either — same reason as the toggles, plus one of its own:
+    /// Construction must not write here either - same reason as the toggles, plus one of its own:
     /// a stored value is what tells a future default change from a deliberate choice.
     @Test("Reading the set writes nothing")
     func soundSetConstructionDoesNotPersist() throws {
@@ -140,7 +140,7 @@ struct BoardSoundPreferenceTests {
 
     /// All four off at once. Kept, and **known to be the weaker half**: every input agrees, so it
     /// passes even if two properties read each other's key. `eachCueReadsItsOwnKey` is the version
-    /// that could fail — this one only proves nothing is ignored outright.
+    /// that could fail - this one only proves nothing is ignored outright.
     @Test("A stored false is honoured")
     func storedFalseIsHonoured() throws {
         try withScratchDefaults { defaults in
@@ -171,7 +171,7 @@ struct BoardSoundPreferenceTests {
         }
     }
 
-    // MARK: Round trip, one key at a time — the crossable half
+    // MARK: Round trip, one key at a time - the crossable half
 
     /// **Read side.** Store `false` for exactly one cue and confirm exactly that cue reads off.
     /// This is what `storedFalseIsHonoured` cannot do: with all four keys set to the same value, a
@@ -193,7 +193,7 @@ struct BoardSoundPreferenceTests {
     }
 
     /// **Write side**, the mirror. Flip one property and confirm exactly one key appears. A
-    /// `didSet` persisting under a neighbour's key is silent in the running app — the value looks
+    /// `didSet` persisting under a neighbour's key is silent in the running app - the value looks
     /// saved, and comes back wrong on the *next launch*, which is the worst place to discover it.
     @Test("Each cue writes its own key", arguments: BoardCue.allCases)
     func eachCueWritesItsOwnKey(_ cue: BoardCue) throws {
@@ -205,7 +205,7 @@ struct BoardSoundPreferenceTests {
                 let expected: Bool? = (candidate == cue) ? false : nil
                 #expect(
                     defaults.object(forKey: Self.key(for: candidate)) as? Bool == expected,
-                    "flipping \(cue) wrote the wrong key — \(candidate)'s changed too"
+                    "flipping \(cue) wrote the wrong key - \(candidate)'s changed too"
                 )
             }
 
@@ -215,7 +215,7 @@ struct BoardSoundPreferenceTests {
     }
 
     /// The full loop through a *fresh instance*, which is what a relaunch actually is. The two
-    /// halves above compose to this, but only if they agree about the key — so this asserts the
+    /// halves above compose to this, but only if they agree about the key - so this asserts the
     /// property the reader cares about ("it was still off this morning") without going through
     /// `StorageKeys` at all.
     @Test("A flip survives a relaunch", arguments: BoardCue.allCases)
@@ -233,7 +233,7 @@ struct BoardSoundPreferenceTests {
 
     /// The same loop for the set, which persists a `String` rather than a `Bool` and so has
     /// its own way to go wrong.
-    /// The parameter is `chosen`, not `set` — a `set` here would shadow this suite's own
+    /// The parameter is `chosen`, not `set` - a `set` here would shadow this suite's own
     /// `set(_:to:on:)` helper, which is the shape that already bit `makeSounds`.
     @Test("A chosen set survives a relaunch", arguments: BoardSoundSet.allCases)
     func aChosenSetSurvivesARelaunch(_ chosen: BoardSoundSet) throws {
@@ -245,7 +245,7 @@ struct BoardSoundPreferenceTests {
         }
     }
 
-    // MARK: The gate — the crossable wiring
+    // MARK: The gate - the crossable wiring
 
     /// Exactly one flag governs each cue. Driven off `allCases` so a fifth cue arriving without a
     /// flag fails here rather than shipping permanently silent, and asserted in both directions:
@@ -268,7 +268,7 @@ struct BoardSoundPreferenceTests {
         }
     }
 
-    /// The instance's answer must be the static one — otherwise the tested mapping and the shipped
+    /// The instance's answer must be the static one - otherwise the tested mapping and the shipped
     /// mapping are two mappings, which is the twin-read-site pattern wearing a method call.
     @Test("The instance agrees with the pure gate", arguments: BoardCue.allCases)
     func instanceAgreesWithTheStaticGate(_ cue: BoardCue) throws {
@@ -303,7 +303,7 @@ struct BoardSoundPreferenceTests {
         #expect(BoardSounds.isAudible(in: ["XCTestSessionIdentifier": "abc"]) == false)
     }
 
-    /// An inaudible player still answers the gate honestly — the two are independent, and folding
+    /// An inaudible player still answers the gate honestly - the two are independent, and folding
     /// them would make "the toggle is off" and "this process is silent" the same state.
     @Test("Silence does not disable the preferences")
     func inaudibleStillReportsItsGates() throws {

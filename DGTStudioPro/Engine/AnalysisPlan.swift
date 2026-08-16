@@ -1,6 +1,6 @@
 /// Which plies an analysis pass will actually search: the classified book prefix is
-/// skipped — the table already names those positions — and a ply scored at ≥ the target depth is
-/// kept rather than re-searched. Pure, so the decision is suite-testable without an engine —
+/// skipped - the table already names those positions - and a ply scored at ≥ the target depth is
+/// kept rather than re-searched. Pure, so the decision is suite-testable without an engine -
 /// the `AnalysisQueue` extraction's reason, one layer down.
 enum AnalysisPlan {
 

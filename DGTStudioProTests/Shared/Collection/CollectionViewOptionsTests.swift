@@ -3,7 +3,7 @@ import SwiftUI
 import Testing
 @testable import DGTStudioPro
 
-/// The panel's value layer: grid geometry, sort grammar, persistence contract. @MainActor — a
+/// The panel's value layer: grid geometry, sort grammar, persistence contract. @MainActor - a
 /// fact about the type, not a constraint worth routing around.
 @MainActor
 @Suite("Collection view options")
@@ -35,7 +35,7 @@ struct CollectionViewOptionsTests {
     }
 
     /// N cards carry N−1 gutters, not N. Off by one here and the grid drops a
-    /// column at exactly the widths where one would have fit flush — the
+    /// column at exactly the widths where one would have fit flush - the
     /// failure that looks like "the window just wastes space on the right".
     @Test func aWidthThatFitsExactlyGetsThatManyColumns() {
         // 4 cards at 100 + 3 gutters at 10 + 2 insets at 16 = 462.
@@ -54,7 +54,7 @@ struct CollectionViewOptionsTests {
 
     /// The degenerate end, from both sides of zero. A `LazyVGrid` handed an
     /// empty column array renders nothing at all, and a window narrower than
-    /// one card is reachable by dragging the sidebar — so the floor is a real
+    /// one card is reachable by dragging the sidebar - so the floor is a real
     /// state, not a defensive nicety.
     @Test(arguments: [CGFloat(0), 1, 32, 80])
     func aWindowNarrowerThanOneCardStillHasAColumn(_ width: CGFloat) {
@@ -63,7 +63,7 @@ struct CollectionViewOptionsTests {
         )
     }
 
-    /// Bigger icons mean fewer columns at a fixed width — the direction the
+    /// Bigger icons mean fewer columns at a fixed width - the direction the
     /// slider promises. Asserted as a *relationship* rather than against two
     /// literals, because the literals would keep passing if both moved.
     @Test func alargerIconYieldsFewerColumns() {
@@ -79,7 +79,7 @@ struct CollectionViewOptionsTests {
     // MARK: Clamping and persistence
 
     /// **This one crashed rather than failed**: a `didSet` self-assignment recurses on an
-    /// `@Observable` (the macro re-enters observers) — hence computed-over-storage.
+    /// `@Observable` (the macro re-enters observers) - hence computed-over-storage.
     @Test func sizesClampToTheirRangesOnWrite() {
         let options = CollectionViewOptions(defaults: Self.scratch())
 
@@ -96,7 +96,7 @@ struct CollectionViewOptionsTests {
         #expect(options.spacing == CollectionViewOptions.spacingRange.lowerBound)
     }
 
-    /// A clamped write persists the *corrected* value — visible only on reload.
+    /// A clamped write persists the *corrected* value - visible only on reload.
     @Test func aClampedWritePersistsTheClampedValue() {
         let defaults = Self.scratch()
         let first = CollectionViewOptions(defaults: defaults)
@@ -111,7 +111,7 @@ struct CollectionViewOptionsTests {
         )
     }
 
-    /// Init writes **storage**, not the setters — routing through accessors would persist defaults
+    /// Init writes **storage**, not the setters - routing through accessors would persist defaults
     /// for users who never touch the panel.
     @Test func constructionWritesNothingToDefaults() {
         let defaults = Self.scratch()
@@ -132,7 +132,7 @@ struct CollectionViewOptionsTests {
         #expect(options.iconSize != CollectionViewOptions.iconSizeRange.lowerBound)
     }
 
-    /// Through a *reload*, not through memory — the `InspectorSectionCollapse`
+    /// Through a *reload*, not through memory - the `InspectorSectionCollapse`
     /// shape. A round trip inside one instance proves the property setter
     /// works and says nothing about whether anything reached the defaults.
     @Test func geometryAndSortSurviveAReload() {
@@ -152,7 +152,7 @@ struct CollectionViewOptionsTests {
     }
 
     /// A stored spelling this build no longer understands is dropped, and the
-    /// destination opens on its default — the retired-raw-value rule, so
+    /// destination opens on its default - the retired-raw-value rule, so
     /// removing a column costs no migration.
     @Test(arguments: ["", "garbage", "event", "event:sideways", ":forward", "notAField:forward"])
     func anUnreadableStoredSortFallsBackToTheDefault(_ stored: String) {
@@ -165,7 +165,7 @@ struct CollectionViewOptionsTests {
     }
 }
 
-/// The sort grammar — the half that survives a header and a picker writing one value.
+/// The sort grammar - the half that survives a header and a picker writing one value.
 /// Nonisolated, load-bearing: the types must stay value-layer.
 @Suite("Collection sort fields")
 struct CollectionSortFieldTests {
@@ -194,7 +194,7 @@ struct CollectionSortFieldTests {
         }
     }
 
-    /// The whole domain, both directions — endpoint off-by-ones survive spot
+    /// The whole domain, both directions - endpoint off-by-ones survive spot
     /// checks, and a field added later without a `keyPath` case would show up
     /// here rather than as a picker that silently stops working.
     @Test func everyFieldSurvivesTheStoredStringRoundTrip() {
@@ -219,7 +219,7 @@ struct CollectionSortFieldTests {
     }
 
     /// The separator is load-bearing for the one-key encoding, so it is pinned
-    /// rather than trusted — a future field spelled `"eco:full"` would make
+    /// rather than trusted - a future field spelled `"eco:full"` would make
     /// every stored sort unreadable in a way that reads as a corrupt
     /// preference rather than as a naming mistake.
     @Test func everyFieldRawValueIsSeparatorSafe() {
@@ -227,7 +227,7 @@ struct CollectionSortFieldTests {
         #expect(PlayersSortField.allCases.allSatisfy { !$0.rawValue.contains(":") })
     }
 
-    /// A persistence contract asserted on literals — one of the few places a hard-coded string is
+    /// A persistence contract asserted on literals - one of the few places a hard-coded string is
     /// the correct thing to test.
     @Test func libraryFieldRawValuesAreStable() {
         #expect(LibrarySortField.index.rawValue == "index")
@@ -238,7 +238,7 @@ struct CollectionSortFieldTests {
         #expect(PlayersSortField.specialMates.rawValue == "specialMates")
     }
 
-    /// The two statements of the launch order must agree — goes red if either moves alone.
+    /// The two statements of the launch order must agree - goes red if either moves alone.
     @Test func theLibraryDefaultMatchesTheDestination() {
         let fromField = CollectionSort<LibrarySortField>.default.comparators
         let fromDestination = LibraryDestination.defaultSortOrder

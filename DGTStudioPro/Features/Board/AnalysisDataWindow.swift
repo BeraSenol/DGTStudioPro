@@ -1,7 +1,7 @@
 import SwiftData
 import SwiftUI
 
-/// The data button's request — the fourth `openWindow(value:)` wrapper, for the standing
+/// The data button's request - the fourth `openWindow(value:)` wrapper, for the standing
 /// reason: the call routes by type.
 struct AnalysisDataRequest: Codable, Hashable, Sendable {
 
@@ -13,29 +13,29 @@ struct AnalysisDataRequest: Codable, Hashable, Sendable {
 }
 
 /// One ply of the table, as values (suite-testable). Move grammar is
-/// `EvaluationGraphReading`'s; evaluation is `EvaluationBarReading`'s pinned grammar — but
+/// `EvaluationGraphReading`'s; evaluation is `EvaluationBarReading`'s pinned grammar - but
 /// **nil for an unscored ply**, deliberately unlike the display surfaces: this table is stored
 /// truth, and `0.0` for a never-scored ply would be a lie.
 struct AnalysisDataRow: Equatable, Sendable, Identifiable {
 
-    /// 0-based ply — the array position, unique by construction.
+    /// 0-based ply - the array position, unique by construction.
     let ply: Int
     /// "12. Nf3" / "12… Nf6".
     let move: String
     /// The bar-grammar label ("+1.3", "0.0", "#4"), or nil for an unscored ply.
     let evaluation: String?
-    /// "64%" — white's win probability, or nil with `evaluation`.
+    /// "64%" - white's win probability, or nil with `evaluation`.
     let whiteWinPercent: String?
-    /// Signed win-probability swing vs. the ply before, in percentage points — "+12" / "-31" —
+    /// Signed win-probability swing vs. the ply before, in percentage points - "+12" / "-31" -
     /// or nil when either side of the step is unscored: no fake deltas across book gaps.
     /// White-relative, like every number on this surface; the blunder signal is the magnitude.
     let swing: String?
-    /// |swing| ≥ 15 pp — the emphasis threshold, a judgement call documented as one.
+    /// |swing| ≥ 15 pp - the emphasis threshold, a judgement call documented as one.
     let swingIsMajor: Bool
 
     var id: Int { ply }
 
-    /// The whole table; tolerates both invariant shapes of `evaluations` — an index past the end is
+    /// The whole table; tolerates both invariant shapes of `evaluations` - an index past the end is
     /// an unscored ply, not a crash.
     static func rows(
         moves: [String],
@@ -69,7 +69,7 @@ struct AnalysisDataRow: Equatable, Sendable, Identifiable {
 
 /// The analysis as data, every ply in its own window. A window (companion surface), its
 /// own group (data windows tab with each other, never boards); deliberately not floating,
-/// unlike the graph — a table is consulted, not glanced.
+/// unlike the graph - a table is consulted, not glanced.
 struct AnalysisDataWindow: View {
 
     // MARK: Stored Properties
@@ -78,13 +78,13 @@ struct AnalysisDataWindow: View {
     // MARK: Private Properties
     @Environment(\.modelContext) private var modelContext
 
-    /// Resolved once per request — a store lookup does not belong on a render path.
+    /// Resolved once per request - a store lookup does not belong on a render path.
     @State private var pgn: PGN?
 
     // MARK: Body
     var body: some View {
         Group {
-            // `hasScoredPly`: an all-nil array is a table of em dashes wearing the shape of data.
+            // `hasScoredPly`: an all-nil array is a table of placeholders wearing the shape of data.
             // The rows tolerate partial arrays; the gate refuses empty ones.
             if let pgn, pgn.hasScoredPly {
                 table(for: pgn)
@@ -93,7 +93,7 @@ struct AnalysisDataWindow: View {
             }
         }
         .frame(minWidth: 420, minHeight: 320)
-        .navigationTitle(pgn.map { "Analysis — \($0.name)" } ?? "Analysis Data")
+        .navigationTitle(pgn.map { "Analysis - \($0.name)" } ?? "Analysis Data")
         .task(id: request) { resolve() }
     }
 
@@ -111,7 +111,7 @@ struct AnalysisDataWindow: View {
     }
 
     private func table(for pgn: PGN) -> some View {
-        // Per resolved game, not per render tick — a pure fold over stored values.
+        // Per resolved game, not per render tick - a pure fold over stored values.
         let rows = AnalysisDataRow.rows(moves: pgn.moves, evaluations: pgn.evaluations)
         return Table(rows) {
             TableColumn("Move") { row in
@@ -119,7 +119,7 @@ struct AnalysisDataWindow: View {
                     .font(.body.monospaced())
             }
             .width(min: 90, ideal: 110)
-            // The house em dash for an unscored ply, secondary so gaps read as absences.
+            // The house placeholder glyph for an unscored ply, secondary so gaps read as absences.
             TableColumn("Evaluation") { row in
                 Text(row.evaluation ?? RosterSummary.displayUnknown)
                     .monospacedDigit()
@@ -145,7 +145,7 @@ struct AnalysisDataWindow: View {
         .accessibilityIdentifier(AccessibilityID.analysisDataWindowTable)
     }
 
-    /// Two causes, one state — the graph window's fold, for its reason.
+    /// Two causes, one state - the graph window's fold, for its reason.
     private var unavailable: some View {
         InspectorEmptyState(
             title: "No Analysis",
@@ -158,7 +158,7 @@ struct AnalysisDataWindow: View {
 
 // MARK: Header Button
 
-/// The magnifier's sibling in the Evaluation header — fourth open-coded glyph button; shares
+/// The magnifier's sibling in the Evaluation header - fourth open-coded glyph button; shares
 /// only the pair that must not drift (`.font(.body)`, one label for `.help` + AX).
 struct AnalysisDataButton: View {
 
@@ -186,7 +186,7 @@ struct AnalysisDataButton: View {
 
 // MARK: Previews
 
-/// The empty branch — pressing the button on a game skipped before it scored anything.
+/// The empty branch - pressing the button on a game skipped before it scored anything.
 #Preview("No Analysis") {
     AnalysisDataWindow(request: nil)
         .frame(width: 460, height: 400)
@@ -194,7 +194,7 @@ struct AnalysisDataButton: View {
 }
 
 /// The populated table; the partial array is the canonical fixture (rows 4–5 must read as
-/// em-dash gaps, not zeros).
+/// placeholder gaps, not zeros).
 #Preview("Data") {
     let container = try! ModelContainer(
         for: PGN.self,

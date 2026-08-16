@@ -1,11 +1,11 @@
 import Testing
 @testable import DGTStudioPro
 
-/// Pins for M6's identity resolver — pure value types in, pure values out,
+/// Pins for M6's identity resolver - pure value types in, pure values out,
 /// so the suite is nonisolated by the standing agreement.
 ///
 /// The one property asserted *everywhere*, via `verified(_:against:)`: the
-/// resolver's output occupancy is the rendered position, verbatim — "the
+/// resolver's output occupancy is the rendered position, verbatim - "the
 /// mirror renders the physical board, always" as a checkable fact rather
 /// than a doc sentence. Every fixture below routes through that helper, so a
 /// future arm that invents or drops a piece fails a dozen tests at once
@@ -14,7 +14,7 @@ struct PieceIdentityTests {
 
     // MARK: Helpers
 
-    /// Plays `sans` from the start, keeping state and tracker in lockstep —
+    /// Plays `sans` from the start, keeping state and tracker in lockstep -
     /// the same pairing `Game`, `LiveGame` and `LibraryGamePreviewState`
     /// maintain.
     private func played(
@@ -30,9 +30,9 @@ struct PieceIdentityTests {
         return (state, tracker)
     }
 
-    /// Asserts the resolver's two structural guarantees — occupancy equals
+    /// Asserts the resolver's two structural guarantees - occupancy equals
     /// the rendered position exactly, and keys are unique (the layer's
-    /// `ForEach` requirement) — then hands the entries back for the
+    /// `ForEach` requirement) - then hands the entries back for the
     /// fixture's own assertions.
     @discardableResult
     private func verified(
@@ -82,7 +82,7 @@ struct PieceIdentityTests {
         })
     }
 
-    // MARK: Mirror Arm — parity
+    // MARK: Mirror Arm - parity
 
     @Test func parityKeepsEveryIdentityWhenPhysicalMatchesTheGame() throws {
         let (state, tracker) = try played(["e4", "c5"])
@@ -105,7 +105,7 @@ struct PieceIdentityTests {
         )
         let bySquare = verified(resolved, against: physical)
         #expect(bySquare[Squares.g1] == nil)
-        // Everyone still on the board keeps a real identity — per-square
+        // Everyone still on the board keeps a real identity - per-square
         // parity, not per-board.
         #expect(bySquare.values.allSatisfy {
             if case .tracked = $0.key { true } else { false }
@@ -125,7 +125,7 @@ struct PieceIdentityTests {
         })
     }
 
-    // MARK: Mirror Arm — the proven move
+    // MARK: Mirror Arm - the proven move
 
     @Test func aCompletedMoveCarriesTheOriginIdentityBeforeTheCommit() throws {
         let (state, tracker) = try played([])
@@ -141,7 +141,7 @@ struct PieceIdentityTests {
 
     /// The hand-off the whole design balances on: the identity handed out by
     /// early reconstruction is the identity parity vouches for after the
-    /// session commits — same key, no re-key, one uninterrupted piece.
+    /// session commits - same key, no re-key, one uninterrupted piece.
     @Test func theProvenIdentityIsStableAcrossTheCommit() throws {
         var (state, tracker) = try played(["e4", "e5"])
         let move = try state.parseSAN("Nf3")
@@ -226,11 +226,11 @@ struct PieceIdentityTests {
         #expect(bySquare[Squares.f5]?.key == .tracked(tracker[Squares.f5]!))
     }
 
-    // MARK: Mirror Arm — the mis-key guard
+    // MARK: Mirror Arm - the mis-key guard
 
     /// The failure the old mirror doc feared, pinned shut: a square whose
     /// physical piece disagrees with the game's never inherits the stale
-    /// identity — not even under negationless parity, not even when the
+    /// identity - not even under negationless parity, not even when the
     /// board is otherwise untouched.
     @Test func aForeignPieceNeverInheritsTheSquaresOldIdentity() throws {
         let (state, tracker) = try played(["e4", "d5"])

@@ -2,8 +2,9 @@ import SwiftUI
 
 /// The editor's working copy: a pure value snapshot of a tag (or a fresh
 /// one), carrying an optional reference to the model it came from.
-/// Cancel discards the value; only OK touches a model — in
-/// `ContentView.commit`, never here.
+/// Cancel discards the value; only OK touches a model - in
+/// `SmartTagEditorWindow.commit` (`ContentView`'s until the editor became
+/// a window, 16 Aug 2026), never here.
 struct TagDraft: Identifiable {
     let id = UUID()
     let editing: SmartTag?
@@ -13,7 +14,7 @@ struct TagDraft: Identifiable {
     var rules: [TagRule]
     
     /// A fresh draft: one blank string rule, which matches nothing until
-    /// filled (the empty-text rule) — a new tag is inert, never
+    /// filled (the empty-text rule) - a new tag is inert, never
     /// select-all.
     init() {
         self.editing = nil
@@ -33,7 +34,7 @@ struct TagDraft: Identifiable {
 }
 
 /// The Apple Music smart-playlist shape. Deliberately absent: Limit-to, checked-only,
-/// live-updating (computed at render — live by construction).
+/// live-updating (computed at render - live by construction).
 struct SmartTagEditorView: View {
     
     // MARK: Stored Properties
@@ -174,6 +175,10 @@ private struct TagRuleRow: View {
     let onAdd: () -> Void
     
     var body: some View {
+        // Three columns that must read as columns down the rule list. The pickers fill their
+        // slots rather than hugging (`.fixedSize()` centred a hugged popup inside the 140-pt
+        // frame, so every row's columns started somewhere else - the 16 Aug 2026 misalignment),
+        // and the value slot leads for the same reason: a centred fixed-width control floated.
         HStack(spacing: 8) {
             Picker("Field", selection: $rule.field) {
                 ForEach(TagRule.Field.allCases) { field in
@@ -181,20 +186,18 @@ private struct TagRuleRow: View {
                 }
             }
             .labelsHidden()
-            .fixedSize()
             .frame(width: 140)
-            
+
             Picker("Comparison", selection: $rule.comparison) {
                 ForEach(rule.field.comparisons) { comparison in
                     Text(comparison.displayName).tag(comparison)
                 }
             }
             .labelsHidden()
-            .fixedSize()
             .frame(width: 140)
-            
+
             valueControl
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .leading)
             
             Button(action: onRemove) {
                 Image(systemName: "minus")
@@ -206,7 +209,7 @@ private struct TagRuleRow: View {
             }
         }
         .onChange(of: rule.field) { _, newField in
-            // Kind switch resets to the field's default comparison —
+            // Kind switch resets to the field's default comparison -
             // otherwise a stale ".contains" survives onto a boolean field.
             if !newField.comparisons.contains(rule.comparison) {
                 rule.comparison = newField.comparisons[0]
@@ -243,7 +246,7 @@ private struct TagRuleRow: View {
             Spacer()
         case .checkmateType:
             // `allCases`, unlike `.result`: every motif the classifier can produce is one a game can carry
-            // — an unchecked claim until a test pinned completeness.
+            // - an unchecked claim until a test pinned completeness.
             Picker("Checkmate Type", selection: $rule.specialCheckmate) {
                 ForEach(SpecialCheckmate.allCases, id: \.self) { pattern in
                     Text(pattern.displayName).tag(pattern)
@@ -275,7 +278,7 @@ private struct TagRuleRow: View {
         .frame(width: 520, height: 420)
 }
 
-/// Every rule kind at once — the row-editor switch renders a different control per kind, so
+/// Every rule kind at once - the row-editor switch renders a different control per kind, so
 /// this is the layout's real stress case.
 #Preview("All Rule Kinds") {
     var draft = TagDraft()

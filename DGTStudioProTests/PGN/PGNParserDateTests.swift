@@ -2,9 +2,9 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// The timezone convention: **PGN dates are UTC calendar days** — parser and hash formatter
+/// The timezone convention: **PGN dates are UTC calendar days** - parser and hash formatter
 /// must agree on the zone or parse → hash-format stops round-tripping and dedupe silently breaks.
-@Suite("PGN Parser — Date Tags")
+@Suite("PGN Parser - Date Tags")
 struct PGNParserDateTests {
     
     /// 2026-05-28T00:00:00Z, computed independently of any formatter
@@ -39,7 +39,7 @@ struct PGNParserDateTests {
         #expect(PGNParser.parseDate(nil) == nil)
     }
 
-    /// A partially unknown date discards the known components too (`parseDate` refuses any `?`) —
+    /// A partially unknown date discards the known components too (`parseDate` refuses any `?`) -
     /// fine for the DGT ecosystem's full-or-unknown files.
     @Test(arguments: ["2026.??.??", "2026.05.??", "??26.05.15"])
     func partiallyUnknownDatesDiscardTheKnownComponents(raw: String) {

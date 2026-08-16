@@ -2,7 +2,7 @@ import Foundation
 
 /// The bar's pure mapping: `Evaluation?` in, fraction + tip label out. The fraction is
 /// `whiteWinProbability` **verbatim**, so bar and graph can never disagree; nil folds to
-/// `.drawn`. Presence is deliberately not this type's job — the wiring gates on `hasScoredPly`.
+/// `.drawn`. Presence is deliberately not this type's job - the wiring gates on `hasScoredPly`.
 struct EvaluationBarReading: Equatable, Sendable {
 
     // MARK: Stored Properties
@@ -12,12 +12,12 @@ struct EvaluationBarReading: Equatable, Sendable {
 
     /// The tip label (always visible): signed pawns to one decimal, unsigned "0.0" for anything
     /// rounding to zero, mates in the `evalTagContent` spelling. `String(format:)`, not
-    /// `.formatted()` — the latter localizes the decimal separator and breaks the pinned grammar.
+    /// `.formatted()` - the latter localizes the decimal separator and breaks the pinned grammar.
     let label: String
 
     // MARK: Initializer
 
-    /// Optional in — nil folds to `.drawn`, matching the graph's `?? 0.5`.
+    /// Optional in - nil folds to `.drawn`, matching the graph's `?? 0.5`.
     init(_ evaluation: Evaluation?) {
         let evaluation = evaluation ?? .drawn
         self.whiteFraction = evaluation.whiteWinProbability

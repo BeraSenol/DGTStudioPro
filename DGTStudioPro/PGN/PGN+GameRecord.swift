@@ -1,9 +1,9 @@
 import Foundation
 
-/// The projection seam — the only place the cores' input touches the model layer.
+/// The projection seam - the only place the cores' input touches the model layer.
 extension PGN {
     
-    /// The one effective-date rule at the model — a view sorting *models* needs the same
+    /// The one effective-date rule at the model - a view sorting *models* needs the same
     /// answer the pure folds use.
     var effectiveDate: Date { date ?? importedAt }
     
@@ -21,7 +21,7 @@ extension PGN {
             name: name,
             round: round,
             plyCount: moves.count,
-            // `hasScoredPly`, not `!evaluations.isEmpty` — the last door on the old spelling.
+            // `hasScoredPly`, not `!evaluations.isEmpty` - the last door on the old spelling.
             hasAnalysis: hasScoredPly,
             isTimed: timeControl != nil,
             opening: opening,

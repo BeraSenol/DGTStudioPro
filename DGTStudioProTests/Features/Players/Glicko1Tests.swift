@@ -3,7 +3,7 @@ import Foundation
 @testable import DGTStudioPro
 
 /// The rating math and the fold's contracts. Reference values computed at full double precision
-/// — the paper's 1464.06/151.4 is rounded-intermediate arithmetic; the formulas give 1464.1065/151.3989.
+/// - the paper's 1464.06/151.4 is rounded-intermediate arithmetic; the formulas give 1464.1065/151.3989.
 @Suite("Glicko-1")
 struct Glicko1Tests {
     
@@ -65,7 +65,7 @@ struct Glicko1Tests {
     }
     
     /// A draw between exact equals is exactly a no-op on the mean
-    /// (s − E is literally zero), while the deviation still tightens —
+    /// (s − E is literally zero), while the deviation still tightens -
     /// information without movement.
     @Test func freshEqualDrawMovesDeviationOnly() {
         let after = Glicko1.updated(.initial, against: [.init(opponent: .initial, score: 0.5)])
@@ -74,7 +74,7 @@ struct Glicko1Tests {
         expectClose(after.deviation, 290.2305)
     }
     
-    /// At RD 30 the unclamped update lands at 29.95 — the floor must
+    /// At RD 30 the unclamped update lands at 29.95 - the floor must
     /// engage, and the near-frozen mean barely moves on a win.
     @Test func deviationFloorEngages() {
         let veteran = Glicko1.Rating(mean: 1500, deviation: 30)
@@ -95,7 +95,7 @@ struct Glicko1Tests {
         #expect(!Glicko1.Rating(mean: 1500, deviation: 110).isProvisional, "boundary is established")
     }
     
-    /// The marker is `*`, not "(provisional)" — the 120 pt cell truncated the word. The two-homes
+    /// The marker is `*`, not "(provisional)" - the 120 pt cell truncated the word. The two-homes
     /// failure: the string moved and neither the doc nor this test did, until ⌘U.
     @Test func displaySummaryRoundsAndMarksProvisional() {
         #expect(Glicko1.Rating(mean: 1662.212, deviation: 290.23).displaySummary == "1662*")
@@ -104,7 +104,7 @@ struct Glicko1Tests {
     
     // MARK: The Fold
     
-    /// A beats B, then B beats A — pins chronology, simultaneity, and the genuine recency effect
+    /// A beats B, then B beats A - pins chronology, simultaneity, and the genuine recency effect
     /// (the pool does not return to 1500/1500).
     @Test func foldIsChronologicalAndSimultaneous() throws {
         let records = [

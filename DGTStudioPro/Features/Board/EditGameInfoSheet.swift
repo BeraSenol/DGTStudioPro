@@ -3,7 +3,7 @@ import SwiftUI
 /// The archive-confirmation sheet (M5): confirms the save, offers one last pass over the
 /// details. Shares `LiveGameRosterForm` (so the three sheets cannot drift) under the
 /// `archive.form.*` prefix. Result shown, not edited. The caller owns the PGN
-/// write and the `refreshHash` — one hash, two doors.
+/// write and the `refreshHash` - one hash, two doors.
 struct EditGameInfoSheet: View {
     
     // MARK: Stored Properties
@@ -11,13 +11,13 @@ struct EditGameInfoSheet: View {
     /// Read for seeding the form and the header line.
     let pgn: PGN
     
-    /// True when the archive deduplicated — the header says so instead of claiming a fresh save.
+    /// True when the archive deduplicated - the header says so instead of claiming a fresh save.
     let deduplicated: Bool
     
     /// Called with the normalized roster; the caller applies, rehashes, and syncs the live roster.
     let onSave: (LiveGame.Roster) -> Void
 
-    /// Known-player tag forms, forwarded verbatim. **A parameter, not a `@Query`** — this sheet is
+    /// Known-player tag forms, forwarded verbatim. **A parameter, not a `@Query`** - this sheet is
     /// deliberately container-free so its previews build; the presenter has the context.
     let knownPlayers: [String]
     
@@ -31,7 +31,7 @@ struct EditGameInfoSheet: View {
     
     // MARK: Initializer
     
-    /// Hand-written because `_roster` seeds from `pgn` — which is also why `knownPlayers` is a
+    /// Hand-written because `_roster` seeds from `pgn` - which is also why `knownPlayers` is a
     /// parameter: a type with its own init gets no memberwise one, and a defaulted property is
     /// invisible to callers.
     init(
@@ -84,15 +84,16 @@ struct EditGameInfoSheet: View {
                 
                 Spacer()
                 
-                // Safe to gate here — the sheet appears *after* archive, so a disabled Save blocks only
-                // the *edit*, never the save. Import stays exempt — the guard is scoped to the doors that mint self-play by hand.
+                // Safe to gate here - the sheet appears *after* archive, so a disabled Save blocks only
+                // the *edit*, never the save. Import stays exempt - both guards are scoped to the doors
+                // that author rosters by hand (self-play, and the site shape since 16 Aug 2026).
                 Button("Save Changes") {
                     onSave(normalized(roster))
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
-                .disabled(roster.seatsNameOnePlayer)
+                .disabled(roster.seatsNameOnePlayer || roster.siteViolatesFormat)
                 .accessibilityIdentifier(AccessibilityID.archiveSave)
             }
             .padding()

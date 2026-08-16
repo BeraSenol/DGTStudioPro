@@ -2,7 +2,7 @@ enum StorageKeys {
     static let boardStyle = "boardStyle"
 
     // Board coordinates. Absent reads true; the two read sites (SettingsView, BoardView)
-    // must agree — documented twin.
+    // must agree - documented twin.
     static let showBoardCoordinates = "showBoardCoordinates"
 
     // Glide duration, seconds. Absent reads `BoardPieceLayer.defaultDuration` at both read sites,
@@ -11,25 +11,26 @@ enum StorageKeys {
 
     // Seed guard for default smart tags: the flag, not tag count, so deleting all defaults sticks.
     static let didSeedDefaultSmartTags = "didSeedDefaultSmartTags"
-    // One view mode for both collection destinations — browsing preference, not per-destination.
+    // One view mode for both collection destinations - browsing preference, not per-destination.
     // The two `.list` defaults are the documented twin.
     static let collectionViewMode = "collectionViewMode"
 
     /// What rank 1 means. Absent reads `.wins`. A new key, not the retired
-    /// `playersSortOrder`: its stale rank/name values would read as an unknown method — a migration
+    /// `playersSortOrder`: its stale rank/name values would read as an unknown method - a migration
     /// disguised as a coincidence.
     static let playersRanking = "playersRanking"
 
     // The two tables' column layouts. Two keys, not one: a column set is per-table. One
-    // `@AppStorage` site each — no twins. Absent reads the shipped layout.
+    // `@AppStorage` site each - no twins. Absent reads the shipped layout.
     static let libraryColumns = "libraryColumnCustomization"
     static let playersColumns = "playersColumnCustomization"
 
-    // The converged stamp gating the two player backfills. Absent reads false — scan until
+    // The converged stamp gating the two player backfills. Absent reads false - scan until
     // one clean pass. Cleared only by Erase Library, which retires the store the stamp described.
     static let playerBackfillsConverged = "playerBackfillsConverged"
 
     // New-game dialog defaults: pre-filled on open, written back on Start. Recurring tags only.
+    // Built-in fallbacks for absent keys live at the one read site (`NewLiveGameSheet`).
     static let defaultEvent       = "defaultEvent"
     static let defaultSite        = "defaultSite"
     static let defaultWhitePlayer = "defaultWhitePlayer"
@@ -41,11 +42,11 @@ enum StorageKeys {
     // are the documented twin.
     static let illegalMoveSoundEnabled = "illegalMoveSoundEnabled"
 
-    // The four board cues. Absent reads **true** for each. Single read site apiece —
+    // The four board cues. Absent reads **true** for each. Single read site apiece -
     // `BoardSounds` owns the values and Settings binds to the properties, so unlike the key above
     // these have no twin to document. Four keys rather than one because four toggles were asked
     // for, and a single stored set would make "which cue is off" a decoding question.
-    /// Which sample set the cues come from. Absent reads `.wood` — the set that shipped
+    /// Which sample set the cues come from. Absent reads `.wood` - the set that shipped
     /// first, so an existing install hears what it heard yesterday. An unknown stored value falls
     /// back to the same default rather than failing, which is what makes retiring a set safe.
     static let boardSoundSet = "boardSoundSet"
@@ -55,7 +56,7 @@ enum StorageKeys {
     static let checkSoundEnabled     = "checkSoundEnabled"
     static let checkmateSoundEnabled = "checkmateSoundEnabled"
 
-    // Idle-sleep play gate. Absent reads **true**. Single read site — `SleepInhibitor` owns
+    // Idle-sleep play gate. Absent reads **true**. Single read site - `SleepInhibitor` owns
     // the value; Settings binds to the property. The shape the twins above should eventually take.
     static let preventSleepDuringPlay = "preventSleepDuringPlay"
 

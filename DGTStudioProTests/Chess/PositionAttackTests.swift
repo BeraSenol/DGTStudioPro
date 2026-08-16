@@ -84,7 +84,7 @@ struct PositionAttackTests {
         #expect(!pos.isSquareAttacked(Squares.h5, by: .white))
     }
 
-    // MARK: Sliding Attacks — Rook
+    // MARK: Sliding Attacks - Rook
     @Test func rookAttacksAlongRankAndFile() {
         let pos = Position.make { $0[Squares.d4] = .whiteRook }
 
@@ -103,7 +103,7 @@ struct PositionAttackTests {
         }
         // d5: in front of the blocker, attacked
         #expect(pos.isSquareAttacked(Squares.d5, by: .white))
-        // d6: the blocker itself — still attacked by the rook (a piece "attacks"
+        // d6: the blocker itself - still attacked by the rook (a piece "attacks"
         // its own defended squares; the ray hits the friendly piece first and
         // that piece IS on a square the rook attacks).
         #expect(pos.isSquareAttacked(Squares.d6, by: .white))
@@ -131,7 +131,7 @@ struct PositionAttackTests {
         #expect(pos.isSquareAttacked(Squares.g1, by: .white))
     }
 
-    // MARK: Sliding Attacks — Bishop
+    // MARK: Sliding Attacks - Bishop
     @Test func bishopAttacksAlongDiagonals() {
         let pos = Position.make { $0[Squares.d4] = .whiteBishop }
 
@@ -149,7 +149,7 @@ struct PositionAttackTests {
             $0[Squares.d4] = .whiteBishop
             // Knight (not pawn!) as blocker: a pawn on f6 would itself attack g7,
             // confounding the test. The knight on f6 jumps to d5/d7/e4/e8/g4/g8/h5/h7
-            // — none of which are the test squares — so it blocks cleanly.
+            // - none of which are the test squares - so it blocks cleanly.
             $0[Squares.f6] = .whiteKnight
         }
         #expect(!pos.isSquareAttacked(Squares.g7, by: .white))
@@ -157,7 +157,7 @@ struct PositionAttackTests {
         #expect(pos.isSquareAttacked(Squares.e5, by: .white))
     }
 
-    // MARK: Sliding Attacks — Queen
+    // MARK: Sliding Attacks - Queen
     @Test func queenAttacksOrthogonalAndDiagonal() {
         let pos = Position.make { $0[Squares.d4] = .whiteQueen }
 
@@ -198,7 +198,7 @@ struct PositionAttackTests {
         // a1 (white rook's own square) isn't attacked by any other white piece:
         // the rook doesn't attack itself, the knight on b1 doesn't jump to a1,
         // and nothing along the diagonals reaches a1 either.
-        // (Note: e1 IS attacked by white — the queen on d1 sees it along rank 1.)
+        // (Note: e1 IS attacked by white - the queen on d1 sees it along rank 1.)
         #expect(!pos.isSquareAttacked(Squares.a1, by: .white))
         // White's e4/e5: e4 not attacked by either side; e5 not attacked by white pawns
         #expect(!pos.isSquareAttacked(Squares.e4, by: .white))

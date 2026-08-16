@@ -2,9 +2,9 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// The witness: export byte-pinned to the three DGT reference files — real bytes, bundled,
-/// never a transcription — import → serialize → identical.
-@Suite("PGN Serializer — Reference Bytes")
+/// The witness: export byte-pinned to the three DGT reference files - real bytes, bundled,
+/// never a transcription - import → serialize → identical.
+@Suite("PGN Serializer - Reference Bytes")
 struct PGNSerializerTests {
 
     /// Swift Testing suites are structs; `Bundle(for:)` needs a class to
@@ -14,7 +14,7 @@ struct PGNSerializerTests {
     private func referenceText(_ name: String) throws -> String {
         let url = try #require(
             Bundle(for: BundleLocator.self).url(forResource: name, withExtension: "pgn"),
-            "Reference file '\(name).pgn' missing from the test bundle — the synchronized test folder should carry it as a resource"
+            "Reference file '\(name).pgn' missing from the test bundle - the synchronized test folder should carry it as a resource"
         )
         return try String(contentsOf: url, encoding: .utf8)
     }
@@ -53,7 +53,7 @@ struct PGNSerializerTests {
         #expect(pgn.moves.last == "Qxg2#", "Mate suffix survives import verbatim")
     }
 
-    /// File 2 ends on White's 39th — the white-only-final-line case the
+    /// File 2 ends on White's 39th - the white-only-final-line case the
     /// serializer's movetext doc names.
     @Test func referenceTwoEndsOnWhitesMove() throws {
         let pgn = try PGNParser.parse(try referenceText("2. Christophe vs Reinaud"))
@@ -63,8 +63,8 @@ struct PGNSerializerTests {
         #expect(pgn.result == .whiteWins)
     }
 
-    /// File 3 carries both promotion shapes — an underpromotion capture
-    /// and a queening with check — which must survive storage verbatim:
+    /// File 3 carries both promotion shapes - an underpromotion capture
+    /// and a queening with check - which must survive storage verbatim:
     /// the parser strips only `!`/`?`, and export re-emits stored moves.
     @Test func referenceThreeKeepsPromotionSuffixesVerbatim() throws {
         let pgn = try PGNParser.parse(try referenceText("3. Christophe vs Bera"))
@@ -74,9 +74,9 @@ struct PGNSerializerTests {
 
     // MARK: Filename
 
-    /// `1. Bera vs Reinaud.pgn` — ordinal within the export, then the two
+    /// `1. Bera vs Reinaud.pgn` - ordinal within the export, then the two
     /// players' *given* names, White vs Black (given names are what
-    /// the reference files do — over-the-board opponents are first names).
+    /// the reference files do - over-the-board opponents are first names).
     @Test func fileNameMatchesTheReferenceShape() {
         #expect(
             PGNSerializer.fileName(white: "Senol, Bera", black: "Brouns, Reinaud", index: 1)
@@ -102,7 +102,7 @@ struct PGNSerializerTests {
         )
     }
 
-    // MARK: Library Index — The Reader Half
+    // MARK: Library Index - The Reader Half
 
     /// The real shape this exists for: the folder on disk numbers every game,
     /// and uses **full display names** where the app's writer uses given names.
@@ -123,7 +123,7 @@ struct PGNSerializerTests {
         )
     }
 
-    /// The reader against **the writer's own output** across magnitudes — the two sit twenty lines
+    /// The reader against **the writer's own output** across magnitudes - the two sit twenty lines
     /// apart and look independent.
     @Test func writerAndReaderRoundTripAcrossMagnitudes() {
         for index in [1, 9, 10, 99, 100, 1_284, 10_000] {
@@ -137,7 +137,7 @@ struct PGNSerializerTests {
         }
     }
 
-    /// No ordinal is a fact, not an error — the period separates the "no ordinal" cases from a real one.
+    /// No ordinal is a fact, not an error - the period separates the "no ordinal" cases from a real one.
     @Test func unnumberedFilesReadAsNil() {
         #expect(PGNSerializer.libraryIndex(fromFileName: "Carlsen-Nepo.pgn") == nil)
         #expect(PGNSerializer.libraryIndex(fromFileName: "1961 Candidates.pgn") == nil)
@@ -145,7 +145,7 @@ struct PGNSerializerTests {
         #expect(PGNSerializer.libraryIndex(fromFileName: "") == nil)
     }
 
-    /// Index when there is one, batch position otherwise — asserting only the first would
+    /// Index when there is one, batch position otherwise - asserting only the first would
     /// pass on an implementation ignoring the index.
     @Test func exportNameUsesTheLibraryIndexWhenThereIsOne() {
         let numbered = PGN(
@@ -160,12 +160,12 @@ struct PGNSerializerTests {
         #expect(unnumbered.exportFileName(index: 2) == "2. Bera vs Christophe.pgn")
     }
 
-    // The hash-exclusion pin is deliberately NOT here — `contentHash` is private, and widening a
+    // The hash-exclusion pin is deliberately NOT here - `contentHash` is private, and widening a
     // door to suit a test is the wrong trade; it lives in `PGNStoreRetagTests` as behaviour.
 
     // MARK: The Constant Nine-Tag Shape
 
-    /// A game that knows nothing still exports all nine tags — the tag block is a constant shape.
+    /// A game that knows nothing still exports all nine tags - the tag block is a constant shape.
     @Test func unknownEverythingStillExportsNineTags() {
         let expected = [
             "[Event \"?\"]",
@@ -187,7 +187,7 @@ struct PGNSerializerTests {
     // MARK: Archive-Shaped Export (M2 gate)
 
     /// The M2 gate sentence as bytes: an archive-shaped game exports tag-form seats and the board
-    /// identity — the app's own archives never pass through the parser.
+    /// identity - the app's own archives never pass through the parser.
     @Test func archiveShapedGameExportsTagFormAndBoard() {
         let pgn = PGN(
             event: "Casual Game",

@@ -2,7 +2,7 @@ enum CastlingSide: Sendable {
     case kingSide
     case queenSide
     
-    /// The king's destination file — g (6) kingside, c (2) queenside. One
+    /// The king's destination file - g (6) kingside, c (2) queenside. One
     /// home for a constant that was a private `Move.kingSideKingFile` plus
     /// two bare literals in the SAN layer, none of which could see each other.
     var kingDestinationFile: Int {

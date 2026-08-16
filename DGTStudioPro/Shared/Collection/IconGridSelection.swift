@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The icons grids' selection grammar — arrow stepping and band rectangles — extracted when
+/// The icons grids' selection grammar - arrow stepping and band rectangles - extracted when
 /// Players' grid became the second host: this is the half that must not fork. A filmstrip is a
 /// one-row grid (`columnCount == count`); pinned.
 enum IconGridSelection {
@@ -21,7 +21,7 @@ enum IconGridSelection {
         case .up:
             index - columnCount >= 0 ? index - columnCount : index
         case .down:
-            // Hold anywhere on the last row — without the row guard, the overflow clamp slid a last-row
+            // Hold anywhere on the last row - without the row guard, the overflow clamp slid a last-row
             // card *sideways* (a vertical key performing a horizontal move).
             index / columnCount == (count - 1) / columnCount
             ? index
@@ -31,7 +31,7 @@ enum IconGridSelection {
         }
     }
 
-    /// A drag's rectangle regardless of sweep direction — normalized.
+    /// A drag's rectangle regardless of sweep direction - normalized.
     static func selectionRect(from origin: CGPoint, to point: CGPoint) -> CGRect {
         CGRect(
             x: min(origin.x, point.x),
@@ -41,7 +41,7 @@ enum IconGridSelection {
         )
     }
 
-    /// The geometry-transform stability rule, one spelling for both grids — the fourth "cycling
+    /// The geometry-transform stability rule, one spelling for both grids - the fourth "cycling
     /// between duplicate values" correction: `.integral` put flip boundaries exactly on the
     /// integers layout rests on, *amplifying* sub-point wobble. Quantize to the half-point grid
     /// (.25/.75), where layout never lands. (The fifth correction gates the observation on the sweep.)
@@ -58,7 +58,7 @@ enum IconGridSelection {
     }
 }
 
-/// Card-frame storage the geometry actions write and only the drag reads — a plain reference
+/// Card-frame storage the geometry actions write and only the drag reads - a plain reference
 /// box, NOT observed state: nothing renders from these frames, so a write must never invalidate
 /// the view.
 final class IconGridFrameStore<ID: Hashable> {

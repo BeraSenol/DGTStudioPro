@@ -1,14 +1,14 @@
 import Testing
 @testable import DGTStudioPro
 
-/// Perft against canonical reference counts — a mismatch points at a specific bug class
+/// Perft against canonical reference counts - a mismatch points at a specific bug class
 /// (Kiwipete: castling and pins; Position 3: EP; Position 5: promotions).
 @Suite("Perft Move Generation Integrity")
 struct PerftTests {
     
     // MARK: Depth-1 Smoke Test
     
-    /// Depth-1 across all six — milliseconds, and catches direct generation bugs.
+    /// Depth-1 across all six - milliseconds, and catches direct generation bugs.
     @Test func allPositionsAtDepth1() throws {
         let cases: [(name: String, fen: String, expected: Int)] = [
             ("Starting",   FEN.startingString, 20),
@@ -32,7 +32,7 @@ struct PerftTests {
     
     // MARK: Depth-4 Reference Counts
     
-    /// Starting position — the most-cited reference value. Touches every
+    /// Starting position - the most-cited reference value. Touches every
     /// piece type but exercises no edge cases directly (no captures, no
     /// castling, no EP, no promotion in the first four plies).
     @Test func startingPositionDepth4() {
@@ -41,14 +41,14 @@ struct PerftTests {
     
     /// Kiwipete (the canonical "exercises everything" middlegame). Both
     /// sides retain castling rights, bishop pin diagonals are live, and
-    /// the queen/knight have capture options — historically the position
+    /// the queen/knight have capture options - historically the position
     /// that catches the most common move-generator bugs.
     @Test func kiwipeteDepth4() throws {
         let state = try GameState.parsing(Chess.kiwipete)
         #expect(Chess.perft(state, depth: 4) == 4_085_603)
     }
     
-    /// Position 3 — sparse endgame on a near-empty board, chosen to
+    /// Position 3 - sparse endgame on a near-empty board, chosen to
     /// exercise en passant capture and discovered attacks (the b-file
     /// rook battery and the kings on a5/h4 are geometrically arranged to
     /// produce many pinned-piece situations).
@@ -57,7 +57,7 @@ struct PerftTests {
         #expect(Chess.perft(state, depth: 4) == 43_238)
     }
     
-    /// Position 4 — promotion-heavy. White has a passed a7 pawn and black
+    /// Position 4 - promotion-heavy. White has a passed a7 pawn and black
     /// has passed pawns on b2 and g2 all racing to promote. Castling
     /// rights remain only for black. Exercises all four promotion targets
     /// across both colors interleaved with captures.
@@ -66,14 +66,14 @@ struct PerftTests {
         #expect(Chess.perft(state, depth: 4) == 422_333)
     }
     
-    /// Position 4's mirror, same count by construction — a mismatch between the pair localizes a
+    /// Position 4's mirror, same count by construction - a mismatch between the pair localizes a
     /// colour asymmetry.
     @Test func position4MirrorDepth4() throws {
         let state = try GameState.parsing(Chess.position4Mirror)
         #expect(Chess.perft(state, depth: 4) == 422_333)
     }
 
-    /// Position 5 — white pawn on d7 ready to promote with capture
+    /// Position 5 - white pawn on d7 ready to promote with capture
     /// possibilities to c8 or e8, plus a black knight on f2 creating
     /// discovered-attack threats against the white king's home square.
     /// Stresses promotion-with-capture interactions.
@@ -82,7 +82,7 @@ struct PerftTests {
         #expect(Chess.perft(state, depth: 4) == 2_103_487)
     }
     
-    /// Position 6 — dense middlegame, ~46 moves per node, the slowest depth-4 case.
+    /// Position 6 - dense middlegame, ~46 moves per node, the slowest depth-4 case.
     @Test func position6Depth4() throws {
         let state = try GameState.parsing(Chess.position6)
         #expect(Chess.perft(state, depth: 4) == 3_894_594)

@@ -2,7 +2,7 @@ import AppKit
 import UniformTypeIdentifiers
 import os
 
-/// The export door's transport half: panels and writes — waived under the save-panel
+/// The export door's transport half: panels and writes - waived under the save-panel
 /// family; every byte comes from the pure serializer. Batch = one numbered file per game.
 @MainActor
 enum PGNExporter {
@@ -15,7 +15,7 @@ enum PGNExporter {
         UTType(filenameExtension: "pgn") ?? .plainText
     }
     
-    /// `games` must arrive in **display order** — the filenames are numbered,
+    /// `games` must arrive in **display order** - the filenames are numbered,
     /// so a `Set`'s arbitrary order would number them arbitrarily.
     static func export(_ games: [PGN]) {
         guard !games.isEmpty else { return }

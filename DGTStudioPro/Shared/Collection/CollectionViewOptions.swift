@@ -14,15 +14,15 @@ final class CollectionViewOptions {
     static let iconSizeRange: ClosedRange<CGFloat> = 80...240
     static let defaultIconSize: CGFloat = 120
 
-    /// Both axes, as before — the gutters read square.
+    /// Both axes, as before - the gutters read square.
     static let spacingRange: ClosedRange<CGFloat> = 4...40
     static let defaultSpacing: CGFloat = 16
 
     /// The glyph is a fraction of the card, not a second slider. 0.5 = 60/120, the exact pre-panel
-    /// pair — at the default nothing moves.
+    /// pair - at the default nothing moves.
     static let glyphWidthFraction: CGFloat = 0.5
 
-    /// Deliberately not on the panel: insets the grid from the window's dividers — destination
+    /// Deliberately not on the panel: insets the grid from the window's dividers - destination
     /// chrome, not cards. Finder doesn't offer it either.
     static let inset: CGFloat = 16
 
@@ -30,9 +30,9 @@ final class CollectionViewOptions {
 
     private let defaults: UserDefaults
 
-    /// **Never assign to a property inside its own `didSet` on an `@Observable` type** — the macro
+    /// **Never assign to a property inside its own `didSet` on an `@Observable` type** - the macro
     /// re-enters observers, unlike a plain stored property. Hence computed-over-storage with the
-    /// clamp in the setter. Storage is not `@ObservationIgnored` — the macro instruments it.
+    /// clamp in the setter. Storage is not `@ObservationIgnored` - the macro instruments it.
     private var iconSizeStorage: CGFloat
 
     var iconSize: CGFloat {
@@ -58,7 +58,7 @@ final class CollectionViewOptions {
     }
 
     /// `didSet` is safe *here* and would not be if these needed correcting: sorts persist whatever
-    /// they are handed — already valid by construction.
+    /// they are handed - already valid by construction.
     var librarySort: CollectionSort<LibrarySortField> {
         didSet {
             guard librarySort != oldValue else { return }
@@ -75,7 +75,7 @@ final class CollectionViewOptions {
 
     // MARK: Session State
 
-    /// Which surface the panel describes. **Session state, deliberately unpersisted** — a fact
+    /// Which surface the panel describes. **Session state, deliberately unpersisted** - a fact
     /// about what is on screen. Written by the destinations; the panel must not read focus itself
     /// (opening it makes it key, so its focused value is already nil).
     var activeSubject: CollectionViewOptionsSubject?
@@ -87,7 +87,7 @@ final class CollectionViewOptions {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
 
-        // Closures, not `.map(CGFloat.init)` — ambiguous: CGFloat has an initializer for every numeric
+        // Closures, not `.map(CGFloat.init)` - ambiguous: CGFloat has an initializer for every numeric
         // type. Assigning the **storage**: the setters' clamp path is for later writes, not seeding.
         let storedIconSize = (defaults.object(forKey: StorageKeys.collectionIconSize) as? Double)
             .map { CGFloat($0) }
@@ -111,7 +111,7 @@ final class CollectionViewOptions {
     /// The card's glyph width at the current size.
     var glyphWidth: CGFloat { iconSize * Self.glyphWidthFraction }
 
-    /// Columns computed rather than `.adaptive` — `IconGridSelection` needs the count to answer
+    /// Columns computed rather than `.adaptive` - `IconGridSelection` needs the count to answer
     /// "where does ↓ land", and `.adaptive` never reports one. Pinned from both ends.
     static func columnCount(
         containerWidth: CGFloat,
@@ -120,7 +120,7 @@ final class CollectionViewOptions {
     ) -> Int {
         let available = containerWidth - inset * 2
         guard available > 0, iconSize > 0 else { return 1 }
-        // `+ spacing` both sides: N cards carry N−1 gutters — without it the count is short by one
+        // `+ spacing` both sides: N cards carry N−1 gutters - without it the count is short by one
         // exactly where a card would have fit flush.
         let fitted = Int(((available + spacing) / (iconSize + spacing)).rounded(.down))
         return max(1, fitted)

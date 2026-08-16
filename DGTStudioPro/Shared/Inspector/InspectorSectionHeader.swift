@@ -1,14 +1,14 @@
 import SwiftUI
 
 /// A section header naming the thing the section is about, action trailing.
-/// `title` is a `String`, not `LocalizedStringKey` — titles are data (a player's name is not
+/// `title` is a `String`, not `LocalizedStringKey` - titles are data (a player's name is not
 /// copy to localize). One line, truncating.
 struct InspectorSectionHeader<Actions: View>: View {
     
     // MARK: Type Properties
     
     /// Trailing inset for the whole actions row. Owned here so a host cannot get it wrong whatever
-    /// it passes into the slot — as a padding on the pencil it insetted the edge AND widened the hit
+    /// it passes into the slot - as a padding on the pencil it insetted the edge AND widened the hit
     /// target, which coincide only while the pencil is last (three distances from one edge resulted).
     /// Computed, not stored: generic types cannot have stored static properties.
     static var actionsInset: CGFloat { 12 }
@@ -45,7 +45,7 @@ struct InspectorSectionHeader<Actions: View>: View {
             Spacer(minLength: 8)
             // Chevron **trailing** the actions (reversed 2 Aug 2026): the disclosure sits at one fixed
             // distance from the edge whatever the arity, one column down the inspector. Price: action
-            // glyphs are no longer rightmost — the original argument, consciously given up.
+            // glyphs are no longer rightmost - the original argument, consciously given up.
             HStack(spacing: 12) {
                 actions()
                 if let section {
@@ -58,10 +58,10 @@ struct InspectorSectionHeader<Actions: View>: View {
     
     // MARK: Instance Methods
     
-    /// One chevron rotated, not two symbols swapped — a continuous motion the eye tracks.
+    /// One chevron rotated, not two symbols swapped - a continuous motion the eye tracks.
     private func disclosure(for section: InspectorSection) -> some View {
         let isCollapsed = collapse.isCollapsed(section)
-        // Annotated `String` on purpose — the inverse of `InspectorEditButtonView`'s
+        // Annotated `String` on purpose - the inverse of `InspectorEditButtonView`'s
         // `LocalizedStringKey` label: that carries copy, this interpolates a title that is data.
         let label: String = isCollapsed ? "Show \(title)" : "Hide \(title)"
         return Button {
@@ -88,7 +88,7 @@ struct InspectorSectionHeader<Actions: View>: View {
 
 extension InspectorSectionHeader where Actions == EmptyView {
     
-    /// A header with nothing to act on. It may still collapse — a chevron is not an action on the
+    /// A header with nothing to act on. It may still collapse - a chevron is not an action on the
     /// section's subject.
     init(_ title: String, section: InspectorSection? = nil) {
         self.init(title, section: section, actions: { EmptyView() })
@@ -105,13 +105,11 @@ extension InspectorSectionHeader where Actions == EmptyView {
             Text("Event, Site, Date, Round, White, Black, Result")
                 .foregroundStyle(.secondary)
         } header: {
-            InspectorSectionHeader("Bera Senol vs Lorenzo Baelus") {
-                InspectorEditButtonView(
-                    label: "Rename",
-                    identifier: AccessibilityID.libraryInspectorRename,
-                    action: {}
-                )
-            }
+            // Actionless since every game edit moved into Get Info - this row carried a
+            // Rename pencil until 16 Aug 2026, simulating a header the inspector no longer renders
+            // (the `playersRenameButton` shape; it was the last reference keeping
+            // `library.inspector.rename` alive).
+            InspectorSectionHeader("Bera Senol vs Lorenzo Baelus, Round 47")
         }
         Section {
             Text("The Board inspector's headline, long enough to truncate")
@@ -146,12 +144,12 @@ extension InspectorSectionHeader where Actions == EmptyView {
     .environment(InspectorSectionCollapse.preview)
 }
 
-/// Every arity the app passes, stacked so trailing edges read against each other — the standing
+/// Every arity the app passes, stacked so trailing edges read against each other - the standing
 /// witness for `actionsInset`. Look for a vertical line, not a row.
 #Preview("Actions, Every Arity") {
     List {
         Section {
-            Text("One control, four inspectors' pencils.")
+            Text("One control, the app's one pencil.")
                 .foregroundStyle(.secondary)
         } header: {
             InspectorSectionHeader("Lone Pencil") {
@@ -164,17 +162,13 @@ extension InspectorSectionHeader where Actions == EmptyView {
             }
         }
         Section {
-            Text("Chevron, pencil, glyph, the Library's PGN header.")
+            Text("Glyph and chevron, the Library's PGN header.")
                 .foregroundStyle(.secondary)
         } header: {
-            // The one multi-control header. Pencil leads: the edit verb is the section's verb, Copy a
-            // convenience on what it shows.
-            InspectorSectionHeader("Pencil and Glyph", section: .pgn) {
-                InspectorEditButtonView(
-                    label: "Edit Details",
-                    identifier: AccessibilityID.liveInspectorEditDetails,
-                    action: {}
-                )
+            // The Library's PGN header as it stands since Get Info took its pencil: Copy is
+            // the actions slot's whole content, the chevron trails (the 2 Aug reversal). This row
+            // showed pencil + glyph + chevron until 16 Aug 2026 - an arity no header had any more.
+            InspectorSectionHeader("Glyph and Chevron", section: .pgn) {
                 Button { } label: { Image(systemName: "doc.on.doc") }
                     .buttonStyle(.borderless)
                     .font(.body)
@@ -190,7 +184,7 @@ extension InspectorSectionHeader where Actions == EmptyView {
             Text("A chevron and nothing else.")
                 .foregroundStyle(.secondary)
         } header: {
-            // The arity to look hardest at — the one claim written from reasoning, not a compiler: with
+            // The arity to look hardest at - the one claim written from reasoning, not a compiler: with
             // no actions the `EmptyView` should flatten out of the builder and contribute no spacing.
             InspectorSectionHeader("Collapsible, No Actions", section: .recentGames)
         }

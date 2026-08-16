@@ -1,7 +1,7 @@
 import Foundation
 
 /// One smart-tag rule: field + comparison + value over a `GameRecord`. Pure, `Codable`, stored
-/// as an array blob on `SmartTag`. Flat value storage — dead slots cost bytes, enum
+/// as an array blob on `SmartTag`. Flat value storage - dead slots cost bytes, enum
 /// bindings cost friction. Rules of record: both sides fold through
 /// `PlayerName.folded` + lowercase; unknowns never match, negation included; zero rules match nothing.
 struct TagRule: Sendable, Hashable, Codable, Identifiable {
@@ -10,7 +10,7 @@ struct TagRule: Sendable, Hashable, Codable, Identifiable {
     
     enum Field: String, Codable, CaseIterable, Identifiable, Sendable {
         case white, black, player, event, site, name
-        /// A string field over the *full* opening name, so a rule can reach a variation —
+        /// A string field over the *full* opening name, so a rule can reach a variation -
         /// `is` matches variation-less lines only, `begins with` is family-level, `contains` is what
         /// most rules want.
         case opening
@@ -18,7 +18,7 @@ struct TagRule: Sendable, Hashable, Codable, Identifiable {
         case round, moves
         case date
         case checkmate, analyzed, timed
-        /// Which checkmate type — distinct from `checkmate` (whether it was mate at all).
+        /// Which checkmate type - distinct from `checkmate` (whether it was mate at all).
         /// **The raw value stays `"matePattern"` and must**: it is encoded in every saved tag's blob,
         /// and following the Swift name would silently drop the rule from every tag using it.
         case checkmateType = "matePattern"
@@ -114,7 +114,7 @@ struct TagRule: Sendable, Hashable, Codable, Identifiable {
     // MARK: Codable
 
     /// A **defaulting** decoder: `[TagRule]` is one blob on `SmartTag`, and synthesized decoding
-    /// would fail every saved tag when a field is added — the sidebar silently emptying. Fallbacks
+    /// would fail every saved tag when a field is added - the sidebar silently emptying. Fallbacks
     /// come from a default-constructed instance, not a second list of literals.
     private enum CodingKeys: String, CodingKey {
         case id, field, comparison, text, number, date, gameResult, specialCheckmate
@@ -151,7 +151,7 @@ struct TagRule: Sendable, Hashable, Codable, Identifiable {
                 // Unknowns never match, negation included: no resolved seat proves nothing.
                 guard !seats.isEmpty else { return false }
                 // A negated comparison over two seats flips the quantifier: "player is not X" means *neither*
-                // seat is X — `contains` made it true of every game X played.
+                // seat is X - `contains` made it true of every game X played.
                 return comparison == .notEquals
                 ? seats.allSatisfy { compareString($0, needle) }
                 : seats.contains { compareString($0, needle) }
@@ -186,7 +186,7 @@ struct TagRule: Sendable, Hashable, Codable, Identifiable {
 
         case .checkmateType:
             // Unknowns never match, negation included: a nil motif means "ordinary mate" or "not
-            // classified yet", and the rule cannot tell — reading nil as "not X" would match every
+            // classified yet", and the rule cannot tell - reading nil as "not X" would match every
             // unclassified game.
             guard let subject = record.specialCheckmate else { return false }
             let hit = subject == specialCheckmate
@@ -209,7 +209,7 @@ struct TagRule: Sendable, Hashable, Codable, Identifiable {
     
     // MARK: Private Helpers
 
-    /// The string fold — the same fold `Player.normalizedKey` and the hash compose, applied to
+    /// The string fold - the same fold `Player.normalizedKey` and the hash compose, applied to
     /// *both* sides.
     private func fold(_ value: String) -> String {
         PlayerName.folded(value).lowercased()

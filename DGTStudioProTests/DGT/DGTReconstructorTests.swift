@@ -45,7 +45,7 @@ struct DGTReconstructorTests {
     /// (`vacatedByMover` / `placedByMover`) and the a8↔a1 transform's symmetry,
     /// which a one-sided suite would never exercise.
     @Test func blackNormalMoveReconstructs() throws {
-        // After 1.e4 — Black to move, e-file double push available.
+        // After 1.e4 - Black to move, e-file double push available.
         let start = try GameState.parsing(
             "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
         )
@@ -108,7 +108,7 @@ struct DGTReconstructorTests {
         #expect(DGTReconstructor.reconstruct(from: state, physical: boards[2]) == .move(expected))
     }
     
-    /// The common slip: EP capture without lifting the captured pawn — indistinguishable from a
+    /// The common slip: EP capture without lifting the captured pawn - indistinguishable from a
     /// plain push until `applying` fails. `.correctable`, NOT `.unresolved`: recovery never takes over.
     @Test func enPassantWithoutLiftingCapturedPawnIsCorrectable() throws {
         let state = try GameState.parsing("4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1")
@@ -154,7 +154,7 @@ struct DGTReconstructorTests {
     }
     
     /// `.correctable` rescues only a *recognized legal* EP; the identical pattern with no EP right
-    /// stays `.unresolved` — the nudge must never paper over a genuine fumble.
+    /// stays `.unresolved` - the nudge must never paper over a genuine fumble.
     @Test func epTargetReachedWithoutLegalEnPassantIsUnresolved() throws {
         // Same shape as the correctable case, but no EP target in the FEN.
         let state = try GameState.parsing("4k3/8/8/3pP3/8/8/8/4K3 w - - 0 1")
@@ -163,13 +163,13 @@ struct DGTReconstructorTests {
             updates: [
                 (Squares.e5, .empty),
                 (Squares.d6, .whitePawn),
-                // d5 black pawn left in place — but there is no EP right here.
+                // d5 black pawn left in place - but there is no EP right here.
             ]
         )
         #expect(DGTReconstructor.reconstruct(from: state, physical: final) == .unresolved)
     }
     
-    // MARK: Castling — Kingside
+    // MARK: Castling - Kingside
     
     @Test func castlingReconstructsWhenComplete() throws {
         let state = try GameState.parsing("4k3/8/8/8/8/8/8/4K2R w K - 0 1")
@@ -215,7 +215,7 @@ struct DGTReconstructorTests {
     }
     
     /// Regression (field desync 2026-07-18, ply-20 O-O): king placed, rook in hand fell through to
-    /// `.unresolved` — every settled interim of the gesture must classify as in progress.
+    /// `.unresolved` - every settled interim of the gesture must classify as in progress.
     @Test func castlingRookInHandStaysInProgress() throws {
         let state = try GameState.parsing(
             "rn1qk2r/1p3ppp/4pn2/p2p4/5Qb1/PB1P4/1PP2PPP/RN2K1NR b KQkq - 0 10"
@@ -238,8 +238,8 @@ struct DGTReconstructorTests {
     }
     
     /// The two-handed castle whose rook hand lands first: with the king still
-    /// in hand, the settled board must read as the castle in progress — not a
-    /// desync — and the king's landing completes it.
+    /// in hand, the settled board must read as the castle in progress - not a
+    /// desync - and the king's landing completes it.
     @Test func castlingKingInHandAfterRookLandsStaysInProgress() throws {
         let state = try GameState.parsing("4k3/8/8/8/8/8/8/4K2R w K - 0 1")
         let expected = try legalMove(state, from: Squares.e1, to: Squares.g1)
@@ -258,7 +258,7 @@ struct DGTReconstructorTests {
         #expect(DGTReconstructor.reconstruct(from: state, physical: boards[3]) == .move(expected))
     }
     
-    // MARK: Castling — Queenside
+    // MARK: Castling - Queenside
     
     /// Queenside is geometrically distinct: the rook travels three squares
     /// (a1→d1) and passes the b1/c1 squares. The kingside cases above can't
@@ -305,7 +305,7 @@ struct DGTReconstructorTests {
         #expect(DGTReconstructor.reconstruct(from: state, physical: final) == .castlingInProgress(expected))
     }
     
-    /// Queenside sibling of `castlingRookInHandStaysInProgress` — the a-rook's
+    /// Queenside sibling of `castlingRookInHandStaysInProgress` - the a-rook's
     /// three-square travel keeps its interim boards geometrically distinct.
     @Test func queensideCastlingRookInHandStaysInProgress() throws {
         let state = try GameState.parsing("4k3/8/8/8/8/8/8/R3K3 w Q - 0 1")
@@ -341,7 +341,7 @@ struct DGTReconstructorTests {
     
     /// Underpromotion is rare physically, but the engine reads the *detected*
     /// piece rather than hardcoding a queen. Placing a knight on the promotion
-    /// square must reconstruct to the knight-promotion move — proving
+    /// square must reconstruct to the knight-promotion move - proving
     /// `promotionType` is driven by the board, not an assumption.
     @Test func underpromotionReadsDetectedPiece() throws {
         let state = try GameState.parsing("4k3/P7/8/8/8/8/8/4K3 w - - 0 1")
@@ -376,7 +376,7 @@ struct DGTReconstructorTests {
     }
     
     @Test func illegalPlacementIsUnresolved() throws {
-        // e2 pawn placed on e5 (a three-square jump) — no legal move produces it.
+        // e2 pawn placed on e5 (a three-square jump) - no legal move produces it.
         let start = GameState.starting
         let final = DGTBoardSimulator.finalBoard(
             from: start.position,
@@ -386,7 +386,7 @@ struct DGTReconstructorTests {
     }
     
     @Test func strayExtraPieceMakesAnOtherwiseLegalMoveUnresolved() throws {
-        // A legal e2→e4, but a second white piece also teleports — the move
+        // A legal e2→e4, but a second white piece also teleports - the move
         // no longer fully explains the board, so it's a fumble, not a move.
         let start = GameState.starting
         let final = DGTBoardSimulator.finalBoard(
@@ -404,7 +404,7 @@ struct DGTReconstructorTests {
     // MARK: Field DESYNC Fixtures (20 July 2026)
 
     /// The first field-session desync: two pieces adjacent along a clear rank produced a
-    /// single-piece diff no legal move matches — must land `.unresolved` (the `enterRecovery` door).
+    /// single-piece diff no legal move matches - must land `.unresolved` (the `enterRecovery` door).
     @MainActor
     @Test func fieldDesyncKingIntoQueensRankIsUnresolved() throws {
         let previous = Position.make { pos in
@@ -434,7 +434,7 @@ struct DGTReconstructorTests {
     }
 
     /// The second field desync: the king stood on d2, itself the block on
-    /// the c3–e1 diagonal, and landed on e1 — the square that diagonal
+    /// the c3–e1 diagonal, and landed on e1 - the square that diagonal
     /// reaches the moment d2 empties behind the move. Same verdict shape
     /// and attachment treatment as the first fixture.
     @MainActor

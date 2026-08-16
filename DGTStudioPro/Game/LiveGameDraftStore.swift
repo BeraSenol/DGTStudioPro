@@ -3,7 +3,7 @@ import os
 
 /// Atomic single-file persistence for the one draft: atomic writes mean a crash mid-write
 /// leaves the previous draft, never a torn file. Directory injectable for tests. The store is
-/// dumb on purpose — the session owns *when*.
+/// dumb on purpose - the session owns *when*.
 @MainActor
 final class LiveGameDraftStore {
 
@@ -17,7 +17,7 @@ final class LiveGameDraftStore {
 
     enum StoreError: Error, Equatable {
         /// The file decoded, but its `schemaVersion` isn't one this build
-        /// understands. Treated as corrupt by callers — never guessed at.
+        /// understands. Treated as corrupt by callers - never guessed at.
         case unsupportedSchema(found: Int)
     }
 
@@ -40,7 +40,7 @@ final class LiveGameDraftStore {
     // MARK: I/O
 
     /// Atomically writes `draft`, replacing any previous one (last write
-    /// wins — there is only ever one draft). Creates the directory on first
+    /// wins - there is only ever one draft). Creates the directory on first
     /// use. Throws on encoding or filesystem failure; the caller decides how
     /// loudly to react.
     func save(_ draft: LiveGameDraft) throws {
@@ -55,7 +55,7 @@ final class LiveGameDraftStore {
 
     /// Loads the draft, or `nil` when no file exists (the common launch).
     /// Throws when a file exists but can't be read, doesn't decode, or
-    /// carries an unknown schema version — "absent" and "corrupt" are
+    /// carries an unknown schema version - "absent" and "corrupt" are
     /// different answers, and the session surfaces them differently.
     func load() throws -> LiveGameDraft? {
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
@@ -69,14 +69,14 @@ final class LiveGameDraftStore {
         return draft
     }
 
-    /// Removes the draft file. Idempotent — deleting an absent draft is not
+    /// Removes the draft file. Idempotent - deleting an absent draft is not
     /// an error (discard and archive paths both call this unconditionally).
     func delete() {
         do {
             try FileManager.default.removeItem(at: fileURL)
             Self.logger?.debug("Draft deleted")
         } catch CocoaError.fileNoSuchFile {
-            // Already gone — exactly the desired end state.
+            // Already gone - exactly the desired end state.
         } catch {
             Self.logger?.error(
                 "Draft delete failed: \(error.localizedDescription, privacy: .public)"

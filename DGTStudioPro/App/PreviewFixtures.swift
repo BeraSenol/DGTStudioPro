@@ -1,11 +1,11 @@
 import Foundation
 
 /// Shared Players preview fixtures. Records, not memberwise stats: stats and ladder are
-/// *derived*, so previews build through the same folds. **Not `#if DEBUG`** — previews
+/// *derived*, so previews build through the same folds. **Not `#if DEBUG`** - previews
 /// are stripped at link time, and the guard once broke six canvases in release schemes.
 enum PreviewFixtures {
     
-    /// Fixed epoch — previews must not shift with wall-clock time.
+    /// Fixed epoch - previews must not shift with wall-clock time.
     private static func day(_ offset: Int) -> Date {
         Date(timeIntervalSince1970: 1_720_000_000 + Double(offset) * 86_400)
     }
@@ -64,7 +64,7 @@ enum PreviewFixtures {
         PlayerStats.index(of: records()).sorted(by: PlayerStats.rankingOrder)
     }
     
-    /// Reaches the upper win bands `records()` never produces — 10+ / 5–9 / 1–4 / none at once.
+    /// Reaches the upper win bands `records()` never produces - 10+ / 5–9 / 1–4 / none at once.
     /// Built by appending games, not hand-writing stats: the folds stay in the loop.
     static func deepRecords() -> [GameRecord] {
         var records = self.records()
@@ -77,7 +77,7 @@ enum PreviewFixtures {
         return records
     }
     
-    /// The shared ladder construction — one implementation, so a fold change shows in every canvas.
+    /// The shared ladder construction - one implementation, so a fold change shows in every canvas.
     private static func ladder(from records: [GameRecord]) -> [RankedPlayer] {
         let histories = Glicko1.histories(from: records)
         return PlayerStats.index(of: records)
@@ -102,9 +102,9 @@ enum PreviewFixtures {
     
     static func topStats() -> PlayerStats { playerStats()[0] }
 
-    /// A `CollectionViewOptions` on a wiped scratch suite. **Never `.standard`** — a canvas reading
+    /// A `CollectionViewOptions` on a wiped scratch suite. **Never `.standard`** - a canvas reading
     /// the developer's icon size renders wrong, and one writing it edits real preferences. Wiped on
-    /// every call. `subject:` is required — defaulting it to nil hid the unlatched branch.
+    /// every call. `subject:` is required - defaulting it to nil hid the unlatched branch.
     @MainActor
     static func viewOptions(
         subject: CollectionViewOptionsSubject? = nil,

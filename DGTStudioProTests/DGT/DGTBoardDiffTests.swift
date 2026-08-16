@@ -1,7 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// `DGTBoardDiff` — the literal before/after delta. A capture destination belongs to `placed`,
+/// `DGTBoardDiff` - the literal before/after delta. A capture destination belongs to `placed`,
 /// never `vacated`; an uncorrected EP is byte-identical to a plain push (why the diff alone
 /// cannot tell them apart).
 @Suite("DGT Board Diff")
@@ -59,7 +59,7 @@ struct DGTBoardDiffTests {
     // MARK: Capture
 
     /// The defining subtlety: a capture destination (enemy → mover) lands only
-    /// in `placed`. The captured piece leaves **no** `vacated` entry — the
+    /// in `placed`. The captured piece leaves **no** `vacated` entry - the
     /// square it died on is still occupied afterwards. (Geometry is irrelevant
     /// here; the diff is a literal delta.)
     @Test func captureDestinationGoesToPlacedOnly() {
@@ -73,7 +73,7 @@ struct DGTBoardDiffTests {
 
         #expect(diff.vacated == [Squares.e4: .whitePawn])
         #expect(diff.placed  == [Squares.d5: .whitePawn])
-        // The captured pawn is invisible to the diff — d5 is in `placed`, never `vacated`.
+        // The captured pawn is invisible to the diff - d5 is in `placed`, never `vacated`.
         #expect(diff.vacated[Squares.d5] == nil)
         #expect(diff.changedSquares == [Squares.e4, Squares.d5])
     }
@@ -101,7 +101,7 @@ struct DGTBoardDiffTests {
     // MARK: En Passant Indistinguishability
 
     /// The uncorrected EP produces the exact diff of a plain push (the victim's square never enters
-    /// it) — the precise reason `.correctable` exists; pinned here so the assumption is visible.
+    /// it) - the precise reason `.correctable` exists; pinned here so the assumption is visible.
     @Test func uncorrectedEnPassantIsIndistinguishableFromAPlainPush() {
         // A plain (illegal-but-irrelevant) push e5→d6, no neighbour pawn.
         let pushDiff = DGTBoardDiff(

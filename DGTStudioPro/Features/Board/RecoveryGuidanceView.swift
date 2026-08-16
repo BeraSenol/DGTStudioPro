@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The square-by-square restore checklist under the status card while recovering. Pure
-/// presentation over `RecoveryGuidance`; a checklist, not a dialog — restoring the position is
+/// presentation over `RecoveryGuidance`; a checklist, not a dialog - restoring the position is
 /// the only resolution.
 struct RecoveryGuidanceView: View {
     
@@ -72,7 +72,7 @@ struct RecoveryGuidanceView: View {
     .frame(width: 420)
 }
 
-/// Wrong piece on the right square — the `replace` action, which is
+/// Wrong piece on the right square - the `replace` action, which is
 /// attention-only in the highlight split (no target square).
 #Preview("Wrong Piece") {
     var physical = Position.starting
@@ -86,7 +86,7 @@ struct RecoveryGuidanceView: View {
     .frame(width: 420)
 }
 
-/// A full scramble — the scrolling / vertical-growth case for a sidebar-pinned
+/// A full scramble - the scrolling / vertical-growth case for a sidebar-pinned
 /// panel, where the checklist must not push the panel past its inset.
 #Preview("Scrambled Board") {
     var physical = Position.empty

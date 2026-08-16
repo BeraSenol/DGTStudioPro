@@ -3,7 +3,7 @@ import SwiftData
 import SwiftUI
 
 /// Board destination. Non-nil `loadedGameID`: PGN lookup → `Game` → board + inspector. Nil: the
-/// live DGT mirror (`connection.physicalBoard`, empty until connected) — the board is always on
+/// live DGT mirror (`connection.physicalBoard`, empty until connected) - the board is always on
 /// screen. Per-tab state lives on `ContentView`'s `TabState`, not here; switching destinations
 /// does not clear a tab's game.
 struct BoardDestination: View {
@@ -31,29 +31,24 @@ struct BoardDestination: View {
     
     // MARK: View State
     
-    /// "Keep for Now" deferral for the corrupt-draft alert, this visit only. Transient by design —
+    /// "Keep for Now" deferral for the corrupt-draft alert, this visit only. Transient by design -
     /// losing it across a sidebar round-trip re-offers, which is the safe direction.
     @State private var corruptOfferDeferred = false
     
-    /// The editors a *loaded* archived game can request from the review
-    /// inspector. Transient by design, like `corruptOfferDeferred` — losing
-    /// "sheet open" across a sidebar round-trip is fine.
-    ///
-    /// One optional rather than two booleans because the two are mutually
-    /// exclusive by construction: both require `boardPGN`, and a click can
-    /// only ask for one. Two booleans would hand the window's single modal
-    /// slot a second way to be asked twice, for no gain.
-    
-    /// The connect dialog, lifted out of the toolbar modifier — always one of the sheets contending
+    // (An orphaned doc block for `activeEditor` stood here until 16 Aug 2026 - the property left
+    // when Get Info absorbed the game editors, its doc did not. A doc comment with no declaration under it is debris, not record;
+    // the epitaph lives in the decision log.)
+
+    /// The connect dialog, lifted out of the toolbar modifier - always one of the sheets contending
     /// for the window's single modal slot.
     @State private var showConnectSheet = false
     
     /// Set by the Game menu's ⌘I (a `Commands` scene cannot open windows); cleared as soon as this
-    /// view has. A trigger, not a stored request — the subject is derivable here (`getInfoSubject`).
+    /// view has. A trigger, not a stored request - the subject is derivable here (`getInfoSubject`).
     @State private var getInfoRequested = false
 
     /// Registry for the archive sheet's seat pickers. Queried *here*: `EditGameInfoSheet` is
-    /// container-free so its previews build — a `@Query` inside it would trap the canvas.
+    /// container-free so its previews build - a `@Query` inside it would trap the canvas.
     @Query(sort: \Player.name) private var knownPlayers: [Player]
 
     // MARK: Body
@@ -84,7 +79,7 @@ struct BoardDestination: View {
             DGTConnectionView()
         }
         // The new-game dialog at body level: the sidebar's New Game button reaches Board with a
-        // game loaded too. The *auto* offer stays gated to the live branch inside the binding — a tab
+        // game loaded too. The *auto* offer stays gated to the live branch inside the binding - a tab
         // reviewing a PGN isn't interrupted.
         .sheet(isPresented: isNewGameSheetPresented) {
             NewLiveGameSheet(
@@ -120,7 +115,7 @@ struct BoardDestination: View {
     // MARK: Toolbar
     
     /// One stream, in written order: items merged from separate `.toolbar` modifiers arrive without
-    /// a region boundary — undivided toolbar, inspector column tucked beneath it.
+    /// a region boundary - undivided toolbar, inspector column tucked beneath it.
     @ToolbarContentBuilder
     private var boardToolbarContent: some ToolbarContent {
         ToolbarItem {
@@ -146,7 +141,7 @@ struct BoardDestination: View {
     
     // MARK: Board Surface
 
-    /// Gap between bar and board. The *width* is deliberately not here — `EvaluationBarView.width`,
+    /// Gap between bar and board. The *width* is deliberately not here - `EvaluationBarView.width`,
     /// stated once by the view that draws it (the two disagreed for a month).
     private static let evaluationBarGap: CGFloat = 10
 
@@ -155,7 +150,7 @@ struct BoardDestination: View {
     /// Being wrong here is a cosmetic clip, never a layout break.
     private static let evaluationLabelWidth: CGFloat = 38
 
-    /// The board, shared by game view and live mirror — one place, so the identifier and modifier
+    /// The board, shared by game view and live mirror - one place, so the identifier and modifier
     /// tail can't drift. Nil evaluation (the live branch's only value) renders no bar: the bar is
     /// review furniture, and live engine eval is assumed-never.
     private func boardSurface(
@@ -167,6 +162,7 @@ struct BoardDestination: View {
         ghostPiece: Piece?,
         attentionSquares: Set<Square> = [],
         targetSquares: Set<Square> = [],
+        hintSquares: Set<Square> = [],
         evaluation: EvaluationBarReading? = nil
     ) -> some View {
         let board = BoardView(
@@ -179,13 +175,14 @@ struct BoardDestination: View {
             ghostSquare:      ghostSquare,
             ghostPiece:       ghostPiece,
             attentionSquares: attentionSquares,
-            targetSquares:    targetSquares
+            targetSquares:    targetSquares,
+            hintSquares:      hintSquares
         )
 
         return Group {
             if let evaluation {
                 GeometryReader { geometry in
-                    // Board is square, takes the shorter axis after the bar column is reserved — reserved, not
+                    // Board is square, takes the shorter axis after the bar column is reserved - reserved, not
                     // measured, so the board doesn't resize as the score changes width.
                     let reserved = EvaluationBarView.width
                         + Self.evaluationBarGap
@@ -207,10 +204,10 @@ struct BoardDestination: View {
                                 perspective: tabState.boardPerspective,
                                 style: boardStyle
                             )
-                            // Height only: the bar states its own width — framing it again re-opens the closed twin.
+                            // Height only: the bar states its own width - framing it again re-opens the closed twin.
                             .frame(height: side)
 
-                            // The always-visible label, in the gap, never on the bar — a thin losing share would swallow it.
+                            // The always-visible label, in the gap, never on the bar - a thin losing share would swallow it.
                             Text(evaluation.label)
                                 .font(.caption.monospacedDigit())
                                 .foregroundStyle(.secondary)
@@ -248,7 +245,7 @@ struct BoardDestination: View {
             checkSquare: game.checkSquare,
             ghostSquare: nil,
             ghostPiece:  nil,
-            // The bar exists iff `hasScoredPly` — **was** `!evaluations.isEmpty`, which is true of an
+            // The bar exists iff `hasScoredPly` - **was** `!evaluations.isEmpty`, which is true of an
             // all-nil array: a pass that scored nothing drew a fabricated 50/50 bar.
             evaluation:  pgn.hasScoredPly
                 ? EvaluationBarReading(game.currentEvaluation)
@@ -279,7 +276,7 @@ struct BoardDestination: View {
                 liveInspector
                     .inspectorColumnWidth(min: 350, ideal: 350, max: 400)
             }
-        // M4.3 resume offer — a modal fork, not a banner: resume-or-delete is a genuine either/or.
+        // M4.3 resume offer - a modal fork, not a banner: resume-or-delete is a genuine either/or.
             .alert(
                 "Resume unfinished game?",
                 isPresented: isResumeOfferPresented,
@@ -314,7 +311,7 @@ struct BoardDestination: View {
                             applyEditedInfo(roster, to: pgn)
                             session.updateRoster(roster)
                         },
-                        // Tag form into the field, `name` fallback — `NewLiveGameSheet`'s exact expression
+                        // Tag form into the field, `name` fallback - `NewLiveGameSheet`'s exact expression
                         // (a second spelling of "what a seat menu offers" is the twin-read-site pattern).
                         knownPlayers: knownPlayers.map { $0.tagName ?? $0.name }
                     )
@@ -322,7 +319,7 @@ struct BoardDestination: View {
             }
     }
     
-    /// Setter deliberately ignores dismissal: the offer is answered by its buttons, never by evasion —
+    /// Setter deliberately ignores dismissal: the offer is answered by its buttons, never by evasion -
     /// Resume-or-delete is a fork, not a suggestion.
     private var isResumeOfferPresented: Binding<Bool> {
         Binding(
@@ -339,7 +336,7 @@ struct BoardDestination: View {
         )
     }
     
-    /// Resume alert body — plus a heads-up when the draft is already decided (resume triggers the
+    /// Resume alert body - plus a heads-up when the draft is already decided (resume triggers the
     /// M5 self-heal archive).
     private func resumeOfferMessage(for draft: LiveGameDraft) -> String {
         let plies = draft.sanMoves.count
@@ -358,7 +355,7 @@ struct BoardDestination: View {
         return lines.joined(separator: "\n")
     }
     
-    /// Presents while a *successful* outcome is unacknowledged; a failure never presents this sheet —
+    /// Presents while a *successful* outcome is unacknowledged; a failure never presents this sheet -
     /// it lives on the HUD as Retry-or-discard.
     private var isArchiveConfirmationPresented: Binding<Bool> {
         Binding(
@@ -396,7 +393,7 @@ struct BoardDestination: View {
     }
 
     /// What ⌘I would open, or nil. Review before live, matching `body`'s branch. The live case
-    /// carries nothing — a live game has no identifier until it archives (why the request is an enum).
+    /// carries nothing - a live game has no identifier until it archives (why the request is an enum).
     private var getInfoSubject: GetInfoRequest? {
         if let pgn = tabState.boardPGN { return .game(pgn.persistentModelID) }
         return session.liveGame == nil ? nil : .live
@@ -420,7 +417,7 @@ struct BoardDestination: View {
         )
     }
     
-    /// Live-branch inspector: game details when one exists, otherwise a connection-aware hint —
+    /// Live-branch inspector: game details when one exists, otherwise a connection-aware hint -
     /// the toggle is never a dead switch on the mirror.
     @ViewBuilder
     private var liveInspector: some View {
@@ -462,7 +459,8 @@ struct BoardDestination: View {
     /// verbatim; identity comes from `PieceIdentity`'s mirror arm (proven moves glide,
     /// everything else fades). Only the *overlays* come from the live game.
     private var mirrorBoard: some View {
-        boardSurface(
+        let guidance = recoveryGuidance
+        return boardSurface(
             position:         connection.physicalBoard,
             pieces:           PieceIdentity.resolved(
                 physical: connection.physicalBoard,
@@ -473,12 +471,21 @@ struct BoardDestination: View {
             checkSquare:      session.liveGame?.checkSquare,
             ghostSquare:      session.castlingGhostSquare,
             ghostPiece:       session.castlingGhostPiece,
-            attentionSquares: recoveryGuidance?.attentionSquares ?? [],
-            targetSquares:    recoveryGuidance?.targetSquares ?? []
+            attentionSquares: guidance?.attentionSquares ?? [],
+            targetSquares:    guidance?.targetSquares ?? [],
+            // Hints stand down whenever recovery chrome is up: two overlay vocabularies at once
+            // would decorate one square with contradicting instructions. Live-mirror only - the
+            // review board's pieces don't lift.
+            hintSquares:      guidance == nil
+                ? MoveHints.destinations(
+                    for: session.liveGame?.currentState,
+                    physical: connection.physicalBoard
+                )
+                : []
         )
     }
     
-    /// Recovery overlays, recomputed per observable change so highlights shrink as squares are fixed —
+    /// Recovery overlays, recomputed per observable change so highlights shrink as squares are fixed -
     /// a 64-square diff per render is cheap. The sidebar's checklist computes its own
     /// (`RecoveryGuidance.current`: two computations, one spelling).
     private var recoveryGuidance: RecoveryGuidance? {
@@ -487,7 +494,7 @@ struct BoardDestination: View {
     
     // MARK: Loading
     
-    /// Resolves `loadedGameID` to PGN + Game, cached on `tabState`. No-op when the cache matches —
+    /// Resolves `loadedGameID` to PGN + Game, cached on `tabState`. No-op when the cache matches -
     /// called from both `onAppear` and `onChange`, and a rebuild would lose scrub position.
     private func loadIfNeeded() {
         guard let id = loadedGameID else {
@@ -497,7 +504,7 @@ struct BoardDestination: View {
         }
         
         // Live models only: a game deleted while this tab held it leaves a tombstone. Falling through
-        // re-resolves and lands on the load-error card — the honest surface.
+        // re-resolves and lands on the load-error card - the honest surface.
         if tabState.boardPGN?.persistentModelID == id,
            tabState.boardPGN?.isDeleted == false,
            tabState.boardGame != nil {
@@ -526,7 +533,7 @@ struct BoardDestination: View {
             // being constructible from a preview. Strong capture: the App owns `BoardSounds` for the
             // process, and it holds no reference back.
             newGame.onStep = { boardSounds.play($0) }
-            // The success path *sets* the cache — `clearBoard` is for the four failure exits only.
+            // The success path *sets* the cache - `clearBoard` is for the four failure exits only.
             tabState.boardPGN = loadedPGN
             tabState.boardGame = newGame
             tabState.boardLoadError = nil

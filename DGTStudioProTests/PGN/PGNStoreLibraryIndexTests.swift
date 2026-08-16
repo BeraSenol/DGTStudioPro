@@ -3,8 +3,8 @@ import SwiftData
 @testable import DGTStudioPro
 import Foundation
 
-/// The folder backfill — driven through a real *directory*, matched by content hash.
-@Suite("PGN Store — Library Index Backfill")
+/// The folder backfill - driven through a real *directory*, matched by content hash.
+@Suite("PGN Store - Library Index Backfill")
 @MainActor
 struct PGNStoreLibraryIndexTests {
 
@@ -66,7 +66,7 @@ struct PGNStoreLibraryIndexTests {
         }
     }
 
-    /// **Matching is by hash, not filename** — the file is named with a player not in the game and
+    /// **Matching is by hash, not filename** - the file is named with a player not in the game and
     /// still matches. Not contrived: the folder writes full names, the serializer given names.
     @Test func matchingIgnoresTheNameInTheFilename() throws {
         let context = try Self.makeContext()
@@ -100,7 +100,7 @@ struct PGNStoreLibraryIndexTests {
         }
     }
 
-    /// A file the Library does not hold is a **finding, not an error** — it
+    /// A file the Library does not hold is a **finding, not an error** - it
     /// means a game has not been imported. The scan reports it and carries on.
     @Test func anUnmatchedFileIsReportedRatherThanThrown() throws {
         let context = try Self.makeContext()
@@ -118,7 +118,7 @@ struct PGNStoreLibraryIndexTests {
 
     /// The guard, one layer up: digits with no period are a year in a title,
     /// not an ordinal. Such a file is skipped *before* it is parsed, so this
-    /// also pins the ordering choice — the game is a real Library game, and it
+    /// also pins the ordering choice - the game is a real Library game, and it
     /// still comes back unnumbered.
     @Test func aFilenameWithNoOrdinalIsSkippedNotGuessedAt() throws {
         let context = try Self.makeContext()
@@ -135,7 +135,7 @@ struct PGNStoreLibraryIndexTests {
     }
 
     /// One bad file must not cost the other forty. The unreadable one is
-    /// reported under `skipped` — kept separate from `unmatched` because the
+    /// reported under `skipped` - kept separate from `unmatched` because the
     /// remedies differ: a broken file versus a missing game.
     @Test func oneUnparseableFileDoesNotAbortTheScan() throws {
         let context = try Self.makeContext()
@@ -172,7 +172,7 @@ struct PGNStoreLibraryIndexTests {
     // MARK: The Affordance's Own Question
 
     /// `hasUnnumberedGames` is what decides whether the toolbar button exists,
-    /// so it needs to be producible **both ways** — the check, run at
+    /// so it needs to be producible **both ways** - the check, run at
     /// minting rather than at the next sweep.
     @Test func hasUnnumberedGamesAnswersBothWays() throws {
         let context = try Self.makeContext()

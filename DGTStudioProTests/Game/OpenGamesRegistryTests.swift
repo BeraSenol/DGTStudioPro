@@ -2,7 +2,7 @@ import Testing
 import SwiftData
 @testable import DGTStudioPro
 
-/// `OpenGamesRegistry` — the unsaved-changes set the delete path consults. Real
+/// `OpenGamesRegistry` - the unsaved-changes set the delete path consults. Real
 /// `PersistentIdentifier`s come from a throwaway in-memory container; the registry itself never
 /// touches SwiftData.
 @MainActor
@@ -55,7 +55,7 @@ struct OpenGamesRegistryTests {
         #expect(registry.isDirty(ids[1]) == false)
     }
 
-    /// `markDirty` is idempotent and `markClean` on an untracked id is a no-op —
+    /// `markDirty` is idempotent and `markClean` on an untracked id is a no-op -
     /// the `Set` semantics that keep the delete path from double-counting or
     /// crashing on an already-clean game.
     @Test func markDirtyIsIdempotentAndCleanIsSafeWhenAbsent() throws {

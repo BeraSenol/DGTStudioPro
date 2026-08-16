@@ -3,9 +3,9 @@ import Testing
 @testable import DGTStudioPro
 
 /// The roster's display contract, as revised. Four pins asserted the old
-/// contract until ⌘U caught them — correct pins on a repealed rule, in a file the pass had not
+/// contract until ⌘U caught them - correct pins on a repealed rule, in a file the pass had not
 /// opened; the lesson: grep the suite for the old rule's *words*.
-@Suite("Roster Summary — Seven Tag Display")
+@Suite("Roster Summary - Seven Tag Display")
 struct RosterSummaryTests {
     
     private func summary(
@@ -31,14 +31,14 @@ struct RosterSummaryTests {
     }
     
     /// Players render in display form, matching the headline and the Library
-    /// inspector — the live inspector used to show the raw tag.
+    /// inspector - the live inspector used to show the raw tag.
     @Test func playersRenderInDisplayForm() {
         let roster = summary()
         #expect(roster[.white] == "Magnus Carlsen")
         #expect(roster[.black] == "Ian Nepomniachtchi")
     }
     
-    /// A stored `"?"` folds to the glyph; a real value passes verbatim — a real Site is never folded.
+    /// A stored `"?"` folds to the glyph; a real value passes verbatim - a real Site is never folded.
     @Test func aStoredUnknownFoldsToTheDisplayGlyph() {
         let roster = summary(event: "?", site: "Wijk aan Zee")
         #expect(roster[.event] == RosterSummary.displayUnknown)
@@ -58,14 +58,14 @@ struct RosterSummaryTests {
     }
 
     /// The date placeholder is the one display glyph, not PGN's own
-    /// `????.??.??` — that spelling is the *export* vocabulary and stays on
+    /// `????.??.??` - that spelling is the *export* vocabulary and stays on
     /// `tagValue(for:)`, which the separation pin below guards.
     @Test func anAbsentDateReadsAsTheDisplayGlyph() {
         #expect(summary(date: nil)[.date] == RosterSummary.displayUnknown)
     }
 
     /// A real date formats rather than placeholds. Deliberately not asserted
-    /// against a literal — `.dateTime` is locale-dependent, and pinning a
+    /// against a literal - `.dateTime` is locale-dependent, and pinning a
     /// string here would fail on a machine set to another region.
     @Test func aPresentDateIsFormatted() {
         let formatted = summary(date: Date(timeIntervalSince1970: 1_700_000_000))[.date]
@@ -83,7 +83,7 @@ struct RosterSummaryTests {
     }
 
     /// The recording split: `*` is *true* on the live projection and an import-door unknown on a
-    /// stored game — only the constructor decides.
+    /// stored game - only the constructor decides.
     @Test func onlyTheLiveProjectionShowsTheOngoingToken() {
         let live = RosterSummary(
             LiveGame.Roster(event: "Club Night", site: "Home", white: "A", black: "B"),
@@ -93,7 +93,7 @@ struct RosterSummaryTests {
         #expect(summary(result: .ongoing)[.result] == RosterSummary.displayUnknown)
     }
 
-    /// **Display folds; export does not** — the em dash must never reach `tagValue(for:)`.
+    /// **Display folds; export does not** - the placeholder glyph must never reach `tagValue(for:)`.
     /// This pins the *separation* a future reader tidying two switches would collapse.
     @Test func exportVocabularyIsUntouchedByTheDisplayFold() {
         let roster = summary(event: "?", date: nil, round: nil, result: .ongoing)
@@ -104,7 +104,7 @@ struct RosterSummaryTests {
     }
 
     /// The pin: building a `Roster` in a nonisolated suite compiles only while the projection
-    /// stays off the main actor — a *compile* failure, the correct severity for an isolation fact.
+    /// stays off the main actor - a *compile* failure, the correct severity for an isolation fact.
     @Test func theLiveProjectionIsReachableOffTheMainActor() {
         let roster = LiveGame.Roster(
             event: "Club Night",

@@ -3,12 +3,12 @@ import Foundation
 @testable import DGTStudioPro
 
 /// The two pure halves of Syzygy support: what the app tells the engine, what it reads back.
-@Suite("Syzygy — Options and Report")
+@Suite("Syzygy - Options and Report")
 struct SyzygyConfigurationTests {
 
     // MARK: Option Emission
 
-    /// **The default says nothing about tablebases** — four options for a feature nobody enabled
+    /// **The default says nothing about tablebases** - four options for a feature nobody enabled
     /// would be noise in every UCI log.
     @Test("With no folder, no Syzygy options are sent")
     func silentWithoutAPath() {
@@ -17,7 +17,7 @@ struct SyzygyConfigurationTests {
         #expect(!lines.contains { $0.contains("Syzygy") })
     }
 
-    /// All four, `SyzygyPath` **last** — the tables load when the path arrives, and the answer
+    /// All four, `SyzygyPath` **last** - the tables load when the path arrives, and the answer
     /// should close the block.
     @Test("With a folder, all four go out and the path goes last")
     func emitsAllFourWithPathLast() {
@@ -51,7 +51,7 @@ struct SyzygyConfigurationTests {
     }
 
     /// Clamped against the ranges Stockfish itself advertises, so a hand-edited
-    /// plist cannot push the engine outside them — the contract the depth and
+    /// plist cannot push the engine outside them - the contract the depth and
     /// threads values already have, extended rather than restated.
     @Test("Probe depth and limit clamp to Stockfish's own ranges")
     func clampsProbeValues() {
@@ -85,7 +85,7 @@ struct SyzygyConfigurationTests {
 
     // MARK: Report Parsing
 
-    /// **Both wordings** — Stockfish has changed the sentence once already; matched on
+    /// **Both wordings** - Stockfish has changed the sentence once already; matched on
     /// "Found" + "tablebase", not the full sentence.
     @Test(
         "Both known report wordings are recognised",
@@ -112,7 +112,7 @@ struct SyzygyConfigurationTests {
         )
     }
 
-    /// Every other `info string` this engine emits must not match — these are
+    /// Every other `info string` this engine emits must not match - these are
     /// the exact lines a real start prints, taken from a session log. Without
     /// this, a matcher loose enough to catch both wordings is also loose enough
     /// to report "Using 12 threads" as a tablebase count.
@@ -134,7 +134,7 @@ struct SyzygyConfigurationTests {
 
     /// The near-miss worth pinning: a line that says "Found" about something
     /// that is not a tablebase. No shipped Stockfish prints this, which is why
-    /// it is here — the matcher's second term is doing work that no real log
+    /// it is here - the matcher's second term is doing work that no real log
     /// would demonstrate.
     @Test("\"Found\" alone is not enough")
     func requiresBothTerms() {

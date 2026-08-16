@@ -25,7 +25,7 @@ struct LiveGameTests {
         }
     }
 
-    /// Scholar's mate — the most-reused finished-game line in this suite.
+    /// Scholar's mate - the most-reused finished-game line in this suite.
     private static let scholarsMate = ["e4", "e5", "Bc4", "Nc6", "Qh5", "Nf6", "Qxf7#"]
 
     // MARK: Recording
@@ -141,7 +141,7 @@ struct LiveGameTests {
     }
 
     /// Resignation must work mid-game (not just at move zero) without disturbing
-    /// the moves already recorded — the transcript is what gets archived.
+    /// the moves already recorded - the transcript is what gets archived.
     @Test func resignationMidGamePreservesTranscript() throws {
         let game = newGame()
         try play(game, ["d4", "d5", "c4"])
@@ -183,7 +183,7 @@ struct LiveGameTests {
     /// Pins the shape D7 (LiveGame → PGN) will read: a finished game exposes the
     /// seven-tag roster, a SAN transcript parallel to its plies, and a decisive
     /// `result`. If any of these drift, the persistence step inherits a broken
-    /// contract — so it's asserted here, before D7 exists.
+    /// contract - so it's asserted here, before D7 exists.
     @Test func finishedGameExposesPGNReadyFields() throws {
         let roster = LiveGame.Roster(
             event: "Test Open",

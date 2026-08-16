@@ -4,7 +4,7 @@ import os
 /// Manages a Stockfish subprocess; analysis as `AsyncStream<EngineProgress>` per call. Owns the
 /// UCI handshake, lifecycle, stdout line buffering, and side-to-move → white-relative conversion.
 /// Inbound pipeline (F2): stdout chunks flow through one ordered stream; buffering as `Data` and
-/// splitting on `\n` is load-bearing — a `String` round trip drops chunks that split a codepoint.
+/// splitting on `\n` is load-bearing - a `String` round trip drops chunks that split a codepoint.
 /// F4: no exit path may strand a waiter.
 actor StockfishEngine {
     
@@ -30,7 +30,7 @@ actor StockfishEngine {
     private var stdinHandle: FileHandle?
     private var stdoutHandle: FileHandle?
     
-    /// Raw stdout awaiting a complete line. `Data`, not `String` — the F2 split-codepoint note above.
+    /// Raw stdout awaiting a complete line. `Data`, not `String` - the F2 split-codepoint note above.
     private var stdoutBuffer = Data()
     
     /// Feeds stdout chunks in arrival order (F2); finished on EOF or by `teardown()`.
@@ -42,7 +42,7 @@ actor StockfishEngine {
     private(set) var engineName: String?
     private(set) var engineAuthor: String?
     
-    // Analysis state — one active at a time in the eval-only phase.
+    // Analysis state - one active at a time in the eval-only phase.
     private var currentContinuation: AsyncStream<EngineProgress>.Continuation?
 
     /// Holds the tablebase folder's security-scoped access for the engine's lifetime; cleared at teardown.
@@ -54,7 +54,7 @@ actor StockfishEngine {
     private var currentSideToMove: PieceColor = .white
     private var currentAnalysisID: UUID?
 
-    /// `bestmove` replies still owed by searches abandoned via replacement — the engine answers every
+    /// `bestmove` replies still owed by searches abandoned via replacement - the engine answers every
     /// `go` exactly once, so until the debt drains, incoming lines belong to a dead search.
     /// Termination deliberately does not count here: its `bestmove` targets the current analysis.
     private var staleBestMovesOwed = 0
@@ -83,7 +83,7 @@ actor StockfishEngine {
     // MARK: Lifecycle
     
     /// Spawns the subprocess and runs the UCI handshake: `uci` → `uciok`, options, `isready` →
-    /// `readyok`. Options must be sent inside that window — this loop once sat outside it.
+    /// `readyok`. Options must be sent inside that window - this loop once sat outside it.
     func start(
         handshakeTimeout: Duration = .seconds(5),
         readyTimeout: Duration = .seconds(30)
@@ -98,7 +98,7 @@ actor StockfishEngine {
         let proc = Process()
         proc.executableURL = binaryURL
         // `.utility`: a `Process` inherits the parent's QoS, and with Threads raised the search fought
-        // the main thread at UI priority. Not `.background` — that tier can starve on efficiency cores.
+        // the main thread at UI priority. Not `.background` - that tier can starve on efficiency cores.
         proc.qualityOfService = .utility
         let stdin = Pipe()
         let stdout = Pipe()
@@ -108,7 +108,7 @@ actor StockfishEngine {
         proc.standardError = stderr
         
         // Ordered stdout pipeline (F2). The handler captures no `self`; raw `read(2)` keeps a dead pipe
-        // from raising through `availableData` — 0/-1 becomes the end-of-stream signal.
+        // from raising through `availableData` - 0/-1 becomes the end-of-stream signal.
         let (chunks, stdoutContinuation) = AsyncStream.makeStream(of: Data.self)
         self.stdoutContinuation = stdoutContinuation
         stdout.fileHandleForReading.readabilityHandler = { handle in
@@ -117,9 +117,9 @@ actor StockfishEngine {
             if count > 0 {
                 stdoutContinuation.yield(Data(buffer[0..<count]))
             } else if count < 0 && (errno == EAGAIN || errno == EINTR) {
-                // Spurious wakeup — the next callback retries.
+                // Spurious wakeup - the next callback retries.
             } else {
-                // EOF or fatal read error — end the pipeline; `engineOutputEnded()` reacts.
+                // EOF or fatal read error - end the pipeline; `engineOutputEnded()` reacts.
                 handle.readabilityHandler = nil
                 stdoutContinuation.finish()
             }
@@ -133,7 +133,7 @@ actor StockfishEngine {
             engineOutputEnded()
         }
         
-        // F4: the engine dying — including the clean `quit` — must never strand a waiter.
+        // F4: the engine dying - including the clean `quit` - must never strand a waiter.
         proc.terminationHandler = { [weak self] process in
             let status = process.terminationStatus
             Task { [weak self] in
@@ -164,7 +164,7 @@ actor StockfishEngine {
             }
             
             // The user's engine options, read fresh each launch (the engine relaunches per run). `setoption`
-            // is only valid after `uciok` and before `isready` — the one window.
+            // is only valid after `uciok` and before `isready` - the one window.
             syzygyAccess = SyzygyLocation.access()
             for option in EngineConfiguration.current(
                 syzygyPath: syzygyAccess?.path
@@ -220,7 +220,7 @@ actor StockfishEngine {
         Self.logger?.info("Engine shutdown complete")
     }
     
-    /// Every process exit — clean quit, startup-failure kill, crash. Fail any pending handshake,
+    /// Every process exit - clean quit, startup-failure kill, crash. Fail any pending handshake,
     /// finish any live stream, tear down (F4). Idempotent.
     private func processDidTerminate(status: Int32) {
         guard process != nil else { return }
@@ -236,7 +236,7 @@ actor StockfishEngine {
         teardown()
     }
     
-    /// Stdout finished. Deliberate teardown → no-op; otherwise a crash's first symptom — fail the
+    /// Stdout finished. Deliberate teardown → no-op; otherwise a crash's first symptom - fail the
     /// handshake and finish any live stream now. Process bookkeeping is the termination handler's.
     private func engineOutputEnded() {
         guard process != nil else { return }
@@ -254,7 +254,7 @@ actor StockfishEngine {
     /// Clears all subprocess state. Idempotent by construction, so shutdown, termination handler and
     /// startup-failure paths overlap safely.
     private func teardown() {
-        // A teardown during a suspended handshake must fail it here — after `process` is nil the other
+        // A teardown during a suspended handshake must fail it here - after `process` is nil the other
         // guards no-op, and only the timeout would rescue a stranded `start()`, up to 30 s late.
         // Pinned by `shutdownDuringThePendingHandshakeFailsStartPromptly`.
         failHandshake(
@@ -270,7 +270,7 @@ actor StockfishEngine {
         process = nil
         stdinHandle = nil
         stdoutHandle = nil
-        // Owed stale replies die with the process — a fresh start must not eat its first real `bestmove`.
+        // Owed stale replies die with the process - a fresh start must not eat its first real `bestmove`.
         staleBestMovesOwed = 0
         // Releasing the token closes the tablebase folder's security-scoped access; teardown is the one
         // path every exit runs through.
@@ -281,7 +281,7 @@ actor StockfishEngine {
     // MARK: Handshake (F4)
     
     /// One handshake response with a deadline; whichever of {response, timeout, termination, EOF}
-    /// runs first wins — each nils the continuation as it resumes.
+    /// runs first wins - each nils the continuation as it resumes.
     private func awaitHandshake(
         timeout: Duration,
         awaiting expected: String,
@@ -352,10 +352,10 @@ actor StockfishEngine {
         }
         
         do {
-            // Abort the prior search first — Stockfish is serial, so stop → position → go applies in order.
+            // Abort the prior search first - Stockfish is serial, so stop → position → go applies in order.
             if hadPriorAnalysis {
                 try writeLine("stop")
-                // The abandoned search owes one stale `bestmove`. Counted only after the write succeeds —
+                // The abandoned search owes one stale `bestmove`. Counted only after the write succeeds -
                 // a failed write means the engine is gone, and teardown resets the budget.
                 staleBestMovesOwed += 1
             }
@@ -376,7 +376,7 @@ actor StockfishEngine {
     
     private func handleStreamTermination(forAnalysisID id: UUID) async {
         guard currentAnalysisID == id else {
-            // Stale termination signal from a replaced analysis — ignore.
+            // Stale termination signal from a replaced analysis - ignore.
             return
         }
         try? writeLine("stop")
@@ -385,7 +385,7 @@ actor StockfishEngine {
     // MARK: Stdout Ingestion
     
     /// Appends chunk bytes and flushes complete lines. Chunks align with neither line nor codepoint
-    /// boundaries — hence `Data` buffer, per-line decoding (F2). Runs only on `stdoutTask`, in order.
+    /// boundaries - hence `Data` buffer, per-line decoding (F2). Runs only on `stdoutTask`, in order.
     private func ingestStdoutChunk(_ chunk: Data) {
         stdoutBuffer.append(chunk)
         while let newlineIndex = stdoutBuffer.firstIndex(of: 0x0A) {
@@ -393,7 +393,7 @@ actor StockfishEngine {
             if lineData.last == 0x0D {  // tolerate \r\n
                 lineData = lineData.dropLast()
             }
-            // `String(decoding:)` never fails — invalid sequences become U+FFFD instead of dropping the line.
+            // `String(decoding:)` never fails - invalid sequences become U+FFFD instead of dropping the line.
             let line = String(decoding: lineData, as: UTF8.self)
             stdoutBuffer.removeSubrange(stdoutBuffer.startIndex...newlineIndex)
             handleStdoutLine(line)
@@ -402,7 +402,7 @@ actor StockfishEngine {
     
     /// Dispatches one complete stdout line.
     /// Stockfish's tablebase sentence, or nil. Matched on "Found" + "tablebase", not the full
-    /// sentence — the wording varies across versions.
+    /// sentence - the wording varies across versions.
     nonisolated static func tablebaseReport(in line: String) -> String? {
         let prefix = "info string "
         guard line.hasPrefix(prefix) else { return nil }
@@ -414,7 +414,7 @@ actor StockfishEngine {
     private func handleStdoutLine(_ line: String) {
         Self.uciLogger?.debug("recv: \(line, privacy: .public)")
 
-        // Captured off the raw line, before parsing — `parseInfo` consumes `string` to end-of-line and
+        // Captured off the raw line, before parsing - `parseInfo` consumes `string` to end-of-line and
         // stores nothing (free-form chatter has no grammar to model). One `hasPrefix` is the smaller change.
         if let report = Self.tablebaseReport(in: line) {
             tablebaseReport = report
@@ -423,7 +423,7 @@ actor StockfishEngine {
 
         guard let response = UCIProtocol.parse(line) else {
             // `parse` returns nil for three reasons and only one is news: empty lines are normal, option
-            // advertisements are deliberately ignored (~25 per start — split off the error channel deliberately).
+            // advertisements are deliberately ignored (~25 per start - split off the error channel deliberately).
             if !UCIProtocol.isDeliberatelyIgnored(line),
                !line.trimmingCharacters(in: .whitespaces).isEmpty {
                 Self.uciLogger?.error("Unrecognized engine line: '\(line, privacy: .public)'")
@@ -436,7 +436,7 @@ actor StockfishEngine {
             // Stragglers of an abandoned search: serial engine, so until the owed `bestmove` arrives every
             // info line belongs to the dead search.
             guard staleBestMovesOwed == 0 else { return }
-            // A line with no score is chatter, not progress — yielding it would hand the window a search
+            // A line with no score is chatter, not progress - yielding it would hand the window a search
             // with an empty evaluation slot (`EngineProgress.evaluation` is non-optional; this guard makes that honest).
             guard let score = info.score else { return }
             currentContinuation?.yield(
@@ -449,7 +449,7 @@ actor StockfishEngine {
             )
 
         case .bestMove:
-            // A stale reply must not finish the stream it never belonged to — pre-guard, it ended the *next*
+            // A stale reply must not finish the stream it never belonged to - pre-guard, it ended the *next*
             // analysis's stream, which completed empty (M1 item 8).
             if staleBestMovesOwed > 0 {
                 staleBestMovesOwed -= 1
@@ -478,7 +478,7 @@ actor StockfishEngine {
     
     // MARK: Stdin
     
-    /// One UCI command line to stdin; synchronous — `write(contentsOf:)` doesn't suspend.
+    /// One UCI command line to stdin; synchronous - `write(contentsOf:)` doesn't suspend.
     private func writeLine(_ command: String) throws {
         guard let stdin = stdinHandle else {
             Self.logger?.error(

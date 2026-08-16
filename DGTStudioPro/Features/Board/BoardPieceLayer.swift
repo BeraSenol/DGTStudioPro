@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// One piece, drawn — glyph, aspect fit, 6% breathing room, stated once. Shared by the layer
+/// One piece, drawn - glyph, aspect fit, 6% breathing room, stated once. Shared by the layer
 /// and the mid-castle ghost, which must be pixel-identical to the piece it foreshadows.
 struct PieceGlyph: View {
 
@@ -21,16 +21,16 @@ struct PieceGlyph: View {
     }
 }
 
-/// M6 — every piece in one identity-keyed layer above the squares. Not
+/// M6 - every piece in one identity-keyed layer above the squares. Not
 /// `matchedGeometryEffect`: MGE has no vocabulary for "this change must not animate", which the
-/// board-dump case needs — identity churn expresses it free (a dump re-keys wholesale, so 32
+/// board-dump case needs - identity churn expresses it free (a dump re-keys wholesale, so 32
 /// pieces fade rather than fly). Reduce Motion drops the animation, not the layer.
 struct BoardPieceLayer: View {
 
     // MARK: Static Constants
 
     /// Glide guardrails and default (user preference). 0.22 s is the shipped feel; the range
-    /// deliberately passes the 300 ms quiescence — above it a glide can still be in flight at the
+    /// deliberately passes the 300 ms quiescence - above it a glide can still be in flight at the
     /// settle. Visual only: the animation retargets mid-flight, nothing about commit timing reads it.
     nonisolated static let durationRange: ClosedRange<Double> = 0.1...1.0
     nonisolated static let defaultDuration: Double = 0.22
@@ -39,7 +39,7 @@ struct BoardPieceLayer: View {
         min(max(raw, durationRange.lowerBound), durationRange.upperBound)
     }
 
-    /// The glide at an already-clamped duration — `.snappy` stays the curve.
+    /// The glide at an already-clamped duration - `.snappy` stays the curve.
     static func glide(duration: Double) -> Animation {
         .snappy(duration: duration)
     }
@@ -75,7 +75,7 @@ struct BoardPieceLayer: View {
 
     // MARK: Instance Methods
 
-    /// The inverse of `BoardView.square(visualRow:visualColumn:)` — same mask, involutive XOR, so a
+    /// The inverse of `BoardView.square(visualRow:visualColumn:)` - same mask, involutive XOR, so a
     /// flip moves every cell and the layer follows without a second rule.
     private func center(of square: Square) -> CGPoint {
         let visual = square ^ (perspective == .white ? 56 : 7)
@@ -90,7 +90,7 @@ struct BoardPieceLayer: View {
 
 // MARK: Previews
 
-/// The full asset set at the layer's own rendering — a preview lives with the code it witnesses.
+/// The full asset set at the layer's own rendering - a preview lives with the code it witnesses.
 #Preview("All Pieces") {
     let pieces: [Piece] = [
         .whitePawn, .whiteKnight, .whiteBishop, .whiteRook, .whiteQueen, .whiteKing,
@@ -111,7 +111,7 @@ struct BoardPieceLayer: View {
     .padding()
 }
 
-/// The 6% padding at three sizes — the scaling contract.
+/// The 6% padding at three sizes - the scaling contract.
 #Preview("Size Scaling") {
     HStack(alignment: .bottom, spacing: 8) {
         ForEach([40, 80, 120] as [CGFloat], id: \.self) { size in
@@ -123,7 +123,7 @@ struct BoardPieceLayer: View {
 }
 
 /// M6's gate, watchable: e4, the en-passant capture, the promotion morph, and O-O, stepped by
-/// hand through `LibraryGamePreviewState.compute` — exactly what the review board renders.
+/// hand through `LibraryGamePreviewState.compute` - exactly what the review board renders.
 #Preview("Four Shapes, Interactive") {
     @Previewable @State var plyCount = 0
     let script = [

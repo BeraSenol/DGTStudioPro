@@ -7,7 +7,7 @@ import SwiftData
 /// diacritics preserved, `"?"`/empty resolve to nobody, first-seen casing wins;
 /// re-resolution collects the row it strands.
 @MainActor
-@Suite("PGN Store — Player Resolution")
+@Suite("PGN Store - Player Resolution")
 struct PGNStorePlayerTests {
     
     // MARK: Helpers
@@ -40,7 +40,7 @@ struct PGNStorePlayerTests {
         """
     }
     
-    /// A decided one-ply game — the `PGNStoreArchiveTests` fixture shape.
+    /// A decided one-ply game - the `PGNStoreArchiveTests` fixture shape.
     private static func finishedGame() throws -> LiveGame {
         let game = LiveGame(
             roster: .init(
@@ -92,7 +92,7 @@ struct PGNStorePlayerTests {
         #expect(try Self.playerCount(in: context) == 1)
     }
     
-    /// First-seen casing wins — a later, differently cased sighting reuses
+    /// First-seen casing wins - a later, differently cased sighting reuses
     /// the row without rewriting its display name.
     @Test func firstSeenCasingIsPreserved() throws {
         let context = try Self.makeContext()
@@ -107,8 +107,8 @@ struct PGNStorePlayerTests {
     
     // MARK: Tag Form
 
-    /// The resolver remembers the first-seen tag form — whitespace-folded,
-    /// comma structure and casing verbatim — beside the display form.
+    /// The resolver remembers the first-seen tag form - whitespace-folded,
+    /// comma structure and casing verbatim - beside the display form.
     @Test func resolveStampsFirstSeenTagName() throws {
         let context = try Self.makeContext()
         let store = PGNStore(modelContext: context)
@@ -120,7 +120,7 @@ struct PGNStorePlayerTests {
     }
 
     /// First-seen wins, `name`-casing style: a later sighting in a
-    /// different raw form reuses the row without rewriting its tag form —
+    /// different raw form reuses the row without rewriting its tag form -
     /// even when the later form is the "better" comma form.
     @Test func laterSightingDoesNotRewriteTagName() throws {
         let context = try Self.makeContext()
@@ -151,7 +151,7 @@ struct PGNStorePlayerTests {
         #expect(try store.backfillPlayerTagNames() == 0)
     }
 
-    /// A linkless row stays nil and never re-reports as work. Unaffected by collection deliberately —
+    /// A linkless row stays nil and never re-reports as work. Unaffected by collection deliberately -
     /// this exercises the reader, not the collector.
     @Test func backfillSkipsLinklessPlayers() throws {
         let context = try Self.makeContext()
@@ -214,7 +214,7 @@ struct PGNStorePlayerTests {
     
     @Test func backfillLinksPreexistingRowsIdempotently() throws {
         let context = try Self.makeContext()
-        // Inserted around the store — the pre-M-prs.1 row shape.
+        // Inserted around the store - the pre-M-prs.1 row shape.
         let orphan = PGN(white: "Giri, Anish", black: "Caruana, Fabiano", contentHash: "pre-schema")
         context.insert(orphan)
         try context.save()
@@ -247,7 +247,7 @@ struct PGNStorePlayerTests {
     
     // MARK: Edit Re-Resolution
     
-    /// The relationship sibling of the one-hash rule: the funnel relinks — and collects the player
+    /// The relationship sibling of the one-hash rule: the funnel relinks - and collects the player
     /// it displaced.
     @Test func applyEditRelinksAndCollectsTheDisplacedPlayer() throws {
         let context = try Self.makeContext()
@@ -267,7 +267,7 @@ struct PGNStorePlayerTests {
     // MARK: Relationship Semantics
     
     /// Deleting a game takes stranded players with it (asserted the opposite until the cascade
-    /// repealed both halves). The surviving player's inverse array is deliberately not asserted —
+    /// repealed both halves). The surviving player's inverse array is deliberately not asserted -
     /// propagation timing is SwiftData's business.
     @Test func deletingGameCollectsThePlayersItStrands() throws {
         let context = try Self.makeContext()
@@ -284,7 +284,7 @@ struct PGNStorePlayerTests {
     
     /// The M-prs.6 bridge is read-only by contract: it finds the row the
     /// resolver created, keyed exactly like the resolver keys it, and a
-    /// miss creates nothing — the single door is about creation,
+    /// miss creates nothing - the single door is about creation,
     /// and the lookup must never become a second one by accident.
     @Test func playerLookupByKeyFindsWithoutCreating() throws {
         let context = try Self.makeContext()

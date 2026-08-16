@@ -4,10 +4,10 @@ import Testing
 
 /// Coding tests for the draft schema (M4.1): encode/decode round-trips
 /// preserve every field (including the optionals), and the on-disk
-/// conventions hold — ISO 8601 dates, pretty-printed, key-sorted JSON.
+/// conventions hold - ISO 8601 dates, pretty-printed, key-sorted JSON.
 ///
 /// `LiveGameDraft` is a `Sendable` value type with no `@MainActor`
-/// references (by design — see its type doc), so this suite runs
+/// references (by design - see its type doc), so this suite runs
 /// nonisolated.
 @Suite("LiveGame Draft")
 struct LiveGameDraftTests {
@@ -49,7 +49,7 @@ struct LiveGameDraftTests {
         #expect(decoded == original)
     }
 
-    /// The optionals (date, round, board) must survive as absent — a draft
+    /// The optionals (date, round, board) must survive as absent - a draft
     /// for a casual game with no round shouldn't resurrect with invented
     /// values.
     @Test func roundTripPreservesNilOptionals() throws {
@@ -65,14 +65,14 @@ struct LiveGameDraftTests {
     }
 
     /// The schema stance, pinned: a version-1 file written *before* the
-    /// `board` field existed — no `board` key at all — still decodes, with
+    /// `board` field existed - no `board` key at all - still decodes, with
     /// nil. If adding a field ever breaks this, `currentSchemaVersion` owes
     /// a bump and this test the update.
     @Test func preBoardVersionOneFileDecodesWithNilBoard() throws {
         let pre = sampleDraft(board: nil)
         let data = try LiveGameDraft.encoder().encode(pre)
         // Synthesized Codable omits a nil optional's key entirely, so this
-        // encoding *is* a pre-M2 file — assert that premise, then decode it.
+        // encoding *is* a pre-M2 file - assert that premise, then decode it.
         #expect(!String(decoding: data, as: UTF8.self).contains("\"board\""))
 
         let decoded = try LiveGameDraft.decoder().decode(LiveGameDraft.self, from: data)
@@ -81,7 +81,7 @@ struct LiveGameDraftTests {
         #expect(decoded == pre)
     }
 
-    /// Dates are ISO 8601 in the file — human-readable and timezone-stable,
+    /// Dates are ISO 8601 in the file - human-readable and timezone-stable,
     /// per the sidecar's "inspectable when debugging" charter.
     @Test func encodingUsesISO8601Dates() throws {
         let data = try LiveGameDraft.encoder().encode(sampleDraft())
@@ -91,7 +91,7 @@ struct LiveGameDraftTests {
     }
 
     /// Pretty-printed, key-sorted output keeps the file diffable across
-    /// saves — the same draft always serializes to the same bytes.
+    /// saves - the same draft always serializes to the same bytes.
     @Test func encodingIsPrettyAndKeySorted() throws {
         let data = try LiveGameDraft.encoder().encode(sampleDraft())
         let json = String(decoding: data, as: UTF8.self)

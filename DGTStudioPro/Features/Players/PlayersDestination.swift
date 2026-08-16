@@ -1,37 +1,37 @@
-// `AppKit` for `selectAll(_:)` — an AppKit protocol member under `MemberImportVisibility` (see Library twin).
+// `AppKit` for `selectAll(_:)` - an AppKit protocol member under `MemberImportVisibility` (see Library twin).
 import AppKit
 import os
 import SwiftData
 import SwiftUI
 
-/// One ladder row: rank under `PlayerStats.rankingOrder` (D11′) with the Glicko rating riding
-/// along. Every mode view's row currency in both orderings — rank is a fact about the player,
-/// not a position in the current sort (D48′).
-internal struct RankedPlayer: Identifiable, Hashable {
-    internal let rank: Int
-    internal let stats: PlayerStats
-    internal let rating: Glicko1.Rating?
+/// One ladder row: rank under `PlayerStats.rankingOrder` with the Glicko rating riding
+/// along. Every mode view's row currency in both orderings - rank is a fact about the player,
+/// not a position in the current sort.
+struct RankedPlayer: Identifiable, Hashable {
+    let rank: Int
+    let stats: PlayerStats
+    let rating: Glicko1.Rating?
 
-    internal var id: PlayerStats.ID { stats.id }
+    var id: PlayerStats.ID { stats.id }
 }
 
-/// The Players destination (absorbed Rankings, D48′): the four `CollectionViewMode`s over the
-/// ranked ladder — one destination that knows everything about a player.
-internal struct PlayersDestination: View {
+/// The Players destination (absorbed Rankings): the four `CollectionViewMode`s over the
+/// ranked ladder - one destination that knows everything about a player.
+struct PlayersDestination: View {
 
     // MARK: Static Constants
     private static let logger = AppLog.logger(.players)
 
     // MARK: Tab State (lives on enclosing `ContentView`)
-    @Bindable internal var tabState: TabState
+    @Bindable var tabState: TabState
 
     /// M-prs.6 hop: hands the resolved player id up to `ContentView`, which owns the sidebar selection.
-    internal let onShowInLibrary: (PersistentIdentifier) -> Void
+    let onShowInLibrary: (PersistentIdentifier) -> Void
 
     // MARK: Private Properties
     // Shared with the Library (StorageKeys.collectionViewMode); `.list` default is the documented twin.
     @AppStorage(StorageKeys.collectionViewMode) private var viewMode: CollectionViewMode = .list
-    /// List-mode column sort. Ascending rank is the default and **is** the D11′ ladder — ordering by
+    /// List-mode column sort. Ascending rank is the default and **is** the ladder - ordering by
     /// the badge reproduces the comparator without restating it. Display only; resets per launch.
     private var sortOrder: Binding<[KeyPathComparator<RankedPlayer>]> {
         Binding(
@@ -43,27 +43,27 @@ internal struct PlayersDestination: View {
         )
     }
 
-    /// How the ladder is scored (D62′) — what rank 1 means, not row order. Persisted, unlike the column sort.
+    /// How the ladder is scored - what rank 1 means, not row order. Persisted, unlike the column sort.
     @AppStorage(StorageKeys.playersRanking) private var ranking: PlayerRanking = .wins
 
     /// The ladder, stated once (`LibraryDestination.defaultSortOrder`'s twin). Ascending: rank 1 is the top.
-    internal nonisolated static var defaultSortOrder: [KeyPathComparator<RankedPlayer>] {
+    nonisolated static var defaultSortOrder: [KeyPathComparator<RankedPlayer>] {
         [KeyPathComparator(\RankedPlayer.rank)]
     }
     @Environment(\.modelContext) private var modelContext
 
-    /// The View Options panel's subject (7 Aug 2026) — see `sortOrder`.
+    /// The View Options panel's subject (7 Aug 2026) - see `sortOrder`.
     @Environment(CollectionViewOptions.self) private var options
 
-    /// Resolves the key window's value: nil whenever another window is front — the signal the mirror needs.
+    /// Resolves the key window's value: nil whenever another window is front - the signal the mirror needs.
     @FocusedValue(\.collectionViewOptionsSubject) private var focusedSubject
     @Query(sort: \PGN.importedAt, order: .reverse) private var games: [PGN]
 
     /// A set (the Library's selection model): rubber-band and ⌘-click work, and every single-player
-    /// consumer reads through the count-of-one guard — never "the first of the set".
+    /// consumer reads through the count-of-one guard - never "the first of the set".
     @State private var selectedKeys: Set<PlayerStats.ID> = []
 
-    /// The three folds this destination cannot render without — computed from the same `records` in
+    /// The three folds this destination cannot render without - computed from the same `records` in
     /// one pass, so one cache, not three.
     private struct Fold {
         let records: [GameRecord]
@@ -72,12 +72,12 @@ internal struct PlayersDestination: View {
     }
 
     /// Memoized on content only (see `CollectionFoldKey`): nothing folded here reads `evaluations`.
-    /// The ranking method is deliberately NOT in the key — re-ranking is cheap; re-folding is not.
+    /// The ranking method is deliberately NOT in the key - re-ranking is cheap; re-folding is not.
     @State private var foldCache = CollectionFoldCache<CollectionFoldKey, Fold>()
 
-    /// The display inputs as one value (D78′) — the Library's `NarrowKey`, this destination's
+    /// The display inputs as one value - the Library's `NarrowKey`, this destination's
     /// vocabulary. A missed input here is stale rows on screen; the suite pins the field list.
-    internal struct DisplayKey: Equatable {
+    struct DisplayKey: Equatable {
         let content: CollectionFoldKey
         let method: PlayerRanking
         let sort: [KeyPathComparator<RankedPlayer>]
@@ -85,9 +85,9 @@ internal struct PlayersDestination: View {
         let tokens: [PlayersSearchToken]
     }
 
-    /// The ladder, its sorted projection, and the searched list — cached as one unit so the
+    /// The ladder, its sorted projection, and the searched list - cached as one unit so the
     /// per-render `sorted(using:)` runs only when an input moves.
-    internal struct Display {
+    struct Display {
         let ranked: [RankedPlayer]
         let displayed: [RankedPlayer]
         let searched: [RankedPlayer]
@@ -97,17 +97,17 @@ internal struct PlayersDestination: View {
 
     // MARK: Search (2 Aug 2026)
     @State private var searchText = ""
-    /// Rated-ness as chips. Was `.searchScopes`, which only existed while the field was focused —
+    /// Rated-ness as chips. Was `.searchScopes`, which only existed while the field was focused -
     /// a filter could keep narrowing invisibly. A chip stays visible with its own remove control.
     @State private var searchTokens: [PlayersSearchToken] = []
 
-    // MARK: Player Editing (rename → Get Info at M10; merge removed D52′; sweep removed D60′)
+    // MARK: Player Editing (rename lives in Get Info)
 
     // MARK: Initializers
 
     /// Explicit: the memberwise init's shape shifts with wrapped/private property details, and the
     /// call-site contract shouldn't.
-    internal init(
+    init(
         tabState: TabState,
         onShowInLibrary: @escaping (PersistentIdentifier) -> Void = { _ in }
     ) {
@@ -119,7 +119,7 @@ internal struct PlayersDestination: View {
     // `records` / `index` / `histories` fold once in `body` and thread down (`index` used to be
     // re-derived three times a render). `selectedGames` stays computed: it reads one player's games.
 
-    /// The selected player's games, newest first. Matching goes through the resolved link — never raw
+    /// The selected player's games, newest first. Matching goes through the resolved link - never raw
     /// tags. Single-selection only.
     private var selectedGames: [PGN] {
         guard selectedKeys.count == 1, let selectedKey = selectedKeys.first else { return [] }
@@ -131,7 +131,7 @@ internal struct PlayersDestination: View {
             .sorted { $0.effectiveDate > $1.effectiveDate }
     }
 
-    // MARK: Derived Data (D48′)
+    // MARK: Derived Data
 
     /// The ranked ladder from an already-computed index and history map. Pure and `static` so it
     /// can't reach for instance state and silently re-derive.
@@ -149,7 +149,7 @@ internal struct PlayersDestination: View {
     }
 
     // MARK: Body
-    internal var body: some View {
+    var body: some View {
         // Fold once per *change*, then thread down (was three unconditional folds per render).
         let contentKey = CollectionFoldKey(games: games)
         let fold = foldCache.value(for: contentKey) {
@@ -162,9 +162,9 @@ internal struct PlayersDestination: View {
         }
         let records = fold.records
         let histories = fold.histories
-        // Rank, sort and search re-run only when a `DisplayKey` input moves (D78′). Rank is still
-        // computed under the ranking method regardless of display order — the sort decides
-        // sequence, never the number on the badge. Search narrows the *list only* — `selected` /
+        // Rank, sort and search re-run only when a `DisplayKey` input moves. Rank is still
+        // computed under the ranking method regardless of display order - the sort decides
+        // sequence, never the number on the badge. Search narrows the *list only* - `selected` /
         // `history` read the full ladder, so a player filtered out keeps their inspector profile.
         let display = displayCache.value(
             for: DisplayKey(
@@ -194,8 +194,8 @@ internal struct PlayersDestination: View {
         let selected = soleKey.flatMap { key in ranked.first { $0.id == key } }
         let history = soleKey.flatMap { histories[$0] } ?? []
 
-        // The store owns the rule, the query owns the rows (D40′).
-        // Exactly two selected is the head-to-head question. Ordered off the *displayed* ladder —
+        // The store owns the rule, the query owns the rows.
+        // Exactly two selected is the head-to-head question. Ordered off the *displayed* ladder -
         // `selectedKeys` is a `Set` with no order, and the sentence must match the rows on screen.
         let pair = selectedKeys.count == 2
         ? displayed.filter { selectedKeys.contains($0.id) }
@@ -210,7 +210,7 @@ internal struct PlayersDestination: View {
                     (record.wins, record.draws, record.losses))
         }()
 
-        return coreContent(players: searched, history: history)
+        return coreContent(players: searched, history: history, records: records)
             .navigationTitle("Players")
             .navigationSubtitle(
                 DestinationSubtitle.players(
@@ -228,7 +228,7 @@ internal struct PlayersDestination: View {
                 .inspectorColumnWidth(min: 365, ideal: 365, max: 400)
             }
             .toolbar { toolbarContent }
-            // Scope bar gone — same choices as chips; suggestions drop what is already applied.
+            // Scope bar gone - same choices as chips; suggestions drop what is already applied.
             .searchable(
                 text: $searchText,
                 tokens: $searchTokens,
@@ -240,19 +240,19 @@ internal struct PlayersDestination: View {
             ) { token in
                 Label(token.displayName, systemImage: token.symbol)
             }
-            // The Library's twin — see there for why the subject carries the mode too.
+            // The Library's twin - see there for why the subject carries the mode too.
             .focusedSceneValue(
                 \.collectionViewOptionsSubject,
                 CollectionViewOptionsSubject(collection: .players, mode: viewMode)
             )
-            // Mirrors the focused subject into the global options object — this view is on screen while its
+            // Mirrors the focused subject into the global options object - this view is on screen while its
             // window is key; the panel never is. Only non-nil writes land.
             .onChange(of: focusedSubject, initial: true) { _, newValue in
                 guard let newValue else { return }
                 options.activeSubject = newValue
             }
             .onAppear {
-                // Players must work even if Library was never visited this launch — store-owned, second call site.
+                // Players must work even if Library was never visited this launch - store-owned, second call site.
                 backfillPlayerLinks()
                 applyInspectorPolicy(for: viewMode)
             }
@@ -263,7 +263,7 @@ internal struct PlayersDestination: View {
 
     // MARK: Instance Methods
 
-    /// The Library's `applyInspectorPolicy` twin — deliberately a twin, not shared: it reads this
+    /// The Library's `applyInspectorPolicy` twin - deliberately a twin, not shared: it reads this
     /// destination's binding, and sharing would mean a parameter whose only job is to say who's calling.
     private func applyInspectorPolicy(for mode: CollectionViewMode) {
         if mode.ownsDetailPane {
@@ -274,7 +274,7 @@ internal struct PlayersDestination: View {
     }
 
     /// Resolves the stats key to its `Player` row and hops the sidebar into the player filter.
-    /// Store-owned lookup, never creates (D9′); a miss is a logged no-op.
+    /// Store-owned lookup, never creates; a miss is a logged no-op.
     private func showInLibrary(key: PlayerStats.ID) {
         do {
             guard let player = try PGNStore(modelContext: modelContext)
@@ -288,16 +288,21 @@ internal struct PlayersDestination: View {
         }
     }
 
-    /// ⌘A over all four modes — `LibraryDestination.selectAll(_:)` carries the full argument.
+    /// ⌘A over all four modes - `LibraryDestination.selectAll(_:)` carries the full argument.
     /// Selects the rows on screen; a profile scrolled out by a query deliberately survives.
     private func selectAll(_ players: [RankedPlayer]) {
         selectedKeys = Set(players.map(\.id))
     }
 
     /// The sole selection's rating history, threaded for the gallery's trend chart; the other three
-    /// modes have the inspector for this.
+    /// modes have the inspector for this. `records` rides along for the gallery's opponents and form
+    /// panels - both are per-selection folds, so the array travels rather than an answer.
     @ViewBuilder
-    private func coreContent(players: [RankedPlayer], history: [Glicko1.Sample]) -> some View {
+    private func coreContent(
+        players: [RankedPlayer],
+        history: [Glicko1.Sample],
+        records: [GameRecord]
+    ) -> some View {
         // Nil when there is nobody to select, so the system menu item disables itself.
         let selectAllAction: (() -> Void)? = players.isEmpty
         ? nil
@@ -334,6 +339,7 @@ internal struct PlayersDestination: View {
                 case .gallery:
                     PlayersGalleryView(players: players, selectedKeys: $selectedKeys,
                                        history: history,
+                                       records: records,
                                        onShowInLibrary: showInLibrary)
                 }
             }
@@ -362,7 +368,7 @@ internal struct PlayersDestination: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarSpacer(.fixed)
         ToolbarItem {
-            // D62′ — what rank 1 means. **Not a sort control**: this changes the badge; the column sort
+            // What rank 1 means. **Not a sort control**: this changes the badge; the column sort
             // changes the row sequence. Both can be active.
             Picker("Ranking", selection: $ranking) {
                 ForEach(PlayerRanking.allCases) { method in
@@ -374,7 +380,7 @@ internal struct PlayersDestination: View {
             .help("Ranked by \(ranking.shortName). Changes what rank 1 means, not the row order")
             .accessibilityIdentifier(AccessibilityID.playersRankingPicker)
         }
-        // D48′'s sort picker is gone — the column headers sort now; the toolbar keeps only what the
+        // The sort picker is gone - the column headers sort now; the toolbar keeps only what the
         // columns cannot reach.
         ToolbarSpacer(.fixed)
         ToolbarItem {
@@ -397,7 +403,7 @@ internal struct PlayersDestination: View {
         )
     }
 
-    /// The Library's twin, behind the same converged stamp (D75′).
+    /// The Library's twin, behind the same converged stamp.
     private func backfillPlayerLinks() {
         do {
             try PGNStore(modelContext: modelContext).healPlayersIfNeeded()

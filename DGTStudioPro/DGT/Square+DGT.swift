@@ -1,5 +1,5 @@
 // DGT numbers fields a8 = 0 … h1 = 63 (protocol doc); the map is `(7 − rank)*8 + file` in both
-// directions — its own inverse.
+// directions - its own inverse.
 extension Square {
     
     /// Converts a DGT field index (a8 = 0 … h1 = 63) to an app `Square`
@@ -10,7 +10,7 @@ extension Square {
         self = (7 - field / 8) * 8 + (field % 8)
     }
     
-    /// The DGT field index — `init(dgtField:)`'s inverse. No production caller (commands are fixed
+    /// The DGT field index - `init(dgtField:)`'s inverse. No production caller (commands are fixed
     /// bytes); test-only by decision.
     var dgtField: Int {
         assert(isOnBoard, "dgtField called on off-board square \(self)")

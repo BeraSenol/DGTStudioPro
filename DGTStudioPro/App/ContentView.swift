@@ -3,7 +3,7 @@ import SwiftData
 import SwiftUI
 
 /// Root of every tab: per-tab sidebar selection, per-tab `TabState`, bound to the window's
-/// `PersistentIdentifier?`. `SidebarSelection` carries identifiers, never models — selections
+/// `PersistentIdentifier?`. `SidebarSelection` carries identifiers, never models - selections
 /// must stay `Hashable` and survive deletion. `.player` is programmatic-only (no sidebar row).
 struct ContentView: View {
 
@@ -23,8 +23,16 @@ struct ContentView: View {
     // MARK: Tags (M-prs.5)
     
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \SmartTag.createdAt) private var tags: [SmartTag]
-    @State private var editorDraft: TagDraft?
+    @Environment(\.openWindow) private var openWindow
+    /// `sortIndex` first (drag-to-reorder, 16 Aug 2026), `createdAt` breaking the all-zero tie
+    /// exactly into the pre-reorder order - so the migration is invisible until the first drag.
+    @Query(sort: [
+        SortDescriptor(\SmartTag.sortIndex),
+        SortDescriptor(\SmartTag.createdAt),
+    ]) private var tags: [SmartTag]
+    /// The menu-bar door's trigger (the `boardGetInfoRequest` shape) - the editor is a window
+    /// since 16 Aug 2026, so the focused value carries a request, no longer a draft.
+    @State private var newTagRequested = false
     @State private var pendingTagDeletion: SmartTag?
     
     // MARK: Players (M-prs.6)
@@ -69,7 +77,7 @@ struct ContentView: View {
                         .accessibilityIdentifier(AccessibilityID.sidebarTag(tag.name))
                         .contextMenu {
                             Button {
-                                editorDraft = TagDraft(editing: tag)
+                                openWindow(value: SmartTagEditorRequest.edit(tag.id))
                             } label: {
                                 Label("Edit Tag", systemImage: "pencil")
                             }
@@ -80,12 +88,13 @@ struct ContentView: View {
                             }
                         }
                     }
+                    .onMove(perform: moveTags)
                 } header: {
                     HStack {
                         Text("Tags")
                         Spacer()
                         Button {
-                            editorDraft = TagDraft()
+                            openWindow(value: SmartTagEditorRequest.new)
                         } label: {
                             Image(systemName: "plus")
                                 .padding(.trailing, 8)
@@ -93,13 +102,13 @@ struct ContentView: View {
                         .buttonStyle(.borderless)
                         .help("New Smart Tag")
                         // Pointer-only affordance: macOS exposes no AXButton for a borderless button in a List section
-                        // header — proven 29 July; the menu-bar door is the AX-reachable one.
+                        // header - proven 29 July; the menu-bar door is the AX-reachable one.
                         .accessibilityIdentifier(AccessibilityID.sidebarTagsAdd)
                     }
                 }
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                // The sidebar owns session info. New Game navigates to Board first — the sheet's
+                // The sidebar owns session info. New Game navigates to Board first - the sheet's
                 // presenter stays `BoardDestination`.
                 SessionSidebarPanel(
                     tabState: tabState,
@@ -140,12 +149,13 @@ struct ContentView: View {
                 )
             }
         }
-        // The menu-bar door: File ▸ New Smart Tag… drives this binding (the `activeGame` pattern).
-        .focusedSceneValue(\.tagEditorDraft, $editorDraft)
-        .sheet(item: $editorDraft) { draft in
-            SmartTagEditorView(draft: draft) { finished in
-                commit(finished)
-            }
+        // The menu-bar door: File ▸ New Smart Tag… sets the trigger; this view opens the window
+        // (a `Commands` scene has no `openWindow` - the Get Info trigger's arrangement, fourth use).
+        .focusedSceneValue(\.newSmartTagRequested, $newTagRequested)
+        .onChange(of: newTagRequested) { _, requested in
+            guard requested else { return }
+            newTagRequested = false
+            openWindow(value: SmartTagEditorRequest.new)
         }
         .alert(
             "Delete Tag?",
@@ -162,26 +172,20 @@ struct ContentView: View {
     }
     
     // MARK: Tag CRUD (M-prs.5)
-    
-    /// Insert-or-update from the editor's draft, one save either way — the live model mutates only
-    /// here, after OK.
-    private func commit(_ draft: TagDraft) {
-        if let tag = draft.editing {
-            tag.name = draft.name
-            tag.colorName = draft.colorName
-            tag.matchAll = draft.matchAll
-            tag.rules = draft.rules
-        } else {
-            modelContext.insert(
-                SmartTag(
-                    name: draft.name,
-                    colorName: draft.colorName,
-                    matchAll: draft.matchAll,
-                    rules: draft.rules
-                )
-            )
+
+    // `commit` moved whole into `SmartTagEditorWindow` with the editor (16 Aug 2026): a window
+    // owns its own save, where a sheet handed the draft back. Delete stays - the alert is this
+    // view's, and the selection fallback below needs `selection`.
+
+    /// Reorder from the sidebar drag (16 Aug 2026): rewrite the whole run 0..n - a handful of
+    /// rows, and partial renumbering is how two tags end up sharing an index.
+    private func moveTags(from source: IndexSet, to destination: Int) {
+        var reordered = tags
+        reordered.move(fromOffsets: source, toOffset: destination)
+        for (index, tag) in reordered.enumerated() where tag.sortIndex != index {
+            tag.sortIndex = index
         }
-        saveTags(after: "commit")
+        saveTags(after: "reorder")
     }
 
     private func delete(_ tag: SmartTag) {
@@ -194,7 +198,7 @@ struct ContentView: View {
     }
 
     /// Tag edits are the one Library write outside `PGNStore`, so they owe the same
-    /// must-reach-somewhere trace — the bare `try?` this replaces could lose a delete silently.
+    /// must-reach-somewhere trace - the bare `try?` this replaces could lose a delete silently.
     private func saveTags(after operation: String) {
         do {
             try modelContext.save()
@@ -219,7 +223,7 @@ enum Destination: String, CaseIterable, Identifiable, Hashable {
     case board
     case library
     case players
-    // `rankings` retired — the selection stores the enum, so the deletion is total at
+    // `rankings` retired - the selection stores the enum, so the deletion is total at
     // compile time.
 
     var id: String { rawValue }
@@ -241,7 +245,7 @@ enum Destination: String, CaseIterable, Identifiable, Hashable {
 
 #Preview {
     ContentView(loadedGameID: .constant(nil))
-        // All three models explicitly — `SmartTag` has no relationships, so inference from `PGN` never
+        // All three models explicitly - `SmartTag` has no relationships, so inference from `PGN` never
         // pulls it in and the canvas would trap on the query.
         .modelContainer(for: [PGN.self, Player.self, SmartTag.self], inMemory: true)
         .environment(OpenGamesRegistry())

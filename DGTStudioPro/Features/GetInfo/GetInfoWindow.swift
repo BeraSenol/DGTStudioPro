@@ -4,15 +4,15 @@ import SwiftUI
 
 // MARK: - Window
 
-/// M10 — Get Info over three subjects, and the app's one rename door.
+/// M10 - Get Info over three subjects, and the app's one rename door.
 /// A window, not a popover or sheet by design: it must survive a click elsewhere.
-/// It edits exactly one thing across the player form — the tag; the game form edits per field;
+/// It edits exactly one thing across the player form - the tag; the game form edits per field;
 /// the live form is read-only. Body re-runs on request/subject change, not on text-field churn.
 struct GetInfoWindow: View {
 
     // MARK: Static Constants
 
-    /// Borrowed from `DGTConnectionView.Metrics` by name and reason, not imported — two dialogs' two
+    /// Borrowed from `DGTConnectionView.Metrics` by name and reason, not imported - two dialogs' two
     /// decisions that agree today.
     private static let contentPadding: CGFloat = 20
 
@@ -21,7 +21,7 @@ struct GetInfoWindow: View {
 
     // MARK: Stored Properties
 
-    /// Optional because `WindowGroup(for:)` binds an optional — a restored window with a gone subject
+    /// Optional because `WindowGroup(for:)` binds an optional - a restored window with a gone subject
     /// arrives nil, and the unavailable state is the honest answer.
     let request: GetInfoRequest?
 
@@ -35,7 +35,7 @@ struct GetInfoWindow: View {
 
     @State private var subject: Subject?
 
-    /// The tag being edited; committed on Return. A draft, not a binding onto `Player.tagName` —
+    /// The tag being edited; committed on Return. A draft, not a binding onto `Player.tagName` -
     /// a rename rewrites every linked game with an MD5 each, and a binding would run that per keystroke.
     @State private var draftTag = ""
 
@@ -44,7 +44,7 @@ struct GetInfoWindow: View {
 
     // MARK: Game Details Drafts
 
-    /// The six text-shaped roster tags as drafts, committed one at a time — `commitField(_:on:)` writes
+    /// The six text-shaped roster tags as drafts, committed one at a time - `commitField(_:on:)` writes
     /// exactly the property its case names, so a stray edit cannot ride another row's Return.
     @State private var draftEvent = ""
     @State private var draftSite = ""
@@ -59,7 +59,7 @@ struct GetInfoWindow: View {
     @State private var draftTimeControl = ""
 
     /// Which row holds the keyboard, so a commit fires on focus loss as well as Return.
-    /// **Focus loss commits here and deliberately not on the player tab** — blast radius: one row vs. every linked game.
+    /// **Focus loss commits here and deliberately not on the player tab** - blast radius: one row vs. every linked game.
     @FocusState private var focusedField: GameField?
 
     /// A refused field edit, held for its alert: a result the final position disproves, or a
@@ -78,7 +78,7 @@ struct GetInfoWindow: View {
         .frame(minWidth: 420, minHeight: 320)
         .navigationTitle(title)
         .task(id: request) { resolve() }
-        // Re-resolves when the live game ends — `.task(id: request)` cannot: a `.live` request never
+        // Re-resolves when the live game ends - `.task(id: request)` cannot: a `.live` request never
         // changes, and without this the window renders a retained `LiveGame` as "Recording" forever.
         .onChange(of: session.liveGame == nil) { _, _ in
             if case .live = request { resolve() }
@@ -112,7 +112,7 @@ extension GetInfoWindow {
         case board, timeControl
     }
 
-    /// A refused per-field edit, as the rendered sentence — cause-to-prose belongs beside the exhaustive switch.
+    /// A refused per-field edit, as the rendered sentence - cause-to-prose belongs beside the exhaustive switch.
     fileprivate struct FieldRefusal: Identifiable {
         let title: String
         let message: String
@@ -132,7 +132,7 @@ extension GetInfoWindow {
         case player(Player)
     }
 
-    /// A refused retag: the store's `Sendable` payload — identifiers and names, never models.
+    /// A refused retag: the store's `Sendable` payload - identifiers and names, never models.
     fileprivate struct Refusal: Identifiable {
         let collisions: [PGNStore.HashCollision]
         var id: PersistentIdentifier { collisions[0].gameID }
@@ -169,7 +169,7 @@ extension GetInfoWindow {
                 return
             }
             // Stored **tag** form (`tagName ?? name`). Seeding from `name` would put a display form in a
-            // field that stores a tag — the first commit writes it into every game's `[White]` (the trap).
+            // field that stores a tag - the first commit writes it into every game's `[White]` (the trap).
             draftTag = player.tagName ?? player.name
             subject = .player(player)
 
@@ -178,7 +178,7 @@ extension GetInfoWindow {
         }
     }
 
-    /// Seeds drafts from stored state, beside the fetch. **Tag form in, verbatim**, `?` included —
+    /// Seeds drafts from stored state, beside the fetch. **Tag form in, verbatim**, `?` included -
     /// these fields edit what export writes byte for byte. Round is a String draft: the empty
     /// field must be expressible.
     private func seedGameDrafts(from pgn: PGN) {
@@ -188,7 +188,7 @@ extension GetInfoWindow {
         draftWhite = pgn.white
         draftBlack = pgn.black
         draftDate = pgn.date
-        // Empty string for nil, not the export's `?` / `-` — a field pre-filled with `-` invites editing
+        // Empty string for nil, not the export's `?` / `-` - a field pre-filled with `-` invites editing
         // around a placeholder. The commit maps empty back to nil.
         draftBoard = pgn.board ?? ""
         draftTimeControl = pgn.timeControl ?? ""
@@ -219,9 +219,9 @@ extension GetInfoWindow {
 
     /// An archived game. Three tabs since **the split is by authorship, not topic**:
     /// Details = the nine exported tags the reader can rewrite, File = what the app derived (read-only),
-    /// Move Text = the editor — named "Move Text", not "PGN", because it shows half the file.
+    /// Move Text = the editor - named "Move Text", not "PGN", because it shows half the file.
     /// Move Text exists on the game form only: a live game has no stored movetext.
-    /// `.tabItem`, not the 2027 `Tab(role:)` spelling — beta.
+    /// `.tabItem`, not the 2027 `Tab(role:)` spelling - beta.
     private func gameForm(_ pgn: PGN) -> some View {
         TabView {
             detailsTab(pgn)
@@ -238,7 +238,7 @@ extension GetInfoWindow {
     }
 
     /// The editor, hosted. Commit model differs from Details on purpose: per-field vs.
-    /// accept-whole-or-reject-whole. `.id(pgn.persistentModelID)` is load-bearing — the editor seeds in `init`.
+    /// accept-whole-or-reject-whole. `.id(pgn.persistentModelID)` is load-bearing - the editor seeds in `init`.
     private func moveTextTab(_ pgn: PGN) -> some View {
         MovetextEditorView(pgn: pgn) { proposed in
             applyMovetext(proposed, to: pgn)
@@ -249,7 +249,7 @@ extension GetInfoWindow {
 
     /// The nine exported tags, editable. Native controls make invalid states unreachable
     /// rather than validated (a `Picker` cannot produce a foreign result, a `DatePicker` 2026-02-31);
-    /// the one rule no widget knows — result vs. final position — is checked.
+    /// the one rule no widget knows - result vs. final position - is checked.
     private func detailsTab(_ pgn: PGN) -> some View {
         Form {
             Section("Seven Tag Roster") {
@@ -289,7 +289,7 @@ extension GetInfoWindow {
                     .onSubmit { commitField(.timeControl, on: pgn) }
                     .accessibilityIdentifier(AccessibilityID.getInfoGameField("timecontrol"))
             }
-            // Commits the row the keyboard just left — `focusedField` is already nil or the next case, so
+            // Commits the row the keyboard just left - `focusedField` is already nil or the next case, so
             // `previous` names the field whose draft is the one to write.
             .onChange(of: focusedField) { previous, _ in
                 if let previous { commitField(previous, on: pgn) }
@@ -299,7 +299,7 @@ extension GetInfoWindow {
         .accessibilityIdentifier(AccessibilityID.getInfoGameDetails)
     }
 
-    /// Date row with its own "no date" arm: a bare `DatePicker` cannot express nil, and nil is real —
+    /// Date row with its own "no date" arm: a bare `DatePicker` cannot express nil, and nil is real -
     /// the exporter writes `????.??.??` for it.
     @ViewBuilder
     private func dateRow(_ pgn: PGN) -> some View {
@@ -362,7 +362,7 @@ extension GetInfoWindow {
         .accessibilityIdentifier(AccessibilityID.getInfoGameField(label.lowercased()))
     }
 
-    /// Known-player menu trailing a seat field — `LiveGameRosterForm.playerMenu`'s shape,
+    /// Known-player menu trailing a seat field - `LiveGameRosterForm.playerMenu`'s shape,
     /// deliberately not shared: that menu only fills (a sheet has Save); this one must commit on pick
     /// or the choice sits uncommitted with no Save to land it. Picking creates no `Player`.
     @ViewBuilder
@@ -394,7 +394,7 @@ extension GetInfoWindow {
     }
 
     /// Result picker, checked against the final position on change. `*` deliberately not
-    /// offered: an imported `*` can be decided here and never set back — the right asymmetry.
+    /// offered: an imported `*` can be decided here and never set back - the right asymmetry.
     private func resultRow(_ pgn: PGN) -> some View {
         Picker(
             "Result",
@@ -410,7 +410,7 @@ extension GetInfoWindow {
         .accessibilityIdentifier(AccessibilityID.getInfoGameField("result"))
     }
 
-    /// Everything the app derived about the row — read-only by the authorship split.
+    /// Everything the app derived about the row - read-only by the authorship split.
     /// Hash and identifier are selectable and monospaced: an MD5 you cannot copy answers nothing.
     private func fileTab(_ pgn: PGN) -> some View {
         Form {
@@ -436,7 +436,7 @@ extension GetInfoWindow {
                         .font(.caption.monospaced())
                         .textSelection(.enabled)
                 }
-                // Seats as *resolved* — a different question from the seats as *tagged* one tab over, and the
+                // Seats as *resolved* - a different question from the seats as *tagged* one tab over, and the
                 // only place in the app the difference is visible (an unlinked row the backfill has not reached).
                 LabeledContent(
                     "White Player",
@@ -464,7 +464,7 @@ extension GetInfoWindow {
     }
 
     /// The live roster. No file facts and no File tab: it has none until it archives, and empty rows
-    /// would describe the archived game this one is going to become. Read-only — the live roster's
+    /// would describe the archived game this one is going to become. Read-only - the live roster's
     /// editor is `EditLiveGameDetailsSheet`.
     private func liveForm(_ live: LiveGame) -> some View {
         let roster = RosterSummary(live.roster, result: live.result)
@@ -485,11 +485,11 @@ extension GetInfoWindow {
     }
 
     /// The registry row, its games, and the app's one rename door. Tag form above display form, in
-    /// that order — names travel tag → display, never back.
+    /// that order - names travel tag → display, never back.
     private func playerForm(_ player: Player) -> some View {
         Form {
             Section("Name") {
-                // Commit on Return only — each commit is `retag`, a rewrite across every linked game. Focus loss
+                // Commit on Return only - each commit is `retag`, a rewrite across every linked game. Focus loss
                 // would fire on a mere click away, which is not a decision the reader made.
                 TextField("Tag", text: $draftTag)
                     .onSubmit { commitRename(for: player) }
@@ -498,7 +498,7 @@ extension GetInfoWindow {
             }
 
             Section("Library") {
-                // Counted off relationships, not the `PlayerStats` fold — this asks a smaller question than the profile.
+                // Counted off relationships, not the `PlayerStats` fold - this asks a smaller question than the profile.
                 LabeledContent("Games", value: "\(player.whiteGames.count + player.blackGames.count)")
                 LabeledContent("As White", value: "\(player.whiteGames.count)")
                 LabeledContent("As Black", value: "\(player.blackGames.count)")
@@ -508,7 +508,7 @@ extension GetInfoWindow {
         .accessibilityIdentifier(AccessibilityID.getInfoPlayer)
     }
 
-    /// One state for every way a subject can be absent — the causes differ, the remedy does not, and
+    /// One state for every way a subject can be absent - the causes differ, the remedy does not, and
     /// splitting them would explain a deletion the reader performed.
     private var unavailable: some View {
         InspectorEmptyState(
@@ -526,7 +526,7 @@ extension GetInfoWindow {
 extension GetInfoWindow {
 
     /// The movetext write door (moved with the affordance). `.rejected` here means this window's
-    /// Save gate and the store's validator disagreed — impossible, both call `MovetextEdit.validate`;
+    /// Save gate and the store's validator disagreed - impossible, both call `MovetextEdit.validate`;
     /// logged as a breadcrumb. Unlike its Board ancestor it rebuilds no cached `Game`.
     fileprivate func applyMovetext(_ proposed: [String], to pgn: PGN) {
         do {
@@ -546,7 +546,7 @@ extension GetInfoWindow {
 
     /// Commits one roster field through `applyEdit`. Two guards ahead of the door, both
     /// load-bearing: unchanged returns early ("nothing happened" and "rewritten identically" look the
-    /// same from outside); emptied Event/Site reverts — `""` exports as neither a name nor an unknown.
+    /// same from outside); emptied Event/Site reverts - `""` exports as neither a name nor an unknown.
     fileprivate func commitField(_ field: GameField, on pgn: PGN) {
         let store = PGNStore(modelContext: modelContext)
         do {
@@ -633,7 +633,7 @@ extension GetInfoWindow {
         return trimmed.isEmpty ? RosterSummary.unknownTag : trimmed
     }
 
-    /// Names the player, not the rule — the reader can see the rule from the two fields.
+    /// Names the player, not the rule - the reader can see the rule from the two fields.
     private static func sameSeatRefusal(_ tag: String) -> FieldRefusal {
         FieldRefusal(
             title: "Can’t Set Both Seats to One Player",
@@ -644,7 +644,7 @@ extension GetInfoWindow {
     }
 
     /// Commits a result, refusing what the final position disproves. Reuses
-    /// `MovetextEdit.validate` — stored moves are canonical, so replay can only fail on the result
+    /// `MovetextEdit.validate` - stored moves are canonical, so replay can only fail on the result
     /// arms. Resignations, agreed draws, wins on time all stay settable.
     fileprivate func commitResult(_ proposed: GameResult, on pgn: PGN) {
         guard proposed != pgn.result else { return }
@@ -688,14 +688,14 @@ extension GetInfoWindow {
 
     // MARK: File Tab Formatters
 
-    /// Date *and* time, unlike every date elsewhere — two imports minutes apart are what this row
+    /// Date *and* time, unlike every date elsewhere - two imports minutes apart are what this row
     /// exists to tell apart (deliberately not `RosterSummary.displayDate`, which is a playing day).
     private static func stamp(_ date: Date) -> String {
         date.formatted(date: .abbreviated, time: .shortened)
     }
 
     /// The transport; every consequence belongs to the store door. Two failure sinks: a refusal is a
-    /// value the reader sees, a save failure is a logged error. Two no-op guards ahead of the door —
+    /// value the reader sees, a save failure is a logged error. Two no-op guards ahead of the door -
     /// empty tag reverts (never reaches `.emptyTag`), unchanged tag skips a full rehash.
     fileprivate func commitRename(for player: Player) {
         let proposed = draftTag.trimmingCharacters(in: .whitespaces)
@@ -727,7 +727,7 @@ extension GetInfoWindow {
         draftTag = player.tagName ?? player.name
     }
 
-    /// Names the games — "would create a duplicate" is unactionable otherwise. Capped: an alert is not a report.
+    /// Names the games - "would create a duplicate" is unactionable otherwise. Capped: an alert is not a report.
     fileprivate static func refusalMessage(_ collisions: [PGNStore.HashCollision]) -> String {
         let shown = collisions.prefix(3).map { "“\($0.gameName)” and “\($0.existingName)'" }
         let lead = "This would make these games identical: " + shown.joined(separator: "; ") + "."
@@ -740,7 +740,7 @@ extension GetInfoWindow {
 
 // MARK: - Previews
 
-/// The branch a reader hits by accident, and the one state needing no resolved subject — the
+/// The branch a reader hits by accident, and the one state needing no resolved subject - the
 /// content forms need a model in a container, and a preview building one tests SwiftData, not layout.
 #Preview("Unavailable") {
     GetInfoWindow(request: nil)
@@ -749,10 +749,11 @@ extension GetInfoWindow {
         .environment(DGTLiveSession())
 }
 
-/// Both game tabs on a fixture rich enough to make the File tab say something. The fixture
-/// sets classification directly — fine in a preview that never runs in the app, and the reason
-/// those fields are absent from `PGN.init` (`classify` stays the single door).
-#Preview("Game, Details & File") {
+/// All three game tabs on a fixture rich enough to make the File tab say something and
+/// give Move Text a real score sheet. The fixture sets classification directly - fine in a
+/// preview that never runs in the app, and the reason those fields are absent from `PGN.init`
+/// (`classify` stays the single door).
+#Preview("Game, Three Tabs") {
     let container = try! ModelContainer(
         for: PGN.self,
         configurations: ModelConfiguration(isStoredInMemoryOnly: true)
@@ -776,7 +777,7 @@ extension GetInfoWindow {
     pgn.ecoCode = "B01"
     pgn.ecoFamily = "Scandinavian Defense"
     pgn.ecoVariation = "Main Line, Mieses Variation"
-    // Twelve of twenty, on purpose — see the doc above.
+    // Twelve of twenty, on purpose - see the doc above.
     pgn.evaluations = (0..<20).map { ply in
         ply < 12 ? Evaluation.centipawns((ply % 5) * 40 - 60) : nil
     }
@@ -787,7 +788,7 @@ extension GetInfoWindow {
         .environment(DGTLiveSession())
 }
 
-/// The live form — the one content branch a canvas reaches without a container, and the only
+/// The live form - the one content branch a canvas reaches without a container, and the only
 /// place `LiveGame.Roster`'s projection renders outside the live inspector.
 #Preview("Recording") {
     let session = DGTLiveSession()

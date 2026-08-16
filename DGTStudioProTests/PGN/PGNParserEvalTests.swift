@@ -1,7 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-@Suite("PGN Parser — [%eval] Comments")
+@Suite("PGN Parser - [%eval] Comments")
 struct PGNParserEvalTests {
 
     // MARK: Helpers
@@ -74,7 +74,7 @@ struct PGNParserEvalTests {
 
     /// Hostile eval payloads must fail the *annotation*, never the import
     /// (M1 item 17): pre-guard, `Double(_:)` accepted "inf"/"nan"/overflow
-    /// literals and the centipawn conversion trapped — one poisoned
+    /// literals and the centipawn conversion trapped - one poisoned
     /// comment crashed the whole import instead of shedding itself. The
     /// moves must survive with no evaluation recorded.
     @Test func hostileEvalPayloadsFailTheAnnotationNotTheImport() throws {
@@ -100,7 +100,7 @@ struct PGNParserEvalTests {
 
     @Test func gameWithNoEvalCommentsProducesEmptyArray() throws {
         // The parse entry point collapses an all-nil evaluations array to
-        // empty — the "no analysis was recorded" sentinel.
+        // empty - the "no analysis was recorded" sentinel.
         let pgn = try PGNParser.parse(pgnText(movetext: "1. e4 e5 2. Nf3 Nc6 *"))
         #expect(pgn.moves == ["e4", "e5", "Nf3", "Nc6"])
         #expect(pgn.evaluations.isEmpty)
@@ -224,14 +224,14 @@ struct PGNParserEvalTests {
                 """
         ))
         #expect(bare.moves == annotated.moves)
-        // And the annotated one really did pick up evals — confirms the
+        // And the annotated one really did pick up evals - confirms the
         // test isn't passing because eval scanning silently no-op'd.
         #expect(annotated.evaluations.contains(where: { $0 != nil }))
     }
 
     @Test func movesIdenticalAcrossClockOnlyVsEvalAndClock() throws {
         // Different annotation mixes (clock-only vs eval+clock) must not
-        // perturb the move list — both annotation forms are comment content
+        // perturb the move list - both annotation forms are comment content
         // that gets stripped before move tokenization.
         let clockOnly = try PGNParser.parse(pgnText(
             movetext: "1. e4 {[%clk 0:05:00]} e5 {[%clk 0:05:00]} *"

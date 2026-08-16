@@ -2,13 +2,13 @@ import Foundation
 import Testing
 @testable import DGTStudioPro
 
-/// Store tests (M4.1) against injected temp directories — the real
+/// Store tests (M4.1) against injected temp directories - the real
 /// Application Support sidecar is never touched, and every test gets a
 /// fresh, isolated directory.
 ///
 /// The contract under test: `load()` answers "absent" (`nil`) and "corrupt"
-/// (throws) *differently* — the session offers nothing for the first and a
-/// delete-only alert for the second — and an unknown `schemaVersion` counts
+/// (throws) *differently* - the session offers nothing for the first and a
+/// delete-only alert for the second - and an unknown `schemaVersion` counts
 /// as corrupt, never guessed at.
 ///
 /// `LiveGameDraftStore` is `@MainActor`, so the suite is too.
@@ -84,7 +84,7 @@ struct LiveGameDraftStoreTests {
         #expect(try store.load() == nil)
     }
 
-    /// Deleting when nothing exists is a quiet no-op — the session calls
+    /// Deleting when nothing exists is a quiet no-op - the session calls
     /// this without checking first.
     @Test func deleteWithNoFileIsANoOp() throws {
         let store = temporaryStore()
@@ -111,7 +111,7 @@ struct LiveGameDraftStoreTests {
     }
 
     /// A decodable file from an unknown schema is rejected with the
-    /// dedicated error — versions are validated, never guessed at.
+    /// dedicated error - versions are validated, never guessed at.
     @Test func unsupportedSchemaThrowsItsError() throws {
         let store = temporaryStore()
         try store.save(sampleDraft(schemaVersion: 999))

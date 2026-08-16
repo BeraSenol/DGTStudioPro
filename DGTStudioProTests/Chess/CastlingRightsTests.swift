@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// Coverage for `CastlingRights` — the four-bit castling-availability set
+/// Coverage for `CastlingRights` - the four-bit castling-availability set
 /// threaded through `GameState` and serialized into FEN. The bit layout
 /// (`K=1, Q=2, k=4, q=8`) and the `fen` rendering are a tested contract: FEN
 /// parsing and the move generator both depend on it. Pure value type
@@ -10,7 +10,7 @@ import Foundation
 /// `@MainActor`.
 ///
 /// One behaviour worth pinning explicitly: the no-argument `init()` grants
-/// **all** rights (a fresh game starts fully castle-able), not none — the
+/// **all** rights (a fresh game starts fully castle-able), not none - the
 /// opposite of what the `0`-valued `.none` might suggest.
 @Suite("Castling Rights")
 struct CastlingRightsTests {
@@ -31,7 +31,7 @@ struct CastlingRightsTests {
         #expect(!none.whiteKingSide && !none.whiteQueenSide && !none.blackKingSide && !none.blackQueenSide)
     }
     
-    /// The default initializer grants all four rights — the starting-game state.
+    /// The default initializer grants all four rights - the starting-game state.
     @Test func defaultInitGrantsAllRights() {
         #expect(CastlingRights() == .all)
     }

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The Diagnostics menu: session-log export and the board-stream recorder. App-scoped — a
+/// The Diagnostics menu: session-log export and the board-stream recorder. App-scoped - a
 /// `Commands` scene has no `modelContext`. Stop-and-export is one action: a diagnostic
 /// recording stopped without saving has no audience.
 struct DiagnosticsCommands: Commands {

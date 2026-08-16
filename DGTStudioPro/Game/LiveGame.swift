@@ -1,7 +1,7 @@
 import Foundation
 import os
 
-/// The rule set; FIDE only in v1. Illegal-move handling follows FIDE 7.5.1 — recovery's
+/// The rule set; FIDE only in v1. Illegal-move handling follows FIDE 7.5.1 - recovery's
 /// "return to the last legal position".
 enum DGTRuleSet: String, CaseIterable, Codable, Sendable {
     case fide = "FIDE"
@@ -9,7 +9,7 @@ enum DGTRuleSet: String, CaseIterable, Codable, Sendable {
     var displayName: String { rawValue }
 }
 
-/// The working model for a live-recorded game — `Game`'s append-only sibling: no takebacks, no
+/// The working model for a live-recorded game - `Game`'s append-only sibling: no takebacks, no
 /// rollback, ever. Legality comes only from the core's `legalMoves()`.
 @Observable
 @MainActor
@@ -31,14 +31,23 @@ final class LiveGame {
         var black: String
 
         /// The board identity, stamped once at game start; survives crash-resume via the draft.
-        /// Not exposed by the roster forms — equipment, not a seat.
+        /// Not exposed by the roster forms - equipment, not a seat.
         var board: String?
 
-        /// One player on both sides? A forwarding accessor — `Player.seatsNameOnePlayer` owns
+        /// One player on both sides? A forwarding accessor - `Player.seatsNameOnePlayer` owns
         /// the rule (one recipe, two spellings). Note `Roster` is nonisolated: a global actor does not
         /// isolate nested types.
         var seatsNameOnePlayer: Bool {
             Player.seatsNameOnePlayer(white, black)
+        }
+
+        /// A site that is neither unknown nor PGN's `"City, Region CCC"` shape (16 Aug 2026, by
+        /// request). Forwarding like its sibling above - `SiteTag` owns the format; what lives here
+        /// is only the unknown exemption, through the app's one blank→`"?"` fold, so an emptied
+        /// field reads as unknown rather than malformed.
+        var siteViolatesFormat: Bool {
+            let value = tagValue(site)
+            return value != RosterSummary.unknownTag && !SiteTag.isWellFormed(value)
         }
 
         init(
@@ -65,7 +74,7 @@ final class LiveGame {
     let ruleSet: DGTRuleSet
     var roster: Roster
     
-    /// Carried into the draft and across resume — a resumed game keeps its original start time.
+    /// Carried into the draft and across resume - a resumed game keeps its original start time.
     let startedAt: Date
     
     /// State at each ply boundary; always `moves.count + 1` long.
@@ -77,7 +86,7 @@ final class LiveGame {
     /// The committed moves, oldest first.
     private(set) var moves: [Move]
     
-    /// SAN parallel to `moves`, computed against the state *before* each move — the archived transcript.
+    /// SAN parallel to `moves`, computed against the state *before* each move - the archived transcript.
     private(set) var sanMoves: [String]
     
     /// `.ongoing` until detected or set manually.
@@ -85,7 +94,7 @@ final class LiveGame {
     
     // MARK: Computed Properties
     
-    // Force-unwrapped deliberately: seeded in `init`, append-only, non-empty by construction —
+    // Force-unwrapped deliberately: seeded in `init`, append-only, non-empty by construction -
     // `last!` states that; `[count - 1]` hides it.
     var currentState: GameState { states.last! }
     var currentTracker: PieceTracker { trackers.last! }
@@ -109,7 +118,7 @@ final class LiveGame {
     
     // MARK: Initializer
     
-    /// Starts from `start` (standard by default). A custom start gets an empty tracker — identities
+    /// Starts from `start` (standard by default). A custom start gets an empty tracker - identities
     /// can't be inferred from a bare position.
     init(
         start: GameState = .starting,
@@ -133,7 +142,7 @@ final class LiveGame {
     
     // MARK: Recording
     
-    /// Records a reconstructed move; `false` (nothing changed) if finished or illegal — the
+    /// Records a reconstructed move; `false` (nothing changed) if finished or illegal - the
     /// resolver never hands over an illegal move, so a rejection is an upstream logic error.
     @discardableResult
     func commit(_ move: Move) -> Bool {
@@ -190,7 +199,7 @@ final class LiveGame {
         guard state.legalMoves().isEmpty else { return }
         
         if state.isInCheck {
-            // Side to move is checkmated — the other side won.
+            // Side to move is checkmated - the other side won.
             result = (state.activeColor == .white) ? .blackWins : .whiteWins
             Self.logger?.info("Checkmate, \(self.result.rawValue, privacy: .public)")
         } else {

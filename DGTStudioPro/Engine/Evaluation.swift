@@ -20,7 +20,7 @@ enum Evaluation: Equatable, Sendable, Codable {
     
     // MARK: Computed Properties
     
-    /// White's win probability in [0, 1]: **base-e** logistic at k=400 — +100 cp ≈ 56%, gentler
+    /// White's win probability in [0, 1]: **base-e** logistic at k=400 - +100 cp ≈ 56%, gentler
     /// than the base-10 reading of "k=400" (≈ 64%), which a test literal once assumed and ⌘U
     /// corrected. Mates clamp to 1/0. Every consumer (bar, graph, swing) shares this one curve.
     var whiteWinProbability: Double {
@@ -33,7 +33,7 @@ enum Evaluation: Equatable, Sendable, Codable {
         }
     }
     
-    /// Sign flipped — the UCI parser normalizes side-to-move output to white-relative storage.
+    /// Sign flipped - the UCI parser normalizes side-to-move output to white-relative storage.
     var flipped: Evaluation {
         switch self {
         case .centipawns(let cp): return .centipawns(-cp)
@@ -46,7 +46,7 @@ enum Evaluation: Equatable, Sendable, Codable {
 
 extension Evaluation {
     
-    /// The widest centipawn magnitude accepted — rejects only nonsense, but finite and inside
+    /// The widest centipawn magnitude accepted - rejects only nonsense, but finite and inside
     /// `Int`, which keeps `Int(_: Double)` from trapping on a hostile file.
     private static let centipawnLimit: Double = 1_000_000
     
@@ -64,7 +64,7 @@ extension Evaluation {
             let normalized = trimmed.hasPrefix("+")
             ? String(trimmed.dropFirst())
             : trimmed
-            // `Double(_:)` accepts "inf"/"nan"/overflow and `Int(_: Double)` traps on all of them — the
+            // `Double(_:)` accepts "inf"/"nan"/overflow and `Int(_: Double)` traps on all of them - the
             // rejection belongs at the parse boundary.
             guard let pawns = Double(normalized), pawns.isFinite else { return nil }
             let cp = (pawns * 100).rounded()
@@ -74,7 +74,7 @@ extension Evaluation {
     }
     
     /// Parses a complete `[%eval …]` tag, the exact Lichess/Chess.com shape. Kept as the pinned
-    /// round-trip pair with `evalTag` — export writes no evals.
+    /// round-trip pair with `evalTag` - export writes no evals.
     init?(parsingEvalTag tag: String) {
         let trimmed = tag.trimmingCharacters(in: .whitespaces)
         let prefix = "[%eval "
@@ -99,7 +99,7 @@ extension Evaluation {
         }
     }
     
-    /// The full tag. Unused in production (export writes no evaluations) — the round-tripped pair.
+    /// The full tag. Unused in production (export writes no evaluations) - the round-tripped pair.
     var evalTag: String {
         "[%eval \(evalTagContent)]"
     }

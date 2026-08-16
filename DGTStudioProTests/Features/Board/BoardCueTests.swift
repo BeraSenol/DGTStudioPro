@@ -6,19 +6,19 @@ import Testing
 /// player's.
 ///
 /// The precedence rule is the whole point of testing this at all. Every arm of it is a *silent*
-/// defect in production — a capture that plays the move click, or a mate that plays the check
+/// defect in production - a capture that plays the move click, or a mate that plays the check
 /// chime, compiles, renders, and is caught only by someone noticing the wrong sound while looking
 /// at the board. Nothing else in the app is positioned to disagree.
 /// `BoardSoundSet`'s pure half rides along at the bottom rather than in its own file: the thing
 /// worth testing about a set is the **set × cue** filename matrix, which is not a fact about
 /// either type alone. Its stored/preference half is in `BoardSoundPreferenceTests`, which is
 /// `@MainActor` because `BoardSounds` is.
-@Suite("Board Cue — Classification and Naming")
+@Suite("Board Cue - Classification and Naming")
 struct BoardCueTests {
 
     // MARK: Helpers
 
-    /// Plays `from`→`to` out of `fen` and returns the move with the position it lands in — the
+    /// Plays `from`→`to` out of `fen` and returns the move with the position it lands in - the
     /// exact pair both call sites hand the classifier (`DGTLiveSession`'s settle arm and `Game`'s
     /// step). Resolving through `legalMoves()` rather than constructing a `Move` by hand is
     /// deliberate: a hand-built move can carry flags movegen would never set, and the en-passant
@@ -33,7 +33,7 @@ struct BoardCueTests {
             state.legalMoves().first {
                 $0.from.algebraicNotation == from && $0.to.algebraicNotation == to
             },
-            "\(from)\(to) is not legal in \(fen) — the fixture is wrong, not the classifier"
+            "\(from)\(to) is not legal in \(fen) - the fixture is wrong, not the classifier"
         )
         return (move, state.applying(move))
     }
@@ -68,7 +68,7 @@ struct BoardCueTests {
     }
 
     /// **Every cue can actually be produced by a legal move**, run through the classifier rather
-    /// than read off the fixture labels — a table asserting its own contents proves nothing. A cue
+    /// than read off the fixture labels - a table asserting its own contents proves nothing. A cue
     /// added without a fixture is a sound nothing shows reachable, and a sound nothing shows
     /// reachable is a sample nobody has heard.
     @Test("Every cue is produced by some position")
@@ -80,7 +80,7 @@ struct BoardCueTests {
         #expect(produced == Set(BoardCue.allCases))
     }
 
-    // MARK: Precedence — the reason this suite exists
+    // MARK: Precedence - the reason this suite exists
 
     /// A capture that gives check is **one** sound, and it is the check. Rxd8+ takes a rook and
     /// checks along the eighth; the losing spelling plays `capture` and is indistinguishable from
@@ -90,7 +90,7 @@ struct BoardCueTests {
         #expect(try Self.cue("3rk3/8/8/8/8/8/8/3RK3 w - - 0 1", "d1", "d8") == .check)
     }
 
-    /// Rxb8# takes a rook *and* checks *and* mates. Only the mate is heard — the rule the Settings
+    /// Rxb8# takes a rook *and* checks *and* mates. Only the mate is heard - the rule the Settings
     /// footer states, pinned at its sharpest case, where all three arms are simultaneously true.
     @Test("A capture that mates is a checkmate, not a check or a capture")
     func checkmateOutranksEverything() throws {
@@ -101,7 +101,7 @@ struct BoardCueTests {
 
     /// En passant is the one capture whose destination square is empty, so a classifier reading the
     /// board rather than the move would call it quiet. `Move.isCapture` is a bit test over the
-    /// captured-type field, which movegen stamps `.pawn` for en passant — this pins that it does.
+    /// captured-type field, which movegen stamps `.pawn` for en passant - this pins that it does.
     @Test("En passant is a capture")
     func enPassantIsACapture() throws {
         #expect(try Self.cue("4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1", "e5", "d6") == .capture)
@@ -110,7 +110,7 @@ struct BoardCueTests {
     /// Stalemate has no cue and deliberately falls through to the ordinary move: the position is
     /// drawn, but the *move* was quiet, and there is no sample for it. Documented as a decision at
     /// `BoardCue.cue`; this is the test that would fail if someone "fixed" it into a mate sound,
-    /// which is the tempting wrong answer — no legal replies looks like the end of a game.
+    /// which is the tempting wrong answer - no legal replies looks like the end of a game.
     @Test("Stalemate is not a checkmate")
     func stalemateFallsThroughToMove() throws {
         #expect(try Self.cue("7k/8/6K1/8/8/8/5Q2/8 w - - 0 1", "f2", "f7") == .move)
@@ -122,7 +122,7 @@ struct BoardCueTests {
 
     /// Both halves of every filename. Pinned on literals, which is rare and correct here for
     /// `AppLog`'s category reason: these strings name files in the app bundle, so nothing in the
-    /// app would notice if one drifted — the symptom is silence, and silence is what an off toggle
+    /// app would notice if one drifted - the symptom is silence, and silence is what an off toggle
     /// looks like too. Bundle *presence* is a manual check; a missing file logs to `sound`.
     @Test("Raw values are half of a filename each")
     func rawValuesArePinned() {
@@ -140,8 +140,8 @@ struct BoardCueTests {
     ///
     /// Distinctness is the property a rename breaks silently: two entries colliding is one cue
     /// playing another's sound with every string still spelled correctly. Asserted over the full
-    /// product rather than per set, because a collision *across* sets — `wood-check` reachable as
-    /// marble's — is the one no per-set test could see.
+    /// product rather than per set, because a collision *across* sets - `wood-check` reachable as
+    /// marble's - is the one no per-set test could see.
     @Test("Every set × cue names a distinct resource")
     func resourceNameMatrixIsComplete() {
         var names: [String] = []
@@ -165,7 +165,7 @@ struct BoardCueTests {
         }
     }
 
-    /// Written out rather than `rawValue.capitalized`, which works for all three today — the
+    /// Written out rather than `rawValue.capitalized`, which works for all three today - the
     /// tripwire for the first set whose name is two words or carries an accent.
     @Test("Display names are written out")
     func displayNamesAreWrittenOut() {

@@ -7,7 +7,7 @@ struct LibraryGalleryView: View {
     let analyzedIDs: Set<PGN.ID>
     @Binding var selectedPGNs: Set<PGN.ID>
     let boardStyle: BoardStyle
-    /// Takes the set — degenerate here: a gallery selection is single by construction.
+    /// Takes the set - degenerate here: a gallery selection is single by construction.
     let onOpen: ([PGN]) -> Void
     let onAnalyze: (PGN) -> Void
     let onExport: (PGN) -> Void
@@ -23,7 +23,7 @@ struct LibraryGalleryView: View {
     /// The gallery itself is the focusable; a thumbnail click hands it focus, ← / → step the strip.
     @FocusState private var isFocused: Bool
 
-    /// Ambient — `LibraryIconsView`'s twin, argued at the environment value.
+    /// Ambient - `LibraryIconsView`'s twin, argued at the environment value.
     @Environment(\.analysisRunningGameID) private var runningAnalysisID
 
     var body: some View {
@@ -38,12 +38,12 @@ struct LibraryGalleryView: View {
         .onMoveCommand { direction in
             move(direction)
         }
-        // The whole gallery is the background target — almost no empty space to aim at; card menus win
+        // The whole gallery is the background target - almost no empty space to aim at; card menus win
         // over their own bounds.
         .contextMenu { ShowViewOptionsButton() }
     }
 
-    /// ← / → step, ↑ / ↓ hold — `IconGridSelection.destination`'s one-row degenerate case
+    /// ← / → step, ↑ / ↓ hold - `IconGridSelection.destination`'s one-row degenerate case
     /// (`columnCount == count`); the previewed card is the anchor.
     private func move(_ direction: MoveCommandDirection) {
         guard !games.isEmpty else { return }
@@ -62,7 +62,7 @@ struct LibraryGalleryView: View {
         selectedPGNs = [games[target].id]
     }
     
-    /// Selection-driven, no `games.first` fallback: an unselected gallery shows an empty board —
+    /// Selection-driven, no `games.first` fallback: an unselected gallery shows an empty board -
     /// never preview what the user didn't pick.
     private var preview: some View {
         LibraryGamePreviewView(game: selectedPGN, boardStyle: boardStyle)
@@ -78,7 +78,7 @@ struct LibraryGalleryView: View {
                 }
                 .padding()
             }
-            // 180 fits the card at the filmstrip size — the strip sizes itself to the card, never the reverse.
+            // 180 fits the card at the filmstrip size - the strip sizes itself to the card, never the reverse.
             .frame(height: 180)
             .background(.thinMaterial)
             .onChange(of: selectedPGNs) { _, newSelection in

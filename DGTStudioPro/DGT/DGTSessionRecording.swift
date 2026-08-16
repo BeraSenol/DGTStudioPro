@@ -3,7 +3,7 @@ import Foundation
 // MARK: Recording
 
 /// Immutable `Codable` recording of a live board session: timestamped physical-board snapshots
-/// plus the board identity. Captured from hardware, replayed deterministically for regression —
+/// plus the board identity. Captured from hardware, replayed deterministically for regression -
 /// pure; reads the chess/reconstruction types, never the session.
 struct DGTSessionRecording: Codable, Equatable {
     
@@ -50,7 +50,7 @@ struct DGTSessionRecording: Codable, Equatable {
 
 extension DGTSessionRecording {
     
-    /// The snapshots the live session would have *settled* on — reproduces the 300 ms debounce from
+    /// The snapshots the live session would have *settled* on - reproduces the 300 ms debounce from
     /// recorded timestamps, deterministically.
     func settledBoards(quiescence: Duration = .milliseconds(300)) -> [Position] {
         let gap = quiescence.inMilliseconds
@@ -71,7 +71,7 @@ extension DGTSessionRecording {
     }
     
     /// Walks the settled snapshots through the pure reconstructor from `initialState`, advancing
-    /// only on committed `.move` — the field-desync replay ("would this recording trip a false
+    /// only on committed `.move` - the field-desync replay ("would this recording trip a false
     /// desync?").
     func reconstructions(
         from initialState: GameState,
@@ -110,7 +110,7 @@ extension DGTSessionRecording {
 
 // MARK: Recorder (mutable accumulator)
 
-/// Accumulates a recording from live changes; MainActor — driven from the connection.
+/// Accumulates a recording from live changes; MainActor - driven from the connection.
 @MainActor
 final class DGTSessionRecorder {
     
@@ -119,14 +119,14 @@ final class DGTSessionRecorder {
     private let recordedAt = Date.now
     private(set) var entries: [DGTSessionRecording.Entry] = []
     
-    /// Stamped when recording stops — identity arrives during the handshake, possibly late.
+    /// Stamped when recording stops - identity arrives during the handshake, possibly late.
     var identity = DGTSessionRecording.Identity()
     
     init() {
         start = clock.now
     }
     
-    /// Hard cap — the recorder's half of the growth bound (the log's is `maxEntries`). A forgotten
+    /// Hard cap - the recorder's half of the growth bound (the log's is `maxEntries`). A forgotten
     /// marathon recording stays under a megabyte; replay reads gaps between retained neighbours.
     private let maxEntries = 10_000
     

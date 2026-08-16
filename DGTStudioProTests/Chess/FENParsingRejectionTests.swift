@@ -1,9 +1,9 @@
 import Testing
 @testable import DGTStudioPro
 
-/// Rejection coverage — the untrusted-input boundary and the sole home of rejection pins.
+/// Rejection coverage - the untrusted-input boundary and the sole home of rejection pins.
 /// Shape, not chess validity. Not @MainActor: plain value types.
-@Suite("FEN Parsing — Rejection")
+@Suite("FEN Parsing - Rejection")
 struct FENParsingRejectionTests {
 
     // MARK: Field Count
@@ -46,7 +46,7 @@ struct FENParsingRejectionTests {
         #expect(throws: FENParseError.malformedPlacement("9/8/8/8/8/8/8/8")) {
             try FEN(parsing: "9/8/8/8/8/8/8/8 w - -")
         }
-        // A zero empty-run digit. 0 is not a valid run length (only 1–8) —
+        // A zero empty-run digit. 0 is not a valid run length (only 1–8) -
         // and this rank *sums* to 8 if 0 were accepted, so the pin trips
         // exactly when a naive digit check lets 0 through rather than being
         // masked by a file-count error.
@@ -91,7 +91,7 @@ struct FENParsingRejectionTests {
 
     /// The EP field accepts `-` or a parseable algebraic square; anything else
     /// throws. (Whether the square sits on a plausible EP rank is a
-    /// position-validity concern, not a parse one — deliberately not checked.)
+    /// position-validity concern, not a parse one - deliberately not checked.)
     @Test func rejectsMalformedEnPassant() {
         #expect(throws: FENParseError.malformedEnPassant("e9")) {
             try FEN(parsing: "8/8/8/8/8/8/8/8 w - e9")
@@ -149,7 +149,7 @@ struct FENParsingRejectionTests {
         }
     }
 
-    // MARK: Positive Control — Four-Field EPD
+    // MARK: Positive Control - Four-Field EPD
 
     /// The complement to the rejection cases: a well-formed four-field EPD
     /// string parses without throwing, defaulting the halfmove clock to 0 and

@@ -5,7 +5,7 @@ import Testing
 struct SANParserTests {
 
     // State and position construction (`GameState.test`, `Position.make`,
-    // and `Position.minimal` — the two-kings-on-e1/e8 scaffold) lives in
+    // and `Position.minimal` - the two-kings-on-e1/e8 scaffold) lives in
     // Support/ChessTestSupport.swift. Promotion tests that need e8 free
     // build with `Position.make` directly and park the black king on a8.
 
@@ -134,7 +134,7 @@ struct SANParserTests {
         }
         let state = GameState.test(pos)
 
-        // 'K' is not a valid promotion piece — the bare-X path treats `K` as
+        // 'K' is not a valid promotion piece - the bare-X path treats `K` as
         // not-a-promotion-letter and falls through to target-square parsing,
         // where "8K" isn't a valid square. Either way, it's malformed.
         #expect(throws: SANParseError.self) {
@@ -201,7 +201,7 @@ struct SANParserTests {
     @Test func pinnedSiblingMakesBareKnightMoveUnambiguous() throws {
         // The parser's twin of the serializer's legality pin: knights on g1
         // and e5 both pseudo-legally reach f3, the e5 knight is absolutely
-        // pinned by the e8 rook — so bare `Nf3` matches exactly one *legal*
+        // pinned by the e8 rook - so bare `Nf3` matches exactly one *legal*
         // move and must resolve to g1, not throw `.ambiguous`. A matcher
         // filtering pseudo-legal moves fails here and only here.
         let pos = Position.make {
@@ -216,7 +216,7 @@ struct SANParserTests {
     }
 
     @Test func redundantDisambiguatorIsAcceptedOnRead() throws {
-        // `Ngf3` from the start position over-disambiguates — only the g1
+        // `Ngf3` from the start position over-disambiguates - only the g1
         // knight reaches f3. Read-side leniency is deliberate (real PGN
         // over-disambiguates constantly; the disambiguator is a filter,
         // not a checksum), while the serializer never emits the redundant
@@ -361,7 +361,7 @@ struct SANParserTests {
     }
 
     @Test func suffixesOnlyAfterStripping() {
-        // Stripping `+++` leaves nothing — malformed (carries the original).
+        // Stripping `+++` leaves nothing - malformed (carries the original).
         #expect(throws: SANParseError.malformed("+++")) {
             _ = try GameState.starting.parseSAN("+++")
         }
@@ -374,7 +374,7 @@ struct SANParserTests {
     }
 
     @Test func nonexistentMoveThrowsNoMatch() {
-        // `e5` from the starting position — pawn on e2 cannot reach e5 in one move.
+        // `e5` from the starting position - pawn on e2 cannot reach e5 in one move.
         #expect(throws: SANParseError.noMatchingMove("e5")) {
             _ = try GameState.starting.parseSAN("e5")
         }

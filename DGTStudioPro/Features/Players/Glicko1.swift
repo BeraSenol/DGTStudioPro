@@ -1,7 +1,7 @@
 import Foundation
 
 /// Glicko-1: per-player deviation replaces Elo's one-size K. Locked: initial 1500/350,
-/// floor 30, cap 350, c = 0 (a pure deterministic fold — no wall-clock input), one game per
+/// floor 30, cap 350, c = 0 (a pure deterministic fold - no wall-clock input), one game per
 /// period, provisional while RD > 110. Reference values pinned at full double precision.
 enum Glicko1 {
     
@@ -18,7 +18,7 @@ enum Glicko1 {
     // MARK: Types
     
     struct Rating: Sendable, Hashable {
-        /// The paper's r — the mean of the modeled skill distribution.
+        /// The paper's r - the mean of the modeled skill distribution.
         var mean: Double
         /// The paper's RD.
         var deviation: Double
@@ -27,7 +27,7 @@ enum Glicko1 {
         
         var isProvisional: Bool { deviation > provisionalDeviationThreshold }
         
-        /// The one display rule — "1662" or "1662*" — centralized because it was about to exist in four
+        /// The one display rule - "1662" or "1662*" - centralized because it was about to exist in four
         /// views. "Unrated" (nil) stays at call sites: only they know their layout. The `*` never
         /// collides with the result token: this one always trails digits.
         var displaySummary: String {

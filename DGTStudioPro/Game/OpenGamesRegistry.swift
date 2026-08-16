@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// App-wide registry of open games with unsaved changes — the unified `WindowGroup` has no
+/// App-wide registry of open games with unsaved changes - the unified `WindowGroup` has no
 /// central tab list. `isDirty` is always false today: every editor commits through the store on
 /// OK, so the delete path's discard-confirmation branch is dormant until an editor defers writes.
 @Observable

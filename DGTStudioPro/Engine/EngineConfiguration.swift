@@ -1,7 +1,7 @@
 import Foundation
 
 /// Single source of truth for the Stockfish options the app controls (M11 review: Settings
-/// asserted values that lived nowhere — the engine silently ran on 16 MB hash). Values clamp on
+/// asserted values that lived nowhere - the engine silently ran on 16 MB hash). Values clamp on
 /// init, so a hand-edited plist can never reach the engine out of range.
 struct EngineConfiguration: Equatable, Sendable {
     
@@ -10,21 +10,21 @@ struct EngineConfiguration: Equatable, Sendable {
     /// 8 = floor where per-ply evals stop being noise; 30 = ceiling where a pass stops being interactive.
     static let depthRange = 8...30
     
-    /// Fixed menu of hash sizes — legible, and the clamp gets a nearest-size snap target.
+    /// Fixed menu of hash sizes - legible, and the clamp gets a nearest-size snap target.
     static let hashChoicesMB = [16, 64, 128, 256, 512, 1024]
     
-    /// One thread minimum; active cores as ceiling. Computed — core count is a fact about the host.
+    /// One thread minimum; active cores as ceiling. Computed - core count is a fact about the host.
     static var threadsRange: ClosedRange<Int> {
         1...max(1, ProcessInfo.processInfo.activeProcessorCount)
     }
 
     // MARK: Syzygy Bounds
 
-    /// Stockfish's own range for `SyzygyProbeDepth` (`spin default 1 min 1 max 100`) — how shallow
+    /// Stockfish's own range for `SyzygyProbeDepth` (`spin default 1 min 1 max 100`) - how shallow
     /// in the tree probing may go; 1 probes everywhere.
     static let syzygyProbeDepthRange = 1...100
 
-    /// `SyzygyProbeLimit` (`spin default 0..7`) — the largest piece count to probe. **7 is a
+    /// `SyzygyProbeLimit` (`spin default 0..7`) - the largest piece count to probe. **7 is a
     /// ceiling, not a promise**: with only 3-4-5 tables Stockfish probes what it has.
     static let syzygyProbeLimitRange = 0...7
 
@@ -34,7 +34,7 @@ struct EngineConfiguration: Equatable, Sendable {
     let hashMB: Int
     let threads: Int
 
-    /// The tablebase folder as a plain path, or nil. A resolved path, not a bookmark — this type
+    /// The tablebase folder as a plain path, or nil. A resolved path, not a bookmark - this type
     /// never opens the folder; holding scoped access is `SyzygyLocation.Access`'s job.
     let syzygyPath: String?
 
@@ -43,7 +43,7 @@ struct EngineConfiguration: Equatable, Sendable {
     let syzygyProbeLimit: Int
     
     /// Depth 18 preserves pre-configuration behaviour (the old twin default, now once); 128 MB
-    /// makes Settings true; 1 thread stays polite. Syzygy members default to Stockfish's own — with
+    /// makes Settings true; 1 thread stays polite. Syzygy members default to Stockfish's own - with
     /// no path the type emits no Syzygy options at all.
     static let `default` = EngineConfiguration(depth: 18, hashMB: 128, threads: 1)
 
@@ -74,13 +74,13 @@ struct EngineConfiguration: Equatable, Sendable {
     // MARK: Persistence
     
     /// Persisted configuration, clamped on read. `UserDefaults` is thread-safe, so callable from
-    /// the actor at launch and the driver per call — Settings apply to the *next* run, no restart story.
+    /// the actor at launch and the driver per call - Settings apply to the *next* run, no restart story.
     static var current: EngineConfiguration {
         current(syzygyPath: nil)
     }
 
     /// The persisted configuration with a tablebase folder threaded in. The path is a parameter,
-    /// not another defaults read — resolving the bookmark and holding scoped access is the caller's.
+    /// not another defaults read - resolving the bookmark and holding scoped access is the caller's.
     static func current(
         syzygyPath: String?,
         in defaults: UserDefaults = .standard
@@ -104,7 +104,7 @@ struct EngineConfiguration: Equatable, Sendable {
 
     // MARK: UCI
 
-    /// The `setoption` lines sent after `uciok`, before `isready` — the one window.
+    /// The `setoption` lines sent after `uciok`, before `isready` - the one window.
     /// **`SyzygyPath` goes last**: Stockfish loads tables the moment it sees the path, under
     /// whatever probe settings are already in effect.
     var uciOptionLines: [String] {
@@ -122,7 +122,7 @@ struct EngineConfiguration: Equatable, Sendable {
 }
 
 extension Comparable {
-    /// The standard clamp the stdlib doesn't ship — two hand-rolled `min(max())` pairs were the
+    /// The standard clamp the stdlib doesn't ship - two hand-rolled `min(max())` pairs were the
     /// file's only arithmetic.
     func clamped(to range: ClosedRange<Self>) -> Self {
         min(max(self, range.lowerBound), range.upperBound)

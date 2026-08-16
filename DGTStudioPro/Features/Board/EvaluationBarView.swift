@@ -1,14 +1,14 @@
 import SwiftUI
 
 /// The vertical evaluation bar. Dumb by design: semantics live in
-/// `EvaluationBarReading`; this view owns only geometry — which end is "near". The reading
+/// `EvaluationBarReading`; this view owns only geometry - which end is "near". The reading
 /// stays white-relative; the flip is one boolean of geometry. Label: always visible, never
-/// inside the bar — a thin losing share would swallow it.
+/// inside the bar - a thin losing share would swallow it.
 struct EvaluationBarView: View {
     
     // MARK: Static Constants
     
-    /// The bar's fixed width, the **one** place it is stated — it was 20 here and 16 in the caller
+    /// The bar's fixed width, the **one** place it is stated - it was 20 here and 16 in the caller
     /// for a month (the twin-read-site pattern); the caller owns only the *gap*.
     static let width: CGFloat = 22
     
@@ -20,7 +20,7 @@ struct EvaluationBarView: View {
     
     // MARK: Derived
     
-    /// The share drawn from the *bottom* — white's under white perspective (the one flip, geometry only).
+    /// The share drawn from the *bottom* - white's under white perspective (the one flip, geometry only).
     private var bottomFraction: Double {
         perspective == .white ? reading.whiteFraction : 1 - reading.whiteFraction
     }
@@ -62,7 +62,7 @@ struct EvaluationBarView: View {
 
 // MARK: Previews
 
-/// Previews the bar and nothing else — the score label moved to `BoardDestination`, which is
+/// Previews the bar and nothing else - the score label moved to `BoardDestination`, which is
 /// waived from previews; the arrangement is manual-check territory.
 #Preview("Drawn (nil folds here)") {
     EvaluationBarView(

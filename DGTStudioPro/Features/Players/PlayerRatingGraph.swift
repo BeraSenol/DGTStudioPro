@@ -2,7 +2,7 @@ import Charts
 import SwiftUI
 
 /// The rating trend over *games played*, not time (Bera's ask): under c = 0 idle time changes
-/// nothing, so game number is the rating's own clock — the date axis spent its width on pauses.
+/// nothing, so game number is the rating's own clock - the date axis spent its width on pauses.
 /// One clean monotone line, nothing else (band, dots and end annotation each shipped and were
 /// removed by request); `.monotone` never claims a value the rating didn't visit.
 struct PlayerRatingGraph: View {
@@ -14,7 +14,7 @@ struct PlayerRatingGraph: View {
     var body: some View {
         CollapsibleSection(.ratingTrend, title: "Rating Trend") {
             if history.isEmpty {
-                // Names the number, not just its absence — "the rating starts" invites "at what?".
+                // Names the number, not just its absence - "the rating starts" invites "at what?".
                 Text("No rated games yet. Everyone starts at \(Int(Glicko1.initialMean)), and the rating moves once this player finishes a game against another named player.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -35,7 +35,7 @@ struct PlayerRatingGraph: View {
 
 // MARK: Chart
 
-/// The line itself, presentation-agnostic — extracted when the gallery preview became a second
+/// The line itself, presentation-agnostic - extracted when the gallery preview became a second
 /// drawer, so two hosts cannot draw one history two ways.
 struct RatingTrendChart: View {
 
@@ -44,14 +44,14 @@ struct RatingTrendChart: View {
 
     // MARK: Computed Properties
 
-    /// **Step 0 is where everyone starts** (by request): the 1500/350 prior, hollow-marked — not a
+    /// **Step 0 is where everyone starts** (by request): the 1500/350 prior, hollow-marked - not a
     /// game, the prior every player is measured against.
     private var plotted: [(step: Int, mean: Double)] {
         [(0, Glicko1.initialMean)]
         + history.enumerated().map { ($0.offset + 1, $0.element.rating.mean) }
     }
 
-    /// Y-domain padded past the means, rounded to tens. Means only — padding past mean ± RD would
+    /// Y-domain padded past the means, rounded to tens. Means only - padding past mean ± RD would
     /// squash a provisional line into the middle third of an empty plot.
     private var yDomain: ClosedRange<Double> {
         // Over `plotted`, not `history`: the starting 1500 is on the line, and excluding it clips the
@@ -66,7 +66,7 @@ struct RatingTrendChart: View {
     // MARK: Body
     var body: some View {
         // Indexed identity: two rated games can share an effective date, so `\.date` could never be the
-        // id — and on an ordinal axis the index IS the x-value.
+        // id - and on an ordinal axis the index IS the x-value.
         Chart(plotted, id: \.step) { point in
             LineMark(
                 x: .value("Game", point.step),
@@ -76,7 +76,7 @@ struct RatingTrendChart: View {
             .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
             .interpolationMethod(.monotone)
 
-            // One mark, step 0 only. Per-game dots were tried and removed by request — this marks the one
+            // One mark, step 0 only. Per-game dots were tried and removed by request - this marks the one
             // point that is *not* a game.
             if point.step == 0 {
                 PointMark(
@@ -92,7 +92,7 @@ struct RatingTrendChart: View {
             }
         }
         .chartYScale(domain: yDomain)
-        // Pinned at **0** — this comment once argued for 1 ("a dead column for a game that doesn't
+        // Pinned at **0** - this comment once argued for 1 ("a dead column for a game that doesn't
         // exist"), true until step 0 became the starting rating.
         .chartXScale(domain: 0...max(history.count, 1))
         .chartXAxis {
@@ -101,8 +101,8 @@ struct RatingTrendChart: View {
         .chartYAxis {
             AxisMarks { _ in
                 AxisGridLine()
-                // `.grouping(.never)`: the locale wrote 1512 as "1.512" — no rating wears a thousands
-                // separator. Concrete style — the leading-dot `.number` is ambiguous in the type-erased axis closure.
+                // `.grouping(.never)`: the locale wrote 1512 as "1.512" - no rating wears a thousands
+                // separator. Concrete style - the leading-dot `.number` is ambiguous in the type-erased axis closure.
                 AxisValueLabel(format: FloatingPointFormatStyle<Double>.number.grouping(.never))
             }
         }
@@ -113,7 +113,7 @@ struct RatingTrendChart: View {
 
 // MARK: Previews
 
-/// A hand-written settling arc — hand-written, not computed through the fold, so the preview
+/// A hand-written settling arc - hand-written, not computed through the fold, so the preview
 /// stays a picture of the view, not a second test of the maths.
 private func settlingHistory() -> [Glicko1.Sample] {
     let means: [Double] = [1464, 1479, 1512, 1538, 1561, 1550, 1573, 1584, 1579, 1591, 1603, 1598]
@@ -126,7 +126,7 @@ private func settlingHistory() -> [Glicko1.Sample] {
     }
 }
 
-/// Sixty games, two-year pause after game 25 — the fixture whose whole point is that the pause
+/// Sixty games, two-year pause after game 25 - the fixture whose whole point is that the pause
 /// is invisible on an ordinal axis.
 private func veteranHistory() -> [Glicko1.Sample] {
     (0..<60).map { index in

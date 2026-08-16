@@ -3,9 +3,9 @@ import SwiftData
 @testable import DGTStudioPro
 import Foundation
 
-/// Import → dedupe → persist. The hash must actually be *stored* on the inserted row — a
+/// Import → dedupe → persist. The hash must actually be *stored* on the inserted row - a
 /// computed-but-never-assigned hash makes every future lookup miss and dedupe silently no-op.
-@Suite("PGN Store — Import and Deduplication")
+@Suite("PGN Store - Import and Deduplication")
 @MainActor
 struct PGNStoreTests {
     
@@ -97,7 +97,7 @@ struct PGNStoreTests {
         }
     }
     
-    /// The hash's date rendering — a **persistence contract**: every stored hash was computed
+    /// The hash's date rendering - a **persistence contract**: every stored hash was computed
     /// against "yyyy.MM.dd" in UTC; drift silently rots dedupe.
     @Test func hashDateRenderingIsPinnedToUTCDots() throws {
         var utc = Calendar(identifier: .gregorian)

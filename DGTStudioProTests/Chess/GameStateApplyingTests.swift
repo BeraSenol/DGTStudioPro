@@ -4,8 +4,8 @@ import Testing
 @Suite("GameState Applying")
 struct GameStateApplyingTests {
 
-    // State and position construction (`GameState.test` — including its
-    // halfmove/fullmove parameters, which the clock tests below exercise —
+    // State and position construction (`GameState.test` - including its
+    // halfmove/fullmove parameters, which the clock tests below exercise -
     // and `Position.minimal`, the two-kings scaffold) lives in
     // Support/ChessTestSupport.swift.
 
@@ -73,7 +73,7 @@ struct GameStateApplyingTests {
         #expect(next.enPassantTarget == nil)
     }
 
-    // MARK: Castling Rights — King Moves
+    // MARK: Castling Rights - King Moves
 
     @Test func kingMoveRevokesBothColorRights() {
         let state = GameState.test(.minimal(), castlingRights: .all)
@@ -100,7 +100,7 @@ struct GameStateApplyingTests {
         #expect(!next.castlingRights.whiteQueenSide)
     }
 
-    // MARK: Castling Rights — Rook Moves
+    // MARK: Castling Rights - Rook Moves
 
     @Test func kingsideRookMoveRevokesKingsideOnly() {
         let pos = Position.minimal { $0[Squares.h1] = .whiteRook }
@@ -139,7 +139,7 @@ struct GameStateApplyingTests {
         #expect(next.castlingRights.whiteQueenSide)
     }
 
-    // MARK: Castling Rights — Captures
+    // MARK: Castling Rights - Captures
 
     @Test func capturingOnH8RevokesBlackKingside() {
         let pos = Position.minimal {

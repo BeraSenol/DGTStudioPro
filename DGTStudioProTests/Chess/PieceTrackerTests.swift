@@ -1,8 +1,8 @@
 import Testing
 @testable import DGTStudioPro
 
-/// `PieceTracker` — the per-square identity map (same rook through a castle, promoted pawn's
-/// identity on the queen). Legality-agnostic; not @MainActor — pure `Sendable` values.
+/// `PieceTracker` - the per-square identity map (same rook through a castle, promoted pawn's
+/// identity on the queen). Legality-agnostic; not @MainActor - pure `Sendable` values.
 @Suite("Piece Tracker")
 struct PieceTrackerTests {
     
@@ -17,7 +17,7 @@ struct PieceTrackerTests {
     
     /// The starting layout: White's 16 pieces take IDs 0–15 on squares a1–h2,
     /// Black's take IDs 16–31 on a7–h8, and the four empty middle ranks hold
-    /// nothing. Pinned both at the corners of each block and as a whole — every
+    /// nothing. Pinned both at the corners of each block and as a whole - every
     /// ID 0–31 present exactly once.
     @Test func startingTrackerMatchesStandardLayout() {
         let tracker = PieceTracker.starting
@@ -58,7 +58,7 @@ struct PieceTrackerTests {
         #expect(tracker[Squares.e4] == nil)
     }
     
-    // MARK: applyMove — Quiet Move
+    // MARK: applyMove - Quiet Move
     
     /// A plain push moves the identity from the origin to the destination and
     /// leaves every other square untouched. From the starting tracker, e2's
@@ -77,10 +77,10 @@ struct PieceTrackerTests {
         #expect(tracker[Squares.a1] == PieceID(rawValue: 0))   // untouched
     }
     
-    // MARK: applyMove — Capture
+    // MARK: applyMove - Capture
     
     /// A capture clears the victim's identity, then lands the mover. Geometrically artificial on
-    /// purpose — the tracker is legality-agnostic.
+    /// purpose - the tracker is legality-agnostic.
     @Test func captureReplacesVictimIdentity() {
         var tracker = PieceTracker.starting
         let capture = Move.make(
@@ -95,11 +95,11 @@ struct PieceTrackerTests {
         #expect(Square.all.contains { tracker[$0] == PieceID(rawValue: 16) } == false)
     }
     
-    // MARK: applyMove — En Passant
+    // MARK: applyMove - En Passant
     
     /// En passant is the case a destination-keyed tracker gets wrong: the
     /// captured pawn leaves a square *other* than the mover's destination. White
-    /// pawn e5→d6 must clear d5 (the victim) and leave d6 holding the mover —
+    /// pawn e5→d6 must clear d5 (the victim) and leave d6 holding the mover -
     /// d5 must end empty.
     @Test func enPassantClearsTheOffsetSquare() {
         var tracker = PieceTracker.empty
@@ -118,7 +118,7 @@ struct PieceTrackerTests {
         #expect(tracker[Squares.d5] == nil)   // victim left the offset square, not `to`
     }
     
-    // MARK: applyMove — Castling
+    // MARK: applyMove - Castling
     
     /// Castling moves two identities: the king e1→g1 and, crucially, the rook
     /// h1→f1. The rook keeps its own identity on its new square.
@@ -157,9 +157,9 @@ struct PieceTrackerTests {
         #expect(tracker[Squares.a1] == nil)
     }
     
-    // MARK: applyMove — Promotion
+    // MARK: applyMove - Promotion
     
-    /// Promotion reuses the pawn's identity on its new square — the physical
+    /// Promotion reuses the pawn's identity on its new square - the physical
     /// piece is the same one the player pushed, now standing in as a queen.
     @Test func promotionPreservesPawnIdentity() {
         var tracker = PieceTracker.empty

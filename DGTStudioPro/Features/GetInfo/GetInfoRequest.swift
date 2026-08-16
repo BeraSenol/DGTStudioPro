@@ -2,7 +2,7 @@ import SwiftData
 
 // MARK: - Request
 
-/// One Get Info subject. An enum, and a wrapper — `openWindow(value:)` routes by type, and the
+/// One Get Info subject. An enum, and a wrapper - `openWindow(value:)` routes by type, and the
 /// main group claims `PersistentIdentifier`. `.live` carries nothing: a live game has no id
 /// until it archives, and an optional id would make "no game" and "the live game" one value.
 enum GetInfoRequest: Codable, Hashable, Sendable {
@@ -14,7 +14,7 @@ enum GetInfoRequest: Codable, Hashable, Sendable {
     /// only while one is in progress.
     case live
 
-    /// A player, by `Player.normalizedName` — a key, not an id: the view modes render folds, and a
+    /// A player, by `Player.normalizedName` - a key, not an id: the view modes render folds, and a
     /// request must be `Codable` scene state.
     case player(key: String)
 }

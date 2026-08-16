@@ -1,13 +1,13 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The parser's rejection contract — `FENParsingRejectionTests`' mirror for the PGN door.
-@Suite("PGN Parser — Rejection and Tag Edges")
+/// The parser's rejection contract - `FENParsingRejectionTests`' mirror for the PGN door.
+@Suite("PGN Parser - Rejection and Tag Edges")
 struct PGNParserRejectionTests {
     
     // MARK: Helpers
     
-    /// The full seven-tag roster around a movetext fragment — same shape as
+    /// The full seven-tag roster around a movetext fragment - same shape as
     /// the eval suite's helper, duplicated deliberately (suites stay
     /// self-contained; the fixture is seven lines).
     private func pgnText(movetext: String) -> String {
@@ -27,7 +27,7 @@ struct PGNParserRejectionTests {
     // MARK: Required Tags
     
     /// Bare movetext has no blank-line separator, so the whole input reads
-    /// as the (empty) tag section — the error must name all seven.
+    /// as the (empty) tag section - the error must name all seven.
     @Test func movetextOnlyInputIsMissingAllSevenTags() {
         #expect(throws: PGNParser.Error.missingRequiredTags(PGNParser.requiredTags)) {
             _ = try PGNParser.parse("1. e4 e5 *")
@@ -116,7 +116,7 @@ struct PGNParserRejectionTests {
 
     /// The `#` case, split out because a false claim rested on it for a week: `!`/`?` are stripped
     /// at import (`flushToken` appends cleaned tokens only), so `hasSuffix("#")` and `contains("#")`
-    /// **cannot disagree on a stored game** — the divergence is only reachable through the editor door.
+    /// **cannot disagree on a stored game** - the divergence is only reachable through the editor door.
     @Test func annotationsDoNotSurviveImport() throws {
         let pgn = try PGNParser.parse(pgnText(movetext: "1. f3 e5 2. g4 Qh4#! 0-1"))
 

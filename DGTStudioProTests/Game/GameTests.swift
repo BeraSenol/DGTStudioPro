@@ -1,7 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-@Suite("Game — Construction and Navigation")
+@Suite("Game - Construction and Navigation")
 @MainActor
 struct GameTests {
     
@@ -63,7 +63,7 @@ struct GameTests {
             // the compiler proves this arm exhaustive and an untyped `catch`
             // after it is dead code. Same call the production loader made at
             // `BoardDestination.loadIfNeeded`. If a second `BuildError` case
-            // is ever added, this stops compiling — which is the right
+            // is ever added, this stops compiling - which is the right
             // failure, since the new case would need its own assertion.
             #expect(index == 1)
             #expect(san == "garbage")
@@ -122,7 +122,7 @@ struct GameTests {
     }
     
     @Test func checkSquareReportedOnMatePosition() throws {
-        // Scholar's mate — black king on e8 is mated by Qxf7.
+        // Scholar's mate - black king on e8 is mated by Qxf7.
         let game = try Game(pgn: Self.makePGN(
             moves: ["e4", "e5", "Bc4", "Nc6", "Qh5", "Nf6", "Qxf7#"]
         ))

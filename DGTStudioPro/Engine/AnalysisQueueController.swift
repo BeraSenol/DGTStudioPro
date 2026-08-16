@@ -4,8 +4,8 @@ import SwiftData
 
 /// The app's owner of batch analysis: transport around `AnalysisQueue`'s pure decisions.
 /// Resolves ids to models, walks each through the one `GameAnalysisDriver`, records outcomes.
-/// Decisions: (1) one driver, one engine — never two racing; (2) app-owned, not per-tab
-/// (reversed 6 Aug 2026 — a scene receives values, not a tab's instance); (4) the subprocess is
+/// Decisions: (1) one driver, one engine - never two racing; (2) app-owned, not per-tab
+/// (reversed 6 Aug 2026 - a scene receives values, not a tab's instance); (4) the subprocess is
 /// released at drain; the next batch pays one fresh handshake.
 @Observable
 @MainActor
@@ -20,7 +20,7 @@ final class AnalysisQueueController {
     /// The pure decision core; views read it, every mutation routes through this controller.
     private(set) var queue = AnalysisQueue<PersistentIdentifier>()
     
-    /// Running game's display name, resolved once at dequeue — a deleted-mid-pass model keeps its
+    /// Running game's display name, resolved once at dequeue - a deleted-mid-pass model keeps its
     /// last known name instead of a lookup placeholder.
     private(set) var currentGameName: String?
     
@@ -29,7 +29,7 @@ final class AnalysisQueueController {
     private let driver = GameAnalysisDriver()
     private var runTask: Task<Void, Never>?
     
-    /// Captured on each `enqueue` — the controller is built before any environment exists.
+    /// Captured on each `enqueue` - the controller is built before any environment exists.
     private var modelContext: ModelContext?
 
     // MARK: Batch Bookkeeping
@@ -38,7 +38,7 @@ final class AnalysisQueueController {
     /// at `enqueue` where the models are in hand: the estimate must not resolve waiting ids per tick.
     private var plyCounts: [PersistentIdentifier: Int] = [:]
 
-    /// Batch start, or nil. The window's `TimelineView` derives elapsed from this — a controller
+    /// Batch start, or nil. The window's `TimelineView` derives elapsed from this - a controller
     /// publishing a per-second tick would re-render every observer.
     private(set) var batchStartedAt: Date?
 
@@ -64,13 +64,13 @@ final class AnalysisQueueController {
         return waiting + Int((total * (1 - currentProgress)).rounded())
     }
 
-    /// Ply count for a queued id, or nil. Read-only by design — only `enqueue` writes, or the
+    /// Ply count for a queued id, or nil. Read-only by design - only `enqueue` writes, or the
     /// estimate would be denominated in two different things.
     func plyCount(for id: PersistentIdentifier) -> Int? {
         plyCounts[id]
     }
 
-    /// The current search, forwarded — the driver is `private` precisely so the transport has one
+    /// The current search, forwarded - the driver is `private` precisely so the transport has one
     /// door; a window holding it could call `stop()` behind the queue's back.
     var currentSearch: GameAnalysisDriver.Search? { driver.search }
 
@@ -92,7 +92,7 @@ final class AnalysisQueueController {
         return 0
     }
 
-    /// The game on the engine now — the currency `AnalysisGlyph.state` takes, published through
+    /// The game on the engine now - the currency `AnalysisGlyph.state` takes, published through
     /// `analysisRunningGameID`. Deliberately not observing progress: leaves asking *whether* must
     /// not re-render on *how far*.
     var runningID: PersistentIdentifier? { queue.current }
@@ -107,8 +107,8 @@ final class AnalysisQueueController {
         // must not restart the clock.
         let wasIdle = !queue.isActive
         for pgn in pgns {
-            // The estimate is denominated in *searchable* plies — the plan the driver will
-            // build — or a skipped book registers as impossible speed and rots the projection.
+            // The estimate is denominated in *searchable* plies - the plan the driver will
+            // build - or a skipped book registers as impossible speed and rots the projection.
             // An unclassified game estimates full-length; its pass classifies, and any later
             // enqueue tightens.
             plyCounts[pgn.persistentModelID] = AnalysisPlan.plan(
@@ -154,7 +154,7 @@ final class AnalysisQueueController {
         batchStartedAt = nil
     }
     
-    /// Library deletion hook — call **before** the store delete: `driver.stop()` sets the walk's
+    /// Library deletion hook - call **before** the store delete: `driver.stop()` sets the walk's
     /// cancellation flag synchronously, so the model is never written after the delete.
     func gameWasDeleted(_ id: PersistentIdentifier) {
         queue.removeWaiting(id)
@@ -164,7 +164,7 @@ final class AnalysisQueueController {
         }
     }
     
-    /// Stand everything down and release the subprocess; re-entrant. **Test-only by decision** —
+    /// Stand everything down and release the subprocess; re-entrant. **Test-only by decision** -
     /// teardown, not a feature door: suites must never leave Stockfish running.
     func shutdown() async {
         queue.clearWaiting()
@@ -174,14 +174,14 @@ final class AnalysisQueueController {
     
     // MARK: Status
     
-    /// The queue's view of one game — what the inspector's control row switches on.
+    /// The queue's view of one game - what the inspector's control row switches on.
     func status(
         of id: PersistentIdentifier
     ) -> AnalysisQueue<PersistentIdentifier>.ItemStatus {
         queue.status(of: id)
     }
     
-    /// Display name for the popover; em dash for anything no longer resolvable.
+    /// Display name for the popover; the placeholder for anything no longer resolvable.
     func displayName(for id: PersistentIdentifier) -> String {
         guard let modelContext,
               let pgn = modelContext.model(for: id) as? PGN,
@@ -198,14 +198,14 @@ final class AnalysisQueueController {
             await self?.run()
             self?.runTask = nil
             // Re-check the line after clearing the task: an `enqueue` landing during the drain's shutdown
-            // grace saw a non-nil `runTask` and was refused — this restart is its retry. Pinned.
+            // grace saw a non-nil `runTask` and was refused - this restart is its retry. Pinned.
             self?.startRunIfNeeded()
         }
     }
     
     private func run() async {
         guard let modelContext else {
-            // Unreachable by construction (`enqueue` sets the context first) — but a drain beats a wedge.
+            // Unreachable by construction (`enqueue` sets the context first) - but a drain beats a wedge.
             Self.logger?.error("Run started without a model context; draining")
             while queue.startNext() != nil {
                 queue.finishCurrent(.failed(message: "Internal error: no model context."))
@@ -237,7 +237,7 @@ final class AnalysisQueueController {
             currentGameName = nil
         }
         
-        // Teardown can cancel between `startNext` and the walk — don't leave a phantom running item.
+        // Teardown can cancel between `startNext` and the walk - don't leave a phantom running item.
         queue.finishCurrent(.cancelled)
         currentGameName = nil
         

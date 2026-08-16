@@ -2,13 +2,13 @@ import Testing
 @testable import DGTStudioPro
 
 /// The parts of `Piece` only *views* consume, given a unit witness.
-@Suite("Piece — Image Names and Packing")
+@Suite("Piece - Image Names and Packing")
 struct PieceTests {
     
     // MARK: Image Names
     
     /// The exact asset-catalog spellings, pinned literally. If a name here
-    /// ever disagrees with the catalog, the mirror shows an empty square —
+    /// ever disagrees with the catalog, the mirror shows an empty square -
     /// this test is the only witness that can fail loudly instead.
     @Test func imageNamesAreExactlySpelled() {
         let expected: [(Piece, String)] = [
@@ -44,7 +44,7 @@ struct PieceTests {
     // MARK: Packed Raw Value
     
     /// The 4-bit packing (`color << 3 | type`) round-trips, all twelve
-    /// occupied values are distinct, and `.empty` decodes to nil/nil — the
+    /// occupied values are distinct, and `.empty` decodes to nil/nil - the
     /// layout the image table indexes by.
     @Test func packedRawValueRoundTripsColorAndType() {
         var raws: Set<UInt8> = []

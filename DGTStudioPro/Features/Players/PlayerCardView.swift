@@ -1,11 +1,15 @@
 import SwiftUI
 
-/// The monogram avatar, shared by the card, the gallery's large preview,
-/// and the inspector header — one initials rule everywhere.
+/// The monogram avatar, shared by the card, the gallery's large preview, and the columns
+/// detail pane - one initials rule everywhere. ("The inspector header" stood in this sentence
+/// as a third consumer and never was one; corrected 16 Aug 2026 - the named-consumer claim
+/// that doesn't consume, again.)
 struct PlayerMonogram: View {
-    
+
     let name: String
-    var diameter: CGFloat = 64
+    /// Side of the bounding square. Was `diameter` while the shape was a circle; renamed with
+    /// the squircle (16 Aug 2026) so the signature doesn't describe a retired shape.
+    var side: CGFloat = 64
     
     private var initials: String {
         let words = name.split(separator: " ")
@@ -16,18 +20,21 @@ struct PlayerMonogram: View {
     
     var body: some View {
         ZStack {
-            Circle()
+            // Squircle, not a circle (Bera's call, 16 Aug 2026). The continuous corner style is
+            // what makes it a squircle rather than a rounded rect; 22.5% of the side is roughly
+            // the app-icon curve, and the ratio keeps the 64 pt card and 96 pt previews agreeing.
+            RoundedRectangle(cornerRadius: side * 0.225, style: .continuous)
                 .fill(.tertiary)
             Text(initials)
-                .font(.system(size: diameter * 0.4, weight: .semibold, design: .rounded))
+                .font(.system(size: side * 0.4, weight: .semibold, design: .rounded))
                 .fontWeight(.medium)
                 .foregroundStyle(.primary)
         }
-        .frame(width: diameter, height: diameter)
+        .frame(width: side, height: side)
     }
 }
 
-/// One labelled metric in a gallery preview's grid — both galleries carried byte-identical
+/// One labelled metric in a gallery preview's grid - both galleries carried byte-identical
 /// private copies.
 struct PlayerStatCell: View {
     
@@ -50,7 +57,7 @@ struct PlayerStatCell: View {
     }
 }
 
-/// The stat grid of a player preview — shared by the gallery and the columns detail pane.
+/// The stat grid of a player preview - shared by the gallery and the columns detail pane.
 /// Rated Games is deliberately absent: it needs the histories fold, which neither host receives.
 struct PlayerStatsGrid: View {
 
@@ -104,7 +111,7 @@ enum RankMedal: String, CaseIterable, Identifiable, Sendable {
         }
     }
     
-    /// Style for a rank on a **headline** surface — medal on the podium, `.tint` below. Erased
+    /// Style for a rank on a **headline** surface - medal on the podium, `.tint` below. Erased
     /// because the two branches return different style types.
     static func style(forRank rank: Int) -> AnyShapeStyle {
         if let medal = RankMedal(rank: rank) {
@@ -114,8 +121,10 @@ enum RankMedal: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Style for a rank in a **column** — same podium colours, `.secondary` below. The fallbacks
-    /// differ on purpose; the podium must not: one colour everywhere or the table and cards disagree.
+    /// Style for a rank in a **column** - same podium colours, `.secondary` below. The fallbacks
+    /// differ on purpose; the podium must not: one colour on every surface that tints - the table
+    /// and both headline previews - or they disagree. (The card left that set 16 Aug 2026; it
+    /// prints its rank plain and tints nothing.)
     static func tableStyle(forRank rank: Int) -> AnyShapeStyle {
         if let medal = RankMedal(rank: rank) {
             AnyShapeStyle(medal.color)
@@ -125,55 +134,54 @@ enum RankMedal: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-/// The ladder position as a chip — one caller (the card) since the table went plain text; kept
-/// because a second host wanting a *different colour* is the failure this type prevents.
-/// The outer inset stays with the caller: the card needs it, a table cell must not inherit it.
-struct RankBadge: View {
-
-    let rank: Int
-
-    var body: some View {
-        let style = RankMedal.style(forRank: rank)
-        Text("#\(rank)")
-            .font(.caption)
-            .padding(5)
-            .foregroundStyle(.primary)
-            .padding(.horizontal, 3)
-            .background(Capsule().fill(style))
-            .offset(x: 6, y: 6)
-    }
-}
+// `RankBadge` - the tinted capsule overlaid on the monogram's corner - was deleted 16 Aug 2026
+// (Bera's request): the card renders its rank as a plain secondary prefix on the name now, so
+// the capsule lost its one caller. Its own doc had already recorded the shape of this ending -
+// "one caller (the card) since the table went plain text". The podium colours survive where they
+// still have consumers: `style(forRank:)` on the gallery and columns headline ranks,
+// `tableStyle(forRank:)` on the table.
 
 /// The Players analogue of `LibraryGameCardView` (icons grid, columns detail, gallery
-/// filmstrip); `rank` earns the badge.
+/// filmstrip); `rank` prefixes the name line.
 struct PlayerCardView: View {
     
     // MARK: Stored Properties
     let stats: PlayerStats
     let isSelected: Bool
     let onSelect: () -> Void
-    /// Ladder position; nil hides the badge.
+    /// Ladder position; nil leaves the name unprefixed.
     var rank: Int? = nil
     /// Presents "Show in Library" when set; optional so previews stay unchanged.
     var onShowInLibrary: (() -> Void)? = nil
-    
+
+    // MARK: Derived
+    /// "#12 Magnus Carlsen" as one run - a styled `Text` interpolated into the outer `Text`,
+    /// which keeps a two-style line a single wrapping, centring, highlightable element.
+    /// (`Text` concatenation's `+` did the same job and is deprecated in macOS 26.)
+    private var nameLine: Text {
+        if let rank {
+            Text("\(Text("#\(rank)").foregroundStyle(.secondary).monospacedDigit()) \(stats.name)")
+        } else {
+            Text(stats.name)
+        }
+    }
+
     // MARK: Body
     var body: some View {
         VStack(spacing: 4) {
-            PlayerMonogram(name: stats.name, diameter: 64)
+            PlayerMonogram(name: stats.name, side: 64)
                 .padding()
                 .background {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(.secondary.opacity(isSelected ? 0.15 : 0))
                 }
-                .overlay(alignment: .topLeading) {
-                    if let rank {
-                        RankBadge(rank: rank)
-                            .padding(4)
-                    }
-                }
-            
-            Text(stats.name)
+
+            // The rank prefixes the name (Bera, 16 Aug 2026 - fourth placement that day: tinted
+            // overlay capsule → plain row below the squircle → inside it → in front of the name).
+            // One `Text` (styled prefix interpolated in) so prefix and name wrap, centre and
+            // highlight as one block; the prefix stays secondary so the name carries the line.
+            // Still no podium tint.
+            nameLine
                 .font(.callout)
             // Capped, no longer reserved (Bera's reversal): uniform card heights bought a blank line under
             // every single-line name.
@@ -194,11 +202,11 @@ struct PlayerCardView: View {
         .padding(.vertical, 8)
         .contentShape(Rectangle())
         .onTapGesture(perform: onSelect)
-        // Without `.combine`, macOS exposes only the inner texts — the identifier never lands on a
+        // Without `.combine`, macOS exposes only the inner texts - the identifier never lands on a
         // tappable element.
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier(AccessibilityID.playerCard(stats.name))
-        // The conditional Show in Library moved into `PlayerActionsMenu` — this card is the host whose
+        // The conditional Show in Library moved into `PlayerActionsMenu` - this card is the host whose
         // shape the shared type absorbed.
         .contextMenu {
             PlayerActionsMenu(
@@ -219,7 +227,7 @@ struct PlayerCardView: View {
     .padding()
 }
 
-#Preview("Rank Badges") {
+#Preview("Rank Prefixes") {
     HStack(spacing: 20) {
         ForEach(PreviewFixtures.rankedPlayers().prefix(4), id: \.id) { ranked in
             PlayerCardView(

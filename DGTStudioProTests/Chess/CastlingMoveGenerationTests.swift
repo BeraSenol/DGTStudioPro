@@ -7,7 +7,7 @@ struct CastlingMoveGenerationTests {
     // State construction (`GameState.test`, `Position.make`) lives in
     // Support/ChessTestSupport.swift; note its castling-rights default is
     // `.none`, so the tests below pass `.all` explicitly wherever rights are
-    // meant to exist — which reads better anyway, since rights are the very
+    // meant to exist - which reads better anyway, since rights are the very
     // thing under test here.
 
     // MARK: Helpers
@@ -83,7 +83,7 @@ struct CastlingMoveGenerationTests {
     // MARK: Rights Without Rooks (hand-edited state)
 
     /// The rook-home guard (M1 item 16): rights imply a home rook only
-    /// for positions reached through `applying` — a FEN can lie, and the
+    /// for positions reached through `applying` - a FEN can lie, and the
     /// draft sidecar resumes through `FEN(parsing:)`. A hand-edited `KQ`
     /// over a bare back rank must generate no castling at all; pre-guard,
     /// `O-O` was emitted and `Position.applying` copied an empty square
@@ -111,7 +111,7 @@ struct CastlingMoveGenerationTests {
     }
 
     /// A foreign piece on the rook's home square is not a rook: the guard
-    /// compares the piece (`position[home] == homeRook`), not occupancy —
+    /// compares the piece (`position[home] == homeRook`), not occupancy -
     /// a knight parked on h1 under `KQ` rights must not castle kingside.
     @Test func wrongPieceOnRookHomeSquareDoesNotCastle() {
         let pos = castlingPosition { p in p[Squares.h1] = .whiteKnight }

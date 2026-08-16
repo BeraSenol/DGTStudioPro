@@ -8,7 +8,7 @@ enum DGTEvent: Equatable, Sendable {
     /// Full 64-square snapshot (`DGT_MSG_BOARD_DUMP`, `0x86`).
     case boardDump(Position)
     /// A single field changed (`DGT_MSG_FIELD_UPDATE`, `0x8E`). A physical move
-    /// produces two of these (lift then place) — pairing them into a move is
+    /// produces two of these (lift then place) - pairing them into a move is
     /// the reconstructor's concern, not the decoder's.
     case fieldUpdate(square: Square, piece: Piece)
     /// Board serial number (`DGT_MSG_SERIALNR`, `0x91`).
@@ -26,7 +26,7 @@ enum DGTEvent: Equatable, Sendable {
 /// Decodes a framed DGT message into a `DGTEvent`. Pure and total: every input
 /// either yields a well-formed event or `nil` (unknown message ID, or a known
 /// ID whose payload fails its length/range contract). It never traps on
-/// malformed input — that's a wire concern, not a programmer error.
+/// malformed input - that's a wire concern, not a programmer error.
 ///
 /// The `a8 ↔ a1` coordinate transform happens here, via `Square(dgtField:)`,
 /// and the `DGTPiece → Piece` remap happens here, via `DGTPiece.piece`. Both
@@ -37,7 +37,7 @@ enum DGTDecoder {
     
     static func decode(_ frame: DGTFrame) -> DGTEvent? {
         guard let message = DGTMessage(rawValue: frame.message) else {
-            return nil // Unknown/unhandled message ID — let the caller log raw.
+            return nil // Unknown/unhandled message ID - let the caller log raw.
         }
         
         switch message {
@@ -75,7 +75,7 @@ enum DGTDecoder {
     
     /// 2 payload bytes: field number (0–63), then the full piece code. (On a
     /// piece-detecting board byte 4 carries the piece, not a bare occupied
-    /// flag — see the roadmap's target-hardware decision.)
+    /// flag - see the roadmap's target-hardware decision.)
     private static func decodeFieldUpdate(_ data: [UInt8]) -> DGTEvent? {
         guard data.count == 2,
               let square = Square(dgtField: Int(data[0])),

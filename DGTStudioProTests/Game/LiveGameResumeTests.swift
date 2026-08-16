@@ -3,7 +3,7 @@ import Testing
 @testable import DGTStudioPro
 
 /// Draft ↔ game conversion: faithful snapshot, equivalent-by-construction resume, manual
-/// results re-applied. `moveRejected` deliberately untested — `parseSAN` can't produce it from
+/// results re-applied. `moveRejected` deliberately untested - `parseSAN` can't produce it from
 /// a transcript the game itself wrote.
 @MainActor
 @Suite("LiveGame Draft Resume")
@@ -91,7 +91,7 @@ struct LiveGameResumeTests {
         #expect(resumed.roster.board == "DGT 3000448278")
     }
 
-    // MARK: Resume — Success Paths
+    // MARK: Resume - Success Paths
 
     /// The core replay guarantee: a resumed game reproduces the original's
     /// transcript, position, ply count, result, and start time.
@@ -102,7 +102,7 @@ struct LiveGameResumeTests {
         let resumed = try LiveGame(resuming: original.draftSnapshot)
 
         #expect(resumed.sanMoves == original.sanMoves)
-        // `FEN(_:)` at the call site — `currentFEN` was deleted 3 Aug 2026.
+        // `FEN(_:)` at the call site - `currentFEN` was deleted 3 Aug 2026.
         #expect(FEN(resumed.currentState).string == FEN(original.currentState).string)
         #expect(resumed.plyCount == original.plyCount)
         #expect(resumed.result == .ongoing)
@@ -110,7 +110,7 @@ struct LiveGameResumeTests {
         #expect(resumed.roster.white == "Wendy")
     }
 
-    /// A resignation is a manual result — the replay ends `.ongoing`, so
+    /// A resignation is a manual result - the replay ends `.ongoing`, so
     /// the stored result is re-applied and the game comes back decided.
     @Test func resumeReappliesAManualResult() throws {
         let original = newGame()
@@ -147,7 +147,7 @@ struct LiveGameResumeTests {
         #expect(resumed.isFinished)
     }
 
-    // MARK: Resume — Error Paths
+    // MARK: Resume - Error Paths
 
     @Test func invalidStartFENThrows() {
         #expect(throws: LiveGame.ResumeError.invalidStart(fen: "garbage")) {
@@ -161,8 +161,8 @@ struct LiveGameResumeTests {
         }
     }
 
-    /// Moves continuing past a checkmate fail at the *parse* step — a mated
-    /// position has no legal moves for SAN to match — so the diagnostic is
+    /// Moves continuing past a checkmate fail at the *parse* step - a mated
+    /// position has no legal moves for SAN to match - so the diagnostic is
     /// `invalidMove` at the offending index (see the type doc on why
     /// `moveRejected` stays out of reach).
     @Test func movesAfterMateThrowInvalidMove() {
@@ -213,7 +213,7 @@ struct LiveGameResumeTests {
 
     /// The draft's transcript is the serializer's canonical SAN. A
     /// non-canonical spelling (`0-0` for `O-O`) parses and commits fine, but
-    /// the replayed transcript then can't reproduce the stored one — the
+    /// the replayed transcript then can't reproduce the stored one - the
     /// file was edited or written by diverging rules, and must not resume.
     @Test func nonCanonicalSANThrowsTranscriptMismatch() {
         let bad = draft(

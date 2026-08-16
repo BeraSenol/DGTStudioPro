@@ -3,7 +3,7 @@
 extension LiveGameHUDView.Phase {
 
     /// The one resolution of "what is the session doing", shared by the sidebar card and the
-    /// Board's subtitle — two computations was fine; two *spellings* of the priority order was not.
+    /// Board's subtitle - two computations was fine; two *spellings* of the priority order was not.
     /// Connection truth outranks session state; a failed archive outranks the finished banner.
     @MainActor
     static func current(

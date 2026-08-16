@@ -2,7 +2,7 @@ import Testing
 @testable import DGTStudioPro
 
 /// Decode-layer tests. The headline case is the start-position board dump
-/// decoding to `Position.starting` *after* the coordinate transform — the
+/// decoding to `Position.starting` *after* the coordinate transform - the
 /// roadmap's named "first decoder test". The dump fixture is built by hand in
 /// DGT field order with DGT piece codes, so it is an independent statement of
 /// the wire format, not a re-derivation of the code under test.

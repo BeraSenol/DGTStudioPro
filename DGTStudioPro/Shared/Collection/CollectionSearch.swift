@@ -1,6 +1,6 @@
 import Foundation
 
-/// Live-search matching for the collection search fields. The fold is the — the identity
+/// Live-search matching for the collection search fields. The fold is the - the identity
 /// rule the rest of the app already lives by ("Bücher" is found by "bücher", not "bucher").
 enum SearchMatch {
 
@@ -14,13 +14,13 @@ enum SearchMatch {
         folded(query).split(separator: " ").map(String.init)
     }
 
-    /// AND over terms, OR over fields, `contains` per pair — the grammar every macOS search field
+    /// AND over terms, OR over fields, `contains` per pair - the grammar every macOS search field
     /// teaches. Empty matches everything; callers gate on emptiness for clarity, not correctness.
     static func matches(query: String, fields: [String]) -> Bool {
         Query(query).matches(fields: fields)
     }
 
-    /// A query folded once, matched many times — the one-shot form re-folded per row per keystroke.
+    /// A query folded once, matched many times - the one-shot form re-folded per row per keystroke.
     /// Delegates, so there is still exactly one matcher.
     struct Query {
         let needles: [String]
@@ -43,10 +43,10 @@ enum SearchMatch {
 }
 
 // MARK: Token Semantics
-/// The rule both vocabularies obey: **OR within a facet, AND across facets** — how every
+/// The rule both vocabularies obey: **OR within a facet, AND across facets** - how every
 /// faceted filter behaves, and the only reading where adding a chip never widens the set.
 
-/// The Library's two non-text facets. Replaced a pair of single-valued optionals — "1-0 or 0-1"
+/// The Library's two non-text facets. Replaced a pair of single-valued optionals - "1-0 or 0-1"
 /// was inexpressible.
 enum LibrarySearchToken: Hashable, Identifiable, CaseIterable {
     case result(GameResult)
@@ -65,7 +65,7 @@ enum LibrarySearchToken: Hashable, Identifiable, CaseIterable {
         }
     }
 
-    /// The chip's text; results pair the word with PGN's own vocabulary — a chip without "1-0"
+    /// The chip's text; results pair the word with PGN's own vocabulary - a chip without "1-0"
     /// makes the user translate.
     var displayName: String {
         switch self {
@@ -86,7 +86,7 @@ enum LibrarySearchToken: Hashable, Identifiable, CaseIterable {
         }
     }
 
-    /// Whether tokens admit this result + analysis state. Takes the facts, not a `PGN` — the caller
+    /// Whether tokens admit this result + analysis state. Takes the facts, not a `PGN` - the caller
     /// reads the app's one spelling of "analyzed?", not second-guessed here.
     static func admit(
         _ tokens: [LibrarySearchToken],
@@ -99,7 +99,7 @@ enum LibrarySearchToken: Hashable, Identifiable, CaseIterable {
             if case .result(let value) = token { return value }
             return nil
         }
-        // An absent facet must not veto — "empty means yes" over chained optionals, whose failure mode
+        // An absent facet must not veto - "empty means yes" over chained optionals, whose failure mode
         // is silent.
         let resultAdmits = results.isEmpty || results.contains(result)
 
@@ -114,7 +114,7 @@ enum LibrarySearchToken: Hashable, Identifiable, CaseIterable {
     }
 }
 
-/// The Players tokens — rated-ness, the one non-text fact worth slicing on.
+/// The Players tokens - rated-ness, the one non-text fact worth slicing on.
 enum PlayersSearchToken: String, CaseIterable, Identifiable {
     case rated
     case provisional
@@ -139,7 +139,7 @@ enum PlayersSearchToken: String, CaseIterable, Identifiable {
     }
 
     /// Provisional ⊂ rated by design: "Rated" answers who has a number, "Provisional" whose is
-    /// still settling. Selecting both == Rated — correct for an OR, worth knowing before it looks
+    /// still settling. Selecting both == Rated - correct for an OR, worth knowing before it looks
     /// like a bug.
     func admits(_ rating: Glicko1.Rating?) -> Bool {
         switch self {

@@ -2,7 +2,7 @@ import SwiftData
 import SwiftUI
 
 /// The icons grid with Finder's two selection gestures: arrow keys walk from the last-touched
-/// card (index math in reading order — the grid is not `.adaptive`, so the column count is
+/// card (index math in reading order - the grid is not `.adaptive`, so the column count is
 /// computable), and a click-drag sweeps a rubber-band over the cards it crosses.
 struct LibraryIconsView: View {
 
@@ -14,11 +14,11 @@ struct LibraryIconsView: View {
 
     // MARK: Stored Properties
     let games: [PGN]
-    /// Which games count as analyzed, off the memoized projection — never off the models, so
+    /// Which games count as analyzed, off the memoized projection - never off the models, so
     /// a card render costs no blob decode.
     let analyzedIDs: Set<PGN.ID>
     @Binding var selectedPGNs: Set<PGN.ID>
-    /// Takes the set — see `open(_:)` for the rule applied first.
+    /// Takes the set - see `open(_:)` for the rule applied first.
     let onOpen: ([PGN]) -> Void
     let onAnalyze: (PGN) -> Void
     let onExport: (PGN) -> Void
@@ -31,11 +31,11 @@ struct LibraryIconsView: View {
     /// Ambient, written once by the destination; nil in previews, which is honest.
     @Environment(\.analysisRunningGameID) private var runningAnalysisID
 
-    /// Realized card frames in `gridSpace` — a box, not observed state. **Populated only while a
+    /// Realized card frames in `gridSpace` - a box, not observed state. **Populated only while a
     /// band is sweeping**; stale entries are re-checked against `games` rather than trusted.
     @State private var cardFrames = IconGridFrameStore<PGN.ID>()
     @State private var rubberBand: CGRect?
-    /// The card the last selection gesture touched — where an arrow steps from.
+    /// The card the last selection gesture touched - where an arrow steps from.
     @State private var anchorID: PGN.ID?
     @FocusState private var isFocused: Bool
 
@@ -68,7 +68,7 @@ struct LibraryIconsView: View {
                             )
                             .id(game.id)
                             .onGeometryChange(for: CGRect.self) { geometry in
-                                // Gated on the sweep — the fifth "cycling between duplicate values" correction, and the first
+                                // Gated on the sweep - the fifth "cycling between duplicate values" correction, and the first
                                 // that removes the observation instead of tuning it: frames are only read mid-sweep.
                                 isSweeping
                                 ? IconGridSelection.stableFrame(
@@ -77,7 +77,7 @@ struct LibraryIconsView: View {
                                 : .null
                             } action: { frame in
                                 // A box write: free, invisible to the render pass. `.null` lands once per card when a sweep
-                                // ends; harmless — `.null` intersects nothing.
+                                // ends; harmless - `.null` intersects nothing.
                                 cardFrames.frames[game.id] = frame
                             }
                         }
@@ -86,13 +86,13 @@ struct LibraryIconsView: View {
                     .frame(maxWidth: .infinity)
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        // Empty space or gutters — a card's own tap wins before this fires.
+                        // Empty space or gutters - a card's own tap wins before this fires.
                         selectedPGNs.removeAll()
                         anchorID = nil
                         isFocused = true
                     }
                     // Background context menu on the same `contentShape` as the clear-selection tap, so it covers
-                    // the gutters — Finder's behaviour; a card's own menu wins over its bounds.
+                    // the gutters - Finder's behaviour; a card's own menu wins over its bounds.
                     .contextMenu { ShowViewOptionsButton() }
                     .gesture(rubberBandGesture)
                     // Content-anchored: the space, the gesture coordinates and the band overlay live on this
@@ -115,7 +115,7 @@ struct LibraryIconsView: View {
                 .focusable()
                 .focusEffectDisabled()
                 .focused($isFocused)
-                // `geometry.size.width` directly — the proxy the layout reads, captured at key-press time when
+                // `geometry.size.width` directly - the proxy the layout reads, captured at key-press time when
                 // layout has settled.
                 .onMoveCommand { direction in
                     move(direction, width: geometry.size.width, proxy: proxy)
@@ -134,7 +134,7 @@ struct LibraryIconsView: View {
 
     /// Finder's double-click rule, spelled by hand (`LibraryListView` gets it free from
     /// `primaryAction`): double-clicking a card in a multi-selection opens the whole
-    /// selection; anything else opens just it. Ordered off `games` — that is tab order.
+    /// selection; anything else opens just it. Ordered off `games` - that is tab order.
     private func open(_ game: PGN) {
         if selectedPGNs.count > 1, selectedPGNs.contains(game.id) {
             onOpen(games.filter { selectedPGNs.contains($0.id) })
@@ -178,7 +178,7 @@ struct LibraryIconsView: View {
                 count: games.count
             )
         } else {
-            // Nothing anchored: the first arrow lands on the first card — Finder's opening move.
+            // Nothing anchored: the first arrow lands on the first card - Finder's opening move.
             target = 0
         }
         let game = games[target]
@@ -187,7 +187,7 @@ struct LibraryIconsView: View {
         proxy.scrollTo(game.id)
     }
 
-    // (Arrow stepping and band normalization live in `IconGridSelection` — one grammar, two grids.)
+    // (Arrow stepping and band normalization live in `IconGridSelection` - one grammar, two grids.)
 }
 
 // MARK: Previews

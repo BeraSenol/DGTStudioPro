@@ -6,9 +6,9 @@ import Testing
 @Suite("Destination Subtitle")
 struct DestinationSubtitleTests {
 
-    // MARK: Board — the exceptional vocabulary
+    // MARK: Board - the exceptional vocabulary
 
-    /// The words themselves — a change to window chrome should have to touch a test.
+    /// The words themselves - a change to window chrome should have to touch a test.
     @Test func exceptionalPhasesRenderAsOneShortWord() {
         func subtitle(_ phase: LiveGameHUDView.Phase) -> String? {
             DestinationSubtitle.board(phase: phase, reviewing: nil)
@@ -22,7 +22,7 @@ struct DestinationSubtitleTests {
         #expect(subtitle(.finished(result: .draw)) == "Finished")
     }
 
-    /// The payload never reaches the subtitle — the whole point of the line is that it stays a word.
+    /// The payload never reaches the subtitle - the whole point of the line is that it stays a word.
     @Test func theSubtitleNeverLeaksAPhasePayload() {
         let subtitle = DestinationSubtitle.board(
             phase: .correction(message: "lift the pawn on e5"),
@@ -32,7 +32,7 @@ struct DestinationSubtitleTests {
         #expect(subtitle?.contains("e5") == false)
     }
 
-    // MARK: Board — the routine cases
+    // MARK: Board - the routine cases
 
     @Test func playingCarriesTheSideToMove() {
         #expect(DestinationSubtitle.board(phase: .playing(sideToMove: .white, lastSAN: nil, ply: 0),
@@ -47,7 +47,7 @@ struct DestinationSubtitleTests {
     }
 
     /// **Reviewing outranks the session.** A tab reading an archived game must
-    /// not report the physical board's troubles — it is not party to them
+    /// not report the physical board's troubles - it is not party to them
     ///. Asserted against a phase that would otherwise win loudly, so
     /// this fails if the branches are ever reordered.
     @Test func aReviewTabIgnoresTheLiveSession() {
@@ -67,7 +67,7 @@ struct DestinationSubtitleTests {
     /// The verbs come from `GameHeadline.Activity`, asserted against that
     /// enum rather than against literals. A literal would keep passing while
     /// the inspector headline and the toolbar drifted apart on a word they
-    /// both display at the same time — the `EvaluationGraphReading` lesson.
+    /// both display at the same time - the `EvaluationGraphReading` lesson.
     @Test func theVerbsAreTheHeadlinesOwn() {
         let recording = DestinationSubtitle.board(
             phase: .playing(sideToMove: .white, lastSAN: nil, ply: 0), reviewing: nil
@@ -86,7 +86,7 @@ struct DestinationSubtitleTests {
     }
 
     /// The backlog clause vanishes at zero rather than reading "0
-    /// unanalyzed" — a fully analysed Library shows a bare title, which is
+    /// unanalyzed" - a fully analysed Library shows a bare title, which is
     /// the entire argument for putting the backlog here instead of a count.
     @Test func libraryGoesQuietWithNothingToDo() {
         #expect(DestinationSubtitle.library(selected: 0, unanalyzed: 7) == "7 unanalyzed")

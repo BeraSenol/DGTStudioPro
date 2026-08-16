@@ -27,7 +27,7 @@ struct LibraryInspectorView: View {
         if let pgn {
             List {
                 // .id re-inits per selected game, resetting per-game view state. It no longer tears down an
-                // analysis — the queue outlives any one selection.
+                // analysis - the queue outlives any one selection.
                 LoadedSection(pgn: pgn)
                     .id(pgn.id)
             }
@@ -49,7 +49,7 @@ struct LibraryInspectorView: View {
         )
     }
     
-    /// The counting variant: same shared chrome, same symbol as the columns detail pane — two
+    /// The counting variant: same shared chrome, same symbol as the columns detail pane - two
     /// surfaces, one vocabulary for "you selected many".
     private var multiSelectionState: some View {
         InspectorEmptyState(
@@ -115,7 +115,7 @@ private struct LoadedSection: View {
     
     // MARK: PGN Section
     
-    /// The game as a file: `PGN.pgnText`, byte-identical to Export — an inspector formatting
+    /// The game as a file: `PGN.pgnText`, byte-identical to Export - an inspector formatting
     /// its own tag block would be a third PGN shape, free to drift from the reference bytes.
     private var pgnSection: some View {
         // `CollapsibleSection` gates the rebuild: body re-runs on every progress tick while this game
@@ -123,12 +123,12 @@ private struct LoadedSection: View {
         CollapsibleSection(.pgn, title: "PGN") {
             rawPGNText
         } actions: {
-            // Read-only — the movetext door is Get Info's Move Text tab.
+            // Read-only - the movetext door is Get Info's Move Text tab.
             copyPGNButton
         }
     }
     
-    /// The bytes, extracted so the section body reads as the decision — open or not.
+    /// The bytes, extracted so the section body reads as the decision - open or not.
     private var rawPGNText: some View {
         Text(pgn.pgnText)
             .font(.system(.caption, design: .monospaced))
@@ -142,7 +142,7 @@ private struct LoadedSection: View {
             .accessibilityIdentifier(AccessibilityID.libraryInspectorPGN)
     }
     
-    /// Review as a roster-header glyph — reachable while the Evaluation section is folded.
+    /// Review as a roster-header glyph - reachable while the Evaluation section is folded.
     /// Not an `InspectorEditButtonView` (that type hardcodes the pencil on purpose); shares the
     /// pair that must not drift: `.font(.body)`, one label feeding `.help` and `.accessibilityLabel`.
     private var reviewGlyphButton: some View {
@@ -158,7 +158,7 @@ private struct LoadedSection: View {
         .accessibilityIdentifier(AccessibilityID.libraryInspectorReviewGlyph)
     }
 
-    /// Exported bytes to the pasteboard — in the header so it works while the section is collapsed.
+    /// Exported bytes to the pasteboard - in the header so it works while the section is collapsed.
     /// Not an `InspectorEditButtonView` (pencil-only by design); extract only if a second copy appears.
     private var copyPGNButton: some View {
         Button {
@@ -215,7 +215,7 @@ private struct LoadedSection: View {
         .environment(InspectorSectionCollapse.preview)
 }
 
-/// The counting branch — no fixture reaches it by accident, which is why it has a preview.
+/// The counting branch - no fixture reaches it by accident, which is why it has a preview.
 #Preview("Multi-Selection") {
     LibraryInspectorView(selectionCount: 12)
         .frame(width: 300, height: 700)

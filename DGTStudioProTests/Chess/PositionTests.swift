@@ -164,7 +164,7 @@ struct PositionTests {
 
     // MARK: Composition
     @Test func chainedApplications() {
-        // 1. e4 e5 2. Nf3 Nc6 — multi-move composition.
+        // 1. e4 e5 2. Nf3 Nc6 - multi-move composition.
         let result = Position.starting
             .applying(.make(from: Squares.e2, to: Squares.e4, pieceType: .pawn, pieceColor: .white, isDoublePawnPush: true))
             .applying(.make(from: Squares.e7, to: Squares.e5, pieceType: .pawn, pieceColor: .black, isDoublePawnPush: true))

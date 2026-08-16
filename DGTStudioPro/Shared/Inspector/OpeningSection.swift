@@ -6,7 +6,7 @@ struct OpeningSection: View {
 
     // MARK: Static Constants
 
-    /// Shown for no classified opening *and* no game at all — an opening is not a tag and has no
+    /// Shown for no classified opening *and* no game at all - an opening is not a tag and has no
     /// `?` vocabulary. Its own constant beside `SevenTagRosterSection`'s: two decisions that agree
     /// today, not one with two call sites.
     private static var unclassifiedPlaceholder: String { RosterSummary.displayUnknown }
@@ -17,7 +17,7 @@ struct OpeningSection: View {
 
     // MARK: Body
 
-    /// Collapses as `.opening` — one section rendered twice, not two that look alike.
+    /// Collapses as `.opening` - one section rendered twice, not two that look alike.
     var body: some View {
         CollapsibleSection(.opening, title: "Opening") {
             if let opening {
@@ -38,7 +38,7 @@ struct OpeningSection: View {
 
 // MARK: Previews
 
-/// The three-row shape — a named line deep enough to carry a variation.
+/// The three-row shape - a named line deep enough to carry a variation.
 #Preview("Named Variation") {
     List {
         OpeningSection(
@@ -53,7 +53,7 @@ struct OpeningSection: View {
     .environment(InspectorSectionCollapse.preview)
 }
 
-/// A bare family drops its Variation row rather than inventing a placeholder — the row-count
+/// A bare family drops its Variation row rather than inventing a placeholder - the row-count
 /// decision's one visible place.
 #Preview("Bare Family") {
     List {
@@ -64,7 +64,7 @@ struct OpeningSection: View {
     .environment(InspectorSectionCollapse.preview)
 }
 
-/// The em dash beside "Bare Family" — "no variation" vs. "no opening" is why the row count moves.
+/// The placeholder beside "Bare Family" - "no variation" vs. "no opening" is why the row count moves.
 #Preview("Unclassified") {
     List {
         OpeningSection(opening: nil)

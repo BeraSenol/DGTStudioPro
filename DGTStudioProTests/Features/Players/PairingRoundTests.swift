@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import DGTStudioPro
 
-/// The round-prefill fold. Nonisolated — pure value types, the /// suite shape. Keys here are already-normalized identity keys (opaque to
+/// The round-prefill fold. Nonisolated - pure value types, the /// suite shape. Keys here are already-normalized identity keys (opaque to
 /// the fold; resolution is the caller's job and `Player.normalizedKey`'s
 /// suite territory).
 @Suite("Pairing Round")
@@ -33,7 +33,7 @@ struct PairingRoundTests {
         #expect(PairingRound.nextRound(between: "bera", and: "lorenzo", in: records) == 3)
     }
     
-    /// F9: the pairing is a set — both color assignments count.
+    /// F9: the pairing is a set - both color assignments count.
     @Test func bothColorAssignmentsCount() {
         let records = [
             game(white: "bera", black: "lorenzo", round: 4),
@@ -42,7 +42,7 @@ struct PairingRoundTests {
         #expect(PairingRound.nextRound(between: "bera", and: "lorenzo", in: records) == 6)
     }
     
-    /// The argument order can't matter either — same set, same answer.
+    /// The argument order can't matter either - same set, same answer.
     @Test func argumentOrderIsIrrelevant() {
         let records = [game(white: "bera", black: "lorenzo", round: 7)]
         #expect(
@@ -52,7 +52,7 @@ struct PairingRoundTests {
     }
     
     /// F9's other half: a game against a third player never informs this
-    /// pairing — the pair's history, not each player's individual maximum.
+    /// pairing - the pair's history, not each player's individual maximum.
     @Test func thirdPartyGamesAreIgnored() {
         let records = [
             game(white: "bera", black: "carla", round: 9),
@@ -61,7 +61,7 @@ struct PairingRoundTests {
         #expect(PairingRound.nextRound(between: "bera", and: "lorenzo", in: records) == 3)
     }
     
-    /// "Latest" is the numeric maximum, not the last game entered — an
+    /// "Latest" is the numeric maximum, not the last game entered - an
     /// old low-round game arriving late must not wind the counter back.
     @Test func maximumWinsRegardlessOfRecordOrder() {
         let records = [

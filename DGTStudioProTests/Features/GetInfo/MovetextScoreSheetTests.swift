@@ -2,7 +2,7 @@ import Testing
 @testable import DGTStudioPro
 
 /// The score-sheet rendering. Nonisolated (compile-time witness it stays pure). The round trip
-/// is asserted against the **real tokenizer**, not a literal — numbers and padding must be
+/// is asserted against the **real tokenizer**, not a literal - numbers and padding must be
 /// decoration the validator never sees.
 @Suite("Movetext score sheet")
 struct MovetextScoreSheetTests {
@@ -26,7 +26,7 @@ struct MovetextScoreSheetTests {
         #expect(lines[1].contains("Nc6"))
     }
 
-    /// A game ending on White's move gets a white-only final line — the shape
+    /// A game ending on White's move gets a white-only final line - the shape
     /// the exporter writes to disk, arrived at here independently because it is what a
     /// score sheet does.
     @Test func oddPlyCountEndsOnAWhiteOnlyLine() {
@@ -71,9 +71,9 @@ struct MovetextScoreSheetTests {
         )
     }
 
-    // MARK: The round trip — the claim the feature rests on
+    // MARK: The round trip - the claim the feature rests on
 
-    /// Everything the sheet adds is invisible to the validator — if this fails, the editor seeds
+    /// Everything the sheet adds is invisible to the validator - if this fails, the editor seeds
     /// text its own Save would refuse.
     @Test func theRenderedSheetTokenizesBackToExactlyTheInputPlies() throws {
         let moves = ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "O-O", "Qa1xd4#"]
@@ -93,7 +93,7 @@ struct MovetextScoreSheetTests {
 
     /// Wrong numbers are harmless, which is the property that lets the sheet be
     /// decoration rather than data. Renumbering nonsense still tokenizes to the
-    /// same plies — so a mid-game deletion leaving stale numbers cannot make an
+    /// same plies - so a mid-game deletion leaving stale numbers cannot make an
     /// otherwise-legal game fail to validate.
     @Test func wrongMoveNumbersDoNotAffectTokenization() throws {
         let nonsense = "99.  e4   e5\n 7.  Nf3  Nc6"
@@ -103,8 +103,8 @@ struct MovetextScoreSheetTests {
     // MARK: Ply ranges
 
     /// The range finder walks by `tokenize`'s own rules, and this is the pin
-    /// that keeps them agreeing: over the real rendered sheet — numbers,
-    /// gutters, padding, newlines — the substring at every ply's range is
+    /// that keeps them agreeing: over the real rendered sheet - numbers,
+    /// gutters, padding, newlines - the substring at every ply's range is
     /// exactly that ply's SAN.
     @Test func everyPlyRangeExtractsItsOwnSANFromTheSheet() throws {
         let moves = ["e4", "e5", "Nf3", "Nc6", "Qa1xd4#", "Kd7", "c4"]
@@ -127,7 +127,7 @@ struct MovetextScoreSheetTests {
         #expect(Array(text)[range.lowerBound..<range.upperBound] == ["e", "4"])
     }
 
-    /// A trailing result token is not a ply — asking for the index past the
+    /// A trailing result token is not a ply - asking for the index past the
     /// last move answers nil rather than pointing at "1-0".
     @Test func aTrailingResultTokenIsNotAPly() throws {
         let text = "e4 e5 1-0"

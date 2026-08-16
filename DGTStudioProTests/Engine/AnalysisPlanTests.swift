@@ -1,7 +1,7 @@
 import Testing
 @testable import DGTStudioPro
 
-/// The pass's plan, pure — the `AnalysisQueue` extraction's shape one layer down: which
+/// The pass's plan, pure - the `AnalysisQueue` extraction's shape one layer down: which
 /// plies get searched is the decision worth pinning without an engine.
 @Suite("Analysis Plan")
 struct AnalysisPlanTests {
@@ -14,7 +14,7 @@ struct AnalysisPlanTests {
             moveCount: 10, evaluations: [], depths: [], bookPlies: 6, targetDepth: 18
         )
         #expect(plan.searchable == [6, 7, 8, 9])
-        // Empty evaluations don't fit ten moves — the fresh-game reset.
+        // Empty evaluations don't fit ten moves - the fresh-game reset.
         #expect(plan.resetsStorage)
     }
 
@@ -32,13 +32,13 @@ struct AnalysisPlanTests {
         #expect(!plan.resetsStorage)
     }
 
-    @Test("Legacy games — evaluations with no depths — keep their scores and re-search everything")
+    @Test("Legacy games - evaluations with no depths - keep their scores and re-search everything")
     func legacyDepthsAreUnknownNotAReset() {
         let plan = AnalysisPlan.plan(
             moveCount: 2, evaluations: [drawn, drawn], depths: [], bookPlies: 0, targetDepth: 18
         )
         #expect(plan.searchable == [0, 1])
-        // The scores survive until each ply is actually re-searched — unknown is not a reset.
+        // The scores survive until each ply is actually re-searched - unknown is not a reset.
         #expect(!plan.resetsStorage)
     }
 
@@ -51,7 +51,7 @@ struct AnalysisPlanTests {
         #expect(plan.searchable == [0, 1, 2])
     }
 
-    @Test("A fully satisfied game plans nothing — no engine will spawn")
+    @Test("A fully satisfied game plans nothing - no engine will spawn")
     func fullySatisfiedPlansEmpty() {
         let plan = AnalysisPlan.plan(
             moveCount: 2, evaluations: [drawn, drawn], depths: [18, 20], bookPlies: 0, targetDepth: 18
@@ -60,7 +60,7 @@ struct AnalysisPlanTests {
         #expect(!plan.resetsStorage)
     }
 
-    @Test("A deeper target re-opens every satisfied ply — re-analysis means deepen")
+    @Test("A deeper target re-opens every satisfied ply - re-analysis means deepen")
     func deeperTargetReopens() {
         let plan = AnalysisPlan.plan(
             moveCount: 2, evaluations: [drawn, drawn], depths: [18, 18], bookPlies: 0, targetDepth: 22

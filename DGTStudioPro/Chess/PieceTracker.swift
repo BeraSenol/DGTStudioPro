@@ -1,4 +1,4 @@
-/// A stable identity for one of the 32 starting pieces — the currency
+/// A stable identity for one of the 32 starting pieces - the currency
 /// `PieceTracker` assigns, and the one `SquareView` would key piece animation
 /// on. It doesn't yet: the parameter is threaded and unread, waiting on the
 /// tracker-parity work that would make the physical mirror safe to animate.

@@ -3,7 +3,7 @@ import Foundation
 import os
 import UniformTypeIdentifiers
 
-/// Exportable diagnostic timeline for live play — the in-memory sibling of the per-type
+/// Exportable diagnostic timeline for live play - the in-memory sibling of the per-type
 /// Console loggers. `record` buffers + mirrors; `capture` buffers only (callers that already
 /// Console-log); `recordDesync` is the full-context capture. Ring-bounded.
 @Observable
@@ -29,7 +29,7 @@ final class DGTSessionLog {
     
     // MARK: Observable State
     
-    /// Ordered timeline, oldest first. Bounded — see `maxEntries`.
+    /// Ordered timeline, oldest first. Bounded - see `maxEntries`.
     private(set) var entries: [Entry] = []
     
     // MARK: Configuration
@@ -41,7 +41,7 @@ final class DGTSessionLog {
     
     // MARK: Recording
     
-    /// Buffers *and* mirrors to Console — for events the caller doesn't otherwise log.
+    /// Buffers *and* mirrors to Console - for events the caller doesn't otherwise log.
     func record(_ level: Level, _ message: String) {
         append(level: level, message: message)
         switch level {
@@ -51,13 +51,13 @@ final class DGTSessionLog {
         }
     }
     
-    /// Buffers only — for milestones whose caller already Console-logs (no duplicate lines).
+    /// Buffers only - for milestones whose caller already Console-logs (no duplicate lines).
     func capture(_ level: Level, _ message: String) {
         append(level: level, message: message)
     }
     
-    /// The headline: everything about an unreconcilable board — last legal FEN, physical board,
-    /// exact diff, recent moves — enough to replay the failure by hand.
+    /// The headline: everything about an unreconcilable board - last legal FEN, physical board,
+    /// exact diff, recent moves - enough to replay the failure by hand.
     func recordDesync(
         before: GameState,
         physical: Position,
@@ -67,7 +67,7 @@ final class DGTSessionLog {
         let diff = DGTBoardDiff(from: before.position, to: physical)
         let recent = recentSAN.suffix(8).joined(separator: " ")
         let message = """
-        DESYNC at ply \(plyCount) — board could not be reconciled to any legal move.
+        DESYNC at ply \(plyCount) - board could not be reconciled to any legal move.
           side to move : \(before.activeColor)
           last legal   : \(FEN(before).string)
           physical     : \(DGTDebugFormat.placement(physical))
@@ -103,7 +103,7 @@ final class DGTSessionLog {
         try exportText().write(to: url, atomically: true, encoding: .utf8)
     }
     
-    /// Save panel + write. Non-throwing, failure Console-logged — a throw across the panel's
+    /// Save panel + write. Non-throwing, failure Console-logged - a throw across the panel's
     /// completion would surface on a later, luckier export.
     func exportViaSavePanel() {
         let panel = NSSavePanel()
@@ -119,7 +119,7 @@ final class DGTSessionLog {
         }
     }
     
-    /// No production caller — ring-bounded, nothing resets per game; exists so the suite can assert
+    /// No production caller - ring-bounded, nothing resets per game; exists so the suite can assert
     /// the bound and the append path independently.
     func clear() {
         entries.removeAll()
@@ -151,11 +151,11 @@ final class DGTSessionLog {
 
 // MARK: Debug Formatters
 
-/// Side-effect-free renderers of the pure DGT/chess values — reads only, which is what lets the
+/// Side-effect-free renderers of the pure DGT/chess values - reads only, which is what lets the
 /// pure types stay logger-free.
 enum DGTDebugFormat {
     
-    /// FEN rank notation via a neutral FEN wrap — no new chess-core code.
+    /// FEN rank notation via a neutral FEN wrap - no new chess-core code.
     static func placement(_ position: Position) -> String {
         FEN(
             position: position,

@@ -1,7 +1,7 @@
 /// A recognised checkmate pattern, computed at analysis time and stored (ten cases).
-/// Pure predicates over the final position — no engine, no last move needed. Each case is
+/// Pure predicates over the final position - no engine, no last move needed. Each case is
 /// defined so it cannot false-positive on an unrelated mate; the `isCheckmate` guard in
-/// `classify` is load-bearing — recognisers only ever run on real mates.
+/// `classify` is load-bearing - recognisers only ever run on real mates.
 enum SpecialCheckmate: String, Codable, Sendable, CaseIterable {
 
     // Ordered for a reader; precedence lives in `precedence` below, so reordering this list cannot
@@ -52,7 +52,7 @@ enum SpecialCheckmate: String, Codable, Sendable, CaseIterable {
 
     /// Precedence, narrowest motif first: a mate can honestly fit two shapes and the stored
     /// column holds one value, so the order is the decision. Data, not an `if`-chain. A new case
-    /// missing from *this list* never classifies, silently — the witness is the completeness pin.
+    /// missing from *this list* never classifies, silently - the witness is the completeness pin.
     private static let precedence: [SpecialCheckmate] = [
         .smothered,
         .arabian,
@@ -108,7 +108,7 @@ extension SpecialCheckmate {
 
 extension SpecialCheckmate.Context {
 
-    /// A neighbouring square, or nil off-board or across the a/h seam — every file walk goes through
+    /// A neighbouring square, or nil off-board or across the a/h seam - every file walk goes through
     /// here so the wrap guard cannot be forgotten at one site.
     func neighbour(_ offset: Int) -> Square? {
         let square = king + offset
@@ -119,7 +119,7 @@ extension SpecialCheckmate.Context {
     /// Every on-board neighbour of the king.
     var neighbours: [Square] { Square.kingOffsets.compactMap(neighbour) }
 
-    /// The king's four orthogonal neighbours — the squares an adjacent rook
+    /// The king's four orthogonal neighbours - the squares an adjacent rook
     /// could check from.
     var orthogonalNeighbours: [Square] { Square.rookDirections.compactMap(neighbour) }
 
@@ -131,7 +131,7 @@ extension SpecialCheckmate.Context {
     }
 
     /// Every listed offset that lands on the board holds a friendly piece. **Off-board offsets are
-    /// walls and do not disqualify** — a cornered king boxed by two pawns is still smothered.
+    /// walls and do not disqualify** - a cornered king boxed by two pawns is still smothered.
     func areFriendlyOrWalled(_ offsets: [Int]) -> Bool {
         offsets.allSatisfy { offset in
             guard let square = neighbour(offset) else { return true }
@@ -139,7 +139,7 @@ extension SpecialCheckmate.Context {
         }
     }
 
-    /// Strict twin: every offset must be on the board AND friendly — an épaulette needs real
+    /// Strict twin: every offset must be on the board AND friendly - an épaulette needs real
     /// shoulder pieces; the board edge is not a shoulder pad.
     func areFriendlyAndOnBoard(_ offsets: [Int]) -> Bool {
         offsets.allSatisfy { offset in
@@ -153,7 +153,7 @@ extension SpecialCheckmate.Context {
 
 extension SpecialCheckmate.Context {
 
-    /// Mating-side knight attacks `square` (generalised — four motifs ask about non-king squares).
+    /// Mating-side knight attacks `square` (generalised - four motifs ask about non-king squares).
     func knightAttacks(_ square: Square) -> Bool {
         position.hasPiece(
             Piece(attacker, .knight),
@@ -172,7 +172,7 @@ extension SpecialCheckmate.Context {
         )
     }
 
-    /// Mating-side **bishop** attacks `square` — bishops only: a queen-supported back-rank rook is
+    /// Mating-side **bishop** attacks `square` - bishops only: a queen-supported back-rank rook is
     /// an ordinary back-rank mate, and widening to `.queen` would quietly rename half of them.
     func bishopAttacks(_ square: Square) -> Bool {
         Square.bishopDirections.contains {
@@ -184,16 +184,16 @@ extension SpecialCheckmate.Context {
         }
     }
 
-    /// Mating side defends `square`, king included — correct, not lax: a king-supported queen is the
+    /// Mating side defends `square`, king included - correct, not lax: a king-supported queen is the
     /// textbook shape gueridon and dovetail are built on.
     func isDefended(_ square: Square) -> Bool {
         position.isSquareAttacked(square, by: attacker)
     }
 
-    /// Rook/queen bearing on the king along its **rank** — the back-rank check.
+    /// Rook/queen bearing on the king along its **rank** - the back-rank check.
     var rankSliderGivesCheck: Bool { sliderGivesCheck(along: [1, -1]) }
 
-    /// Rook/queen bearing along the king's **file** — the frontal check épaulette and Anastasia's need.
+    /// Rook/queen bearing along the king's **file** - the frontal check épaulette and Anastasia's need.
     var fileSliderGivesCheck: Bool { sliderGivesCheck(along: [8, -8]) }
 
     private func sliderGivesCheck(along directions: [Int]) -> Bool {
@@ -206,14 +206,14 @@ extension SpecialCheckmate.Context {
         }
     }
 
-    /// A mating rook orthogonally adjacent to the king — always check, nothing between; diagonal
+    /// A mating rook orthogonally adjacent to the king - always check, nothing between; diagonal
     /// adjacency checks nothing, hence only four orthogonals scanned.
     var adjacentCheckingRook: Square? {
         orthogonalNeighbours.first { isEnemy(.rook, at: $0) }
     }
 
     /// A checking mating **bishop**, found by walking the king's diagonals (a Boden bishop sits far
-    /// away). Bishops only — a diagonal queen is a Dovetail, and the two must not blur.
+    /// away). Bishops only - a diagonal queen is a Dovetail, and the two must not blur.
     var checkingBishopExists: Bool {
         Square.bishopDirections.contains {
             position.rayHitsSlider(
@@ -224,7 +224,7 @@ extension SpecialCheckmate.Context {
         }
     }
 
-    /// An adjacent mating queen with the offset that reached it — the offset separates Guéridon
+    /// An adjacent mating queen with the offset that reached it - the offset separates Guéridon
     /// (orthogonal) from Dovetail (diagonal), so it is returned, not recomputed.
     var adjacentCheckingQueen: (square: Square, offset: Int)? {
         for offset in Square.kingOffsets {
@@ -240,13 +240,13 @@ extension SpecialCheckmate.Context {
 extension SpecialCheckmate.Context {
 
     /// Knight check, every on-board neighbour friendly (edges are walls). The checker is a knight by
-    /// definition, so no overlap with other motifs — free first place in `precedence`.
+    /// definition, so no overlap with other motifs - free first place in `precedence`.
     var isSmothered: Bool {
         knightAttacks(king) && areFriendlyOrWalled(Square.kingOffsets)
     }
 
     /// King on its own back rank, rook/queen checking along it, the forward squares walled by its
-    /// own pieces — the "trapped behind its own pawns" motif.
+    /// own pieces - the "trapped behind its own pawns" motif.
     var isBackRank: Bool {
         king.rank == backRank
         && rankSliderGivesCheck
@@ -262,7 +262,7 @@ extension SpecialCheckmate.Context {
         let inward = king.file == 0 ? 1 : -1
         guard let beside = neighbour(inward), isFriendly(beside) else { return false }
 
-        // One inner diagonal is off-board for a corner king — a real Anastasia's — so absent squares are
+        // One inner diagonal is off-board for a corner king - a real Anastasia's - so absent squares are
         // skipped, but at least one must exist and every one present must be covered.
         let diagonals = [inward + 8, inward - 8].compactMap(neighbour)
         return !diagonals.isEmpty && diagonals.allSatisfy(knightAttacks)
@@ -278,7 +278,7 @@ extension SpecialCheckmate.Context {
         return knightAttacks(rook)
     }
 
-    /// Back-rank rook beside the king, defended by a bishop (Morphy's Rd8#/Bg5). Adjacency required —
+    /// Back-rank rook beside the king, defended by a bishop (Morphy's Rd8#/Bg5). Adjacency required -
     /// without it, any back-rank rook mate with a bishop anywhere would take this name.
     var isOpera: Bool {
         guard king.rank == backRank else { return false }
@@ -302,7 +302,7 @@ extension SpecialCheckmate.Context {
     }
 
     /// Defended queen **orthogonally** adjacent, own pieces on the two diagonal rear squares.
-    /// Dovetail's mirror — the queen's offset is the only difference.
+    /// Dovetail's mirror - the queen's offset is the only difference.
     var isGueridon: Bool {
         guard let (queen, offset) = adjacentCheckingQueen,
               Square.rookDirections.contains(offset),
@@ -326,7 +326,7 @@ extension SpecialCheckmate.Context {
         return areFriendlyAndOnBoard([vertical, rear - vertical])
     }
 
-    /// Rook beside the king, defended by a knight, itself defended by a pawn — the three-link chain
+    /// Rook beside the king, defended by a knight, itself defended by a pawn - the three-link chain
     /// is the motif. The pawn need not block a flight square.
     var isHook: Bool {
         guard let rook = adjacentCheckingRook else { return false }
@@ -334,7 +334,7 @@ extension SpecialCheckmate.Context {
         return pawnAttacks(knight)
     }
 
-    /// The mating knight defending `square` — the hook needs its square to ask what defends *it*.
+    /// The mating knight defending `square` - the hook needs its square to ask what defends *it*.
     private func defendingKnight(of square: Square) -> Square? {
         for offset in Square.knightOffsets {
             let from = square + offset

@@ -28,7 +28,7 @@ struct BoardInspectorView: View {
     }
     
     // MARK: Instance Methods
-    /// The roster under the headline — the same shape and place as the live inspector's, so
+    /// The roster under the headline - the same shape and place as the live inspector's, so
     /// the two metadata surfaces read as one idea in two states.
     private var metadataSection: some View {
         // The action slot is empty and kept: an empty `@ViewBuilder` slot is the honest
@@ -39,7 +39,7 @@ struct BoardInspectorView: View {
         )
     }
     
-    /// The headline; falls back to a bare noun with no game — "? vs ?" would over-claim.
+    /// The headline; falls back to a bare noun with no game - "? vs ?" would over-claim.
     private var headline: String {
         guard let pgn else { return "Game" }
         return GameHeadline.text(
@@ -47,7 +47,7 @@ struct BoardInspectorView: View {
         )
     }
     
-    /// The magnifier renders only over a game the Library knows about and doesn't exist otherwise —
+    /// The magnifier renders only over a game the Library knows about and doesn't exist otherwise -
     /// an affordance that can't act shouldn't sit greyed out.
     private var evaluationSection: some View {
         CollapsibleSection(.evaluation, title: "Evaluation") {
@@ -67,7 +67,7 @@ struct BoardInspectorView: View {
     /// `MoveHistoryView` doesn't scroll itself, so the header keeps the section's controls reachable.
     private var movesSection: some View {
         // Was a hand-rolled `HStack` reimplementing `InspectorSectionHeader` and disagreeing on three
-        // counts — predated the shared type, never migrated.
+        // counts - predated the shared type, never migrated.
         CollapsibleSection(.moves, title: "Moves") {
             MoveHistoryView(
                 moves: moves,

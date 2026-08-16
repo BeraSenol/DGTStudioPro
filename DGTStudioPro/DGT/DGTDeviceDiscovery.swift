@@ -3,14 +3,14 @@ import IOKit
 import IOKit.serial
 import os
 
-/// Enumerates the board's serial device — and *only* it: `kIOTTYDeviceKey` is pinned to the
+/// Enumerates the board's serial device - and *only* it: `kIOTTYDeviceKey` is pinned to the
 /// board's TTY name (derived from `onlyBoardPath`), so the app cannot see a device it would
 /// never connect to. The decree is a fact about the query, not a filter after it.
 enum DGTDeviceDiscovery {
     
     private static let logger = AppLog.logger(.dgt)
     
-    /// Every matching callout device, unsorted — enumeration order is not an opinion about order.
+    /// Every matching callout device, unsorted - enumeration order is not an opinion about order.
     static func availableDevices() -> [DGTSerialDevice] {
         guard let matching = IOServiceMatching(kIOSerialBSDServiceValue) else {
             logger?.error("IOServiceMatching returned nil for serial services")
@@ -49,7 +49,7 @@ enum DGTDeviceDiscovery {
             service = IOIteratorNext(iterator)
         }
         
-        // Debug, not info: fires on every launch, Rescan and reconnect lap — present/absent is the one
+        // Debug, not info: fires on every launch, Rescan and reconnect lap - present/absent is the one
         // fact callers ask about.
         logger?.debug("Board node \(devices.isEmpty ? "absent" : "present", privacy: .public)")
         return devices
