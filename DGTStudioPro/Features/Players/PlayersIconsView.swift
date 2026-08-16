@@ -45,6 +45,7 @@ struct PlayersIconsView: View {
                                 isSelected: selectedKeys.contains(player.id),
                                 onSelect: { select(player) },
                                 rank: player.rank,
+                                rating: player.rating,
                                 onShowInLibrary: { onShowInLibrary(player.id) },
                                 // The Library grid's `glyphWidth` arrangement with the monogram's
                                 // own calibration: 64 pt at the default 120, scaling linearly.

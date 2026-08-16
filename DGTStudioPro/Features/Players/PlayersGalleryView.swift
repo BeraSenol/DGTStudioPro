@@ -148,6 +148,7 @@ struct PlayersGalleryView: View {
                             isSelected: selectedKeys.contains(player.id),
                             onSelect: { selectedKeys = [player.id]; isFocused = true },
                             rank: player.rank,
+                            rating: player.rating,
                             onShowInLibrary: { onShowInLibrary(player.id) }
                         )
                         .frame(width: 160)

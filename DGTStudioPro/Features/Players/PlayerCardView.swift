@@ -151,6 +151,9 @@ struct PlayerCardView: View {
     let onSelect: () -> Void
     /// Ladder position; nil leaves the name unprefixed.
     var rank: Int? = nil
+    /// The caption under the name (16 Aug 2026, by request - it replaced the games count, which
+    /// lives in the profile grid). Nil renders the placeholder; provisional keeps its `*`.
+    var rating: Glicko1.Rating? = nil
     /// Presents "Show in Library" when set; optional so previews stay unchanged.
     var onShowInLibrary: (() -> Void)? = nil
 
@@ -203,8 +206,8 @@ struct PlayerCardView: View {
                         .fill(isSelected ? Color.accentColor : .clear)
                 )
             
-            Text("\(stats.games) games")
-                .font(.caption)
+            Text(rating?.displaySummary ?? RosterSummary.displayUnknown)
+                .font(.caption.monospacedDigit())
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -244,6 +247,7 @@ struct PlayerCardView: View {
                 isSelected: false,
                 onSelect: {},
                 rank: ranked.rank,
+                rating: ranked.rating,
                 onShowInLibrary: {}
             )
         }
