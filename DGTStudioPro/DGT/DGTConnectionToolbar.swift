@@ -1,33 +1,46 @@
 import SwiftUI
 
 /// The connection control as `ToolbarContent` a host composes into its own builder - a second
-/// `.toolbar` modifier leaves the toolbar undivided. The sheet is the host's `@State`; this
-/// only flips it.
+/// `.toolbar` modifier leaves the toolbar undivided. Opens the connection *window* since
+/// 16 Aug 2026 (the sheet binding it carried went with the everything-is-a-window pass).
 struct DGTConnectionToolbarContent: ToolbarContent {
-    
-    /// Status as a plain value, sheet as a `Binding`: dynamic properties inside a custom
-    /// `ToolbarContent` are not reliably observed.
+
+    /// Status as a plain value: dynamic properties inside a custom `ToolbarContent` are not
+    /// reliably observed - which is also why the button below is its own `View`: the
+    /// `openWindow` environment read lives where SwiftUI promises to resolve it.
     let status: DGTConnection.Status
-    
+
     /// No default, per the `board.connectButton` agreement: a shared fallback
     /// silently gives two hosts the same identifier, and a required parameter
     /// makes forgetting a compile error.
     let identifier: String
-    
-    @Binding var isSheetPresented: Bool
-    
+
     var body: some ToolbarContent {
         ToolbarItem {
-            Button {
-                isSheetPresented = true
-            } label: {
-                label
-            }
-            .help(helpText)
-            .accessibilityIdentifier(identifier)
+            ConnectButton(status: status, identifier: identifier)
         }
     }
-    
+}
+
+/// The `ShowViewOptionsButton` arrangement: a plain `View` carries the action so the
+/// environment is honestly available.
+private struct ConnectButton: View {
+
+    let status: DGTConnection.Status
+    let identifier: String
+
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button {
+            openWindow(id: DGTConnectionView.sceneID)
+        } label: {
+            label
+        }
+        .help(helpText)
+        .accessibilityIdentifier(identifier)
+    }
+
     @ViewBuilder
     private var label: some View {
         switch status {

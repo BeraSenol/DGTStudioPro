@@ -230,6 +230,19 @@ struct DGTStudioProApp: App {
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
 .windowManagerRole(.associated)
+        // The board connection dialog (16 Aug 2026; was BoardDestination's sheet) - a singleton
+        // `Window` for the queue scene's reason: one board, one connection, opened by id.
+        // Floating like View Options: a companion consulted over the board, not a tab.
+        Window("Board Connection", id: DGTConnectionView.sceneID) {
+            DGTConnectionView()
+                .environment(dgtConnection)
+        }
+        .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled) // see the Analysis window above
+        .windowResizability(.contentSize)
+        .windowLevel(.floating)
+        .windowManagerRole(.associated)
+
         // View Options (⌘J) - a `Window` for the queue scene's reason: one panel, opened by id.
         Window("View Options", id: CollectionViewOptionsWindow.sceneID) {
             CollectionViewOptionsWindow()

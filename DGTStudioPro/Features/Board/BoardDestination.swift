@@ -39,9 +39,8 @@ struct BoardDestination: View {
     // when Get Info absorbed the game editors, its doc did not. A doc comment with no declaration under it is debris, not record;
     // the epitaph lives in the decision log.)
 
-    /// The connect dialog, lifted out of the toolbar modifier - always one of the sheets contending
-    /// for the window's single modal slot.
-    @State private var showConnectSheet = false
+    // (`showConnectSheet` stood here until 16 Aug 2026 - the connect dialog is its own
+    // window now, opened by id from the toolbar control.)
     
     /// Set by the Game menu's ⌘I (a `Commands` scene cannot open windows); cleared as soon as this
     /// view has. A trigger, not a stored request - the subject is derivable here (`getInfoSubject`).
@@ -75,9 +74,8 @@ struct BoardDestination: View {
             ) ?? ""
         )
         .toolbar { boardToolbarContent }
-        .sheet(isPresented: $showConnectSheet) {
-            DGTConnectionView()
-        }
+        // The connect dialog is its own window since 16 Aug 2026 - one fewer sheet contending
+        // for this window's single modal slot.
         // The new-game dialog at body level: the sidebar's New Game button reaches Board with a
         // game loaded too. The *auto* offer stays gated to the live branch inside the binding - a tab
         // reviewing a PGN isn't interrupted.
@@ -129,8 +127,7 @@ struct BoardDestination: View {
         }
         DGTConnectionToolbarContent(
             status: connection.status,
-            identifier: AccessibilityID.boardConnectButton,
-            isSheetPresented: $showConnectSheet
+            identifier: AccessibilityID.boardConnectButton
         )
         ToolbarSpacer()
         InspectorToggleContent(

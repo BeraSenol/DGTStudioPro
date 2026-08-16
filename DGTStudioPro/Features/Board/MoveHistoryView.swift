@@ -221,7 +221,7 @@ private struct CurrentMoveScrollSync: ViewModifier {
                 currentMoveIndex: 14,
                 style: .walnut
             )
-            .frame(height: 110)
+            .frame(height: 140)
             .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
         }
         

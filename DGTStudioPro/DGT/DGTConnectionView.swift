@@ -5,6 +5,11 @@ import SwiftUI
 /// app-global `DGTConnection`; never opens a port itself.
 struct DGTConnectionView: View {
 
+    /// Its own window since 16 Aug 2026 (was `BoardDestination`'s sheet - the everything-is-a-window
+    /// pass). A singleton `Window` opened by id, the View Options shape: one board, one connection,
+    /// no wrapper type to mint. `dismiss` closes the window now; the buttons read the same.
+    static let sceneID = "boardConnection"
+
     @Environment(DGTConnection.self) private var connection
     @Environment(\.dismiss) private var dismiss
 

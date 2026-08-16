@@ -103,7 +103,7 @@ private struct LoadedSection: View {
                 currentMoveIndex: nil,
                 style: boardStyle
             )
-            .frame(height: 100)
+            .frame(height: 140)
             .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
         } actions: {
             // Two controls in the slot (`actionsInset` spaces them). Data before the magnifier so the graph

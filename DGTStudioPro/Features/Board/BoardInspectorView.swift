@@ -56,7 +56,7 @@ struct BoardInspectorView: View {
                 currentMoveIndex: currentMoveIndex,
                 style: style
             )
-            .frame(height: 200)
+            .frame(height: 140)
         } actions: {
             if let pgn {
                 EvaluationMagnifierButton(gameID: pgn.persistentModelID)
