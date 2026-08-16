@@ -154,6 +154,13 @@ struct PlayerCardView: View {
     /// Presents "Show in Library" when set; optional so previews stay unchanged.
     var onShowInLibrary: (() -> Void)? = nil
 
+    /// Monogram side. A parameter, not an environment read - the Library card's `glyphWidth`
+    /// reason: the gallery filmstrip keeps its own size while the icons grid follows View
+    /// Options. Hosts that pass nothing render as before. (Until 16 Aug 2026 this was a
+    /// hardcoded 64, so the icon-size slider grew the *cell* and the squircle stood still -
+    /// the slider read as padding.)
+    var monogramSide: CGFloat = 64
+
     // MARK: Derived
     /// "#12 Magnus Carlsen" as one run - a styled `Text` interpolated into the outer `Text`,
     /// which keeps a two-style line a single wrapping, centring, highlightable element.
@@ -169,7 +176,7 @@ struct PlayerCardView: View {
     // MARK: Body
     var body: some View {
         VStack(spacing: 4) {
-            PlayerMonogram(name: stats.name, side: 64)
+            PlayerMonogram(name: stats.name, side: monogramSide)
                 .padding()
                 .background {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -188,7 +195,9 @@ struct PlayerCardView: View {
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .padding(.vertical, 2)
-                .frame(width: 94)
+                // Tracks the monogram (94 at the 64 default) - a fixed 94 under a grown squircle
+                // would truncate names into cells with room to spare.
+                .frame(width: monogramSide + 30)
                 .background(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .fill(isSelected ? Color.accentColor : .clear)

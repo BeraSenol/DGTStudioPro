@@ -45,7 +45,11 @@ struct PlayersIconsView: View {
                                 isSelected: selectedKeys.contains(player.id),
                                 onSelect: { select(player) },
                                 rank: player.rank,
-                                onShowInLibrary: { onShowInLibrary(player.id) }
+                                onShowInLibrary: { onShowInLibrary(player.id) },
+                                // The Library grid's `glyphWidth` arrangement with the monogram's
+                                // own calibration: 64 pt at the default 120, scaling linearly.
+                                monogramSide: options.iconSize
+                                    * (64 / CollectionViewOptions.defaultIconSize)
                             )
                             .id(player.id)
                             .onGeometryChange(for: CGRect.self) { geometry in
