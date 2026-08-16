@@ -107,18 +107,8 @@ struct ContentView: View {
                     }
                 }
             }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                // The sidebar owns session info. New Game navigates to Board first - the sheet's
-                // presenter stays `BoardDestination`.
-                SessionSidebarPanel(
-                    tabState: tabState,
-                    onNewGame: {
-                        selection = .destination(.board)
-                        tabState.manualNewGameRequested = true
-                    },
-                    onDismissLoadError: { loadedGameID = nil }
-                )
-            }
+            // (`SessionSidebarPanel` was pinned here, under every tab's sidebar list, until
+            // 16 Aug 2026 - it tops the Board inspector now, by request.)
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
             .accessibilityIdentifier(AccessibilityID.sidebar)
         } detail: {

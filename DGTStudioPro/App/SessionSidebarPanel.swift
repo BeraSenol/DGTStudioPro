@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// The sidebar's session surface - the single home for connection and session messaging,
-/// pinned under every tab's sidebar list. The stage above the board stays clear; only the
+/// The session surface - the single home for connection and session messaging, pinned atop the
+/// Board inspector since 16 Aug 2026 (it hung under every tab's sidebar list before, hence the
+/// name, kept so the move stays one commit). The stage above the board stays clear; only the
 /// recovery *overlays* stay on the board (they are the mirror's, not messaging).
 struct SessionSidebarPanel: View {
     

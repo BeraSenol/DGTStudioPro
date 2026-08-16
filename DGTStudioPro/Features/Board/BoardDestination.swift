@@ -259,6 +259,7 @@ struct BoardDestination: View {
                 style: boardStyle,
                 onMoveTapped: { index in game.jump(to: index + 1) }
             )
+            .safeAreaInset(edge: .top, spacing: 0) { sessionPanel }
             .inspectorColumnWidth(min: 350, ideal: 350, max: 400)
         }
     }
@@ -271,6 +272,7 @@ struct BoardDestination: View {
         mirrorBoard
             .inspector(isPresented: $tabState.boardInspectorPresented) {
                 liveInspector
+                    .safeAreaInset(edge: .top, spacing: 0) { sessionPanel }
                     .inspectorColumnWidth(min: 350, ideal: 350, max: 400)
             }
         // M4.3 resume offer - a modal fork, not a banner: resume-or-delete is a genuine either/or.
@@ -450,6 +452,23 @@ struct BoardDestination: View {
         }
     }
     
+    // MARK: Session Panel
+
+    /// The session surface, re-homed from under the sidebar list to the top of this
+    /// destination's inspector (16 Aug 2026, by request) - both branches, because the session
+    /// runs whether the tab mirrors or reviews. Two consequences, named rather than found:
+    /// Library and Players no longer show connection state (the toolbar plug is their surface),
+    /// and a closed inspector hides the checklist and New Game button - the board's recovery
+    /// *overlays* and the auto-offered sheet are session-driven and unaffected.
+    private var sessionPanel: some View {
+        SessionSidebarPanel(
+            tabState: tabState,
+            // Already on Board - the sidebar's copy had to navigate here first.
+            onNewGame: { tabState.manualNewGameRequested = true },
+            onDismissLoadError: { loadedGameID = nil }
+        )
+    }
+
     // MARK: Live Mirror
     
     /// The mirror whenever no game is loaded. The *position* always renders `physicalBoard`
