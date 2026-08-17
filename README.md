@@ -26,145 +26,95 @@ DGT Studio Pro is a ground-up rewrite of [DGT Studio](https://github.com/BeraSen
 The live mirror, coordinates printed for both seats. Session status floats over the board; the inspector holds the roster, the moves, and the lifecycle verbs.
 
 #### No board attached
-
 ![The Board destination with no DGT board attached](Screenshots/boardview-no-board-connected.png)
-
-#### Board not found
-
 ![The connection sheet reporting nothing at /dev/cu.usbmodem01, offering Try Again](Screenshots/boardviewwindow-board-connection-not-found.png)
-
-#### Connecting
-
 ![The connection sheet resetting the board and reading its starting position](Screenshots/boardviewwindow-board-connecting.png)
-
-#### Connected
-
 ![The connection sheet reporting the board's serial and firmware](Screenshots/boardviewwindow-board-connected.png)
 
 #### Ready to record
-
 ![A connected board at the starting position, the floating card inviting a new game](Screenshots/boardview-board-connected-no-live-game.png)
 
 #### New Game
-
 ![The New Game window, both seats picked from the player registry](Screenshots/boardviewwindow-new-game.png)
 
 #### Live recording
-
 ![A live recording after 1. d4 e5, the played squares lit](Screenshots/boardview-board-connected-during-live-game.png)
 
 ### Library
-
 Four view modes, live search, smart tags, batch analysis.
 
 #### Icons view
-
 ![The Library in icons view](Screenshots/libraryview-iconsview.png)
 
 #### List view
-
 ![The Library in list view, sortable on every column](Screenshots/libraryview-listview.png)
 
 #### Columns view
-
 ![The Library in columns view](Screenshots/libraryview-columnsview.png)
 
 #### Gallery view
-
 ![The Library in gallery view, the mated king highlighted](Screenshots/libraryview-galleryview.png)
 
 #### Batch selection
-
 ![All 111 games selected, with the batch menu](Screenshots/libraryview-listview-all-games-selected-contextmenu.png)
 
-#### View Options
-
-![Library View Options: sort, icon size, grid spacing](Screenshots/libraryviewwindow-viewoptions.png)
-
-#### Smart Tag editor
-
-![A named, coloured tag built from rules](Screenshots/window-smarttag-editor.png)
-
-### Analysis
-
-Bundled Stockfish, run as a batch.
-
-![The analysis queue mid-batch, with time remaining](Screenshots/window-analysis-queue.png)
-
-![The evaluation graph, reading out the ply under the pointer](Screenshots/window-evaluation-graph.png)
-
-### Get Info
-
-One window over any game or player.
-
 #### Details
-
 ![The Seven Tag Roster in native controls](Screenshots/window-getinfo-details.png)
 
 #### Move Text
-
 ![The score sheet, validated by legal replay](Screenshots/window-getinfo-movetext-editor.png)
 
 #### File
-
 ![Content hash, ECO and checkmate type](Screenshots/window-getinfo-file.png)
 
+#### View Options
+![Library View Options: sort, icon size, grid spacing](Screenshots/libraryviewwindow-viewoptions.png)
 
-![A player's record and rating trend](Screenshots/playersviewwindow-getinfo-profile.png)
+#### Smart Tag editor
+![A named, coloured tag built from rules](Screenshots/window-smarttag-editor.png)
 
-
-![Head-to-head against one opponent](Screenshots/playersviewwindow-getinfo-matchup.png)
+### Analysis
+Bundled Stockfish, run as a batch.
+![The analysis queue mid-batch, with time remaining](Screenshots/window-analysis-queue.png)
+![The evaluation graph, reading out the ply under the pointer](Screenshots/window-evaluation-graph.png)
 
 ### Players
-
 A configurable ladder - wins, win rate, or Glicko-1 rating - with a profile in every view mode.
 
 #### Icons view
-
 ![The Players ladder in icons view](Screenshots/playersview-iconview.png)
 
 #### List view
-
 ![The ladder as a table: record, win rate, special mates, rating](Screenshots/playersview-listview.png)
 
 #### Columns view
-
 ![Players in columns view](Screenshots/playersview-columnsview.png)
 
 #### Gallery view
-
 ![Players in gallery view, with rating trend and head-to-head](Screenshots/playersview-galleryview.png)
 
-#### View Options
+### Get Info
+One window over any game or player.
+![A player's record and rating trend](Screenshots/playersviewwindow-getinfo-profile.png)
+![Head-to-head against one opponent](Screenshots/playersviewwindow-getinfo-matchup.png)
 
+#### View Options
 ![Players View Options: sort, icon size, grid spacing](Screenshots/playerviewwindow-viewoptions.png)
 
 ### Settings
-
 ![Auto-connect and two sleep guards](Screenshots/window-settings-general.png)
-
 ![Four board styles and the piece-glide duration](Screenshots/window-settings-board.png)
-
 ![A sound set and per-event toggles](Screenshots/window-settings-sounds.png)
-
 ![Depth, hash, threads, and an optional Syzygy folder](Screenshots/window-settings-engine.png)
-
 ![The stored game count and Erase Library](Screenshots/window-settings-data.png)
 
 ### Previews
-
 Xcode previews, each holding every state of one view at once.
 
-#### Session card
-
-![Every phase, from reconnecting to a finished game that could not be saved](Screenshots/previews-livegamehudview.png)
-
 #### Import results
-
 ![Each rejected file with its reason](Screenshots/previews-importstatusview.png)
 
 #### Game card
-
 ![A Library game card in its selection states](Screenshots/previews-librarygamecardview.png)
 
 ## License
