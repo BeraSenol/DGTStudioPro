@@ -63,15 +63,22 @@ struct BoardDestination: View {
         }
         // Load-error surface lives in the session panel atop the inspector.
         .navigationTitle(tabState.boardPGN?.name ?? "Board")
-        // NO subtitle on this destination - a product call that outlived its first justification.
-        // The panel atop the inspector already says the same words, so the subtitle was an echo;
-        // that reason carries the removal. What does NOT carry it: this was twice built as the
-        // fix for the full-screen toolbar fault (16 Aug: dropped outright, hypothesizing the
-        // ""↔present flip forced the NSToolbar replacement; 17 Aug: held permanently present
-        // with a no-break space, same hypothesis from the other side) and the crash survived
-        // both, plus review tabs flip subtitle text every arrow step without incident. The
-        // subtitle is exonerated as the trigger; the fault hunt continues elsewhere. Library
-        // and Players keep theirs - their values don't flip with session state.
+        // Subtitle is *state*; title is identity; the inspector's `GameHeadline` is the pairing.
+        // A tab reviewing a PGN has no business announcing a desync it isn't party to.
+        // Round trip, recorded: dropped 16 Aug 2026 and re-added 17 Aug by request. It was
+        // twice built into a fix for the full-screen toolbar fault - removed outright, then
+        // held permanently present with a no-break space - and the crash survived both, while
+        // review tabs flip subtitle text every arrow step without incident. Exonerated as the
+        // trigger, so the echo argument lost to wanting the words in the titlebar, and the
+        // fault hunt continues elsewhere.
+        .navigationSubtitle(
+            DestinationSubtitle.board(
+                phase: .current(session: session, connection: connection),
+                reviewing: tabState.boardPGN == nil
+                    ? nil
+                    : tabState.boardGame?.currentState.activeColor
+            ) ?? ""
+        )
         .toolbar { boardToolbarContent }
         // The connect dialog is its own window since 16 Aug 2026 - one fewer sheet contending
         // for this window's single modal slot.
@@ -233,59 +240,139 @@ struct BoardDestination: View {
     
     private func content(pgn: PGN, game: Game) -> some View {
         // PGN-replay path: no ghost. Ghosts only make sense against the live physical board.
-        boardSurface(
-            position:    game.currentState.position,
-            // Review arm: parity is total, every piece glides under its per-ply tracker identity.
-            pieces:      PieceIdentity.resolved(
-                position: game.currentState.position,
-                tracker:  game.currentTracker
-            ),
-            lastMove:    game.lastMove,
-            checkSquare: game.checkSquare,
-            ghostSquare: nil,
-            ghostPiece:  nil,
-            // The bar exists iff `hasScoredPly` - **was** `!evaluations.isEmpty`, which is true of an
-            // all-nil array: a pass that scored nothing drew a fabricated 50/50 bar.
-            evaluation:  pgn.hasScoredPly
-                ? EvaluationBarReading(game.currentEvaluation)
-                : nil
-        )
-        .inspector(isPresented: $tabState.boardInspectorPresented) {
-            // Plain layout, NOT `safeAreaInset` (16 Aug 2026): an inset inside `.inspector` leaks
-            // into the split view's window-level safe-area constraints, and the whole window's
-            // content lays out taller than the window the moment the panel's card changes - the
-            // "board zooms and everything shifts off screen at game start" bug.
-            VStack(spacing: 0) {
-                sessionPanel
-                BoardInspectorView(
-                    pgn: pgn,
-                    evaluations: pgn.evaluations.map {
-                        $0?.whiteWinProbability ?? 0.5
-                    },
-                    moves: pgn.moves,
-                    currentMoveIndex: game.currentPly > 0 ? game.currentPly - 1 : nil,
-                    style: boardStyle,
-                    onMoveTapped: { index in game.jump(to: index + 1) }
-                )
+        HStack(spacing: 0) {
+            boardSurface(
+                position:    game.currentState.position,
+                // Review arm: parity is total, every piece glides under its per-ply tracker identity.
+                pieces:      PieceIdentity.resolved(
+                    position: game.currentState.position,
+                    tracker:  game.currentTracker
+                ),
+                lastMove:    game.lastMove,
+                checkSquare: game.checkSquare,
+                ghostSquare: nil,
+                ghostPiece:  nil,
+                // The bar exists iff `hasScoredPly` - **was** `!evaluations.isEmpty`, which is true of an
+                // all-nil array: a pass that scored nothing drew a fabricated 50/50 bar.
+                evaluation:  pgn.hasScoredPly
+                    ? EvaluationBarReading(game.currentEvaluation)
+                    : nil
+            )
+            if tabState.boardInspectorPresented {
+                Divider()
+                // Plain VStack, not `safeAreaInset` - the 16 Aug lesson survives the pane.
+                VStack(spacing: 0) {
+                    sessionPanel
+                    BoardInspectorView(
+                        pgn: pgn,
+                        evaluations: pgn.evaluations.map {
+                            $0?.whiteWinProbability ?? 0.5
+                        },
+                        moves: pgn.moves,
+                        currentMoveIndex: game.currentPly > 0 ? game.currentPly - 1 : nil,
+                        style: boardStyle,
+                        onMoveTapped: { index in game.jump(to: index + 1) }
+                    )
+                }
+                .frame(width: Self.panelWidth)
             }
-            .inspectorColumnWidth(min: 350, ideal: 350, max: 400)
         }
     }
-    
+
+    // MARK: Trailing Panel
+
+    /// The Board's inspector column is a HAND-ROLLED trailing pane since 17 Aug 2026, not
+    /// `.inspector` - and the change is aimed at the full-screen toolbar fault, arrived at by
+    /// elimination. `.inspector`'s defining feature is toolbar integration: an `NSSplitView`
+    /// column that climbs into the titlebar. On this OS (26.5) that integration is broken in
+    /// full screen - AppKit's own log showed the split view's safe-area guide demanding the
+    /// sidebar's width as a LEFT inset (`H:|-(208)-`, unsatisfiable, "recovered" by breaking
+    /// constraints, plus a layout-recursion warning), and a toolbar replacement mid-that-state
+    /// re-enters `updateToolbarIfNeeded` through the full-screen menu-bar companion and
+    /// double-removes its "displayMode" KVO observer: toolbar gone, layout mangled. Exonerated
+    /// before this, in order: the subtitle (removed outright, then held permanently present),
+    /// the New Game window's teardown frame, the empty-state List backing, pinning the toolbar
+    /// visible in full screen, and every width constraint (the strip test). Bera's
+    /// discriminator - inspector open faults, hidden never - is what pointed here. A plain
+    /// `HStack` pane has no toolbar integration to corrupt.
+    ///
+    /// Costs, named: fixed width (no drag-resize - `.inspector`'s min/ideal/max retired with
+    /// it), no system inspector material, and the toolbar toggle now shows/hides a pane rather
+    /// than a real inspector - same binding, same button. Library and Players keep `.inspector`
+    /// until this pane proves itself on the Board, the repro surface.
+    private static let panelWidth: CGFloat = 350
+
+    // MARK: Inspector Bisect (TEMPORARY, 17 Aug 2026)
+
+    /// The re-introduction ladder: one word, one rebuild, one full-screen game start per step,
+    /// panel OPEN. `.pane` is the proven-good control (ships committed); `.fullSwitching` is the
+    /// faulting original. Walk down until the FAULT fires - the first faulting step names the
+    /// ingredient:
+    ///
+    ///   .pane           hand-rolled HStack, no `.inspector` at all       - known good
+    ///   .emptyShell     `.inspector { Color.clear }`                     - the machinery alone
+    ///   .constantList   `.inspector { List {} }`                         - + a scroll view under the bar, constant
+    ///   .panelNoSwitch  `.inspector { sessionPanel + constant List }`    - + the card that changes height at game start
+    ///   .fullSwitching  `.inspector { sessionPanel + liveInspector }`    - + the content branch switch (the original)
+    ///
+    /// The width modifier is deliberately not a rung - the fault fired with every width
+    /// constraint stripped, so it is already exonerated as a necessary ingredient. Applies to
+    /// the LIVE branch only: the repro is a live game's start, and the review branch stays on
+    /// the pane so only one thing varies. Delete this enum and the dead arms when the ladder
+    /// has answered.
+    private enum InspectorBisect { case pane, emptyShell, constantList, panelNoSwitch, fullSwitching }
+    private static let bisect: InspectorBisect = .pane
+
+    /// The live panel's real content, shared by the arms that show it.
+    private var livePanelContent: some View {
+        // Plain VStack, not `safeAreaInset` - the 16 Aug lesson survives every arrangement.
+        VStack(spacing: 0) {
+            sessionPanel
+            liveInspector
+        }
+    }
+
     // MARK: Live Surface
     
     /// The live surface: mirror board, live inspector, resume/corrupt forks, archive confirmation.
     /// All status messaging lives in the sidebar panel; the stage above the board stays clear.
     private var liveSurface: some View {
-        mirrorBoard
-            .inspector(isPresented: $tabState.boardInspectorPresented) {
-                // Plain layout, not `safeAreaInset` - the review branch's reasoning, stated there.
-                VStack(spacing: 0) {
-                    sessionPanel
-                    liveInspector
+        Group {
+            switch Self.bisect {
+            case .pane:
+                HStack(spacing: 0) {
+                    mirrorBoard
+                    if tabState.boardInspectorPresented {
+                        Divider()
+                        livePanelContent
+                            .frame(width: Self.panelWidth)
+                    }
                 }
-                .inspectorColumnWidth(min: 350, ideal: 350, max: 400)
+            case .emptyShell:
+                mirrorBoard
+                    .inspector(isPresented: $tabState.boardInspectorPresented) {
+                        Color.clear
+                    }
+            case .constantList:
+                mirrorBoard
+                    .inspector(isPresented: $tabState.boardInspectorPresented) {
+                        List {}.listStyle(.sidebar)
+                    }
+            case .panelNoSwitch:
+                mirrorBoard
+                    .inspector(isPresented: $tabState.boardInspectorPresented) {
+                        VStack(spacing: 0) {
+                            sessionPanel
+                            List {}.listStyle(.sidebar)
+                        }
+                    }
+            case .fullSwitching:
+                mirrorBoard
+                    .inspector(isPresented: $tabState.boardInspectorPresented) {
+                        livePanelContent
+                    }
             }
+        }
         // M4.3 resume offer - a modal fork, not a banner: resume-or-delete is a genuine either/or.
             .alert(
                 "Resume unfinished game?",
@@ -433,12 +520,16 @@ struct BoardDestination: View {
                 onDiscard: { session.discardGame() }
             )
         } else if connection.isConnected {
+            // Both empty arms `scrollBacked()`: the live branch above is a List, and the
+            // List↔bare flip at game start - with the inspector open - is the full-screen
+            // toolbar fault's trigger. Mechanism and evidence live on `scrollBacked()`.
             InspectorEmptyState(
                 title: "No Live Game",
                 systemImage: "checkerboard.rectangle",
                 message: "Start a game from the board to see its details and moves here.",
                 identifier: AccessibilityID.liveInspectorNoGame
             )
+            .scrollBacked()
         } else {
             // The former HUD `disconnected` banner, relocated with an action instead of a dead message.
             InspectorEmptyState(
@@ -447,6 +538,7 @@ struct BoardDestination: View {
                 message: "Connect your DGT board to record games live.",
                 identifier: AccessibilityID.liveInspectorNoBoard
             )
+            .scrollBacked()
         }
     }
     

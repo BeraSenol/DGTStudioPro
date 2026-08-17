@@ -109,7 +109,7 @@ struct ContentView: View {
             }
             // (`SessionSidebarPanel` was pinned here, under every tab's sidebar list, until
             // 16 Aug 2026 - it tops the Board inspector now, by request.)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+            // STRIP-TEST 17AUG: .navigationSplitViewColumnWidth(min: 180, ideal: 200)
             .accessibilityIdentifier(AccessibilityID.sidebar)
         } detail: {
             switch selection {
@@ -242,6 +242,12 @@ enum Destination: String, CaseIterable, Identifiable, Hashable {
         .environment(DGTConnection())
         .environment(DGTLiveSession())
         .environment(DGTSessionLog())
+        // The 16 Aug registries - `LibraryDestination` reads both, and this preview predates
+        // them, so the canvas trapped on the first uninjected read (found 17 Aug 2026, while
+        // the strip-test put this file in the editor). The crash class the App's own registry
+        // comment records, mirrored: the App injected, the preview didn't.
+        .environment(AnalysisQueueController())
+        .environment(PreviewFixtures.viewOptions())
         .frame(width: 800, height: 600)
         .environment(InspectorSectionCollapse.preview)
         // `BoardDestination` reads it, so the canvas traps without it. The `.preview`

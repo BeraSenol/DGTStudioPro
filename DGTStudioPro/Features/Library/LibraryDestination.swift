@@ -358,7 +358,7 @@ struct LibraryDestination: View {
                 pgn: selectedPGN(in: games),
                 selectionCount: selectedPGNs.count
             )
-            .inspectorColumnWidth(min: 335, ideal: 335, max: 400)
+            // STRIP-TEST 17AUG: .inspectorColumnWidth(min: 335, ideal: 335, max: 400)
         }
         // The one write of the glyph's ambient state - applied once so the four modes cannot disagree.
         .environment(\.analysisRunningGameID, analysisQueue.runningID)
@@ -805,23 +805,29 @@ struct LibraryDestination: View {
     
     return NavigationSplitView {
         List { Label("Library", systemImage: "books.vertical") }
-            .navigationSplitViewColumnWidth(min: 80, ideal: 100, max: 120)
+            // STRIP-TEST 17AUG: .navigationSplitViewColumnWidth(min: 80, ideal: 100, max: 120)
     } detail: {
         LibraryDestination(tabState: TabState())
     }
     .modelContainer(container)
     .environment(OpenGamesRegistry())
     .environment(InspectorSectionCollapse.preview)
+    // Both read since 16 Aug; uninjected, the canvas traps - the ContentView preview's find.
+    .environment(PreviewFixtures.viewOptions())
+    .environment(AnalysisQueueController())
 }
 
 #Preview("Empty") {
     NavigationSplitView {
         List { Label("Library", systemImage: "books.vertical") }
-            .navigationSplitViewColumnWidth(min: 80, ideal: 100, max: 120)
+            // STRIP-TEST 17AUG: .navigationSplitViewColumnWidth(min: 80, ideal: 100, max: 120)
     } detail: {
         LibraryDestination(tabState: TabState())
     }
     .modelContainer(for: PGN.self, inMemory: true)
     .environment(OpenGamesRegistry())
     .environment(InspectorSectionCollapse.preview)
+    // Both read since 16 Aug; uninjected, the canvas traps - the ContentView preview's find.
+    .environment(PreviewFixtures.viewOptions())
+    .environment(AnalysisQueueController())
 }

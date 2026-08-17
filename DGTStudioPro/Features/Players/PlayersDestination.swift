@@ -225,7 +225,7 @@ struct PlayersDestination: View {
                     recentGames: selectedGames,
                     selectionCount: selectedKeys.count
                 )
-                .inspectorColumnWidth(min: 365, ideal: 365, max: 400)
+                // STRIP-TEST 17AUG: .inspectorColumnWidth(min: 365, ideal: 365, max: 400)
             }
             .toolbar { toolbarContent }
             // Scope bar gone - same choices as chips; suggestions drop what is already applied.
@@ -420,4 +420,7 @@ struct PlayersDestination: View {
         .modelContainer(for: PGN.self, inMemory: true)
         .frame(width: 800, height: 500)
         .environment(InspectorSectionCollapse.preview)
+        // Read since 16 Aug (the View Options pass); uninjected, the canvas traps - the
+        // ContentView preview's find, applied here in the same sweep.
+        .environment(PreviewFixtures.viewOptions())
 }

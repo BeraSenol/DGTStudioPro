@@ -3,7 +3,8 @@ import SwiftUI
 /// The one "nothing selected" surface - nothing forces hosts to agree on an empty
 /// state's shape, so one type does. **Render outside the `List`** - inside, it is a top-aligned
 /// row with sidebar chrome. The contract is about layout, so non-inspector hosts (the graph
-/// window) qualify.
+/// window) qualify. Inspector-column hosts additionally wrap it in `scrollBacked()` - see that
+/// doc for the full-screen toolbar fault the wrapper exists to prevent.
 struct InspectorEmptyState: View {
     
     // MARK: Stored Properties
@@ -25,6 +26,36 @@ struct InspectorEmptyState: View {
         // call site rather than most of them.
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier(identifier)
+    }
+}
+
+// MARK: Scroll Backing
+
+extension InspectorEmptyState {
+
+    /// The inspector-hosted arrangement: the empty state floated over an **empty sidebar
+    /// `List` - and the List is load-bearing, not chrome.** Every inspector's loaded branch is a
+    /// `.sidebar`-styled `List`, so a bare empty state made whether-a-scroll-view-sits-under-
+    /// the-toolbar flip with content. The reading every observable supports (17 Aug 2026): the
+    /// bar derives its appearance from the scroll view beneath it, so the flip makes SwiftUI
+    /// *replace* the window's `NSToolbar` - and in a full-screen space `setToolbar:` re-enters
+    /// its own update through the menu-bar companion's `resizeContentWindow` → `_endLiveResize`
+    /// → constraint flush, double-removing the `BarAppearanceBridge` "displayMode" KVO observer:
+    /// NSRangeException mid-reshape, toolbar gone, content half-laid-out - the "everything zooms
+    /// off screen at game start" fault. The hard facts under that reading: Bera's discriminator
+    /// (inspector open at game start faults, inspector hidden never does), the fault stack's
+    /// route through the companion, and the two suspects exonerated before it (the subtitle,
+    /// twice over; the New Game window's teardown frame).
+    ///
+    /// The overlay keeps this type's centring contract - the empty state sits *over* the List,
+    /// never as a row in it. `.sidebar` matches all three loaded branches, so empty and loaded
+    /// share one background. Non-inspector hosts (the graph, analysis-data, info and
+    /// view-options windows) stay bare: no toolbar rides their scroll state, and a List
+    /// background there would be new chrome.
+    func scrollBacked() -> some View {
+        List {}
+            .listStyle(.sidebar)
+            .overlay { self }
     }
 }
 

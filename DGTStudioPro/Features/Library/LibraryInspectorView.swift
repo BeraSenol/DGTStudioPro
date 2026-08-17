@@ -23,7 +23,8 @@ struct LibraryInspectorView: View {
     // MARK: Body
     var body: some View {
         // The empty branch renders *outside* the `List`; inside one it is a top-aligned row with
-        // sidebar chrome behind it.
+        // sidebar chrome behind it. Both empty arms are `scrollBacked()` - the List↔bare flip
+        // with the inspector open is the full-screen toolbar fault (see the wrapper's doc).
         if let pgn {
             List {
                 // .id re-inits per selected game, resetting per-game view state. It no longer tears down an
@@ -47,8 +48,9 @@ struct LibraryInspectorView: View {
             message: "Select a game from the library to view its details and analysis.",
             identifier: AccessibilityID.libraryInspectorEmpty
         )
+        .scrollBacked()
     }
-    
+
     /// The counting variant: same shared chrome, same symbol as the columns detail pane - two
     /// surfaces, one vocabulary for "you selected many".
     private var multiSelectionState: some View {
@@ -58,6 +60,7 @@ struct LibraryInspectorView: View {
             message: "Right-click any selected game to analyze, export or delete the whole selection.",
             identifier: AccessibilityID.libraryInspectorMulti
         )
+        .scrollBacked()
     }
 }
 

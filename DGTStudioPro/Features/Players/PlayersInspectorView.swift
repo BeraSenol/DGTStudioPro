@@ -16,7 +16,9 @@ struct PlayersInspectorView: View {
 
     // MARK: Body
     var body: some View {
-        // Empty renders outside the `List`; see `InspectorEmptyState`.
+        // Empty renders outside the `List`; see `InspectorEmptyState`. Both empty arms are
+        // `scrollBacked()` - the List↔bare flip with the inspector open is the full-screen
+        // toolbar fault (see the wrapper's doc).
         if let ranked {
             List {
                 ProfileSection(
@@ -43,6 +45,7 @@ struct PlayersInspectorView: View {
             message: "Select a player to see their profile, rating trend and recent games.",
             identifier: AccessibilityID.playersInspectorEmpty
         )
+        .scrollBacked()
     }
 
     /// The counting variant - the Library inspector's shape and symbol, one vocabulary.
@@ -53,6 +56,7 @@ struct PlayersInspectorView: View {
             message: "Select a single player to see their profile, or use Show in Library from a card's menu.",
             identifier: AccessibilityID.playersInspectorMulti
         )
+        .scrollBacked()
     }
 }
 
