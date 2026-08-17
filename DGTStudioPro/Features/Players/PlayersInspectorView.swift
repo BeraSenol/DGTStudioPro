@@ -17,8 +17,8 @@ struct PlayersInspectorView: View {
     // MARK: Body
     var body: some View {
         // Empty renders outside the `List`; see `InspectorEmptyState`. Both empty arms are
-        // `scrollBacked()` - the List↔bare flip with the inspector open is the full-screen
-        // toolbar fault (see the wrapper's doc).
+        // `scrollBacked()` - a fault hypothesis since exonerated, kept pending the Board bisect
+        // ladder; the record is on the wrapper.
         if let ranked {
             List {
                 ProfileSection(

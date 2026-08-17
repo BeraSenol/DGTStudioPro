@@ -109,7 +109,7 @@ struct ContentView: View {
             }
             // (`SessionSidebarPanel` was pinned here, under every tab's sidebar list, until
             // 16 Aug 2026 - it tops the Board inspector now, by request.)
-            // STRIP-TEST 17AUG: .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
             .accessibilityIdentifier(AccessibilityID.sidebar)
         } detail: {
             switch selection {

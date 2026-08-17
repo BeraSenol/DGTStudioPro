@@ -225,7 +225,13 @@ struct PlayersDestination: View {
                     recentGames: selectedGames,
                     selectionCount: selectedKeys.count
                 )
-                // STRIP-TEST 17AUG: .inspectorColumnWidth(min: 365, ideal: 365, max: 400)
+                // Pinned to the app-wide width - `InspectorColumn.width` owns the number and
+                // the argument. Retired this strip-tag: the unified spelling supersedes the 365.
+                .inspectorColumnWidth(
+                    min: InspectorColumn.width,
+                    ideal: InspectorColumn.width,
+                    max: InspectorColumn.width
+                )
             }
             .toolbar { toolbarContent }
             // Scope bar gone - same choices as chips; suggestions drop what is already applied.

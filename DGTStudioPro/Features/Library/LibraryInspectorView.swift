@@ -23,8 +23,8 @@ struct LibraryInspectorView: View {
     // MARK: Body
     var body: some View {
         // The empty branch renders *outside* the `List`; inside one it is a top-aligned row with
-        // sidebar chrome behind it. Both empty arms are `scrollBacked()` - the List↔bare flip
-        // with the inspector open is the full-screen toolbar fault (see the wrapper's doc).
+        // sidebar chrome behind it. Both empty arms are `scrollBacked()` - a fault hypothesis
+        // since exonerated, kept pending the Board bisect ladder; the record is on the wrapper.
         if let pgn {
             List {
                 // .id re-inits per selected game, resetting per-game view state. It no longer tears down an

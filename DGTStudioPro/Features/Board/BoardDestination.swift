@@ -240,7 +240,8 @@ struct BoardDestination: View {
     
     private func content(pgn: PGN, game: Game) -> some View {
         // PGN-replay path: no ghost. Ghosts only make sense against the live physical board.
-        HStack(spacing: 0) {
+        VStack(spacing: 0) {
+            sessionPanel
             boardSurface(
                 position:    game.currentState.position,
                 // Review arm: parity is total, every piece glides under its per-ply tracker identity.
@@ -258,120 +259,44 @@ struct BoardDestination: View {
                     ? EvaluationBarReading(game.currentEvaluation)
                     : nil
             )
-            if tabState.boardInspectorPresented {
-                Divider()
-                // Plain VStack, not `safeAreaInset` - the 16 Aug lesson survives the pane.
-                VStack(spacing: 0) {
-                    sessionPanel
-                    BoardInspectorView(
-                        pgn: pgn,
-                        evaluations: pgn.evaluations.map {
-                            $0?.whiteWinProbability ?? 0.5
-                        },
-                        moves: pgn.moves,
-                        currentMoveIndex: game.currentPly > 0 ? game.currentPly - 1 : nil,
-                        style: boardStyle,
-                        onMoveTapped: { index in game.jump(to: index + 1) }
-                    )
-                }
-                .frame(width: Self.panelWidth)
-            }
         }
-    }
-
-    // MARK: Trailing Panel
-
-    /// The Board's inspector column is a HAND-ROLLED trailing pane since 17 Aug 2026, not
-    /// `.inspector` - and the change is aimed at the full-screen toolbar fault, arrived at by
-    /// elimination. `.inspector`'s defining feature is toolbar integration: an `NSSplitView`
-    /// column that climbs into the titlebar. On this OS (26.5) that integration is broken in
-    /// full screen - AppKit's own log showed the split view's safe-area guide demanding the
-    /// sidebar's width as a LEFT inset (`H:|-(208)-`, unsatisfiable, "recovered" by breaking
-    /// constraints, plus a layout-recursion warning), and a toolbar replacement mid-that-state
-    /// re-enters `updateToolbarIfNeeded` through the full-screen menu-bar companion and
-    /// double-removes its "displayMode" KVO observer: toolbar gone, layout mangled. Exonerated
-    /// before this, in order: the subtitle (removed outright, then held permanently present),
-    /// the New Game window's teardown frame, the empty-state List backing, pinning the toolbar
-    /// visible in full screen, and every width constraint (the strip test). Bera's
-    /// discriminator - inspector open faults, hidden never - is what pointed here. A plain
-    /// `HStack` pane has no toolbar integration to corrupt.
-    ///
-    /// Costs, named: fixed width (no drag-resize - `.inspector`'s min/ideal/max retired with
-    /// it), no system inspector material, and the toolbar toggle now shows/hides a pane rather
-    /// than a real inspector - same binding, same button. Library and Players keep `.inspector`
-    /// until this pane proves itself on the Board, the repro surface.
-    private static let panelWidth: CGFloat = 350
-
-    // MARK: Inspector Bisect (TEMPORARY, 17 Aug 2026)
-
-    /// The re-introduction ladder: one word, one rebuild, one full-screen game start per step,
-    /// panel OPEN. `.pane` is the proven-good control (ships committed); `.fullSwitching` is the
-    /// faulting original. Walk down until the FAULT fires - the first faulting step names the
-    /// ingredient:
-    ///
-    ///   .pane           hand-rolled HStack, no `.inspector` at all       - known good
-    ///   .emptyShell     `.inspector { Color.clear }`                     - the machinery alone
-    ///   .constantList   `.inspector { List {} }`                         - + a scroll view under the bar, constant
-    ///   .panelNoSwitch  `.inspector { sessionPanel + constant List }`    - + the card that changes height at game start
-    ///   .fullSwitching  `.inspector { sessionPanel + liveInspector }`    - + the content branch switch (the original)
-    ///
-    /// The width modifier is deliberately not a rung - the fault fired with every width
-    /// constraint stripped, so it is already exonerated as a necessary ingredient. Applies to
-    /// the LIVE branch only: the repro is a live game's start, and the review branch stays on
-    /// the pane so only one thing varies. Delete this enum and the dead arms when the ladder
-    /// has answered.
-    private enum InspectorBisect { case pane, emptyShell, constantList, panelNoSwitch, fullSwitching }
-    private static let bisect: InspectorBisect = .pane
-
-    /// The live panel's real content, shared by the arms that show it.
-    private var livePanelContent: some View {
-        // Plain VStack, not `safeAreaInset` - the 16 Aug lesson survives every arrangement.
-        VStack(spacing: 0) {
-            sessionPanel
-            liveInspector
+        .inspector(isPresented: $tabState.boardInspectorPresented) {
+            BoardInspectorView(
+                pgn: pgn,
+                evaluations: pgn.evaluations.map {
+                    $0?.whiteWinProbability ?? 0.5
+                },
+                moves: pgn.moves,
+                currentMoveIndex: game.currentPly > 0 ? game.currentPly - 1 : nil,
+                style: boardStyle,
+                onMoveTapped: { index in game.jump(to: index + 1) }
+            )
+            .inspectorColumnWidth(
+                min: InspectorColumn.width,
+                ideal: InspectorColumn.width,
+                max: InspectorColumn.width
+            )
         }
     }
 
     // MARK: Live Surface
     
-    /// The live surface: mirror board, live inspector, resume/corrupt forks, archive confirmation.
-    /// All status messaging lives in the sidebar panel; the stage above the board stays clear.
+    /// The live surface: the session panel bannered above the mirror board, the live inspector
+    /// in a real `.inspector` again, resume/corrupt forks, archive confirmation. The stage
+    /// above the board is deliberately NOT clear any more - the panel's third home; the whole
+    /// why lives on `sessionPanel`.
     private var liveSurface: some View {
-        Group {
-            switch Self.bisect {
-            case .pane:
-                HStack(spacing: 0) {
-                    mirrorBoard
-                    if tabState.boardInspectorPresented {
-                        Divider()
-                        livePanelContent
-                            .frame(width: Self.panelWidth)
-                    }
-                }
-            case .emptyShell:
-                mirrorBoard
-                    .inspector(isPresented: $tabState.boardInspectorPresented) {
-                        Color.clear
-                    }
-            case .constantList:
-                mirrorBoard
-                    .inspector(isPresented: $tabState.boardInspectorPresented) {
-                        List {}.listStyle(.sidebar)
-                    }
-            case .panelNoSwitch:
-                mirrorBoard
-                    .inspector(isPresented: $tabState.boardInspectorPresented) {
-                        VStack(spacing: 0) {
-                            sessionPanel
-                            List {}.listStyle(.sidebar)
-                        }
-                    }
-            case .fullSwitching:
-                mirrorBoard
-                    .inspector(isPresented: $tabState.boardInspectorPresented) {
-                        livePanelContent
-                    }
-            }
+        VStack(spacing: 0) {
+            sessionPanel
+            mirrorBoard
+        }
+        .inspector(isPresented: $tabState.boardInspectorPresented) {
+            liveInspector
+                .inspectorColumnWidth(
+                    min: InspectorColumn.width,
+                    ideal: InspectorColumn.width,
+                    max: InspectorColumn.width
+                )
         }
         // M4.3 resume offer - a modal fork, not a banner: resume-or-delete is a genuine either/or.
             .alert(
@@ -520,9 +445,8 @@ struct BoardDestination: View {
                 onDiscard: { session.discardGame() }
             )
         } else if connection.isConnected {
-            // Both empty arms `scrollBacked()`: the live branch above is a List, and the
-            // List↔bare flip at game start - with the inspector open - is the full-screen
-            // toolbar fault's trigger. Mechanism and evidence live on `scrollBacked()`.
+            // Both empty arms `scrollBacked()` - built as a fault hypothesis, exonerated the
+            // same hour, kept pending the bisect ladder's verdict; the record is on the wrapper.
             InspectorEmptyState(
                 title: "No Live Game",
                 systemImage: "checkerboard.rectangle",
@@ -544,12 +468,26 @@ struct BoardDestination: View {
     
     // MARK: Session Panel
 
-    /// The session surface, re-homed from under the sidebar list to the top of this
-    /// destination's inspector (16 Aug 2026, by request) - both branches, because the session
-    /// runs whether the tab mirrors or reviews. Two consequences, named rather than found:
-    /// Library and Players no longer show connection state (the toolbar plug is their surface),
-    /// and a closed inspector hides the checklist and New Game button - the board's recovery
-    /// *overlays* and the auto-offered sheet are session-driven and unaffected.
+    /// The session surface, in its THIRD home: bannered above the board in the destination's
+    /// own VStack (17 Aug 2026, by request), after the sidebar (born there) and the inspector
+    /// top (16 Aug). Both branches, because the session runs whether the tab mirrors or reviews.
+    ///
+    /// The move out of the inspector is not taste - **this panel inside the `.inspector` column
+    /// is what broke full screen.** Its card changes height exactly at game start; the column's
+    /// constraint churn lands mid-`setToolbar:`; SwiftUI's toolbar update re-enters itself
+    /// through the full-screen menu-bar companion (`resizeContentWindow` → `_endLiveResize` →
+    /// constraint flush) and double-removes its `BarAppearanceBridge` "displayMode" KVO
+    /// observer - no toolbar, half-reshaped window, everything zoomed off screen. Convicted by
+    /// differential on the bisect ladder: the faulting original minus this panel ran clean,
+    /// after the subtitle (both directions), the New Game window's teardown frame, the
+    /// empty-state List backing, the toolbar visibility pin, and every width constraint were
+    /// each exonerated by rebuild-and-repro. Above the board the card changes height in plain
+    /// destination layout that no toolbar machinery watches.
+    ///
+    /// Consequences, named rather than found: the old stage-clear rule loses to a panel that
+    /// cannot live in the inspector and must live somewhere; and the panel now shows with the
+    /// inspector closed, so the New Game button and recovery checklist no longer vanish with
+    /// it - the 16 Aug consequence of the opposite sign, undone.
     private var sessionPanel: some View {
         SessionSidebarPanel(
             tabState: tabState,

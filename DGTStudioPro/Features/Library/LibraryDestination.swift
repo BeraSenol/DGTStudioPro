@@ -358,7 +358,14 @@ struct LibraryDestination: View {
                 pgn: selectedPGN(in: games),
                 selectionCount: selectedPGNs.count
             )
-            // STRIP-TEST 17AUG: .inspectorColumnWidth(min: 335, ideal: 335, max: 400)
+            // Pinned to the app-wide width (min = ideal = max: sameness beats drag-resize) -
+            // `InspectorColumn.width` owns the number and the argument. Retired this strip-tag:
+            // the unified spelling supersedes the old 335.
+            .inspectorColumnWidth(
+                min: InspectorColumn.width,
+                ideal: InspectorColumn.width,
+                max: InspectorColumn.width
+            )
         }
         // The one write of the glyph's ambient state - applied once so the four modes cannot disagree.
         .environment(\.analysisRunningGameID, analysisQueue.runningID)
@@ -805,7 +812,7 @@ struct LibraryDestination: View {
     
     return NavigationSplitView {
         List { Label("Library", systemImage: "books.vertical") }
-            // STRIP-TEST 17AUG: .navigationSplitViewColumnWidth(min: 80, ideal: 100, max: 120)
+            .navigationSplitViewColumnWidth(min: 80, ideal: 100, max: 120)
     } detail: {
         LibraryDestination(tabState: TabState())
     }
@@ -820,7 +827,7 @@ struct LibraryDestination: View {
 #Preview("Empty") {
     NavigationSplitView {
         List { Label("Library", systemImage: "books.vertical") }
-            // STRIP-TEST 17AUG: .navigationSplitViewColumnWidth(min: 80, ideal: 100, max: 120)
+            .navigationSplitViewColumnWidth(min: 80, ideal: 100, max: 120)
     } detail: {
         LibraryDestination(tabState: TabState())
     }

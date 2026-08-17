@@ -34,18 +34,16 @@ struct InspectorEmptyState: View {
 extension InspectorEmptyState {
 
     /// The inspector-hosted arrangement: the empty state floated over an **empty sidebar
-    /// `List` - and the List is load-bearing, not chrome.** Every inspector's loaded branch is a
-    /// `.sidebar`-styled `List`, so a bare empty state made whether-a-scroll-view-sits-under-
-    /// the-toolbar flip with content. The reading every observable supports (17 Aug 2026): the
-    /// bar derives its appearance from the scroll view beneath it, so the flip makes SwiftUI
-    /// *replace* the window's `NSToolbar` - and in a full-screen space `setToolbar:` re-enters
-    /// its own update through the menu-bar companion's `resizeContentWindow` → `_endLiveResize`
-    /// → constraint flush, double-removing the `BarAppearanceBridge` "displayMode" KVO observer:
-    /// NSRangeException mid-reshape, toolbar gone, content half-laid-out - the "everything zooms
-    /// off screen at game start" fault. The hard facts under that reading: Bera's discriminator
-    /// (inspector open at game start faults, inspector hidden never does), the fault stack's
-    /// route through the companion, and the two suspects exonerated before it (the subtitle,
-    /// twice over; the New Game window's teardown frame).
+    /// `List`**, so whether-a-scroll-view-sits-under-the-toolbar stays constant while the
+    /// column's content flips between empty and loaded.
+    ///
+    /// **Built as the third suspect in the full-screen toolbar fault and exonerated the same
+    /// hour (17 Aug 2026)**: the fault fired with this in place, so the List↔bare flip is not a
+    /// *sufficient* explanation - what actually cured the Board was retiring `.inspector` for a
+    /// hand-rolled pane (the elimination record lives at `BoardDestination.panelWidth`). Kept
+    /// rather than reverted, for now: Library and Players still sit on `.inspector`, the bisect
+    /// ladder at `BoardDestination` is re-testing the content-flip rung in isolation, and this
+    /// wrapper's fate belongs to that verdict rather than to another same-day round trip.
     ///
     /// The overlay keeps this type's centring contract - the empty state sits *over* the List,
     /// never as a row in it. `.sidebar` matches all three loaded branches, so empty and loaded

@@ -145,18 +145,6 @@ struct DGTStudioProApp: App {
                 .environment(inspectorCollapse)
                 .environment(viewOptions)
                 .environment(boardSounds)
-                // Third arrow at the full-screen toolbar fault (17 Aug 2026): pin the toolbar
-                // visible in full screen. By default a full-screen toolbar DETACHES and rides
-                // the menu bar - owned by the same `_NSFullScreenMenuBarCompanionController`
-                // every fault stack routes through (`resizeContentWindow` mid-`setToolbar:`).
-                // Pinned, the toolbar stays the window's own, which should keep a toolbar
-                // rebuild's reshape out of the companion's hands; it also matches how Bera
-                // runs full screen (menu bar always shown). A *view* modifier on the window's
-                // root content per the docs' own sample - the Scene spelling does not exist,
-                // which one build error established the hard way. If the fault survives this,
-                // the next move is structural: replace `.inspector` with a hand-rolled
-                // trailing pane and leave the toolbar-integrated inspector subsystem entirely.
-                // STRIP-TEST 17AUG: .windowToolbarFullScreenVisibility(.visible)
         }
         .modelContainer(sharedContainer)
         .defaultLaunchBehavior(.presented)
@@ -279,9 +267,11 @@ struct DGTStudioProApp: App {
         .defaultSize(width: 340, height: 300)
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled) // see the Analysis window above
-        // STRIP-TEST 17AUG (prime suspect - the species the 16 Aug commit caught leaking
-        // from dialog scenes into the main window; this one survived that purge):
-        // .windowResizability(.contentMinSize)
+        // Exonerated by the 17 Aug strip test (the toolbar fault fired with it removed) and
+        // restored - though it remains the one survivor of the species the 16 Aug commit
+        // caught leaking across scenes, so it stays first suspect if window sizing ever
+        // misbehaves again.
+        .windowResizability(.contentMinSize)
         .windowLevel(.floating)
 .windowManagerRole(.associated)
         Settings {

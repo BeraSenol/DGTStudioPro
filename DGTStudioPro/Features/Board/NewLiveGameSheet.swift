@@ -61,10 +61,14 @@ struct LiveGameRosterForm: View {
                     Button(name) { field.wrappedValue = name }
                 }
             } label: {
-                Image(systemName: "chevron.up.chevron.down")
+                // One chevron (17 Aug 2026, by request): the old `chevron.up.chevron.down`
+                // stacked beside the button style's own indicator and the pair read as a
+                // stepper glued to a dropdown.
+                Image(systemName: "chevron.down")
             }
             .menuStyle(.button)
             .buttonStyle(.borderless)
+            .menuIndicator(.hidden)
             .fixedSize()
             .help("Choose a known player")
             .accessibilityIdentifier(identifier)
