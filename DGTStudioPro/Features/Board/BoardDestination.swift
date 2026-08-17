@@ -65,6 +65,10 @@ struct BoardDestination: View {
         .navigationTitle(tabState.boardPGN?.name ?? "Board")
         // Subtitle is *state*; title is identity; the inspector's `GameHeadline` is the pairing.
         // A tab reviewing a PGN has no business announcing a desync it isn't party to.
+        // (A `destinationSubtitle` door coalescing nil to a no-break space stood here for a few
+        // hours on 17 Aug 2026, hypothesizing the ""↔text flip caused the full-screen toolbar
+        // crash. Disproven by rebuild-and-repro - and by review tabs flipping subtitle text every
+        // arrow step without incident - so the door went rather than surviving on a false why.)
         .navigationSubtitle(
             DestinationSubtitle.board(
                 phase: .current(session: session, connection: connection),

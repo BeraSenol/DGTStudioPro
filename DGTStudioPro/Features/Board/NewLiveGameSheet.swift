@@ -187,8 +187,21 @@ struct NewLiveGameWindow: View {
     var body: some View {
         NewLiveGameSheet(
             onStart: { roster in
-                session.startNewGame(roster: roster)
+                // Dismiss first, start one turn later - deliberately NOT one transaction
+                // (17 Aug 2026). `startNewGame` floods the main window with updates (phase,
+                // subtitle, inspector card, focused values) in the same frame this floating
+                // window tears down over the full-screen space and key focus shifts back - and
+                // that combined frame is where the toolbar-replacement crash fires (the
+                // `BarAppearanceBridge` "displayMode" KVO double-remove inside
+                // `-[NSWindow setToolbar:]`, re-entered through the full-screen menu-bar
+                // companion's `_endLiveResize`). One `@MainActor` hop separates the two
+                // transactions. Consequence, named: on the auto-offer path `onDisappear`'s
+                // `dismissNewGameOffer` now logs before "Started live game" - flag-clear only,
+                // `startNewGame` never reads it.
                 dismiss()
+                Task { @MainActor in
+                    session.startNewGame(roster: roster)
+                }
             },
             onNotNow: { dismiss() },
             // A resumable draft counts as unfinished: starting fresh overwrites its file, so same
