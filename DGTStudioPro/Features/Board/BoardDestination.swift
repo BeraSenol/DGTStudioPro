@@ -28,6 +28,9 @@ struct BoardDestination: View {
     @Environment(DGTLiveSession.self) private var session
     @Environment(BoardSounds.self) private var boardSounds
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
+    /// The spoiler switch's second reader - the score label beside the bar. The bar owns the
+    /// toggle; this only silences the number when it is on.
+    @AppStorage(StorageKeys.evaluationBarHidden) private var evaluationHidden = false
     
     // MARK: View State
     
@@ -169,6 +172,7 @@ struct BoardDestination: View {
         attentionSquares: Set<Square> = [],
         targetSquares: Set<Square> = [],
         hintSquares: Set<Square> = [],
+        liftedGhosts: [Square: Piece] = [:],
         evaluation: EvaluationBarReading? = nil
     ) -> some View {
         let board = BoardView(
@@ -182,28 +186,31 @@ struct BoardDestination: View {
             ghostPiece:       ghostPiece,
             attentionSquares: attentionSquares,
             targetSquares:    targetSquares,
-            hintSquares:      hintSquares
+            hintSquares:      hintSquares,
+            liftedGhosts:     liftedGhosts
         )
 
         return Group {
             if let evaluation {
                 GeometryReader { geometry in
-                    // Board is square, takes the shorter axis after the bar column is reserved - reserved, not
-                    // measured, so the board doesn't resize as the score changes width.
-                    let reserved = EvaluationBarView.width
+                    // Bar column at the FAR leading edge, mirrored by an invisible column of
+                    // identical width at the trailing edge (17 Aug 2026, by request), so the
+                    // board is centred in the *pane* rather than in what the bar left over -
+                    // the ZStack arrangement this replaces centred the board across the full
+                    // width and let it drift across the label. Priced honestly: the board's
+                    // width budget loses BOTH flanks, so a scored game's board is smaller
+                    // than an unscored one's at the same window size.
+                    let flank = EvaluationBarView.width
                         + Self.evaluationBarGap
                         + Self.evaluationLabelWidth
+                    // Reserved, not measured - the board must not resize as the score's text
+                    // width changes.
                     let side = max(0, min(
-                        geometry.size.width - reserved,
+                        geometry.size.width - 2 * flank,
                         geometry.size.height
                     ))
 
-                    // Bar pinned to the destination's leading edge, board centred in what is left (by request).
-                    ZStack {
-                        board
-                            .frame(width: side, height: side)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
+                    HStack(spacing: 0) {
                         HStack(spacing: Self.evaluationBarGap) {
                             EvaluationBarView(
                                 reading: evaluation,
@@ -214,7 +221,10 @@ struct BoardDestination: View {
                             .frame(height: side)
 
                             // The always-visible label, in the gap, never on the bar - a thin losing share would swallow it.
-                            Text(evaluation.label)
+                            // Blank while hidden (17 Aug 2026): the same `StorageKeys.evaluationBarHidden`
+                            // the bar reads, so a hidden bar can't sit beside a printed score. The slot
+                            // is still reserved, so hiding never resizes the board.
+                            Text(evaluationHidden ? "" : evaluation.label)
                                 .font(.caption.monospacedDigit())
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
@@ -223,7 +233,17 @@ struct BoardDestination: View {
                                     alignment: .leading
                                 )
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(width: flank, alignment: .leading)
+
+                        board
+                            .frame(width: side, height: side)
+                            .frame(maxWidth: .infinity)
+
+                        // The invisible twin. `Color.clear`, not `Spacer()`: a spacer's width
+                        // is negotiated, and the whole point is a flank that matches the bar
+                        // column to the point.
+                        Color.clear
+                            .frame(width: flank)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
@@ -240,26 +260,26 @@ struct BoardDestination: View {
     
     private func content(pgn: PGN, game: Game) -> some View {
         // PGN-replay path: no ghost. Ghosts only make sense against the live physical board.
-        VStack(spacing: 0) {
-            sessionPanel
-            boardSurface(
-                position:    game.currentState.position,
-                // Review arm: parity is total, every piece glides under its per-ply tracker identity.
-                pieces:      PieceIdentity.resolved(
-                    position: game.currentState.position,
-                    tracker:  game.currentTracker
-                ),
-                lastMove:    game.lastMove,
-                checkSquare: game.checkSquare,
-                ghostSquare: nil,
-                ghostPiece:  nil,
-                // The bar exists iff `hasScoredPly` - **was** `!evaluations.isEmpty`, which is true of an
-                // all-nil array: a pass that scored nothing drew a fabricated 50/50 bar.
-                evaluation:  pgn.hasScoredPly
-                    ? EvaluationBarReading(game.currentEvaluation)
-                    : nil
-            )
-        }
+        boardSurface(
+            position:    game.currentState.position,
+            // Review arm: parity is total, every piece glides under its per-ply tracker identity.
+            pieces:      PieceIdentity.resolved(
+                position: game.currentState.position,
+                tracker:  game.currentTracker
+            ),
+            lastMove:    game.lastMove,
+            checkSquare: game.checkSquare,
+            ghostSquare: nil,
+            ghostPiece:  nil,
+            // The bar exists iff `hasScoredPly` - **was** `!evaluations.isEmpty`, which is true of an
+            // all-nil array: a pass that scored nothing drew a fabricated 50/50 bar.
+            evaluation:  pgn.hasScoredPly
+                ? EvaluationBarReading(game.currentEvaluation)
+                : nil
+        )
+        // No session panel on the review branch (17 Aug 2026, by request): a tab reviewing a
+        // PGN is not party to the live session, and the connected-board card floating over an
+        // archived game announced someone else's business. The live branch keeps the overlay.
         .inspector(isPresented: $tabState.boardInspectorPresented) {
             BoardInspectorView(
                 pgn: pgn,
@@ -281,23 +301,24 @@ struct BoardDestination: View {
 
     // MARK: Live Surface
     
-    /// The live surface: the session panel bannered above the mirror board, the live inspector
-    /// in a real `.inspector` again, resume/corrupt forks, archive confirmation. The stage
-    /// above the board is deliberately NOT clear any more - the panel's third home; the whole
-    /// why lives on `sessionPanel`.
+    /// The live surface: mirror board, session panel atop the live inspector, resume/corrupt
+    /// forks, archive confirmation. The stage above the board is clear again - the panel's
+    /// day-trip up there is recorded on `sessionPanel`.
     private var liveSurface: some View {
-        VStack(spacing: 0) {
-            sessionPanel
-            mirrorBoard
-        }
-        .inspector(isPresented: $tabState.boardInspectorPresented) {
-            liveInspector
-                .inspectorColumnWidth(
-                    min: InspectorColumn.width,
-                    ideal: InspectorColumn.width,
-                    max: InspectorColumn.width
-                )
-        }
+        mirrorBoard
+            .overlay(alignment: .top) {
+                sessionPanel
+                    .frame(maxWidth: 420)
+                    .padding(.top, 8)
+            }
+            .inspector(isPresented: $tabState.boardInspectorPresented) {
+                liveInspector
+                    .inspectorColumnWidth(
+                        min: InspectorColumn.width,
+                        ideal: InspectorColumn.width,
+                        max: InspectorColumn.width
+                    )
+            }
         // M4.3 resume offer - a modal fork, not a banner: resume-or-delete is a genuine either/or.
             .alert(
                 "Resume unfinished game?",
@@ -414,6 +435,16 @@ struct BoardDestination: View {
         }
     }
 
+    /// "Recording 112." - the number the game will carry in the Library, D58′'s own max+1
+    /// (via `PGNStore.highestLibraryIndex`, predicated + limit 1 - not a fetch-all), NOT the
+    /// roster's round (17 Aug 2026, by request: round 12 against Lorenzo made the headline
+    /// read "Recording 12." while 111 games sat in the Library). Round stays a roster fact
+    /// everywhere else - the New Game prefill, the tags, export.
+    private var prospectiveGameNumber: Int? {
+        let highest = (try? PGNStore(modelContext: modelContext).highestLibraryIndex()) ?? nil
+        return (highest ?? 0) + 1
+    }
+
     /// What ⌘I would open, or nil. Review before live, matching `body`'s branch. The live case
     /// carries nothing - a live game has no identifier until it archives (why the request is an enum).
     private var getInfoSubject: GetInfoRequest? {
@@ -433,6 +464,7 @@ struct BoardDestination: View {
         if let game = session.liveGame {
             LiveGameInspectorView(
                 game: game,
+                recordingNumber: prospectiveGameNumber,
                 onUpdateRoster: { roster in
                     session.updateRoster(roster)
                     // Post-archive, Edit Details keeps the Library row in step too.
@@ -468,26 +500,28 @@ struct BoardDestination: View {
     
     // MARK: Session Panel
 
-    /// The session surface, in its THIRD home: bannered above the board in the destination's
-    /// own VStack (17 Aug 2026, by request), after the sidebar (born there) and the inspector
-    /// top (16 Aug). Both branches, because the session runs whether the tab mirrors or reviews.
+    /// The session surface, in its FOURTH home: a floating overlay over the board's top edge
+    /// (17 Aug 2026) - after the sidebar, the inspector top (16 Aug), and one afternoon above
+    /// the board in a VStack. **Live branch only since the same evening**: a review tab is not
+    /// party to the session, and the panel floating over an archived game announced someone
+    /// else's business (the subtitle already made this exact call - "a tab reviewing a PGN has
+    /// no business announcing a desync it isn't party to").
     ///
-    /// The move out of the inspector is not taste - **this panel inside the `.inspector` column
-    /// is what broke full screen.** Its card changes height exactly at game start; the column's
-    /// constraint churn lands mid-`setToolbar:`; SwiftUI's toolbar update re-enters itself
-    /// through the full-screen menu-bar companion (`resizeContentWindow` → `_endLiveResize` →
-    /// constraint flush) and double-removes its `BarAppearanceBridge` "displayMode" KVO
-    /// observer - no toolbar, half-reshaped window, everything zoomed off screen. Convicted by
-    /// differential on the bisect ladder: the faulting original minus this panel ran clean,
-    /// after the subtitle (both directions), the New Game window's teardown frame, the
-    /// empty-state List backing, the toolbar visibility pin, and every width constraint were
-    /// each exonerated by rebuild-and-repro. Above the board the card changes height in plain
-    /// destination layout that no toolbar machinery watches.
+    /// **The overlay is the point, not the look.** The full-screen toolbar fault
+    /// (`BarAppearanceBridge` "displayMode" KVO double-remove inside `setToolbar:`, re-entered
+    /// through the menu-bar companion's `_endLiveResize`) fired with this panel in the
+    /// inspector column, above the board in a VStack, painted `.bar`, and painted
+    /// `.regularMaterial` - and never once fired with the panel absent. The card itself is
+    /// ordinary SwiftUI (texts, a symbol, two conditional buttons), so the conviction is not
+    /// any single modifier: it is the panel's *participation in window layout* while its card
+    /// changes at game start. An overlay participates in rendering but not in layout - it
+    /// proposes nothing to the window, so the card's changes stay out of the sizing
+    /// negotiation the fault re-enters. If the fault survives even this, the panel's content
+    /// is implicated beyond its layout role, and the next probe is a static-text stand-in.
     ///
-    /// Consequences, named rather than found: the old stage-clear rule loses to a panel that
-    /// cannot live in the inspector and must live somewhere; and the panel now shows with the
-    /// inspector closed, so the New Game button and recovery checklist no longer vanish with
-    /// it - the 16 Aug consequence of the opposite sign, undone.
+    /// Costs, named: the panel floats OVER the board's top rank on short windows (max width
+    /// 420, top-aligned - the board is centred square, so overlap needs a genuinely small
+    /// window), and it no longer pushes the inspector's content down.
     private var sessionPanel: some View {
         SessionSidebarPanel(
             tabState: tabState,
@@ -525,8 +559,32 @@ struct BoardDestination: View {
                     for: session.liveGame?.currentState,
                     physical: connection.physicalBoard
                 )
-                : []
+                : [],
+            liftedGhosts:     liftedGhostPieces
         )
+    }
+
+    /// Pieces in a hand: squares the committed game holds and the physical board doesn't,
+    /// handed to the board as 25% ghosts (17 Aug 2026, by request) instead of vanishing.
+    /// Overlay vocabulary - the castling ghost's sibling - so D47′'s layer invariant is
+    /// untouched: the piece layer still renders physical occupancy verbatim; this is square
+    /// chrome about the committed game's claim. Gated like the hints: nothing during physical
+    /// setup (the whole board differs - thirty-two ghosts is noise the setup overlays own),
+    /// nothing under recovery chrome (two overlay vocabularies on one square contradict).
+    /// A capture mid-flight ghosts both lifted pieces; a mid-castle rook ghosts at its origin
+    /// and its castling destination alike - one 25% for every ghost, same day's request.
+    private var liftedGhostPieces: [Square: Piece] {
+        guard let state = session.liveGame?.currentState,
+              !session.awaitingPhysicalSetup,
+              recoveryGuidance == nil else { return [:] }
+        var lifted: [Square: Piece] = [:]
+        for square in Square.all {
+            let expected = state.position[square]
+            if expected.isOccupied, !connection.physicalBoard[square].isOccupied {
+                lifted[square] = expected
+            }
+        }
+        return lifted
     }
     
     /// Recovery overlays, recomputed per observable change so highlights shrink as squares are fixed -

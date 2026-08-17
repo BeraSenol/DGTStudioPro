@@ -14,6 +14,8 @@ struct PlayersIconsView: View {
     let players: [RankedPlayer]
     @Binding var selectedKeys: Set<PlayerStats.ID>
     let onShowInLibrary: (PlayerStats.ID) -> Void
+    /// Double-click's door - the matchup window (17 Aug 2026). Defaulted so previews stand.
+    var onOpenMatchup: (PlayerStats.ID) -> Void = { _ in }
 
     // MARK: Private Properties
 
@@ -47,6 +49,7 @@ struct PlayersIconsView: View {
                                 rank: player.rank,
                                 rating: player.rating,
                                 onShowInLibrary: { onShowInLibrary(player.id) },
+                                onOpen: { onOpenMatchup(player.id) },
                                 // The Library grid's `glyphWidth` arrangement with the monogram's
                                 // own calibration: 64 pt at the default 120, scaling linearly.
                                 monogramSide: options.iconSize

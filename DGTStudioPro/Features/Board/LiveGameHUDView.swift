@@ -99,7 +99,15 @@ struct LiveGameHUDView: View {
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.bar, in: RoundedRectangle(cornerRadius: 8))
+        // `.regularMaterial`, NOT `.bar` (17 Aug 2026): `.bar` is the toolbar's own material,
+        // and a `.bar`-painted view under the toolbar is coordinated by SwiftUI's
+        // `BarAppearanceBridge` - the KVO observer in every full-screen fault stack. This card
+        // re-renders exactly at game start (phase flip), and with `.bar` on it that churn made
+        // SwiftUI replace the window's `NSToolbar` mid-frame: the toolbar-vanishes-and-layout-
+        // zooms fault, in every home this panel ever had. The app's only `.bar` users were this
+        // card and the load-error card - which is why removing the panel was the one thing that
+        // ever ran clean.
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
         .overlay(
             RoundedRectangle(cornerRadius: 8)
                 .strokeBorder(tint.opacity(0.35), lineWidth: 1)
@@ -146,7 +154,7 @@ struct LiveGameHUDView: View {
         case .reconnecting:
             "Plug the board back in, the game picks up where it left off."
         case .idle:
-            "Set up the pieces to be offered a game, or start one now."
+            "Set up the pieces into the starting position, or start one now."
         case .awaitingSetup:
             "Live recording begins once the pieces match."
         case .playing(_, let lastSAN, let ply):

@@ -64,7 +64,8 @@ final class DGTLiveSession {
     /// `Mode` case: it can only ever be an idle-time overlay.
     private(set) var shouldOfferNewGame = false
     
-    /// Mid-castle: the un-placed rook's destination, rendered 50%-transparent. Set/cleared with
+    /// Mid-castle: the un-placed rook's destination, rendered as a 25% ghost (one opacity for
+    /// every ghost since 17 Aug 2026 - it was 50% before the lifted-piece ghosts arrived). Set/cleared with
     /// `castlingGhostPiece` as a pair; non-nil iff a castle is mid-flight.
     private(set) var castlingGhostSquare: Square?
     

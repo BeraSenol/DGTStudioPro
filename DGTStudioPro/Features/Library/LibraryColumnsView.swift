@@ -104,8 +104,7 @@ struct LibraryColumnsView: View {
             runningID: runningAnalysisID
         )
         return HStack(spacing: 6) {
-            Image(systemName: "doc.text")
-                .foregroundStyle(.tint)
+            Image(systemName: "text.document.fill")
                 .imageScale(.medium)
             Text(game.name)
                 .lineLimit(1)
@@ -146,11 +145,18 @@ struct LibraryColumnsView: View {
     private func gameDetail(_ game: PGN) -> some View {
         VStack(spacing: 0) {
             ScrollView {
+                // A centred, width-capped container (17 Aug 2026, by request) - full-pane
+                // monospaced text put sixty-character lines against a very wide margin. The
+                // inner frame caps the column; the outer greedy frame centres the cap.
                 Text(game.pgnText)
                     .font(.system(.body, design: .monospaced))
                     .textSelection(.enabled)
                     .lineLimit(nil)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
+                    .frame(maxWidth: 520)
+                    .frame(maxWidth: .infinity)
                     .padding(20)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

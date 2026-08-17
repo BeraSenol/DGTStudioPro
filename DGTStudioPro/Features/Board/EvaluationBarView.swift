@@ -17,7 +17,19 @@ struct EvaluationBarView: View {
     let reading: EvaluationBarReading
     let perspective: PieceColor
     let style: BoardStyle
-    
+
+    // MARK: Spoiler Switch
+
+    /// Hidden draws a flat grey bar and no score (17 Aug 2026, by request) - the spoiler
+    /// guard for replaying a game you haven't seen. App-wide and persisted: the state is
+    /// about the reader, not about one game or one window. The hosts read the same key for
+    /// their score labels, so bar and label can never disagree about being hidden.
+    @AppStorage(StorageKeys.evaluationBarHidden) private var isHidden = false
+
+    /// Pointer-only affordance, hence a written manual check rather than a UI test: canvases
+    /// have no pointer, and a hover state with no witness is how it silently stops working.
+    @State private var isHovering = false
+
     // MARK: Derived
     
     /// The share drawn from the *bottom* - white's under white perspective (the one flip, geometry only).
@@ -39,23 +51,54 @@ struct EvaluationBarView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .bottom) {
-                Rectangle()
-                    .fill(topColor)
-                Rectangle()
-                    .fill(bottomColor)
-                    .frame(height: geometry.size.height * bottomFraction)
+                if isHidden {
+                    // One flat fill, no split: a hidden bar must not leak the share it would
+                    // have drawn - a two-tone "hidden" bar is the spoiler with extra steps.
+                    Rectangle()
+                        .fill(.gray.opacity(0.35))
+                } else {
+                    Rectangle()
+                        .fill(topColor)
+                    Rectangle()
+                        .fill(bottomColor)
+                        .frame(height: geometry.size.height * bottomFraction)
+                }
             }
             .animation(.snappy(duration: 0.2), value: reading.whiteFraction)
+            .animation(.snappy(duration: 0.2), value: isHidden)
         }
         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .strokeBorder(.gridBorder, lineWidth: 1)
         }
+        // The hover affordance: an eye-with-slash while pointing at the bar, click to flip.
+        // Drawn as an overlay on the bar rather than a control beside it - the bar is 22 pt
+        // wide and a neighbour would move the board.
+        .overlay {
+            if isHovering {
+                Button {
+                    isHidden.toggle()
+                } label: {
+                    Image(systemName: isHidden ? "eye" : "eye.slash")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(5)
+                        .background(.black.opacity(0.55), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .help(isHidden ? "Show the evaluation" : "Hide the evaluation")
+                .accessibilityIdentifier(AccessibilityID.boardEvaluationBarHideToggle)
+                .transition(.opacity)
+            }
+        }
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
+        }
         .frame(width: Self.width)
-        .accessibilityElement(children: .ignore)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel("Evaluation")
-        .accessibilityValue(reading.label)
+        .accessibilityValue(isHidden ? "Hidden" : reading.label)
         .accessibilityIdentifier(AccessibilityID.boardEvaluationBar)
     }
 }

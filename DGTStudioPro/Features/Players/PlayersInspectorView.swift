@@ -105,17 +105,30 @@ private struct RecentGamesSection: View {
 
     @Environment(\.openWindow) private var openWindow
 
+    /// The reader's cap (17 Aug 2026, by request): last 3 by default - a sidebar section, not
+    /// an archive - with 5 and 10 a menu away. `StorageKeys.playersRecentGames` is shared with
+    /// the columns detail, so the two lists agree on "recent".
+    @AppStorage(StorageKeys.playersRecentGames) private var recentCount = 3
+
     var body: some View {
         CollapsibleSection(.recentGames, title: "Recent Games") {
+            Picker("Show", selection: $recentCount) {
+                Text("Last 3").tag(3)
+                Text("Last 5").tag(5)
+                Text("Last 10").tag(10)
+            }
+            .pickerStyle(.menu)
+            .controlSize(.small)
+
             if games.isEmpty {
                 Text("No games")
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(games.prefix(10)) { game in
+                ForEach(games.prefix(recentCount)) { game in
                     row(for: game)
                 }
-                if games.count > 10 {
-                    Text("and \(games.count - 10) more…")
+                if games.count > recentCount {
+                    Text("and \(games.count - recentCount) more…")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }

@@ -57,17 +57,67 @@ struct LibraryGamePreviewView: View {
         }
     }
     
+    /// The gap between bar and board - this host's own, per `EvaluationBarView`'s standing
+    /// decision that the bar states its width and each caller states its gap.
+    private static let evaluationBarGap: CGFloat = 10
+
     private var board: some View {
-        BoardView(
-            position: preview?.position ?? .empty,
-            pieces: preview.map {
-                PieceIdentity.resolved(position: $0.position, tracker: $0.pieceTracker)
-            } ?? [],
-            style: boardStyle,
-            perspective: .white,
-            lastMove: preview?.lastMove,
-            checkSquare: preview?.checkSquare
-        )
+        // The bar joins the gallery preview (17 Aug 2026, by request) in the Board
+        // destination's arrangement: bar column at the far leading edge, an invisible column
+        // of identical width trailing, board centred between them. The flanks are reserved
+        // **whether or not this game has a bar** - unlike the Board, where the whole branch is
+        // conditional - so the board keeps one size as the reader steps through analyzed and
+        // unanalyzed games in the filmstrip. A board that resized per selection would be the
+        // gallery's own version of the fabricated-bar bug: motion that means nothing.
+        GeometryReader { geometry in
+            let flank = EvaluationBarView.width + Self.evaluationBarGap
+            let side = max(0, min(
+                geometry.size.width - 2 * flank,
+                geometry.size.height
+            ))
+
+            HStack(spacing: 0) {
+                Group {
+                    // The bar exists iff the game has a scored ply (`hasScoredPly`, not
+                    // `!evaluations.isEmpty` - an all-nil array is non-empty and drew a
+                    // fabricated 50/50 bar on the Board once).
+                    if let game, game.hasScoredPly {
+                        EvaluationBarView(
+                            // The last *scored* ply, not the last element: a scored game can
+                            // end on unscored plies, and `.last` would fold those to an even
+                            // bar. This preview shows the final position, so the final score
+                            // is the honest reading.
+                            reading: EvaluationBarReading(
+                                game.evaluations.compactMap { $0 }.last
+                            ),
+                            perspective: .white,
+                            style: boardStyle
+                        )
+                        .frame(height: side)
+                    }
+                }
+                .frame(width: flank, alignment: .leading)
+
+                BoardView(
+                    position: preview?.position ?? .empty,
+                    pieces: preview.map {
+                        PieceIdentity.resolved(position: $0.position, tracker: $0.pieceTracker)
+                    } ?? [],
+                    style: boardStyle,
+                    perspective: .white,
+                    lastMove: preview?.lastMove,
+                    checkSquare: preview?.checkSquare
+                )
+                .frame(width: side, height: side)
+                .frame(maxWidth: .infinity)
+
+                // The invisible twin - `Color.clear`, not `Spacer()`: a spacer's width is
+                // negotiated, and this must match the bar column to the point.
+                Color.clear
+                    .frame(width: flank)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
         // The walk hops off the main actor (`parseSAN` generates every legal move per ply). The
         // cancellation check is load-bearing - `Task.detached` is not auto-cancelled by `.task`'s exit.
         .task(id: game?.moves) {

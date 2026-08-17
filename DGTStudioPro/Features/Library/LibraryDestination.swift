@@ -403,9 +403,12 @@ struct LibraryDestination: View {
                 analyzedIDs: analyzedIDs,
                 selectedPGNs: $selectedPGNs,
                 onOpen:    openGames,
-                onAnalyze: requestAnalysis,
-                onExport:  requestExport,
-                onDelete:  { pendingDeletion = $0 }
+                // The list's batch doors, not the singular ones (17 Aug 2026): the grid
+                // resolves Finder's rule itself, so a selected card's menu hands the whole
+                // selection here - the singular doors made "select all, analyze" analyze one.
+                onAnalyze: { requestAnalysis(ids: Set($0.map(\.id))) },
+                onExport:  { requestExport(ids: Set($0.map(\.id))) },
+                onDelete:  { requestDelete(ids: Set($0.map(\.id))) }
             )
             .accessibilityIdentifier(AccessibilityID.libraryModeIcons)
         case .list:
@@ -592,11 +595,10 @@ struct LibraryDestination: View {
             } label: {
                 Label("Inspector", systemImage: "sidebar.trailing")
             }
-            // Disabled, not hidden - vanishing on a mode switch reads as a glitch; the guard is producible.
-            .disabled(viewMode.ownsDetailPane)
-            .help(viewMode.ownsDetailPane
-                  ? "Columns view shows details in its own pane"
-                  : "Show or hide the inspector")
+            // Always enabled (17 Aug 2026, by request - the `.disabled(ownsDetailPane)` guard
+            // retired with the Players twin's): entering columns closes the inspector once,
+            // and this button is how a reader disagrees.
+            .help("Show or hide the inspector")
             .accessibilityIdentifier(AccessibilityID.libraryInspectorToggle)
         }
     }

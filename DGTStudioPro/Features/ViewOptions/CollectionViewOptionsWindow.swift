@@ -3,11 +3,11 @@ import SwiftUI
 /// Which collection surface the panel is describing - both halves, because the destination
 /// decides which sort fields exist and the mode whether the grid section renders.
 struct CollectionViewOptionsSubject: Equatable, Sendable {
-
+    
     enum Collection: String, Sendable {
         case library
         case players
-
+        
         var displayName: String {
             switch self {
             case .library: "Library"
@@ -15,10 +15,10 @@ struct CollectionViewOptionsSubject: Equatable, Sendable {
             }
         }
     }
-
+    
     var collection: Collection
     var mode: CollectionViewMode
-
+    
     /// Only the icons grid packs columns; list and columns are tables, the gallery is a strip.
     var hasSizableGrid: Bool { mode == .icons }
 }
@@ -39,18 +39,18 @@ extension FocusedValues {
 /// Finder's ⌘J. A singleton `Window` - one panel, opened by id, no wrapper type to mint.
 /// One panel, not one per destination: sizes are preferences about browsing, not destinations.
 struct CollectionViewOptionsWindow: View {
-
+    
     static let sceneID = "collectionViewOptions"
-
+    
     @Environment(CollectionViewOptions.self) private var options
-
+    
     /// A pure reader - no `@FocusedValue` here, and that is the fix: opening the panel makes it key,
     /// so by first render the focused value is already nil. The destinations latch into `options`.
     private var subject: CollectionViewOptionsSubject? { options.activeSubject }
-
+    
     var body: some View {
         @Bindable var options = options
-
+        
         Group {
             if let subject {
                 Form {
@@ -80,9 +80,9 @@ struct CollectionViewOptionsWindow: View {
         }
         .frame(minWidth: 320, minHeight: 260)
     }
-
+    
     // MARK: Sections
-
+    
     /// Two branches, deliberately: the destinations' field enums are different types, and a generic
     /// picker buys nothing over two short switches.
     @ViewBuilder
@@ -99,9 +99,9 @@ struct CollectionViewOptionsWindow: View {
                     }
                 }
                 .accessibilityIdentifier(AccessibilityID.viewOptionsSortField)
-
+                
                 directionPicker(isReverse: options.librarySort.isReverse)
-
+                
             case .players:
                 Picker("Sort By", selection: options.playersSort.field) {
                     ForEach(PlayersSortField.allCases, id: \.self) { field in
@@ -109,12 +109,12 @@ struct CollectionViewOptionsWindow: View {
                     }
                 }
                 .accessibilityIdentifier(AccessibilityID.viewOptionsSortField)
-
+                
                 directionPicker(isReverse: options.playersSort.isReverse)
             }
         }
     }
-
+    
     /// Words, not an arrow glyph: "descending" reads correctly for dates, counts, ratings and names;
     /// ↑ beside "Last Played" says nothing about which end is recent.
     private func directionPicker(isReverse: Binding<Bool>) -> some View {
@@ -125,7 +125,7 @@ struct CollectionViewOptionsWindow: View {
         .pickerStyle(.inline)
         .accessibilityIdentifier(AccessibilityID.viewOptionsSortDirection)
     }
-
+    
     private func gridSection(
         for collection: CollectionViewOptionsSubject.Collection,
         options: Bindable<CollectionViewOptions>
@@ -134,7 +134,7 @@ struct CollectionViewOptionsWindow: View {
         // sheet meant nothing on Players, whose cards are person monograms. Spacing keeps the grid
         // glyphs on both - a grid is a grid whatever fills it.
         let sizeGlyph = collection == .players ? "person" : "doc"
-
+        
         return Section("Grid") {
             // `in:` takes the ranges the type clamps to, so the slider cannot ask for a value the object
             // silently corrects - extremes that do nothing read as a stuck slider.
@@ -145,9 +145,9 @@ struct CollectionViewOptionsWindow: View {
                 range: CollectionViewOptions.iconSizeRange,
                 step: Self.iconSizeStep,
                 minimumGlyph: sizeGlyph,
-                minimumSize: 11,
+                minimumSize: 10,
                 maximumGlyph: sizeGlyph,
-                maximumSize: 22,
+                maximumSize: 16,
                 identifier: AccessibilityID.viewOptionsIconSize
             )
             sizedSlider(
@@ -157,9 +157,9 @@ struct CollectionViewOptionsWindow: View {
                 range: CollectionViewOptions.spacingRange,
                 step: Self.spacingStep,
                 minimumGlyph: "square.grid.2x2.fill",
-                minimumSize: 13,
+                minimumSize: 10,
                 maximumGlyph: "square.grid.3x3.fill",
-                maximumSize: 18,
+                maximumSize: 16,
                 identifier: AccessibilityID.viewOptionsSpacing
             )
             Button("Use Defaults") {
@@ -169,19 +169,19 @@ struct CollectionViewOptionsWindow: View {
             .accessibilityIdentifier(AccessibilityID.viewOptionsUseDefaults)
         }
     }
-
+    
     // MARK: Slider Steps
-
+    
     /// Both steps chosen so the shipped default lands **on** a tick - `Use Defaults` moves the
     /// thumb, and a thumb between ticks reads as a failed snap.
     private static let iconSizeStep: CGFloat = 20
     private static let spacingStep: CGFloat = 4
-
+    
     /// The label cluster's fixed slot, so the two sliders' tracks start at one x whatever the
     /// title says - two rows with hugging labels are two sliders that never align (the tag
     /// editor's 16 Aug lesson, one window over). Wide enough for "Icon size: 240 pt".
     private static let labelColumnWidth: CGFloat = 118
-
+    
     /// Finder's View Options slider on one line (label above until 16 Aug 2026, by request):
     /// value in the label, small/large glyphs at the ends - the affordance, not decoration.
     /// Icon size shows a value, grid spacing does not (Finder's split); `pt`, not `128×128` -
@@ -199,8 +199,8 @@ struct CollectionViewOptionsWindow: View {
         maximumSize: CGFloat,
         identifier: String
     ) -> some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 6) {
+        HStack {
+            HStack {
                 Text("\(title):")
                 if let value {
                     // `monospacedDigit` so the row does not twitch as the number crosses a digit boundary mid-drag.
@@ -210,34 +210,49 @@ struct CollectionViewOptionsWindow: View {
                 }
             }
             .frame(width: Self.labelColumnWidth, alignment: .leading)
-
-            HStack(spacing: 10) {
+            
+            // The glyphs ride the slider's OWN value-label slots (17 Aug 2026), not a
+            // hand-built `HStack { Image; Slider; Image }`. That version left a wide gap
+            // between the minimum glyph and the track which survived making both the slider
+            // and its column greedy - three siblings in an HStack have no rule about who hugs
+            // whom, and inside a grouped `Form` the leftover width settled between them. These
+            // slots are the API's answer: AppKit hugs them to the track's ends and owns the
+            // spacing.
+            // `step:` draws the tick marks - ticks and snapping are one decision, so the step
+            // constants carry the argument.
+            Slider(value: binding, in: range, step: step) {
+                // Hidden below but present: VoiceOver would not associate the row's visible
+                // `Text` label on its own.
+                Text(title)
+            } minimumValueLabel: {
                 Image(systemName: minimumGlyph)
                     .font(.system(size: minimumSize))
-                // `step:` draws the tick marks - ticks and snapping are one decision, so the step constants
-                // carry the argument.
-                Slider(value: binding, in: range, step: step)
-                    .accessibilityIdentifier(identifier)
-                    // VoiceOver would not associate the visible `Text` label on its own.
-                    .accessibilityLabel(title)
+                    .foregroundStyle(.secondary)
+                    .padding(.trailing, 6)
+            } maximumValueLabel: {
                 Image(systemName: maximumGlyph)
                     .font(.system(size: maximumSize))
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, 6)
             }
-            // Both glyphs together, so a host tinting one tints both - a divergence reads as one enabled.
-            .foregroundStyle(.secondary)
+            // The row draws its own label column, so the slider's built-in one would be a
+            // second copy of the same words. Both glyphs are styled from this one helper, so
+            // they still cannot diverge - the tint that used to sit on their shared HStack.
+            .labelsHidden()
+            .accessibilityIdentifier(identifier)
+            .accessibilityLabel(title)
             // The tallest glyph sets the row height; otherwise rows sit at different heights per `maximumSize`.
-            .frame(minHeight: 24)
+            .frame(maxWidth: .infinity, minHeight: 24)
         }
-        .padding(.vertical, 2)
     }
 }
 
 /// The View menu's half of ⌘J - a `Commands` scene has no `openWindow`, so the shared button
 /// carries the action and this scene just hosts it.
 struct CollectionViewOptionsCommands: Commands {
-
+    
     @FocusedValue(\.collectionViewOptionsSubject) private var subject
-
+    
     var body: some Commands {
         CommandGroup(after: .toolbar) {
             // ⌘J applied here and nowhere else: the shortcut lived on the shared button with five hosts, so
@@ -253,9 +268,9 @@ struct CollectionViewOptionsCommands: Commands {
 /// Carries label and action, deliberately not the shortcut: a key equivalent is a claim to own
 /// the verb globally, and only the menu may make it.
 struct ShowViewOptionsButton: View {
-
+    
     @Environment(\.openWindow) private var openWindow
-
+    
     var body: some View {
         Button("Show View Options") {
             openWindow(id: CollectionViewOptionsWindow.sceneID)

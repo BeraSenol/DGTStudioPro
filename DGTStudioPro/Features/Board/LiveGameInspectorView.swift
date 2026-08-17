@@ -7,6 +7,9 @@ struct LiveGameInspectorView: View {
     // MARK: Stored Properties
     
     let game: LiveGame
+    /// The number the game will carry in the Library (D58′'s max+1), threaded from the
+    /// destination for the headline (17 Aug 2026). Nil omits the number - previews stand.
+    var recordingNumber: Int? = nil
     let onUpdateRoster: (LiveGame.Roster) -> Void
     let onResign: (PieceColor) -> Void
     let onAgreeDraw: () -> Void
@@ -97,9 +100,13 @@ struct LiveGameInspectorView: View {
     /// live twin of the review headline. Same formatter, so the two
     /// inspectors can't drift apart on the grammar.
     private var headline: String {
+        // The number slot carries the LIBRARY ordinal since 17 Aug 2026, not the roster's
+        // round - "Recording 112." for the game that will archive as 112. The formatter's
+        // grammar is untouched; only the number's source moved (the round-12-vs-game-112
+        // report). Round stays a roster fact everywhere else.
         GameHeadline.text(
             .recording,
-            round: game.roster.round,
+            round: recordingNumber,
             white: game.roster.white,
             black: game.roster.black
         )
@@ -125,22 +132,39 @@ struct LiveGameInspectorView: View {
     /// `InspectorSection` an enum: Resign/Draw/Discard is a set of verbs, not the game.
     private var lifecycleSection: some View {
         CollapsibleSection(.lifecycle, title: "Game") {
-            if !game.isFinished {
-                Button("Resign") {
-                    isChoosingResign = true
+            // One horizontal row (17 Aug 2026, by request): three stacked rows read as a
+            // settings list; side by side they read as the set of verbs they are. Equal
+            // widths - ragged verb buttons read as unrelated - and a finished game degrades
+            // to the lone Discard at full width.
+            HStack(spacing: 8) {
+                if !game.isFinished {
+                    Button {
+                        isChoosingResign = true
+                    } label: {
+                        Text("Resign")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .accessibilityIdentifier(AccessibilityID.liveInspectorResign)
+
+                    Button {
+                        isConfirmingDraw = true
+                    } label: {
+                        Text("Agree Draw")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .accessibilityIdentifier(AccessibilityID.liveInspectorDraw)
                 }
-                .accessibilityIdentifier(AccessibilityID.liveInspectorResign)
-                
-                Button("Agree Draw") {
-                    isConfirmingDraw = true
+
+                Button(role: .destructive) {
+                    isConfirmingDiscard = true
+                } label: {
+                    Text("Discard Game")
+                        .frame(maxWidth: .infinity)
                 }
-                .accessibilityIdentifier(AccessibilityID.liveInspectorDraw)
+                .accessibilityIdentifier(AccessibilityID.liveInspectorDiscard)
             }
-            
-            Button("Discard Game", role: .destructive) {
-                isConfirmingDiscard = true
-            }
-            .accessibilityIdentifier(AccessibilityID.liveInspectorDiscard)
+            .buttonStyle(.bordered)
+            .listRowSeparator(.hidden)
         }
     }
 }

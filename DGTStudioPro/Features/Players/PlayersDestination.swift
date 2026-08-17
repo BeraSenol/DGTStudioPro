@@ -51,6 +51,7 @@ struct PlayersDestination: View {
         [KeyPathComparator(\RankedPlayer.rank)]
     }
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openWindow) private var openWindow
 
     /// The View Options panel's subject (7 Aug 2026) - see `sortOrder`.
     @Environment(CollectionViewOptions.self) private var options
@@ -218,6 +219,10 @@ struct PlayersDestination: View {
                     headToHead: headToHead
                 ) ?? ""
             )
+            // Closed BY DEFAULT in the self-detailing modes, not disabled (17 Aug 2026 - the
+            // day's second revision: first auto-hidden in gallery, then re-enabled everywhere
+            // by request): entering columns or gallery closes it once (the `onChange` on the
+            // content), and the toggle stays live for a reader who wants both surfaces.
             .inspector(isPresented: $tabState.playersInspectorPresented) {
                 PlayersInspectorView(
                     ranked: selected,
@@ -330,11 +335,13 @@ struct PlayersDestination: View {
                 switch viewMode {
                 case .icons:
                     PlayersIconsView(players: players, selectedKeys: $selectedKeys,
-                                     onShowInLibrary: showInLibrary)
+                                     onShowInLibrary: showInLibrary,
+                                     onOpenMatchup: { openMatchup($0, in: players) })
                 case .list:
                     PlayersListView(players: players, selectedKeys: $selectedKeys,
                                     onShowInLibrary: showInLibrary,
-                                    sortOrder: sortOrder)
+                                    sortOrder: sortOrder,
+                                    onOpenMatchup: { openMatchup($0, in: players) })
                 case .columns:
                     // Flat list + detail (Finder-columns redesign); the list follows `players`' display order.
                     PlayersColumnsView(players: players,
@@ -346,16 +353,36 @@ struct PlayersDestination: View {
                     PlayersGalleryView(players: players, selectedKeys: $selectedKeys,
                                        history: history,
                                        records: records,
-                                       onShowInLibrary: showInLibrary)
+                                       onShowInLibrary: showInLibrary,
+                                       onOpenMatchup: { openMatchup($0, in: players) })
                 }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier(AccessibilityID.playersContent)
+        // Entering a self-detailing mode closes the inspector once; the toggle reopens it -
+        // closed-by-default, never disabled (17 Aug 2026, by request).
+        .onChange(of: viewMode) { _, mode in
+            if mode.ownsDetailPane || mode == .gallery {
+                tabState.playersInspectorPresented = false
+            }
+        }
         .onCommand(
             #selector(NSStandardKeyBindingResponding.selectAll(_:)),
             perform: selectAllAction
         )
+    }
+
+    /// Double-click's door (17 Aug 2026, by request): the matchup window, keyed on stats key +
+    /// display name. It replaces the double-click route only - Get Info keeps the menus, and
+    /// with them the rename. Columns mode deliberately has no double-click: its detail pane is
+    /// already the profile, and a second door from the same click would race the selection.
+    private func openMatchup(_ key: PlayerStats.ID, in players: [RankedPlayer]) {
+        guard let player = players.first(where: { $0.id == key }) else { return }
+        openWindow(value: PlayerMatchupRequest(
+            playerKey: player.stats.key,
+            playerName: player.stats.name
+        ))
     }
 
     private var emptyState: some View {
@@ -401,11 +428,11 @@ struct PlayersDestination: View {
             .accessibilityIdentifier(AccessibilityID.playersViewModePicker)
         }
         ToolbarSpacer(.fixed)
+        // Always enabled (17 Aug 2026, by request - `isDisabled` retired): the self-detailing
+        // modes close the inspector on entry instead, and the toggle is how a reader disagrees.
         InspectorToggleContent(
             isPresented: $tabState.playersInspectorPresented,
-            identifier: AccessibilityID.playersInspectorToggle,
-            isDisabled: viewMode.ownsDetailPane,
-            disabledReason: "Columns view shows details in its own pane"
+            identifier: AccessibilityID.playersInspectorToggle
         )
     }
 

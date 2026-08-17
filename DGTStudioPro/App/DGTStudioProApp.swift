@@ -206,6 +206,17 @@ struct DGTStudioProApp: App {
         .defaultSize(width: 460, height: 520)
 .windowManagerRole(.associated)        .restorationBehavior(.disabled) // companion - see the graph above
 
+        // The player matchup - the double-click door in every Players view (17 Aug 2026).
+        // Newest wrapper in the `openWindow(value:)` family. Not floating; `value:` dedupes,
+        // so re-opening a player's matchup focuses the existing window.
+        WindowGroup("Matchup", for: PlayerMatchupRequest.self) { $request in
+            PlayerMatchupWindow(request: request)
+        }
+        .modelContainer(sharedContainer)
+        .defaultSize(width: 460, height: 340)
+        .windowManagerRole(.associated)
+        .restorationBehavior(.disabled) // companion - see the graph above
+
         // The smart-tag editor as its own window (16 Aug 2026; was ContentView's sheet). Sixth
         // wrapper in the `openWindow(value:)` family. Not floating; sized by its own fixed frame.
         WindowGroup("Smart Tag", for: SmartTagEditorRequest.self) { $request in
@@ -267,11 +278,14 @@ struct DGTStudioProApp: App {
         .defaultSize(width: 340, height: 300)
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled) // see the Analysis window above
-        // Exonerated by the 17 Aug strip test (the toolbar fault fired with it removed) and
-        // restored - though it remains the one survivor of the species the 16 Aug commit
-        // caught leaking across scenes, so it stays first suspect if window sizing ever
-        // misbehaves again.
-        .windowResizability(.contentMinSize)
+        // NO `.windowResizability` here - removed twice, kept out for good (17 Aug 2026).
+        // The 16 Aug purge dropped `.contentSize` from three dialog scenes because scene
+        // resizability leaks to the main window in practice; this `.contentMinSize` survived
+        // that purge, was exonerated for the *toolbar* fault by the strip test, got restored -
+        // and then the main window stopped height-resizing during live games, which is the
+        // leak's signature (content min-size enforced on a window this scene never owned).
+        // The panel's own frame bounds it; automatic resizability derives its limits from
+        // content.
         .windowLevel(.floating)
 .windowManagerRole(.associated)
         Settings {

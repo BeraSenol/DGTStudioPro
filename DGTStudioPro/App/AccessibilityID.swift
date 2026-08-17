@@ -50,6 +50,8 @@ enum AccessibilityID {
     static let evaluationWindowGraph   = "evaluation.window.graph"
     static let evaluationWindowReadout = "evaluation.window.readout"
     static let evaluationWindowEmpty   = "evaluation.window.empty"
+    static let matchupWindowEmpty      = "matchup.window.empty"
+    static let boardEvaluationBarHideToggle = "board.evaluationBar.hideToggle"
     
     // MARK: Analysis Data (8 Aug 2026)
     

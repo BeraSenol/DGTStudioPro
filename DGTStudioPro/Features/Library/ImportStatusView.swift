@@ -64,10 +64,31 @@ struct ImportStatusView: View {
             
             Divider()
             
-            List(progress.results) { result in
-                ImportResultRow(result: result)
+            // `ScrollView` + `LazyVStack`, NOT `List` (17 Aug 2026): the List crashed this
+            // file's live preview every time - SwiftUI's `OutlineListCoordinator` hitting a
+            // `fatalError` in `ViewListTree.visitItem` while AppKit estimated row heights
+            // during `viewDidMoveToWindow` (`rowAtPoint:` → `computeTotalRowsSpan` →
+            // `itemAtRow:`), a framework ordering bug reached through a `List` whose height
+            // is still being negotiated as it attaches. Reproducible with static data and a
+            // fresh preview agent, so not the preview's accumulated state.
+            //
+            // The `List` was buying nothing here: this is a read-only report - no selection,
+            // no menus, no reordering - so an `NSOutlineView` was pure liability. Separators
+            // and insets restated by hand to keep `.listStyle(.inset)`'s look.
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(progress.results.enumerated()), id: \.element.id) { index, result in
+                        if index > 0 {
+                            Divider()
+                        }
+                        ImportResultRow(result: result)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 4)
+                    }
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
             }
-            .listStyle(.inset)
             .frame(minHeight: 200)
             
             Divider()

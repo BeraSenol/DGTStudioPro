@@ -120,7 +120,10 @@ struct SessionSidebarPanel: View {
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.bar, in: RoundedRectangle(cornerRadius: 8))
+        // `.regularMaterial`, not `.bar` - the same swap as the HUD card's, same reason (the
+        // full why lives there): `.bar` under the toolbar is bridge-coordinated, and this app's
+        // two `.bar` cards were the full-screen toolbar fault's fuel.
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
         .overlay(
             RoundedRectangle(cornerRadius: 8)
                 .strokeBorder(Color.orange.opacity(0.35), lineWidth: 1)
@@ -134,8 +137,20 @@ struct SessionSidebarPanel: View {
     /// Status-card phase, priority-ordered: connection truth first (a pulled cable outranks
     /// everything; reconnecting reads as its own card). Delegates to `SessionPhase.current` -
     /// the ordering is the content, and two surfaces must agree on it.
+    ///
+    /// **`.playing` is filtered to nil (17 Aug 2026, by request): the card stands down during
+    /// the game itself.** A floating card repeating whose move it is - which the toolbar
+    /// subtitle and the board already say - is chrome over the board exactly while the board
+    /// is the whole point. Every arrival, exception and exit still shows: setup, corrections,
+    /// recovery, reconnects, the result, a failed archive. Visibility policy only - the
+    /// *ordering* stays `SessionPhase.current`'s, and the subtitle deliberately keeps
+    /// `.playing`, whose words are its main job.
     private var hudPhase: LiveGameHUDView.Phase? {
-        .current(session: session, connection: connection)
+        guard let phase = LiveGameHUDView.Phase.current(
+            session: session, connection: connection
+        ) else { return nil }
+        if case .playing = phase { return nil }
+        return phase
     }
     
     /// The restore checklist while recovering; recomputed per observable change so rows disappear

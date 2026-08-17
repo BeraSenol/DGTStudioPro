@@ -25,6 +25,12 @@ struct BoardView: View {
     var targetSquares: Set<Square> = []
     /// Legal destinations of the one lifted piece (`MoveHints`) - the board knows dots, not chess.
     var hintSquares: Set<Square> = []
+    /// Pieces in a hand (17 Aug 2026, by request): squares the committed game holds and the
+    /// physical board doesn't, ghosted at 25% instead of vanishing. The castling ghost's
+    /// sibling - overlay vocabulary on the squares, so the piece LAYER's occupancy-verbatim
+    /// invariant (D47′: the mirror renders the physical board, always) is untouched. The
+    /// caller computes; the board only draws.
+    var liftedGhosts: [Square: Piece] = [:]
     
     // MARK: Preferences
     
@@ -161,7 +167,10 @@ struct BoardView: View {
                             highlight: squareHighlight(for: square),
                             squareSize: layout.innerSquareSize,
                             style: style,
-                            ghostPiece: (square == ghostSquare) ? ghostPiece : nil
+                            // Castle ghost outranks a lifted ghost on the same square (it
+                            // cannot happen - a castle destination is empty in the game too -
+                            // but precedence is stated rather than accidental).
+                            ghostPiece: (square == ghostSquare) ? ghostPiece : liftedGhosts[square]
                         )
                         // "square.e4" - stable algebraic handle, kept per the registry's bet.
                         .accessibilityIdentifier(
@@ -360,6 +369,29 @@ private struct Layout {
         checkSquare: nil,
         ghostSquare: Squares.d8,
         ghostPiece: .blackRook
+    )
+    .frame(width: 600, height: 600)
+}
+
+// The same mid-lift with the 25% stand-in: the e4-pawn is in the player's hand, so it ghosts
+// faintly on e4 while the hint dots mark where it may land - the "where did my piece go"
+// answer. The castle previews above ghost at the same 25% - one opacity for every ghost.
+#Preview("Lifted Piece Ghost") {
+    var position = Position.starting
+    position[Squares.e2] = .empty          // e4 was played,
+    position[Squares.d7] = .empty          // ...d5 answered,
+    position[Squares.d5] = .blackPawn
+    // ...and the e4-pawn is up (e4 stays empty on the physical board).
+
+    return BoardView(
+        position: position,
+        pieces: PieceIdentity.resolved(position: position, tracker: .empty),
+        style: .walnut,
+        perspective: .white,
+        lastMove: LastMove(from: Squares.d7, to: Squares.d5),
+        checkSquare: nil,
+        hintSquares: [Squares.e5, Squares.d5],
+        liftedGhosts: [Squares.e4: .whitePawn]
     )
     .frame(width: 600, height: 600)
 }

@@ -23,78 +23,149 @@ DGT Studio Pro is a ground-up rewrite of [DGT Studio](https://github.com/BeraSen
 
 ### Board
 
-The live mirror of the physical board - coordinates printed for both seats, the stage kept clear, and the sidebar owning all connection and session status.
+The live mirror, coordinates printed for both seats. Session status floats over the board; the inspector holds the roster, the moves, and the lifecycle verbs.
 
-![The Board destination awaiting a DGT board connection](Screenshots/board-no-connection.png)
+#### No board attached
+
+![The Board destination with no DGT board attached](Screenshots/boardview-no-board-connected.png)
+
+#### Board not found
+
+![The connection sheet reporting nothing at /dev/cu.usbmodem01, offering Try Again](Screenshots/boardviewwindow-board-connection-not-found.png)
+
+#### Connecting
+
+![The connection sheet resetting the board and reading its starting position](Screenshots/boardviewwindow-board-connecting.png)
+
+#### Connected
+
+![The connection sheet reporting the board's serial and firmware](Screenshots/boardviewwindow-board-connected.png)
+
+#### Ready to record
+
+![A connected board at the starting position, the floating card inviting a new game](Screenshots/boardview-board-connected-no-live-game.png)
+
+#### New Game
+
+![The New Game window, both seats picked from the player registry](Screenshots/boardviewwindow-new-game.png)
+
+#### Live recording
+
+![A live recording after 1. d4 e5, the played squares lit](Screenshots/boardview-board-connected-during-live-game.png)
 
 ### Library
 
-Every archived game in four view modes - icons, list, columns, and gallery - with live search, smart-tag filtering, and batch engine analysis running behind the toolbar's counter.
+Four view modes, live search, smart tags, batch analysis.
 
-![The Library in icons view during a batch analysis, with the inspector showing a game's roster, evaluation graph and PGN](Screenshots/library-icons-during-batch-analysis.png)
+#### Icons view
 
-![The Library in list view with sortable columns for ordinal, players, result and ECO code](Screenshots/library-list-during-batch-analysis.png)
+![The Library in icons view](Screenshots/libraryview-iconsview.png)
 
-![The Library in columns view, the selected game's full PGN and facts in the detail pane](Screenshots/library-columns-game-detail.png)
+#### List view
 
-![The Library in gallery view, previewing a finished game's final position with the checkmated king highlighted](Screenshots/library-gallery-game-preview.png)
+![The Library in list view, sortable on every column](Screenshots/libraryview-listview.png)
 
-![The Library's filter menu: result facets and analysis state as search tokens](Screenshots/library-filter-menu.png)
+#### Columns view
+
+![The Library in columns view](Screenshots/libraryview-columnsview.png)
+
+#### Gallery view
+
+![The Library in gallery view, the mated king highlighted](Screenshots/libraryview-galleryview.png)
+
+#### Batch selection
+
+![All 111 games selected, with the batch menu](Screenshots/libraryview-listview-all-games-selected-contextmenu.png)
+
+#### View Options
+
+![Library View Options: sort, icon size, grid spacing](Screenshots/libraryviewwindow-viewoptions.png)
+
+#### Smart Tag editor
+
+![A named, coloured tag built from rules](Screenshots/window-smarttag-editor.png)
 
 ### Analysis
 
-Batch analysis with bundled Stockfish: a queue window showing the live search, per-game progress and the projected time left - and every game's evaluation curve, enlarged in its own window with a read-out under the pointer.
+Bundled Stockfish, run as a batch.
 
-![The analysis queue window mid-batch: the running game's search, the line still to go, and Stop All](Screenshots/analysis-queue-window.png)
+![The analysis queue mid-batch, with time remaining](Screenshots/window-analysis-queue.png)
 
-![The evaluation graph in its own window, naming the ply under the pointer](Screenshots/evaluation-graph-window.png)
+![The evaluation graph, reading out the ply under the pointer](Screenshots/window-evaluation-graph.png)
 
 ### Get Info
 
-One window over any game, recording or player - the editable Seven Tag Roster on Details, the movetext as a validated score sheet on Move Text, and the file's derived facts on File.
+One window over any game or player.
 
-![Get Info's Details tab: native controls for the Seven Tag Roster and equipment tags](Screenshots/get-info-details.png)
+#### Details
 
-![Get Info's Move Text tab: the score sheet, validated by full replay on every keystroke](Screenshots/get-info-move-text.png)
+![The Seven Tag Roster in native controls](Screenshots/window-getinfo-details.png)
+
+#### Move Text
+
+![The score sheet, validated by legal replay](Screenshots/window-getinfo-movetext-editor.png)
+
+#### File
+
+![Content hash, ECO and checkmate type](Screenshots/window-getinfo-file.png)
+
+
+![A player's record and rating trend](Screenshots/playersviewwindow-getinfo-profile.png)
+
+
+![Head-to-head against one opponent](Screenshots/playersviewwindow-getinfo-matchup.png)
 
 ### Players
 
-Every player the Library knows, ranked on a configurable ladder (wins, win rate, or Glicko-1 rating), with a full profile - record, rating trend over games played, and recent encounters - in every view mode.
+A configurable ladder - wins, win rate, or Glicko-1 rating - with a profile in every view mode.
 
-![The Players ladder in icons view with the selected player's profile, rating trend and recent games](Screenshots/players-icons-profile.png)
+#### Icons view
 
-![The Players ladder as a sortable table: rank, record, win rate, special mates and rating](Screenshots/players-list-ladder.png)
+![The Players ladder in icons view](Screenshots/playersview-iconview.png)
 
-![Players in columns view, the profile and recent games in the detail pane](Screenshots/players-columns-profile.png)
+#### List view
 
-![Players in gallery view, one profile at full size over the filmstrip](Screenshots/players-gallery-profile.png)
+![The ladder as a table: record, win rate, special mates, rating](Screenshots/playersview-listview.png)
 
-## How it's built
+#### Columns view
 
-The application is first-party Swift throughout - no third-party packages. The only external components are the Stockfish binary (a separate GPL work, obtained separately and never committed here) and lichess's CC0 opening table, bundled as fetched.
+![Players in columns view](Screenshots/playersview-columnsview.png)
 
-- **A pure chess core.** Board representation, move generation, SAN, and FEN are `Sendable` value types with no I/O, no logging, and no actor - validated by perft suites against reference node counts, including deep positions.
-- **Swift 6 language mode** with complete concurrency checking on every target. An actor owns the engine subprocess, the main actor owns the UI and the live session, and the seams between them are explicit.
-- **Over 1,100 tests** in more than a hundred Swift Testing suites, runnable headless: the live session's side effects are settable hooks that tests leave nil, so the full plan needs no board, no network, and no engine (engine suites skip when the binary is absent).
-- **A written decision log.** Every non-obvious call - seventy-plus of them - is a numbered, argued entry in [docs/internal/DECISIONS.md](docs/internal/DECISIONS.md), append-only, with the rejected alternatives recorded alongside the winner.
+#### Gallery view
 
-The full technical tour - module map, the DGT protocol pipeline, the session state machine, persistence and identity, testing approach - is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+![Players in gallery view, with rating trend and head-to-head](Screenshots/playersview-galleryview.png)
 
-## Building and running
+#### View Options
 
-Requirements: macOS 26.2 or later, Xcode 26.
+![Players View Options: sort, icon size, grid spacing](Screenshots/playerviewwindow-viewoptions.png)
 
-1. Clone the repository and open `DGTStudioPro.xcodeproj`.
-2. *Optional, for engine analysis:* download a Stockfish macOS build from [stockfishchess.org](https://stockfishchess.org) and place the raw binary at `DGTStudioPro/Engine/stockfish` (no file extension, executable bit set). The path is gitignored. Without it the app builds and runs normally; analysis is unavailable and the engine test suites skip.
-3. *Optional, for tablebase-exact endgame evaluation:* point Settings at a local Syzygy folder.
-4. Build and run. Live recording needs a DGT USB eBoard; the Library, analysis, and player features all work without one.
+### Settings
 
-Tests: ⌘U runs the full plan. No hardware required.
+![Auto-connect and two sleep guards](Screenshots/window-settings-general.png)
 
-## Documentation
+![Four board styles and the piece-glide duration](Screenshots/window-settings-board.png)
 
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - the technical tour.
-- [docs/internal/](docs/internal/) - the project's working memory, kept verbatim: the append-only decision log, the standing instructions, and the roadmap.
+![A sound set and per-event toggles](Screenshots/window-settings-sounds.png)
+
+![Depth, hash, threads, and an optional Syzygy folder](Screenshots/window-settings-engine.png)
+
+![The stored game count and Erase Library](Screenshots/window-settings-data.png)
+
+### Previews
+
+Xcode previews, each holding every state of one view at once.
+
+#### Session card
+
+![Every phase, from reconnecting to a finished game that could not be saved](Screenshots/previews-livegamehudview.png)
+
+#### Import results
+
+![Each rejected file with its reason](Screenshots/previews-importstatusview.png)
+
+#### Game card
+
+![A Library game card in its selection states](Screenshots/previews-librarygamecardview.png)
 
 ## License
 

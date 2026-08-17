@@ -18,11 +18,15 @@ struct LibraryIconsView: View {
     /// a card render costs no blob decode.
     let analyzedIDs: Set<PGN.ID>
     @Binding var selectedPGNs: Set<PGN.ID>
-    /// Takes the set - see `open(_:)` for the rule applied first.
+    /// All four verbs take the set, resolved through `subjects(for:)` - Finder's rule for
+    /// every card action, not just Open. Analyze, Export and Delete were `(PGN) -> Void`
+    /// until 17 Aug 2026 and acted on one game however many were selected, while the list's
+    /// `.contextMenu(forSelectionType:)` handed it the whole selection free - the
+    /// "select all, delete all, it deletes one" report.
     let onOpen: ([PGN]) -> Void
-    let onAnalyze: (PGN) -> Void
-    let onExport: (PGN) -> Void
-    let onDelete: (PGN) -> Void
+    let onAnalyze: ([PGN]) -> Void
+    let onExport: ([PGN]) -> Void
+    let onDelete: ([PGN]) -> Void
 
     // MARK: Private Properties
 
@@ -61,10 +65,10 @@ struct LibraryIconsView: View {
                                 ),
                                 isSelected: selectedPGNs.contains(game.id),
                                 onSelect:  { select(game) },
-                                onOpen:    { open(game) },
-                                onAnalyze: { onAnalyze(game) },
-                                onExport:  { onExport(game) },
-                                onDelete:  { onDelete(game) }
+                                onOpen:    { onOpen(subjects(for: game)) },
+                                onAnalyze: { onAnalyze(subjects(for: game)) },
+                                onExport:  { onExport(subjects(for: game)) },
+                                onDelete:  { onDelete(subjects(for: game)) }
                             )
                             .id(game.id)
                             .onGeometryChange(for: CGRect.self) { geometry in
@@ -132,15 +136,17 @@ struct LibraryIconsView: View {
         isFocused = true
     }
 
-    /// Finder's double-click rule, spelled by hand (`LibraryListView` gets it free from
-    /// `primaryAction`): double-clicking a card in a multi-selection opens the whole
-    /// selection; anything else opens just it. Ordered off `games` - that is tab order.
-    private func open(_ game: PGN) {
+    /// Finder's rule, spelled by hand (`LibraryListView` gets it free from
+    /// `.contextMenu(forSelectionType:)` and `primaryAction`): acting on a card inside a
+    /// multi-selection acts on the whole selection; on anything else, just that card.
+    /// One resolution for all four verbs since 17 Aug 2026 - it belonged to Open alone
+    /// (as `open(_:)`), and the other three quietly acted on one game whatever was
+    /// selected. Ordered off `games` - that is tab and processing order.
+    private func subjects(for game: PGN) -> [PGN] {
         if selectedPGNs.count > 1, selectedPGNs.contains(game.id) {
-            onOpen(games.filter { selectedPGNs.contains($0.id) })
-        } else {
-            onOpen([game])
+            return games.filter { selectedPGNs.contains($0.id) }
         }
+        return [game]
     }
 
     /// Sweeping replaces the selection with the crossed cards (Finder's plain drag); the anchor

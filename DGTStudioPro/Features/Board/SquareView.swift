@@ -11,7 +11,10 @@ struct SquareView: View {
     let highlight: SquareHighlight
     let squareSize: CGFloat
     let style: BoardStyle
-    /// Ghost at 50% when the square is empty - the square stays ignorant of castling semantics.
+    /// Ghost at 25% when the square is empty - the mid-castle rook and a lifted piece's
+    /// stand-in alike (one opacity for every ghost, 17 Aug 2026 by request; a per-kind
+    /// opacity parameter lived here for an hour and died when the kinds stopped differing).
+    /// The square stays ignorant of which ghost it draws.
     var ghostPiece: Piece? = nil
     
     // MARK: Computed Properties
@@ -40,7 +43,7 @@ struct SquareView: View {
             if !piece.isOccupied, let ghostPiece {
                 // Ghost only on an empty square; `PieceGlyph` keeps it pixel-identical to the piece it foreshadows.
                 PieceGlyph(piece: ghostPiece, squareSize: squareSize)
-                    .opacity(0.5)
+                    .opacity(0.25)
             }
 
             // Legal-destination hint: dot on an empty square, ring around an occupied one (a

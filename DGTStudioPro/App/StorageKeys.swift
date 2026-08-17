@@ -80,6 +80,14 @@ enum StorageKeys {
     static let collectionGridSpacing = "collectionGridSpacing"
     static let librarySort           = "librarySort"
     static let playersSort           = "playersSort"
+    /// Recent-games caps in the Players surfaces: 3 by default (17 Aug 2026, by request),
+    /// 5 and 10 a menu away. One key, read by the inspector section and the columns detail,
+    /// so the two lists always agree on "recent".
+    static let playersRecentGames    = "playersRecentGames"
+    /// The evaluation bar's spoiler switch (17 Aug 2026): hidden draws a flat grey bar with no
+    /// score. App-wide and persisted deliberately - a reader replaying a game they haven't seen
+    /// wants it off until they choose otherwise, and wants that to survive the next launch.
+    static let evaluationBarHidden   = "evaluationBarHidden"
 
     static let syzygyBookmark    = "syzygyBookmark"
     static let syzygyDisplayPath = "syzygyDisplayPath"

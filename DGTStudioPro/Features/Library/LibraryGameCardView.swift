@@ -159,7 +159,7 @@ private func sampleGame(
         }
     }
     .padding()
-    .frame(width: 720)
+    .frame(width: 720, height: 200)
     .modelContainer(for: PGN.self, inMemory: true)
 }
 
@@ -187,7 +187,7 @@ private func sampleGame(
         )
     }
     .padding()
-    .frame(width: 360)
+    .frame(width: 360, height: 200)
     .modelContainer(for: PGN.self, inMemory: true)
 }
 
@@ -227,7 +227,7 @@ private func sampleGame(
         )
     }
     .padding()
-    .frame(width: 540)
+    .frame(width: 540, height: 200)
     .modelContainer(for: PGN.self, inMemory: true)
 }
 
@@ -261,6 +261,6 @@ private func sampleGame(
         )
     }
     .padding()
-    .frame(width: 360)
+    .frame(width: 360, height: 200)
     .modelContainer(for: PGN.self, inMemory: true)
 }

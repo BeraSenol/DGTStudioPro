@@ -42,8 +42,12 @@ struct BoardInspectorView: View {
     /// The headline; falls back to a bare noun with no game - "? vs ?" would over-claim.
     private var headline: String {
         guard let pgn else { return "Game" }
+        // The number slot carries the LIBRARY ordinal since 17 Aug 2026 - "Reviewing 47." for
+        // game 47 - the live headline's rule, applied to its review twin the same day (round
+        // is a rivalry counter, and the two inspectors must not number differently). A game
+        // without an ordinal omits the number, which the grammar already does for nil.
         return GameHeadline.text(
-            .reviewing, round: pgn.round, white: pgn.white, black: pgn.black
+            .reviewing, round: pgn.libraryIndex, white: pgn.white, black: pgn.black
         )
     }
     

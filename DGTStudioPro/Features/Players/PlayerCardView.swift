@@ -156,6 +156,9 @@ struct PlayerCardView: View {
     var rating: Glicko1.Rating? = nil
     /// Presents "Show in Library" when set; optional so previews stay unchanged.
     var onShowInLibrary: (() -> Void)? = nil
+    /// Double-click - the matchup window's door (17 Aug 2026). Defaulted so previews and any
+    /// host with no window to offer stay valid.
+    var onOpen: () -> Void = {}
 
     /// Monogram side. A parameter, not an environment read - the Library card's `glyphWidth`
     /// reason: the gallery filmstrip keeps its own size while the icons grid follows View
@@ -170,9 +173,15 @@ struct PlayerCardView: View {
     /// (`Text` concatenation's `+` did the same job and is deprecated in macOS 26.)
     private var nameLine: Text {
         if let rank {
-            Text("\(Text("#\(rank)").foregroundStyle(.secondary).monospacedDigit()) \(stats.name)")
+            // Medal colours for the PODIUM only (17 Aug 2026, second pass the same evening):
+            // #1-#3 wear gold/silver/bronze, everything below keeps the card's own
+            // `.secondary` - the headline surfaces' `.tint` fallback is deliberately not
+            // copied here, "not tinted" being the request's exact words.
+            let rankStyle = RankMedal(rank: rank).map { AnyShapeStyle($0.color) }
+                ?? AnyShapeStyle(.secondary)
+            return Text("\(Text("#\(rank)").foregroundStyle(rankStyle).monospacedDigit()) \(stats.name)")
         } else {
-            Text(stats.name)
+            return Text(stats.name)
         }
     }
 
@@ -213,7 +222,12 @@ struct PlayerCardView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(.vertical, 8)
         .contentShape(Rectangle())
-        .onTapGesture(perform: onSelect)
+        // The Library card's gesture arrangement, copied exactly: selection is a
+        // `simultaneousGesture`, not a second `onTapGesture` - two sequential taps made
+        // SwiftUI hold the single click for the full double-click interval. Select on
+        // mouse-down; only open waits.
+        .onTapGesture(count: 2, perform: onOpen)
+        .simultaneousGesture(TapGesture().onEnded { onSelect() })
         // Without `.combine`, macOS exposes only the inner texts - the identifier never lands on a
         // tappable element.
         .accessibilityElement(children: .combine)

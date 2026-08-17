@@ -13,6 +13,9 @@ struct PlayersColumnsView: View {
     @Binding var selectedKeys: Set<PlayerStats.ID>
     /// The selected player's games, newest first - threaded exactly as the inspector gets it.
     let recentGames: [PGN]
+    /// The shared recent-games cap - `StorageKeys.playersRecentGames`'s second reader; the
+    /// inspector section holds the twin menu, one key keeps them agreeing.
+    @AppStorage(StorageKeys.playersRecentGames) private var recentCount = 3
     let onShowInLibrary: (PlayerStats.ID) -> Void
 
     /// Shared with list mode through the destination (the Library twin's arrangement).
@@ -82,9 +85,15 @@ struct PlayersColumnsView: View {
     /// three; corrected 16 Aug 2026.)
     private func row(for player: RankedPlayer) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: "person")
-                .foregroundStyle(.tint)
+            Image(systemName: "person.fill")
                 .imageScale(.medium)
+                // Medal colours for the PODIUM glyphs only (17 Aug 2026, second pass): #1-#3
+                // wear the medals, everything below keeps the default label colour - not the
+                // headline's `.tint` fallback, "not tinted" being the request's exact words.
+                .foregroundStyle(
+                    RankMedal(rank: player.rank).map { AnyShapeStyle($0.color) }
+                        ?? AnyShapeStyle(.primary)
+                )
             Text(player.stats.name)
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -116,7 +125,18 @@ struct PlayersColumnsView: View {
     /// A scrolling profile, unlike the Library's fixed block: nothing fights for aspect ratio here,
     /// and the recent-games list is the part that grows.
     private func playerDetail(_ player: RankedPlayer) -> some View {
-        ScrollView {
+        // Vertically centred when the content is shorter than the pane (17 Aug 2026, by
+        // request): the viewport height becomes the content's minimum, so short profiles
+        // centre and tall ones scroll exactly as before.
+        GeometryReader { pane in
+            ScrollView {
+                playerDetailContent(player)
+                    .frame(maxWidth: .infinity, minHeight: pane.size.height)
+            }
+        }
+    }
+
+    private func playerDetailContent(_ player: RankedPlayer) -> some View {
             VStack(spacing: 16) {
                 PlayerMonogram(name: player.stats.name, side: 96)
 
@@ -145,25 +165,38 @@ struct PlayersColumnsView: View {
             }
             .padding(24)
             .frame(maxWidth: .infinity)
-        }
     }
 
-    /// The inspector's recent-games rules restated: capped at ten with a tail, rows open via
+    /// The inspector's recent-games rules restated: rows open via `openWindow(value:)`, the
+    /// cap is the reader's stored choice. Two hosts' decisions that agree today - deliberately
+    /// not shared.
     /// `openWindow(value:)`. Two hosts' decisions that agree today - deliberately not shared.
     private var recentGamesBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Recent Games")
-                .font(.headline)
+            HStack {
+                Text("Recent Games")
+                    .font(.headline)
+                Spacer()
+                // The inspector section's cap menu, restated - one stored key, two surfaces.
+                Picker("Show", selection: $recentCount) {
+                    Text("Last 3").tag(3)
+                    Text("Last 5").tag(5)
+                    Text("Last 10").tag(10)
+                }
+                .pickerStyle(.menu)
+                .controlSize(.small)
+                .fixedSize()
+            }
 
             if recentGames.isEmpty {
                 Text("No games")
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(recentGames.prefix(10)) { game in
+                ForEach(recentGames.prefix(recentCount)) { game in
                     gameRow(for: game)
                 }
-                if recentGames.count > 10 {
-                    Text("and \(recentGames.count - 10) more…")
+                if recentGames.count > recentCount {
+                    Text("and \(recentGames.count - recentCount) more…")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }

@@ -22,6 +22,8 @@ struct PlayersGalleryView: View {
     let records: [GameRecord]
 
     let onShowInLibrary: (PlayerStats.ID) -> Void
+    /// Double-click's door - the matchup window (17 Aug 2026). Defaulted so previews stand.
+    var onOpenMatchup: (PlayerStats.ID) -> Void = { _ in }
 
     private var selectedPlayer: RankedPlayer? {
         guard let key = selectedKeys.first else { return nil }
@@ -75,6 +77,10 @@ struct PlayersGalleryView: View {
             // Scrolls only when it must. The preview grew a third tier with the profile band, and a
             // centred VStack that outgrows its host clips at both ends rather than at the bottom -
             // the failure would hide the monogram, not the new content.
+            // Vertically centred when the content is shorter than the viewport (17 Aug 2026,
+            // by request) - the viewport height becomes the minimum; taller content scrolls
+            // exactly as before, clipping at both ends per the original reasoning.
+            GeometryReader { pane in
             ScrollView(.vertical) {
                 VStack(spacing: 12) {
                     PlayerMonogram(name: player.stats.name, side: 96)
@@ -100,10 +106,23 @@ struct PlayersGalleryView: View {
                             .padding(.top, 8)
                     }
 
-                    profileBand(for: player)
+                    // The matchup band (17 Aug 2026, by request): the head-to-head content
+                    // replaced Recent Form / By Colour / Opponents wholesale - the same
+                    // `PlayerMatchupView` the double-click window shows, so the two surfaces
+                    // cannot drift. `.id` resets the opponent selection when the subject
+                    // changes; without it the previous player's opponent lingers.
+                    PlayerMatchupView(
+                        playerKey: player.stats.key,
+                        playerName: player.stats.name,
+                        records: records
+                    )
+                    .id(player.stats.key)
+                    .frame(maxWidth: 620)
+                    .padding(.top, 16)
                 }
-                .frame(maxWidth: .infinity)
                 .padding(.vertical, 24)
+                .frame(maxWidth: .infinity, minHeight: pane.size.height)
+            }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -118,25 +137,11 @@ struct PlayersGalleryView: View {
         }
     }
 
-    /// The three panels the gallery has that the inspector doesn't - what "the gallery goes deeper"
-    /// actually means. Folded here rather than in the destination because both answers are about the
-    /// current selection, which only this view knows.
-    ///
-    /// Capped at 620 to sit under the 460-wide chart without the outer two panels drifting to the
-    /// window's edges on a wide display: the band should read as one block below the chart, not as
-    /// three things pinned to the corners.
-    @ViewBuilder
-    private func profileBand(for player: RankedPlayer) -> some View {
-        let key = player.stats.key
-
-        HStack(alignment: .top, spacing: 32) {
-            PlayerColourSplitPanel(stats: player.stats)
-            PlayerFormPanel(form: PlayerStats.form(of: key, in: records))
-            PlayerOpponentsPanel(opponents: PlayerStats.opponents(of: key, in: records))
-        }
-        .frame(maxWidth: 620)
-        .padding(.top, 16)
-    }
+    // (`profileBand` stood here until 17 Aug 2026 - Recent Form / By Colour / Opponents,
+    // replaced by request with the matchup band above. The three panels briefly moved to the
+    // matchup window's Profile tab and were deleted from there the same evening, also by
+    // request - they now stand in `PlayerProfilePanels` with no consumer, and whether they
+    // retire is a decision for a calmer day, not this edit's rider.)
 
     private var filmstrip: some View {
         ScrollViewReader { proxy in
@@ -149,7 +154,8 @@ struct PlayersGalleryView: View {
                             onSelect: { selectedKeys = [player.id]; isFocused = true },
                             rank: player.rank,
                             rating: player.rating,
-                            onShowInLibrary: { onShowInLibrary(player.id) }
+                            onShowInLibrary: { onShowInLibrary(player.id) },
+                            onOpen: { onOpenMatchup(player.id) }
                         )
                         .frame(width: 160)
                         .id(player.id)
