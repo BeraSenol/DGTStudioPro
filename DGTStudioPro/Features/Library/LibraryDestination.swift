@@ -18,6 +18,10 @@ struct LibraryDestination: View {
     
     /// Clears the active filter; owned by `ContentView` because a filter is a sidebar selection. Nil when unfiltered.
     let onClearFilter: (() -> Void)?
+
+    /// Loads a game into the tab the reader is already in (17 Aug 2026). Optional: previews
+    /// and any future host without a Board destination to point at simply don't supply it.
+    let onOpenInPlace: ((PGN) -> Void)?
     
     // MARK: Tab State (lives on enclosing `ContentView`)
     @Bindable var tabState: TabState
@@ -85,11 +89,13 @@ struct LibraryDestination: View {
     init(
         filter: LibraryFilter? = nil,
         tabState: TabState,
-        onClearFilter: (() -> Void)? = nil
+        onClearFilter: (() -> Void)? = nil,
+        onOpenInPlace: ((PGN) -> Void)? = nil
     ) {
         self.filter = filter
         self.tabState = tabState
         self.onClearFilter = onClearFilter
+        self.onOpenInPlace = onOpenInPlace
     }
     
     // MARK: Computed Properties
@@ -402,7 +408,9 @@ struct LibraryDestination: View {
                 games: games,
                 analyzedIDs: analyzedIDs,
                 selectedPGNs: $selectedPGNs,
+                // `onOpen` is the menu's new-tab door; `onOpenInPlace` is double-click's.
                 onOpen:    openGames,
+                onOpenInPlace: openInPlace,
                 // The list's batch doors, not the singular ones (17 Aug 2026): the grid
                 // resolves Finder's rule itself, so a selected card's menu hands the whole
                 // selection here - the singular doors made "select all, analyze" analyze one.
@@ -417,6 +425,7 @@ struct LibraryDestination: View {
                 analyzedIDs: analyzedIDs,
                 selectedPGNs: $selectedPGNs,
                 onOpen:       openGames,
+                onOpenInPlace: openInPlace,
                 onAnalyzeIDs: { requestAnalysis(ids: $0) },
                 onExportIDs:  { requestExport(ids: $0) },
                 onDeleteIDs:  { requestDelete(ids: $0) },
@@ -430,6 +439,7 @@ struct LibraryDestination: View {
                 selectedPGNs: $selectedPGNs,
                 boardStyle: boardStyle,
                 onOpen:    openGames,
+                onOpenInPlace: openInPlace,
                 onAnalyze: requestAnalysis,
                 onExport:  requestExport,
                 onDelete:  { pendingDeletion = $0 },
@@ -443,6 +453,7 @@ struct LibraryDestination: View {
                 selectedPGNs: $selectedPGNs,
                 boardStyle: boardStyle,
                 onOpen:    openGames,
+                onOpenInPlace: openInPlace,
                 onAnalyze: requestAnalysis,
                 onExport:  requestExport,
                 onDelete:  { pendingDeletion = $0 }
@@ -451,8 +462,23 @@ struct LibraryDestination: View {
         }
     }
     
+    /// Double-click's door since 17 Aug 2026, by request: load the game into **this** tab
+    /// rather than spawning one. `ContentView` owns the two values it takes - the window's
+    /// `loadedGameID` and the sidebar selection - so the destination only asks. Nil when the
+    /// host has no in-place route (previews), which is why every gesture guards it and falls
+    /// back to the new-tab path rather than doing nothing.
+    private func openInPlace(_ pgn: PGN) {
+        guard let onOpenInPlace else {
+            performOpen([pgn])
+            return
+        }
+        Self.logger?.info("Open in place: '\(pgn.name, privacy: .public)'")
+        onOpenInPlace(pgn)
+    }
+
     /// One resolution point for "open these in windows". macOS dedups and tabs, which makes the plural
-    /// safe; arrives and stays in display order - visible here as tab order.
+    /// safe; arrives and stays in display order - visible here as tab order. Reached from the
+    /// context menu's "Open in New Tab" only - double-click goes to `openInPlace`.
     private func openGames(_ pgns: [PGN]) {
         guard !pgns.isEmpty else { return }
         if pgns.count > Self.openConfirmationThreshold {

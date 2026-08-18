@@ -9,6 +9,8 @@ struct LibraryListView: View {
     @Binding var selectedPGNs: Set<PGN.ID>
     /// Takes the set, like every action here.
     let onOpen: ([PGN]) -> Void
+    /// Double-click / Return's door (17 Aug 2026): one game, into the current tab.
+    var onOpenInPlace: (PGN) -> Void = { _ in }
     let onAnalyzeIDs: (Set<PGN.ID>) -> Void
     let onExportIDs: (Set<PGN.ID>) -> Void
     let onDeleteIDs: (Set<PGN.ID>) -> Void
@@ -126,9 +128,13 @@ struct LibraryListView: View {
                 onDelete: { onDeleteIDs(Set($0.map(\.id))) }
             )
         } primaryAction: { ids in
-            // Fires on double-click and Return. **Opens the whole set** - this read `ids.first`
-            // once: "some row, in `Set` order", a game wearing another's face.
-            onOpen(games.filter { ids.contains($0.id) })
+            // Fires on double-click and Return, and opens ONE game in the current tab since
+            // 17 Aug 2026. Resolved through display order, never `ids.first` - a `Set` has no
+            // order, and reading its first element handed back "some row", a game wearing
+            // another's face. Opening the whole set was the old behaviour and is now the
+            // context menu's job.
+            guard let first = games.first(where: { ids.contains($0.id) }) else { return }
+            onOpenInPlace(first)
         }
     }
 }

@@ -36,11 +36,15 @@ struct GameActionsMenu: View {
                 Divider()
             }
 
+            // Named for what it does since 17 Aug 2026: this item is the ONLY door to a new
+            // tab. Double-click stopped taking it that day - opening a tab per double-click
+            // buried the reader in tabs they never asked for - and now loads the game into the
+            // tab they are already in. A second item for that would just restate the gesture.
             Button {
                 onOpen(games)
             } label: {
                 Label(
-                    games.count > 1 ? "Open \(games.count) in Board" : "Open in Board",
+                    games.count > 1 ? "Open \(games.count) in New Tabs" : "Open in New Tab",
                     systemImage: "checkerboard.rectangle"
                 )
             }
@@ -52,9 +56,13 @@ struct GameActionsMenu: View {
                 onAnalyze(games)
             } label: {
                 // The shared aggregate rule: running wins, then checkmark only when the whole set is analyzed.
+                // Title comes from `menuTitle`, not the label's `actionTitle` default: this is an
+                // action surface, so an analyzed game reads "Re-Analyze" while the badges in the
+                // list and columns keep stating "Analyzed".
+                let state = AnalysisGlyph.state(of: games, runningID: runningAnalysisID)
                 AnalysisLabel(
-                    state: AnalysisGlyph.state(of: games, runningID: runningAnalysisID),
-                    title: games.count > 1 ? "Analyze \(games.count) Games" : nil
+                    state: state,
+                    title: AnalysisGlyph.menuTitle(state, count: games.count)
                 )
             }
             // R for Run - the one key with no convention behind it (see the type doc).

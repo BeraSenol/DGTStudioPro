@@ -75,7 +75,7 @@ enum AnalysisGlyph {
     static func tint(_ state: State) -> Color? {
         switch state {
         case .unanalyzed: .red
-        case .analyzing:  nil
+        case .analyzing:  .gray
         case .analyzed:   .green
         }
     }
@@ -90,6 +90,24 @@ enum AnalysisGlyph {
         }
     }
     
+    /// The **menu's** vocabulary - verbs, counted (17 Aug 2026, by request). Distinct from
+    /// `actionTitle`'s state wording on purpose: a badge answers "has this been done", a menu
+    /// item answers "what happens if I pick this", so an analyzed game offers **Re-Analyze**
+    /// rather than restating "Analyzed" as though it were an outcome. `.analyzing` refuses the
+    /// count - the queue is working, not offering, and "Analyzing… 5 Games" reads as a claim
+    /// about progress. A mixed selection folds to `.unanalyzed` by the aggregate rule and so
+    /// says plain "Analyze", which is the honest offer: some of those games have no pass yet.
+    static func menuTitle(_ state: State, count: Int) -> String {
+        switch state {
+        case .analyzing:
+            "Analyzing…"
+        case .unanalyzed:
+            count > 1 ? "Analyze \(count) Games" : "Analyze"
+        case .analyzed:
+            count > 1 ? "Re-Analyze \(count) Games" : "Re-Analyze"
+        }
+    }
+
     /// Status vocabulary ("Not Analyzed" …) for surfaces that state rather than act; matches
     /// `LibrarySearchToken.unanalyzed`'s chip so badge and filter speak alike.
     static func statusLabel(_ state: State) -> String {
@@ -197,7 +215,8 @@ struct AnalysisStatusBadge: View {
     var body: some View {
         AnalysisBadgeIcon(state: state)
             .font(.title2)
-            .background(.ultraThinMaterial, in: Circle())
+            .foregroundStyle(.primary)
+            .background(.white, in: Circle())
             .allowsHitTesting(false)
             .accessibilityLabel(AnalysisGlyph.statusLabel(state))
     }

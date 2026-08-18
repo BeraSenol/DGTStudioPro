@@ -15,6 +15,9 @@ struct LibraryColumnsView: View {
     /// Takes the set. Deliberately not adapted with a `forEach` like the others: those fan
     /// out to per-game doors, while Open's door owns the count threshold.
     let onOpen: ([PGN]) -> Void
+    /// The detail pane's Open button (17 Aug 2026): this tab, not a new one - the gesture's
+    /// meaning is now uniform across every mode.
+    var onOpenInPlace: (PGN) -> Void = { _ in }
     let onAnalyze: (PGN) -> Void
     let onExport: (PGN) -> Void
     let onDelete: (PGN) -> Void
@@ -183,12 +186,12 @@ struct LibraryColumnsView: View {
             HStack(spacing: 12) {
                 Button {
                     // Singular by construction: the detail pane renders only for a count of one.
-                    onOpen([game])
+                    onOpenInPlace(game)
                 } label: {
                     Label("Open", systemImage: "arrow.up.forward.square")
                 }
                 .buttonStyle(.borderedProminent)
-                .help("Open this game in its own window")
+                .help("Open this game in this tab")
 
                 Button {
                     onAnalyze(game)

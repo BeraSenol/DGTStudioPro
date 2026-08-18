@@ -116,7 +116,11 @@ struct ContentView: View {
             case .destination(.board):
                 BoardDestination(loadedGameID: $loadedGameID, tabState: tabState)
             case .destination(.library):
-                LibraryDestination(filter: nil, tabState: tabState)
+                LibraryDestination(
+                    filter: nil,
+                    tabState: tabState,
+                    onOpenInPlace: openGameInThisTab
+                )
             case .destination(.players):
                 PlayersDestination(
                     tabState: tabState,
@@ -127,7 +131,8 @@ struct ContentView: View {
                 LibraryDestination(
                     filter: tags.first(where: { $0.id == id }).map(LibraryFilter.smartTag),
                     tabState: tabState,
-                    onClearFilter: { selection = .destination(.library) }
+                    onClearFilter: { selection = .destination(.library) },
+                    onOpenInPlace: openGameInThisTab
                 )
             case .player(let id):
                 // Programmatic only: the chip is this selection's one visible face and exit. Same
@@ -135,7 +140,8 @@ struct ContentView: View {
                 LibraryDestination(
                     filter: players.first(where: { $0.id == id }).map(LibraryFilter.player),
                     tabState: tabState,
-                    onClearFilter: { selection = .destination(.library) }
+                    onClearFilter: { selection = .destination(.library) },
+                    onOpenInPlace: openGameInThisTab
                 )
             }
         }
@@ -161,6 +167,18 @@ struct ContentView: View {
         }
     }
     
+    // MARK: Opening Games
+
+    /// Double-click's route since 17 Aug 2026: the game lands in **this** tab. Only this view
+    /// can do it - the window's `loadedGameID` and the sidebar selection are both its state,
+    /// and `BoardDestination` reads the first while `selection` decides which destination is
+    /// on screen. Every Library variant (plain, tag-filtered, player-filtered) hands the same
+    /// closure down, so the gesture means one thing wherever the reader is standing.
+    private func openGameInThisTab(_ pgn: PGN) {
+        loadedGameID = pgn.persistentModelID
+        selection = .destination(.board)
+    }
+
     // MARK: Tag CRUD (M-prs.5)
 
     // `commit` moved whole into `SmartTagEditorWindow` with the editor (16 Aug 2026): a window

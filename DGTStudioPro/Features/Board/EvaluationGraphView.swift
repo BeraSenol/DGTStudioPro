@@ -114,20 +114,37 @@ struct EvaluationGraphView: View {
         }
     }
     
+    /// Monotone cubic (Fritsch-Carlson) since 17 Aug 2026, replacing Catmull-Rom - the graph
+    /// read as violently spiky and **part of that was drawn, not played**: Catmull-Rom
+    /// overshoots at a direction reversal, sailing past the data point and inventing a peak
+    /// higher than any evaluation in the game. A monotone fit cannot leave the interval
+    /// between two plies, so every visible extreme is a real one, and the curve is smoother
+    /// besides - the two goals turned out to be the same goal.
+    ///
+    /// A blunder still shows as a cliff. Damping *that* would need a moving average over the
+    /// evaluations, which is a lie a study tool must not tell: the sharp drop is the thing the
+    /// reader opened the graph to find.
     private func curvePath(through points: [CGPoint]) -> Path {
         guard points.count >= 2 else { return Path() }
-        
+
+        let slopes = monotoneSlopes(through: points)
+
         return Path { path in
             path.move(to: points[0])
-            
-            if points.count == 2 {
-                path.addLine(to: points[1])
-                return
-            }
-            
+
+            // Hermite → Bézier: the control points sit a third of the span along each
+            // endpoint's tangent. Two points degenerate to a straight line on their own, so
+            // the old `count == 2` special case retired with the old interpolation.
             for i in 0 ..< (points.count - 1) {
-                let (cp1, cp2) = catmullRomControlPoints(at: i, in: points)
-                path.addCurve(to: points[i + 1], control1: cp1, control2: cp2)
+                let p1 = points[i]
+                let p2 = points[i + 1]
+                let third = (p2.x - p1.x) / 3
+
+                path.addCurve(
+                    to: p2,
+                    control1: CGPoint(x: p1.x + third, y: p1.y + third * slopes[i]),
+                    control2: CGPoint(x: p2.x - third, y: p2.y - third * slopes[i + 1])
+                )
             }
         }
     }
@@ -142,26 +159,40 @@ struct EvaluationGraphView: View {
         return area
     }
     
-    private func catmullRomControlPoints(
-        at index: Int,
-        in points: [CGPoint]
-    ) -> (CGPoint, CGPoint) {
-        let p0 = index > 0 ? points[index - 1] : points[index]
-        let p1 = points[index]
-        let p2 = points[index + 1]
-        let p3 = index + 2 < points.count ? points[index + 2] : points[index + 1]
-        let tension: CGFloat = 5.0
-        
-        let cp1 = CGPoint(
-            x: p1.x + (p2.x - p0.x) / tension,
-            y: p1.y + (p2.y - p0.y) / tension
-        )
-        let cp2 = CGPoint(
-            x: p2.x - (p3.x - p1.x) / tension,
-            y: p2.y - (p3.y - p1.y) / tension
-        )
-        
-        return (cp1, cp2)
+    /// Fritsch-Carlson tangents: the whole anti-overshoot rule, in two clauses. **A ply that
+    /// reverses direction gets a flat tangent** (the neighbouring slopes disagree in sign), so
+    /// the curve arrives level at the turn instead of sailing through it - that clause alone
+    /// removes the invented peaks. Otherwise the average slope is clamped to three times the
+    /// gentler neighbour, which keeps a steep segment from bending its calm neighbour out of
+    /// range. Plies are evenly spaced so `dx` is never zero in practice; guarded anyway,
+    /// because a zero here would be a NaN in a `Path`.
+    private func monotoneSlopes(through points: [CGPoint]) -> [CGFloat] {
+        let count = points.count
+        guard count >= 2 else { return Array(repeating: 0, count: count) }
+
+        let secants: [CGFloat] = (0 ..< count - 1).map { i in
+            let dx = points[i + 1].x - points[i].x
+            return dx == 0 ? 0 : (points[i + 1].y - points[i].y) / dx
+        }
+
+        var slopes = [CGFloat](repeating: 0, count: count)
+        slopes[0] = secants[0]
+        slopes[count - 1] = secants[count - 2]
+
+        for i in 1 ..< count - 1 {
+            let before = secants[i - 1]
+            let after = secants[i]
+
+            if before * after <= 0 {
+                slopes[i] = 0
+            } else {
+                let average = (before + after) / 2
+                let limit = 3 * min(abs(before), abs(after))
+                slopes[i] = min(abs(average), limit) * (average < 0 ? -1 : 1)
+            }
+        }
+
+        return slopes
     }
 }
 

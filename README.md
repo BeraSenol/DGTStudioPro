@@ -58,15 +58,6 @@ Four view modes, live search, smart tags, batch analysis.
 #### Batch selection
 ![All 111 games selected, with the batch menu](Screenshots/libraryview-listview-all-games-selected-contextmenu.png)
 
-#### Details
-![The Seven Tag Roster in native controls](Screenshots/window-getinfo-details.png)
-
-#### Move Text
-![The score sheet, validated by legal replay](Screenshots/window-getinfo-movetext-editor.png)
-
-#### File
-![Content hash, ECO and checkmate type](Screenshots/window-getinfo-file.png)
-
 #### View Options
 ![Library View Options: sort, icon size, grid spacing](Screenshots/libraryviewwindow-viewoptions.png)
 
@@ -93,13 +84,16 @@ A configurable ladder - wins, win rate, or Glicko-1 rating - with a profile in e
 #### Gallery view
 ![Players in gallery view, with rating trend and head-to-head](Screenshots/playersview-galleryview.png)
 
-### Get Info
-One window over any game or player.
-![A player's record and rating trend](Screenshots/playersviewwindow-getinfo-profile.png)
-![Head-to-head against one opponent](Screenshots/playersviewwindow-getinfo-matchup.png)
-
 #### View Options
 ![Players View Options: sort, icon size, grid spacing](Screenshots/playerviewwindow-viewoptions.png)
+
+### Get Info
+One window over any game or player.
+![The Seven Tag Roster in native controls](Screenshots/window-getinfo-details.png)
+![The score sheet, validated by legal replay](Screenshots/window-getinfo-movetext-editor.png)
+![Content hash, ECO and checkmate type](Screenshots/window-getinfo-file.png)
+![A player's record and rating trend](Screenshots/playersviewwindow-getinfo-profile.png)
+![Head-to-head against one opponent](Screenshots/playersviewwindow-getinfo-matchup.png)
 
 ### Settings
 ![Auto-connect and two sleep guards](Screenshots/window-settings-general.png)
@@ -107,15 +101,6 @@ One window over any game or player.
 ![A sound set and per-event toggles](Screenshots/window-settings-sounds.png)
 ![Depth, hash, threads, and an optional Syzygy folder](Screenshots/window-settings-engine.png)
 ![The stored game count and Erase Library](Screenshots/window-settings-data.png)
-
-### Previews
-Xcode previews, each holding every state of one view at once.
-
-#### Import results
-![Each rejected file with its reason](Screenshots/previews-importstatusview.png)
-
-#### Game card
-![A Library game card in its selection states](Screenshots/previews-librarygamecardview.png)
 
 ## License
 

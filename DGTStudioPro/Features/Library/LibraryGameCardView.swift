@@ -64,6 +64,7 @@ struct LibraryGameCardView: View {
                 .aspectRatio(contentMode: .fit)
                 .foregroundStyle(.white)
                 .frame(width: glyphWidth)
+                .fontWeight(.ultraLight)
             // Rigid, not merely width-pinned: a resizable image under `fit` was the card's one compressible
             // element - the filmstrip squeezed the glyph to half height.
                 .fixedSize(horizontal: false, vertical: true)
@@ -74,7 +75,7 @@ struct LibraryGameCardView: View {
             Text(displayIndex)
                 .font(
                     .system(
-                        size: glyphWidth * (14.0 / 60.0),
+                        size: glyphWidth * (7.0 / 30.0),
                         weight: .semibold,
                         design: .monospaced
                     )

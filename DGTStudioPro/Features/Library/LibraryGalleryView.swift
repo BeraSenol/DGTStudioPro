@@ -9,6 +9,8 @@ struct LibraryGalleryView: View {
     let boardStyle: BoardStyle
     /// Takes the set - degenerate here: a gallery selection is single by construction.
     let onOpen: ([PGN]) -> Void
+    /// Double-click's door (17 Aug 2026): this tab, not a new one.
+    var onOpenInPlace: (PGN) -> Void = { _ in }
     let onAnalyze: (PGN) -> Void
     let onExport: (PGN) -> Void
     let onDelete: (PGN) -> Void
@@ -100,7 +102,7 @@ struct LibraryGalleryView: View {
             ),
             isSelected: selectedPGNs.contains(game.id),
             onSelect:  { selectedPGNs = [game.id]; isFocused = true },
-            onOpen:    { onOpen([game]) },
+            onOpen:    { onOpenInPlace(game) },
             onAnalyze: { onAnalyze(game) },
             onExport:  { onExport(game) },
             onDelete:  { onDelete(game) }

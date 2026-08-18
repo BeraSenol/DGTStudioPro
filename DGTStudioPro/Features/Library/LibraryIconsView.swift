@@ -24,6 +24,9 @@ struct LibraryIconsView: View {
     /// `.contextMenu(forSelectionType:)` handed it the whole selection free - the
     /// "select all, delete all, it deletes one" report.
     let onOpen: ([PGN]) -> Void
+    /// Double-click's door (17 Aug 2026): one game, into the tab the reader is already in.
+    /// Defaulted so previews stand.
+    var onOpenInPlace: (PGN) -> Void = { _ in }
     let onAnalyze: ([PGN]) -> Void
     let onExport: ([PGN]) -> Void
     let onDelete: ([PGN]) -> Void
@@ -65,7 +68,9 @@ struct LibraryIconsView: View {
                                 ),
                                 isSelected: selectedPGNs.contains(game.id),
                                 onSelect:  { select(game) },
-                                onOpen:    { onOpen(subjects(for: game)) },
+                                // Double-click opens THIS card in place - never the whole
+                                // selection, which would be N tabs from one gesture.
+                                onOpen:    { onOpenInPlace(game) },
                                 onAnalyze: { onAnalyze(subjects(for: game)) },
                                 onExport:  { onExport(subjects(for: game)) },
                                 onDelete:  { onDelete(subjects(for: game)) }
