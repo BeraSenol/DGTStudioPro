@@ -1,6 +1,12 @@
 import SwiftUI
 
+/// The Players gallery: a profile preview of the selected player over a filmstrip of cards. The
+/// scaffold is `FilmstripGalleryView`'s (the Library gallery's twin, shared since 18 Aug 2026);
+/// what is here is the preview pane, which is the whole point of each gallery and the one part
+/// that was never the same.
 struct PlayersGalleryView: View {
+
+    // MARK: Stored Properties
 
     let players: [RankedPlayer]
     /// A set (shared model); the gallery stays one-at-a-time by gesture and previews the *first*
@@ -25,50 +31,34 @@ struct PlayersGalleryView: View {
     /// Double-click's door - the matchup window (17 Aug 2026). Defaulted so previews stand.
     var onOpenMatchup: (PlayerStats.ID) -> Void = { _ in }
 
+    // MARK: Private Properties
+
     private var selectedPlayer: RankedPlayer? {
         guard let key = selectedKeys.first else { return nil }
         return players.first { $0.id == key }
     }
-    
-    /// The gallery itself is the focusable; a card click hands it focus, ← / → step the strip.
-    @FocusState private var isFocused: Bool
 
+    // MARK: Body
     var body: some View {
-        VStack(spacing: 0) {
+        FilmstripGalleryView(
+            items: players,
+            selection: $selectedKeys,
+            metrics: .players
+        ) {
             preview
-            Divider()
-            filmstrip
+        } card: { player, isSelected, select in
+            PlayerCardView(
+                stats: player.stats,
+                isSelected: isSelected,
+                onSelect: select,
+                rank: player.rank,
+                rating: player.rating,
+                onShowInLibrary: { onShowInLibrary(player.id) },
+                onOpen: { onOpenMatchup(player.id) }
+            )
         }
-        .focusable()
-        .focusEffectDisabled()
-        .focused($isFocused)
-        .onMoveCommand { direction in
-            move(direction)
-        }
-        // The whole gallery is the background target - a gallery has almost no empty space to aim at.
-        // Card menus still win over their own bounds.
-        .contextMenu { ShowViewOptionsButton() }
     }
 
-    /// ← / → step, ↑ / ↓ hold - the shared grammar's one-row degenerate case; the previewed card is
-    /// the anchor.
-    private func move(_ direction: MoveCommandDirection) {
-        guard !players.isEmpty else { return }
-        let target: Int
-        if let key = selectedKeys.first,
-           let current = players.firstIndex(where: { $0.id == key }) {
-            target = IconGridSelection.destination(
-                from: current,
-                direction: direction,
-                columnCount: players.count,
-                count: players.count
-            )
-        } else {
-            target = 0
-        }
-        selectedKeys = [players[target].id]
-    }
-    
     /// Selection-driven, no `players.first` fallback - "never preview what the user didn't pick"
     /// (the Library's rule, closing the last gallery parity residue).
     @ViewBuilder
@@ -81,48 +71,48 @@ struct PlayersGalleryView: View {
             // by request) - the viewport height becomes the minimum; taller content scrolls
             // exactly as before, clipping at both ends per the original reasoning.
             GeometryReader { pane in
-            ScrollView(.vertical) {
-                VStack(spacing: 12) {
-                    PlayerMonogram(name: player.stats.name, side: 96)
-                    HStack(spacing: 8) {
-                        // The rank earns the medal styling beside the name.
-                        Text("#\(player.rank)")
-                            .font(.title2.weight(.bold).monospacedDigit())
-                            .foregroundStyle(RankMedal.style(forRank: player.rank))
-                        Text(player.stats.name)
-                            .font(.title2.weight(.semibold))
+                ScrollView(.vertical) {
+                    VStack(spacing: 12) {
+                        PlayerMonogram(name: player.stats.name, side: 96)
+                        HStack(spacing: 8) {
+                            // The rank earns the medal styling beside the name.
+                            Text("#\(player.rank)")
+                                .font(.title2.weight(.bold).monospacedDigit())
+                                .foregroundStyle(RankMedal.style(forRank: player.rank))
+                            Text(player.stats.name)
+                                .font(.title2.weight(.semibold))
+                        }
+
+                        // One grid, each fact once, shared so both hosts widen together.
+                        PlayerStatsGrid(stats: player.stats, rating: player.rating)
+                            .padding(.top, 4)
+
+                        // The same line the inspector draws (`RatingTrendChart` - one chart, two
+                        // hosts). Gated on having something to draw.
+                        if !history.isEmpty {
+                            // Width capped; height is the chart's own, stated once inside it.
+                            RatingTrendChart(history: history)
+                                .frame(maxWidth: 460)
+                                .padding(.top, 8)
+                        }
+
+                        // The matchup band (17 Aug 2026, by request): the head-to-head content
+                        // replaced Recent Form / By Colour / Opponents wholesale - the same
+                        // `PlayerMatchupView` the double-click window shows, so the two surfaces
+                        // cannot drift. `.id` resets the opponent selection when the subject
+                        // changes; without it the previous player's opponent lingers.
+                        PlayerMatchupView(
+                            playerKey: player.stats.key,
+                            playerName: player.stats.name,
+                            records: records
+                        )
+                        .id(player.stats.key)
+                        .frame(maxWidth: 620)
+                        .padding(.top, 16)
                     }
-
-                    // One grid, each fact once, shared so both hosts widen together.
-                    PlayerStatsGrid(stats: player.stats, rating: player.rating)
-                        .padding(.top, 4)
-
-                    // The same line the inspector draws (`RatingTrendChart` - one chart, two hosts). Gated on
-                    // having something to draw.
-                    if !history.isEmpty {
-                        // Width capped; height is the chart's own, stated once inside it.
-                        RatingTrendChart(history: history)
-                            .frame(maxWidth: 460)
-                            .padding(.top, 8)
-                    }
-
-                    // The matchup band (17 Aug 2026, by request): the head-to-head content
-                    // replaced Recent Form / By Colour / Opponents wholesale - the same
-                    // `PlayerMatchupView` the double-click window shows, so the two surfaces
-                    // cannot drift. `.id` resets the opponent selection when the subject
-                    // changes; without it the previous player's opponent lingers.
-                    PlayerMatchupView(
-                        playerKey: player.stats.key,
-                        playerName: player.stats.name,
-                        records: records
-                    )
-                    .id(player.stats.key)
-                    .frame(maxWidth: 620)
-                    .padding(.top, 16)
+                    .padding(.vertical, 24)
+                    .frame(maxWidth: .infinity, minHeight: pane.size.height)
                 }
-                .padding(.vertical, 24)
-                .frame(maxWidth: .infinity, minHeight: pane.size.height)
-            }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -142,38 +132,6 @@ struct PlayersGalleryView: View {
     // matchup window's Profile tab and were deleted from there the same evening, also by
     // request - they now stand in `PlayerProfilePanels` with no consumer, and whether they
     // retire is a decision for a calmer day, not this edit's rider.)
-
-    private var filmstrip: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(players) { player in
-                        PlayerCardView(
-                            stats: player.stats,
-                            isSelected: selectedKeys.contains(player.id),
-                            onSelect: { selectedKeys = [player.id]; isFocused = true },
-                            rank: player.rank,
-                            rating: player.rating,
-                            onShowInLibrary: { onShowInLibrary(player.id) },
-                            onOpen: { onOpenMatchup(player.id) }
-                        )
-                        .frame(width: 160)
-                        .id(player.id)
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-            }
-            .frame(height: 170)
-            .background(.thinMaterial)
-            .onChange(of: selectedKeys) { _, newKeys in
-                guard let key = newKeys.first else { return }
-                withAnimation(.easeInOut(duration: 0.25)) {
-                    proxy.scrollTo(key, anchor: .center)
-                }
-            }
-        }
-    }
 }
 
 // MARK: Previews
@@ -201,10 +159,10 @@ struct PlayersGalleryView: View {
     .frame(width: 720, height: 420)
 }
 
-/// The full preview pane: eight-fact grid, trend, and the three profile panels - the height check
-/// that the filmstrip stays pinned, and the only canvas where the band renders with content.
-/// `records` is the same fixture the ladder was folded from, so the panels agree with the grid
-/// above them rather than describing a different player.
+/// The full preview pane: eight-fact grid, trend, and the matchup band - the height check that the
+/// filmstrip stays pinned, and the only canvas where the band renders with content. `records` is
+/// the same fixture the ladder was folded from, so the band agrees with the grid above it rather
+/// than describing a different player.
 #Preview("Gallery, Preselected") {
     @Previewable @State var selection: Set<PlayerStats.ID> = [PreviewFixtures.topStats().id]
 

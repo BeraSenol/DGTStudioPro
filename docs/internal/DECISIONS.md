@@ -26,7 +26,7 @@ Locked product decisions #1–#8 and their interpretation flags were recorded in
 
 Old milestone and finding tags (M7.2, M-prs.1, F1–F9…) survive in code comments and below as provenance only — they identify where a decision came from; they schedule nothing.
 
-D-numbers are sequential and never reused. Next free number: **D83′**. (D82′ minted 12 Aug 2026 with the cue sets, by request. D81′ minted 12 Aug 2026 with the board cues, by request. D80′ minted 10 Aug 2026 with the companion-window fix, by defect report. D79′ minted 9 Aug 2026 with the red-ply highlight, the game-98 sitting's feature. D74′–D78′ minted 9 Aug 2026, in the waste-audit sitting, *with* the work. D71′–D73′ minted 8 Aug 2026, in the release-audit sitting, *with* the work rather than after it. D69′ and D70′ were minted 8 Aug 2026 for the View Options panel and the memoized collection folds — both recording work that had already shipped into the working tree unnumbered, which is the failure their entries open by naming.) (This line said D47′ until the 3 Aug audit — it had not been advanced since the M6 revision while the header above was; the header is the owner and this line now just repeats it.)
+D-numbers are sequential and never reused. Next free number: **D84′**. (D82′ minted 12 Aug 2026 with the cue sets, by request. D81′ minted 12 Aug 2026 with the board cues, by request. D80′ minted 10 Aug 2026 with the companion-window fix, by defect report. D79′ minted 9 Aug 2026 with the red-ply highlight, the game-98 sitting's feature. D74′–D78′ minted 9 Aug 2026, in the waste-audit sitting, *with* the work. D71′–D73′ minted 8 Aug 2026, in the release-audit sitting, *with* the work rather than after it. D69′ and D70′ were minted 8 Aug 2026 for the View Options panel and the memoized collection folds — both recording work that had already shipped into the working tree unnumbered, which is the failure their entries open by naming.) (This line said D47′ until the 3 Aug audit — it had not been advanced since the M6 revision while the header above was; the header is the owner and this line now just repeats it.)
 
 ### D9′ — Player is a machine-managed @Model
 
@@ -1479,3 +1479,69 @@ feedback that a move landed, at app volume.
 
 The consequence to hold onto, and it is the reason the split was kept mechanical: **anything that
 behaves differently after this is a defect, not a design choice.** The manual check says so too.
+
+
+### D83′ — the collection surfaces share their machinery, not just their grammar
+
+18 Aug 2026, from a DRY audit of the whole tree. Two new types — `IconGridView` and
+`FilmstripGalleryView` — now own what `LibraryIconsView`/`PlayersIconsView` and
+`LibraryGalleryView`/`PlayersGalleryView` had been spelling twice. The card stays the caller's;
+everything around it is shared.
+
+**The number is minted for the reversal, not the extraction.** `PlayersDestination` carried a
+written argument that its `applyInspectorPolicy(for:)` twin was deliberate — "sharing would mean a
+parameter whose only job is to say who's calling" — and that argument is *correct about a shared
+function*, which is why this pass did not write one. The **policy** moved onto
+`CollectionViewMode.inspectorPresentationOnEntry`, a `Bool?` where nil is a third answer ("no
+opinion, leave it") rather than a default; each destination still writes its own flag in one line,
+and nothing is passed. A recorded decision reasoned its way to the wrong shape and the entry that
+overturns it should say which half of it survived.
+
+**What the fork actually cost, since that is the case for the change.** `IconGridSelection` has
+owned the pure half of the icons grids since Players became the second host, and it was the right
+half to extract — index math and rect normalization are where a wrong answer is invisible. But the
+stateful half stayed in two files: the drag gesture, the frame observation and its sweep gate, the
+band overlay, the focus chrome, the anchor. Normalised for type names, 109 lines were identical.
+The tell was in the comments — "the fifth cycling correction, **shared with the Library grid**" is
+not a note about sharing, it is a note that a fix had to be applied twice and was. The sixth
+correction now has one home, and `IconGridSelection.subjects` (Finder's "act on the selection, not
+the card" rule, which the 17 Aug pass had to fix in the grid by hand) became a pure function with
+its own tests instead of a private method on a `View`.
+
+**What deliberately did not converge.** The two filmstrips still differ — 180 pt vs 170, stack-default
+spacing vs 12, and a 160 pt card pin on the Players side only — and `FilmstripMetrics` holds those as
+two named presets rather than one set of numbers. Only the Library's height has a stated reason
+("the strip sizes itself to the card, never the reverse"); the rest is unexplained divergence, which
+is exactly what must not be silently resolved by a refactor. Unifying them is now a one-line edit by
+someone looking at both on screen, which is the only way that question can honestly be answered.
+
+Also folded in the same pass, each small enough to need no number of its own: the two destinations'
+byte-identical `backfillPlayerLinks()` onto `PGNStore.healPlayers(in:logger:)` (the logger *is*
+passed, and that is not "who's calling" — a category is a contract with the console, and folding both
+callers onto `.pgnstore` would silently empty two `log stream` predicates); five copies of the same
+Library preview fixture onto `LibraryPreviewFixtures`, which is a separate type from
+`PreviewFixtures` so the latter stays Foundation-only and keeps being a witness that the pure folds
+work; a second `"yyyy.MM.dd"` `DateFormatter` in the columns fixture, deleted rather than relocated
+— it was built without the UTC pin `PGNParser`'s doc calls load-bearing, so it was a second spelling
+that already disagreed; `Square.pawnAttackOrigins(of:)`, which `Position.isSquareAttacked` and
+`SpecialCheckmate.Context.pawnAttacks` each held inline, the second with a comment pointing at the
+first for the convention; and `checkingBishopExists`, which was `bishopAttacks(king)` written out
+again beside it.
+
+**One finding recorded and not acted on.** `LibraryIconsView.onOpen` and `LibraryGalleryView.onOpen`
+are unreached — the card has one Open door and both gestures route to `onOpenInPlace` — while
+`LibraryDestination` still supplies them and still calls the first "the menu's new-tab door" in a
+comment. That is a behaviour question (should a grid card's menu offer a new tab?), not a
+de-duplication, so the properties stay and now say so at their declarations. Deleting a
+destination-supplied door inside a refactor is how a refactor stops being trustworthy.
+
+Rejected: **leaving the grids forked and extracting only the gesture** (about 60% of the duplication,
+and it leaves two `body`s that must keep agreeing — the arrangement that produced the doubled
+corrections); **generic over the selection type** (both destinations bind a `Set` and ⌘A writes one;
+the generality has no second shape to serve); **a `static let` coordinate-space name on the shared
+grid** (a generic type cannot have stored static properties — it is a parameter, and the two names
+stay distinct so a space never resolves across a destination switch); **unifying the filmstrip
+metrics now** (above); **`PGN` fixtures on `PreviewFixtures`** (costs it `import SwiftData` and mixes
+model fixtures into the file whose Foundation-only character is the point); **logging both player
+backfills under `.pgnstore`** (above); and **collapsing `applyInspectorPolicy` into a shared function
+taking the destination** (the objection the old doc raised, and it stands).

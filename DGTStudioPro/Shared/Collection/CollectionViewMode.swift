@@ -23,6 +23,24 @@ enum CollectionViewMode: String, CaseIterable, Identifiable {
     var ownsDetailPane: Bool {
         self == .columns
     }
+
+    /// What *entering* this mode should do to the inspector, or nil for "no opinion - leave it
+    /// where the reader put it". Gallery forces it open (it is a picker, and the inspector is
+    /// where the picked game's facts are); columns forces it shut (its own detail pane already
+    /// shows them). Leaving either mode deliberately does not restore.
+    ///
+    /// **The policy, not its application.** Both collection destinations carried this as a private
+    /// `applyInspectorPolicy(for:)`, byte-identical but for which `TabState` flag it wrote, and the
+    /// Players copy's doc argued the twin was deliberate: sharing it "would mean a parameter whose
+    /// only job is to say who's calling". That objection is right about a shared *function* and is
+    /// what this shape answers - the mode answers what it wants, nothing is passed, and each
+    /// destination still writes its own binding in one line. It also puts the rule somewhere a
+    /// suite can reach it, which a private method on a `View` never was.
+    var inspectorPresentationOnEntry: Bool? {
+        if ownsDetailPane { return false }
+        if self == .gallery { return true }
+        return nil
+    }
 }
 
 /// The icons grids' geometry, shared by both destinations. The inset is uniform so the first

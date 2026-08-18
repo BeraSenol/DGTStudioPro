@@ -1,16 +1,11 @@
 import SwiftData
 import SwiftUI
 
-/// The icons grid with Finder's two selection gestures: arrow keys walk from the last-touched
-/// card (index math in reading order - the grid is not `.adaptive`, so the column count is
-/// computable), and a click-drag sweeps a rubber-band over the cards it crosses.
+/// The Library's icons grid - the card and its four verbs. Finder's two selection gestures (arrow
+/// stepping and the rubber band), the frame observation and the focus chrome live in
+/// `IconGridView`, which is the half that must not fork; this file is what makes the grid the
+/// *Library's*.
 struct LibraryIconsView: View {
-
-    // MARK: Static Constants
-
-    /// The named space the frames and the band share (a coordinate space, not an identifier).
-    /// `nonisolated`: `View` conformance infers @MainActor onto statics.
-    private nonisolated static let gridSpace = "libraryIconsGrid"
 
     // MARK: Stored Properties
     let games: [PGN]
@@ -18,215 +13,79 @@ struct LibraryIconsView: View {
     /// a card render costs no blob decode.
     let analyzedIDs: Set<PGN.ID>
     @Binding var selectedPGNs: Set<PGN.ID>
-    /// All four verbs take the set, resolved through `subjects(for:)` - Finder's rule for
-    /// every card action, not just Open. Analyze, Export and Delete were `(PGN) -> Void`
-    /// until 17 Aug 2026 and acted on one game however many were selected, while the list's
-    /// `.contextMenu(forSelectionType:)` handed it the whole selection free - the
-    /// "select all, delete all, it deletes one" report.
+
+    /// **Currently unreached from this grid** (noted 18 Aug 2026, in the shared-grid pass, not
+    /// changed by it): the card has one Open door, and both double-click and the menu's Open item
+    /// route to `onOpenInPlace`. The destination still supplies this and its comment there still
+    /// calls it "the menu's new-tab door", which the grid has not been since the card's menu was
+    /// wired. Kept rather than deleted - removing a destination-supplied door is a behaviour
+    /// decision, not a de-duplication - but recorded so it reads as known, not as an oversight.
     let onOpen: ([PGN]) -> Void
     /// Double-click's door (17 Aug 2026): one game, into the tab the reader is already in.
     /// Defaulted so previews stand.
     var onOpenInPlace: (PGN) -> Void = { _ in }
+    /// All three verbs take the set, resolved through `IconGridSelection.subjects` - Finder's rule
+    /// for every card action, not just Open. They were `(PGN) -> Void` until 17 Aug 2026 and acted
+    /// on one game however many were selected, while the list's `.contextMenu(forSelectionType:)`
+    /// got the whole selection free - the "select all, delete all, it deletes one" report.
     let onAnalyze: ([PGN]) -> Void
     let onExport: ([PGN]) -> Void
     let onDelete: ([PGN]) -> Void
 
     // MARK: Private Properties
 
+    /// Read here, not in `IconGridView`: the shared grid owns the gesture, the call site owns the
+    /// card and therefore everything the card reads.
     @Environment(CollectionViewOptions.self) private var options
 
     /// Ambient, written once by the destination; nil in previews, which is honest.
     @Environment(\.analysisRunningGameID) private var runningAnalysisID
 
-    /// Realized card frames in `gridSpace` - a box, not observed state. **Populated only while a
-    /// band is sweeping**; stale entries are re-checked against `games` rather than trusted.
-    @State private var cardFrames = IconGridFrameStore<PGN.ID>()
-    @State private var rubberBand: CGRect?
-    /// The card the last selection gesture touched - where an arrow steps from.
-    @State private var anchorID: PGN.ID?
-    @FocusState private var isFocused: Bool
-
     // MARK: Body
     var body: some View {
-        // Read once ahead of the `ForEach`, so sixty closures capture one Bool, not sixty @State reads.
-        let isSweeping = rubberBand != nil
-        return GeometryReader { geometry in
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVGrid(
-                        columns: options.columns(containerWidth: geometry.size.width),
-                        spacing: options.spacing
-                    ) {
-                        ForEach(games) { game in
-                            LibraryGameCardView(
-                                game: game,
-                                glyphWidth: options.glyphWidth,
-                                analysisState: AnalysisGlyph.state(
-                                    of: game,
-                                    isAnalyzed: analyzedIDs.contains(game.id),
-                                    runningID: runningAnalysisID
-                                ),
-                                isSelected: selectedPGNs.contains(game.id),
-                                onSelect:  { select(game) },
-                                // Double-click opens THIS card in place - never the whole
-                                // selection, which would be N tabs from one gesture.
-                                onOpen:    { onOpenInPlace(game) },
-                                onAnalyze: { onAnalyze(subjects(for: game)) },
-                                onExport:  { onExport(subjects(for: game)) },
-                                onDelete:  { onDelete(subjects(for: game)) }
-                            )
-                            .id(game.id)
-                            .onGeometryChange(for: CGRect.self) { geometry in
-                                // Gated on the sweep - the fifth "cycling between duplicate values" correction, and the first
-                                // that removes the observation instead of tuning it: frames are only read mid-sweep.
-                                isSweeping
-                                ? IconGridSelection.stableFrame(
-                                    geometry.frame(in: .named(Self.gridSpace))
-                                )
-                                : .null
-                            } action: { frame in
-                                // A box write: free, invisible to the render pass. `.null` lands once per card when a sweep
-                                // ends; harmless - `.null` intersects nothing.
-                                cardFrames.frames[game.id] = frame
-                            }
-                        }
-                    }
-                    .padding(CollectionViewOptions.inset)
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        // Empty space or gutters - a card's own tap wins before this fires.
-                        selectedPGNs.removeAll()
-                        anchorID = nil
-                        isFocused = true
-                    }
-                    // Background context menu on the same `contentShape` as the clear-selection tap, so it covers
-                    // the gutters - Finder's behaviour; a card's own menu wins over its bounds.
-                    .contextMenu { ShowViewOptionsButton() }
-                    .gesture(rubberBandGesture)
-                    // Content-anchored: the space, the gesture coordinates and the band overlay live on this
-                    // container, inside the scroll.
-                    .coordinateSpace(name: Self.gridSpace)
-                    .overlay(alignment: .topLeading) {
-                        if let band = rubberBand {
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(Color.accentColor.opacity(0.15))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 2)
-                                        .strokeBorder(Color.accentColor.opacity(0.6), lineWidth: 1)
-                                )
-                                .frame(width: band.width, height: band.height)
-                                .offset(x: band.minX, y: band.minY)
-                                .allowsHitTesting(false)
-                        }
-                    }
-                }
-                .focusable()
-                .focusEffectDisabled()
-                .focused($isFocused)
-                // `geometry.size.width` directly - the proxy the layout reads, captured at key-press time when
-                // layout has settled.
-                .onMoveCommand { direction in
-                    move(direction, width: geometry.size.width, proxy: proxy)
-                }
-            }
+        IconGridView(
+            items: games,
+            selection: $selectedPGNs,
+            space: "libraryIconsGrid"
+        ) { game, isSelected, select in
+            LibraryGameCardView(
+                game: game,
+                glyphWidth: options.glyphWidth,
+                analysisState: AnalysisGlyph.state(
+                    of: game,
+                    isAnalyzed: analyzedIDs.contains(game.id),
+                    runningID: runningAnalysisID
+                ),
+                isSelected: isSelected,
+                onSelect: select,
+                // Double-click opens THIS card in place - never the whole selection, which would be
+                // N tabs from one gesture.
+                onOpen:    { onOpenInPlace(game) },
+                onAnalyze: { onAnalyze(subjects(for: game)) },
+                onExport:  { onExport(subjects(for: game)) },
+                onDelete:  { onDelete(subjects(for: game)) }
+            )
         }
     }
 
     // MARK: Instance Methods
 
-    private func select(_ game: PGN) {
-        selectedPGNs = [game.id]
-        anchorID = game.id
-        isFocused = true
-    }
-
-    /// Finder's rule, spelled by hand (`LibraryListView` gets it free from
-    /// `.contextMenu(forSelectionType:)` and `primaryAction`): acting on a card inside a
-    /// multi-selection acts on the whole selection; on anything else, just that card.
-    /// One resolution for all four verbs since 17 Aug 2026 - it belonged to Open alone
-    /// (as `open(_:)`), and the other three quietly acted on one game whatever was
-    /// selected. Ordered off `games` - that is tab and processing order.
+    /// Finder's rule, from the shared grammar - ordered off `games`, which is tab and processing
+    /// order. (It was spelled here by hand until 18 Aug 2026; it is a pure function of an array and
+    /// a set, so it belongs where it can be tested.)
     private func subjects(for game: PGN) -> [PGN] {
-        if selectedPGNs.count > 1, selectedPGNs.contains(game.id) {
-            return games.filter { selectedPGNs.contains($0.id) }
-        }
-        return [game]
+        IconGridSelection.subjects(for: game, in: games, selection: selectedPGNs)
     }
-
-    /// Sweeping replaces the selection with the crossed cards (Finder's plain drag); the anchor
-    /// follows the sweep so the next arrow steps from inside it.
-    private var rubberBandGesture: some Gesture {
-        DragGesture(minimumDistance: 4, coordinateSpace: .named(Self.gridSpace))
-            .onChanged { value in
-                let band = IconGridSelection.selectionRect(from: value.startLocation, to: value.location)
-                rubberBand = band
-                let crossed = Set(
-                    games
-                        .filter { cardFrames.frames[$0.id]?.intersects(band) == true }
-                        .map(\.id)
-                )
-                // Guarded: most drag frames cross nothing new, and an unguarded write invalidated the
-                // destination's body at pointer rate.
-                guard crossed != selectedPGNs else { return }
-                selectedPGNs = crossed
-                anchorID = crossed.isEmpty ? nil : games.first { crossed.contains($0.id) }?.id
-            }
-            .onEnded { _ in
-                rubberBand = nil
-                isFocused = true
-            }
-    }
-
-    private func move(_ direction: MoveCommandDirection, width: CGFloat, proxy: ScrollViewProxy) {
-        guard !games.isEmpty else { return }
-        let target: Int
-        if let anchorID, let current = games.firstIndex(where: { $0.id == anchorID }) {
-            target = IconGridSelection.destination(
-                from: current,
-                direction: direction,
-                columnCount: options.columnCount(containerWidth: width),
-                count: games.count
-            )
-        } else {
-            // Nothing anchored: the first arrow lands on the first card - Finder's opening move.
-            target = 0
-        }
-        let game = games[target]
-        selectedPGNs = [game.id]
-        anchorID = game.id
-        proxy.scrollTo(game.id)
-    }
-
-    // (Arrow stepping and band normalization live in `IconGridSelection` - one grammar, two grids.)
 }
 
 // MARK: Previews
-private func iconsPreviewGames() -> [PGN] {
-    [
-        PGN(event: "World Championship", site: "Dubai", round: 11,
-            white: "Carlsen, Magnus", black: "Nepomniachtchi, Ian", result: .whiteWins),
-        PGN(event: "Tata Steel Masters", site: "Wijk aan Zee", round: 7,
-            white: "Giri, Anish", black: "Caruana, Fabiano", result: .draw),
-        PGN(event: "Norway Chess", site: "Stavanger", round: 3,
-            white: "Firouzja, Alireza", black: "Ding, Liren", result: .blackWins),
-        PGN(event: "Candidates Tournament", site: "Madrid", round: 14,
-            white: "Nepomniachtchi, Ian", black: "Ding, Liren", result: .ongoing),
-        PGN(event: "Candidates Tournament", site: "Madrid", round: 2,
-            white: "Caruana, Fabiano", black: "Firouzja, Alireza", result: .draw),
-        PGN(event: "Tata Steel Masters", site: "Wijk aan Zee", round: 1,
-            white: "Ding, Liren", black: "Giri, Anish", result: .whiteWins),
-        PGN(event: "Norway Chess", site: "Stavanger", round: 9,
-            white: "Carlsen, Magnus", black: "Caruana, Fabiano", result: .whiteWins)
-    ]
-}
 
 /// Seven cards over six columns: a partial second row, so overflow and wrap are exercisable.
 /// First three carry the analyzed badge so both verdicts render.
 #Preview("With Games") {
     @Previewable @State var selection: Set<PGN.ID> = []
 
-    let games = iconsPreviewGames()
+    let games = LibraryPreviewFixtures.games()
 
     LibraryIconsView(
         games: games,

@@ -91,4 +91,43 @@ struct IconGridSelectionTests {
         let band = IconGridSelection.selectionRect(from: point, to: point)
         #expect(band.isEmpty)
     }
+
+    // MARK: Finder's Subject Rule
+
+    /// Stands in for a card's model - `subjects` needs nothing but identity.
+    private struct Item: Identifiable, Equatable {
+        let id: Int
+    }
+
+    private var items: [Item] { (0..<5).map(Item.init) }
+
+    /// Acting on a card *inside* a multi-selection acts on the whole selection. This is the rule
+    /// whose absence was the "select all, delete all, it deletes one" report, and it only became
+    /// assertable when it stopped being a private method on a `View` (18 Aug 2026).
+    @Test func actingInsideAMultiSelectionTakesTheWholeSelection() {
+        let resolved = IconGridSelection.subjects(for: items[1], in: items, selection: [1, 3])
+        #expect(resolved == [items[1], items[3]])
+    }
+
+    /// Acting on a card *outside* the selection takes only that card - the selection is not
+    /// extended, and the untouched cards keep their state.
+    @Test func actingOutsideTheSelectionTakesOnlyThatCard() {
+        let resolved = IconGridSelection.subjects(for: items[4], in: items, selection: [1, 3])
+        #expect(resolved == [items[4]])
+    }
+
+    /// A single selection is not a multi-selection: one card in, one card out, whether or not the
+    /// card is the selected one.
+    @Test func aSingleSelectionResolvesToTheCardItself() {
+        #expect(IconGridSelection.subjects(for: items[2], in: items, selection: [2]) == [items[2]])
+        #expect(IconGridSelection.subjects(for: items[2], in: items, selection: []) == [items[2]])
+    }
+
+    /// **Display order, never set order.** The export door numbers filenames off this array and
+    /// the open door makes tabs from it, so a `Set`'s arbitrary order would number them
+    /// arbitrarily. Asked for in reverse to make the claim capable of failing.
+    @Test func subjectsArriveInDisplayOrder() {
+        let resolved = IconGridSelection.subjects(for: items[3], in: items, selection: [3, 0, 2])
+        #expect(resolved.map(\.id) == [0, 2, 3])
+    }
 }

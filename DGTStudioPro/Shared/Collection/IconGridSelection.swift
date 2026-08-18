@@ -31,6 +31,26 @@ enum IconGridSelection {
         }
     }
 
+    /// Finder's rule for what a card's verb acts on: inside a multi-selection, the whole
+    /// selection; on anything else, just that card. The list modes get this free from
+    /// `.contextMenu(forSelectionType:)` and `primaryAction`; the grids have to spell it, and
+    /// spelling it *once* is the point - it belonged to Open alone until 17 Aug 2026, and the
+    /// other three verbs quietly acted on one game whatever was selected ("select all, delete
+    /// all, it deletes one").
+    ///
+    /// Ordered off `items`, never off the set: that is tab and processing order, and a `Set`'s
+    /// order would number an export's filenames arbitrarily.
+    static func subjects<Item: Identifiable>(
+        for item: Item,
+        in items: [Item],
+        selection: Set<Item.ID>
+    ) -> [Item] {
+        if selection.count > 1, selection.contains(item.id) {
+            return items.filter { selection.contains($0.id) }
+        }
+        return [item]
+    }
+
     /// A drag's rectangle regardless of sweep direction - normalized.
     static func selectionRect(from origin: CGPoint, to point: CGPoint) -> CGRect {
         CGRect(

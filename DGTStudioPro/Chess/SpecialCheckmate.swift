@@ -161,13 +161,14 @@ extension SpecialCheckmate.Context {
         )
     }
 
-    /// Mating-side pawn attacks `square`; offsets run backwards from the target, `isSquareAttacked`'s
-    /// own convention.
+    /// Mating-side pawn attacks `square`; the offsets run backwards from the target, which is
+    /// `isSquareAttacked`'s convention and now literally its offsets - `Square.pawnAttackOrigins`
+    /// owns the pair, so the shared rule this doc always claimed is one value rather than two.
     func pawnAttacks(_ square: Square) -> Bool {
         position.hasPiece(
             Piece(attacker, .pawn),
             steppingFrom: square,
-            offsets: attacker == .white ? [-7, -9] : [7, 9],
+            offsets: Square.pawnAttackOrigins(of: attacker),
             maxFileDistance: 1
         )
     }
@@ -214,14 +215,12 @@ extension SpecialCheckmate.Context {
 
     /// A checking mating **bishop**, found by walking the king's diagonals (a Boden bishop sits far
     /// away). Bishops only - a diagonal queen is a Dovetail, and the two must not blur.
+    ///
+    /// This is `bishopAttacks(king)` and was written out again beside it, identically, until
+    /// 18 Aug 2026. The name earns its keep - "a bishop is checking" is the sentence the
+    /// recognisers below read - but the ray walk does not need a second copy.
     var checkingBishopExists: Bool {
-        Square.bishopDirections.contains {
-            position.rayHitsSlider(
-                from: king, direction: $0,
-                slider1: .bishop, slider2: .bishop,
-                attacker: attacker
-            )
-        }
+        bishopAttacks(king)
     }
 
     /// An adjacent mating queen with the offset that reached it - the offset separates Guéridon

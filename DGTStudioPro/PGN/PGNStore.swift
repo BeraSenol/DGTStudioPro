@@ -355,6 +355,22 @@ struct PGNStore {
         }
     }
 
+    /// The `onAppear` spelling of the above: build the store, heal, swallow the failure into a log.
+    /// Both collection destinations need players linked whether or not the other was visited this
+    /// launch, and each carried this as a byte-identical private method until 18 Aug 2026.
+    ///
+    /// **`logger` is a parameter and that is not "who's calling".** A category is a contract with
+    /// the console - manual checks stream `category == "library"` and `== "players"` by name - so
+    /// folding both callers onto this type's own `.pgnstore` would silently empty two predicates.
+    /// The caller passes the category it already publishes under; the *work* lives once.
+    static func healPlayers(in modelContext: ModelContext, logger: Logger?) {
+        do {
+            try PGNStore(modelContext: modelContext).healPlayersIfNeeded()
+        } catch {
+            logger?.error("Player-link backfill failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
     /// Links rows predating the M-prs.1 schema. Idempotent, called through `healPlayersIfNeeded`.
     /// Fetch-all-and-scan deliberately: a nil `whitePlayer` on a `"?"` row is *correct*, not missing.
     @discardableResult

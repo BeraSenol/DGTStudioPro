@@ -27,6 +27,19 @@ extension Square {
     static let rookDirections:   [Int] = [1, 8, -1, -8]
     static let bishopDirections: [Int] = [7, 9, -7, -9]
     static let queenDirections:  [Int] = [1, 7, 8, 9, -1, -7, -8, -9]
+
+    /// The two squares a pawn of `color` attacks *from*, as offsets from the **attacked** square -
+    /// backwards, which is the convention `isSquareAttacked` scans in and the opposite of the
+    /// direction a pawn moves. The one color-dependent member of this block, and it earns the place:
+    /// `Position.isSquareAttacked` and `SpecialCheckmate.Context.pawnAttacks` each spelled the
+    /// ternary inline until 18 Aug 2026, the second with a comment pointing at the first for the
+    /// convention - a shared rule documented as shared and stored twice.
+    ///
+    /// Pairs with `maxFileDistance: 1` at every use, like every offset here: the offset alone wraps
+    /// the a/h seam.
+    static func pawnAttackOrigins(of color: PieceColor) -> [Int] {
+        color == .white ? [-7, -9] : [7, 9]
+    }
     
     static func fileCharacter(_ file: Int) -> Character {
         fileIndicatorTable[file]

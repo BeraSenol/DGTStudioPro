@@ -29,6 +29,22 @@ struct PositionAttackTests {
         #expect(!pos.isSquareAttacked(Squares.d6, by: .black))
     }
 
+    /// The offsets are stated from the **attacked** square, running backwards to where a pawn would
+    /// have to stand - the convention `SpecialCheckmate` also reads, and the reason the pair moved
+    /// onto `Square` (18 Aug 2026) instead of being spelled at both sites.
+    ///
+    /// Asserted against the scanner rather than against the literals `[-7, -9]`: a pinned literal
+    /// would keep passing while the constant and its one consumer quietly disagreed.
+    @Test func pawnAttackOriginsRunBackwardsFromTheAttackedSquare() {
+        for (color, target) in [(PieceColor.white, Squares.d5), (.black, Squares.d4)] {
+            for offset in Square.pawnAttackOrigins(of: color) {
+                let origin = target + offset
+                let pos = Position.make { $0[origin] = Piece(color, .pawn) }
+                #expect(pos.isSquareAttacked(target, by: color))
+            }
+        }
+    }
+
     @Test func pawnAttackDoesNotWraparound() {
         let pos = Position.make { $0[Squares.a4] = .whitePawn }
         // h5 is not attacked despite a4 - 9 = h2 arithmetic; file diff catches the wrap.

@@ -264,7 +264,7 @@ struct PlayersDestination: View {
             }
             .onAppear {
                 // Players must work even if Library was never visited this launch - store-owned, second call site.
-                backfillPlayerLinks()
+                PGNStore.healPlayers(in: modelContext, logger: Self.logger)
                 applyInspectorPolicy(for: viewMode)
             }
             .onChange(of: viewMode) { _, mode in
@@ -274,14 +274,14 @@ struct PlayersDestination: View {
 
     // MARK: Instance Methods
 
-    /// The Library's `applyInspectorPolicy` twin - deliberately a twin, not shared: it reads this
-    /// destination's binding, and sharing would mean a parameter whose only job is to say who's calling.
+    /// Applies the mode's own opinion to this destination's flag. This doc used to argue the twin
+    /// was deliberate - "sharing would mean a parameter whose only job is to say who's calling" -
+    /// and that argument was right about a shared *function*, which is why the 18 Aug 2026 pass
+    /// moved the **policy** onto `CollectionViewMode` instead. Nothing is passed; what remains here
+    /// is the one line that is genuinely this destination's: which flag it writes.
     private func applyInspectorPolicy(for mode: CollectionViewMode) {
-        if mode.ownsDetailPane {
-            tabState.playersInspectorPresented = false
-        } else if mode == .gallery {
-            tabState.playersInspectorPresented = true
-        }
+        guard let presented = mode.inspectorPresentationOnEntry else { return }
+        tabState.playersInspectorPresented = presented
     }
 
     /// Resolves the stats key to its `Player` row and hops the sidebar into the player filter.
@@ -434,15 +434,6 @@ struct PlayersDestination: View {
             isPresented: $tabState.playersInspectorPresented,
             identifier: AccessibilityID.playersInspectorToggle
         )
-    }
-
-    /// The Library's twin, behind the same converged stamp.
-    private func backfillPlayerLinks() {
-        do {
-            try PGNStore(modelContext: modelContext).healPlayersIfNeeded()
-        } catch {
-            Self.logger?.error("Player-link backfill failed: \(error.localizedDescription, privacy: .public)")
-        }
     }
 }
 

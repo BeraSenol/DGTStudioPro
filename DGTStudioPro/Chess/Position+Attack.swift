@@ -20,10 +20,11 @@ extension Position {
     func isSquareAttacked(_ square: Square, by attacker: PieceColor) -> Bool {
         // Pawn attacks: an enemy pawn one rank "in front of" us (from the attacker's
         // perspective) on either adjacent file would be attacking this square.
-        let pawnFromOffsets: [Int] = attacker == .white ? [-7, -9] : [7, 9]
         if hasPiece(
             Piece(attacker, .pawn),
-            steppingFrom: square, offsets: pawnFromOffsets, maxFileDistance: 1
+            steppingFrom: square,
+            offsets: Square.pawnAttackOrigins(of: attacker),
+            maxFileDistance: 1
         ) { return true }
         
         // Knight attacks: any of the 8 knight-jump squares holds an enemy knight.

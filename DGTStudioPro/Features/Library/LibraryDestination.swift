@@ -276,7 +276,9 @@ struct LibraryDestination: View {
             }
             .onAppear {
                 backfillEmptyNames()
-                backfillPlayerLinks()
+                // Store-owned and idempotent, behind the converged stamp; both collection
+                // destinations call it on appear, under their own console category.
+                PGNStore.healPlayers(in: modelContext, logger: Self.logger)
                 applyInspectorPolicy(for: viewMode)
             }
         // `.task`: has to await the ECO table - see `backfillClassifications()`.
@@ -507,14 +509,12 @@ struct LibraryDestination: View {
         analysisQueue.enqueue([pgn], modelContext: modelContext)
     }
     
-    /// The two modes with inspector opinions, in one place so `onAppear` and `onChange` cannot disagree:
-    /// gallery forces open (it is a picker), columns forces shut. Leaving columns does not restore.
+    /// Applies the mode's own opinion to this destination's flag, in one place so `onAppear` and
+    /// `onChange` cannot disagree. The opinion itself is `CollectionViewMode`'s since 18 Aug 2026 -
+    /// it was spelled here and again in `PlayersDestination`, identical but for the flag written.
     private func applyInspectorPolicy(for mode: CollectionViewMode) {
-        if mode.ownsDetailPane {
-            tabState.libraryInspectorPresented = false
-        } else if mode == .gallery {
-            tabState.libraryInspectorPresented = true
-        }
+        guard let presented = mode.inspectorPresentationOnEntry else { return }
+        tabState.libraryInspectorPresented = presented
     }
 
     /// Multi-game entry: enqueues in display order; leaves selection and inspector untouched.
@@ -784,16 +784,6 @@ struct LibraryDestination: View {
         }
     }
     
-    /// Store-owned and idempotent; both collection destinations call it on appear. Behind the
-    /// converged stamp - the healed steady state skips the scan. This is the Library's error sink.
-    private func backfillPlayerLinks() {
-        do {
-            try PGNStore(modelContext: modelContext).healPlayersIfNeeded()
-        } catch {
-            Self.logger?.error("Player-link backfill failed: \(error.localizedDescription, privacy: .public)")
-        }
-    }
-    
     /// The eager half: heals pre-M4 rows on appearance so an opening name never costs a depth-18 re-run.
     private func backfillClassifications() async {
         let table = await ECOTable.warmed()
@@ -828,15 +818,7 @@ struct LibraryDestination: View {
         configurations: ModelConfiguration(isStoredInMemoryOnly: true)
     )
     
-    let samples: [PGN] = [
-        PGN(event: "World Championship", site: "Dubai", round: 11,
-            white: "Carlsen, Magnus", black: "Nepomniachtchi, Ian", result: .whiteWins),
-        PGN(event: "Tata Steel Masters", site: "Wijk aan Zee", round: 7,
-            white: "Giri, Anish", black: "Caruana, Fabiano", result: .draw),
-        PGN(event: "Norway Chess", site: "Stavanger", round: 3,
-            white: "Firouzja, Alireza", black: "Ding, Liren", result: .blackWins)
-    ]
-    for sample in samples { container.mainContext.insert(sample) }
+    for sample in LibraryPreviewFixtures.games(3) { container.mainContext.insert(sample) }
     
     return NavigationSplitView {
         List { Label("Library", systemImage: "books.vertical") }

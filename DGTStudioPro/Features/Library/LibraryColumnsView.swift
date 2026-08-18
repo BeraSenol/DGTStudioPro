@@ -228,41 +228,12 @@ struct LibraryColumnsView: View {
 }
 
 // MARK: Previews
-private func columnsPreviewGames() -> [PGN] {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy.MM.dd"
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-
-    return [
-        // Fully-populated branch: every derived facts row has a value.
-        PGN(event: "World Championship", site: "Dubai",
-            date: formatter.date(from: "2021.12.10"),
-            round: 11,
-            white: "Carlsen, Magnus", black: "Nepomniachtchi, Ian",
-            moves: ["e4", "e5", "Bc4", "Nc6", "Qh5", "Nf6", "Qxf7#"],
-            result: .whiteWins,
-            timeControl: "40/7200"),
-        PGN(event: "Tata Steel Masters", site: "Wijk aan Zee",
-            date: formatter.date(from: "2024.01.20"),
-            round: 7,
-            white: "Giri, Anish", black: "Caruana, Fabiano", result: .draw),
-        PGN(event: "Norway Chess", site: "Stavanger",
-            date: formatter.date(from: "2023.06.03"),
-            round: 3,
-            white: "Firouzja, Alireza", black: "Ding, Liren", result: .blackWins),
-        // Undated and moveless: the placeholder branch of every derived row at once.
-        PGN(event: "Norway Chess", site: "Stavanger",
-            date: nil,
-            round: 5,
-            white: "Carlsen, Magnus", black: "Firouzja, Alireza", result: .whiteWins)
-    ]
-}
 
 #Preview("Detail") {
     @Previewable @State var selection: Set<PGN.ID> = []
     @Previewable @State var sort = LibraryDestination.defaultSortOrder
 
-    let games = columnsPreviewGames()
+    let games = LibraryPreviewFixtures.datedGames()
 
     LibraryColumnsView(
         games: games,
@@ -286,7 +257,7 @@ private func columnsPreviewGames() -> [PGN] {
     @Previewable @State var selection: Set<PGN.ID> = []
     @Previewable @State var sort = LibraryDestination.defaultSortOrder
 
-    let games = columnsPreviewGames()
+    let games = LibraryPreviewFixtures.datedGames()
 
     LibraryColumnsView(
         games: games,
@@ -311,7 +282,7 @@ private func columnsPreviewGames() -> [PGN] {
     @Previewable @State var sort = LibraryDestination.defaultSortOrder
 
     LibraryColumnsView(
-        games: columnsPreviewGames(),
+        games: LibraryPreviewFixtures.datedGames(),
         analyzedIDs: [],
         selectedPGNs: $selection,
         boardStyle: .rosewood,
