@@ -83,43 +83,57 @@ struct CollectionViewOptionsTests {
     @Test func sizesClampToTheirRangesOnWrite() {
         let options = CollectionViewOptions(defaults: Self.scratch())
 
-        options.iconSize = 10_000
-        #expect(options.iconSize == CollectionViewOptions.iconSizeRange.upperBound)
+        options.libraryIconSize = 10_000
+        #expect(options.libraryIconSize == CollectionViewOptions.iconSizeRange.upperBound)
 
-        options.iconSize = -5
-        #expect(options.iconSize == CollectionViewOptions.iconSizeRange.lowerBound)
+        options.libraryIconSize = -5
+        #expect(options.libraryIconSize == CollectionViewOptions.iconSizeRange.lowerBound)
 
-        options.spacing = 10_000
-        #expect(options.spacing == CollectionViewOptions.spacingRange.upperBound)
+        options.librarySpacing = 10_000
+        #expect(options.librarySpacing == CollectionViewOptions.spacingRange.upperBound)
 
-        options.spacing = -5
-        #expect(options.spacing == CollectionViewOptions.spacingRange.lowerBound)
+        options.librarySpacing = -5
+        #expect(options.librarySpacing == CollectionViewOptions.spacingRange.lowerBound)
+
+        // The Players pair clamps too - four properties now share one range apiece, and a pair that
+        // forgot its clamp would read as a stuck slider on one surface only.
+        options.playersIconSize = 10_000
+        #expect(options.playersIconSize == CollectionViewOptions.iconSizeRange.upperBound)
+
+        options.playersSpacing = -5
+        #expect(options.playersSpacing == CollectionViewOptions.spacingRange.lowerBound)
     }
 
     /// A clamped write persists the *corrected* value - visible only on reload.
     @Test func aClampedWritePersistsTheClampedValue() {
         let defaults = Self.scratch()
         let first = CollectionViewOptions(defaults: defaults)
-        first.iconSize = 10_000
+        first.libraryIconSize = 10_000
 
         let reloaded = CollectionViewOptions(defaults: defaults)
 
-        #expect(reloaded.iconSize == CollectionViewOptions.iconSizeRange.upperBound)
+        #expect(reloaded.libraryIconSize == CollectionViewOptions.iconSizeRange.upperBound)
         #expect(
-            defaults.object(forKey: StorageKeys.collectionIconSize) as? Double
+            defaults.object(forKey: StorageKeys.libraryIconSize) as? Double
                 == Double(CollectionViewOptions.iconSizeRange.upperBound)
         )
     }
 
     /// Init writes **storage**, not the setters - routing through accessors would persist defaults
-    /// for users who never touch the panel.
+    /// for users who never touch the panel. Still true with the migration in place, and that is the
+    /// point of reading the retired keys rather than copying them forward at launch.
     @Test func constructionWritesNothingToDefaults() {
         let defaults = Self.scratch()
         _ = CollectionViewOptions(defaults: defaults)
 
-        #expect(defaults.object(forKey: StorageKeys.collectionIconSize) == nil)
-        #expect(defaults.object(forKey: StorageKeys.collectionGridSpacing) == nil)
-        #expect(defaults.object(forKey: StorageKeys.librarySort) == nil)
+        for key in [
+            StorageKeys.libraryIconSize, StorageKeys.playersIconSize,
+            StorageKeys.libraryGridSpacing, StorageKeys.playersGridSpacing,
+            StorageKeys.libraryViewMode, StorageKeys.playersViewMode,
+            StorageKeys.librarySort,
+        ] {
+            #expect(defaults.object(forKey: key) == nil, "construction wrote \(key)")
+        }
     }
 
     /// The `object(forKey:)` pin: `double(forKey:)` answers 0 for absent, and clamping 0 hands
@@ -127,9 +141,13 @@ struct CollectionViewOptionsTests {
     @Test func anAbsentPreferenceReadsTheDefaultRatherThanTheFloor() {
         let options = CollectionViewOptions(defaults: Self.scratch())
 
-        #expect(options.iconSize == CollectionViewOptions.defaultIconSize)
-        #expect(options.spacing == CollectionViewOptions.defaultSpacing)
-        #expect(options.iconSize != CollectionViewOptions.iconSizeRange.lowerBound)
+        for collection in [CollectionViewOptionsSubject.Collection.library, .players] {
+            #expect(options.iconSize(for: collection) == CollectionViewOptions.defaultIconSize)
+            #expect(options.spacing(for: collection) == CollectionViewOptions.defaultSpacing)
+            #expect(options.iconSize(for: collection) != CollectionViewOptions.iconSizeRange.lowerBound)
+        }
+        #expect(options.libraryViewMode == CollectionViewOptions.defaultViewMode)
+        #expect(options.playersViewMode == CollectionViewOptions.defaultViewMode)
     }
 
     /// Through a *reload*, not through memory - the `InspectorSectionCollapse`
@@ -138,17 +156,126 @@ struct CollectionViewOptionsTests {
     @Test func geometryAndSortSurviveAReload() {
         let defaults = Self.scratch()
         let first = CollectionViewOptions(defaults: defaults)
-        first.iconSize = 160
-        first.spacing = 24
+        first.libraryIconSize = 160
+        first.librarySpacing = 24
+        first.libraryViewMode = .icons
         first.librarySort = CollectionSort(field: .event, isReverse: true)
         first.playersSort = CollectionSort(field: .rating, isReverse: true)
 
         let second = CollectionViewOptions(defaults: defaults)
 
-        #expect(second.iconSize == 160)
-        #expect(second.spacing == 24)
+        #expect(second.libraryIconSize == 160)
+        #expect(second.librarySpacing == 24)
+        #expect(second.libraryViewMode == .icons)
         #expect(second.librarySort == CollectionSort(field: .event, isReverse: true))
         #expect(second.playersSort == CollectionSort(field: .rating, isReverse: true))
+    }
+
+    // MARK: Independence - the reason the split exists
+
+    /// **Neither destination disturbs the other**, across all three axes that used to be shared.
+    /// This is the property that was asked for, and the one a keyed dictionary or a stray overload
+    /// would quietly undo - a shared value under a new name still passes every clamp test above.
+    @Test func eachDestinationKeepsItsOwnGeometryAndMode() {
+        let defaults = Self.scratch()
+        let options = CollectionViewOptions(defaults: defaults)
+
+        options.libraryIconSize = 200
+        options.librarySpacing = 32
+        options.libraryViewMode = .icons
+
+        #expect(options.playersIconSize == CollectionViewOptions.defaultIconSize)
+        #expect(options.playersSpacing == CollectionViewOptions.defaultSpacing)
+        #expect(options.playersViewMode == CollectionViewOptions.defaultViewMode)
+
+        options.playersIconSize = 90
+        options.playersSpacing = 6
+        options.playersViewMode = .gallery
+
+        // And the Library keeps what it was given.
+        #expect(options.libraryIconSize == 200)
+        #expect(options.librarySpacing == 32)
+        #expect(options.libraryViewMode == .icons)
+
+        // Through a reload, since separate *persisted* values is the request - two properties over
+        // one key would pass everything above and fail here.
+        let reloaded = CollectionViewOptions(defaults: defaults)
+        #expect(reloaded.libraryIconSize == 200)
+        #expect(reloaded.playersIconSize == 90)
+        #expect(reloaded.librarySpacing == 32)
+        #expect(reloaded.playersSpacing == 6)
+        #expect(reloaded.libraryViewMode == .icons)
+        #expect(reloaded.playersViewMode == .gallery)
+    }
+
+    /// The keyed accessors agree with the named properties. They are what the grids and the panel
+    /// read, so a crossed switch here paints the Players grid at the Library's size with every
+    /// name spelled correctly.
+    @Test func theKeyedAccessorsAgreeWithTheNamedProperties() {
+        let options = CollectionViewOptions(defaults: Self.scratch())
+        options.libraryIconSize = 200
+        options.playersIconSize = 90
+        options.librarySpacing = 32
+        options.playersSpacing = 6
+
+        #expect(options.iconSize(for: .library) == 200)
+        #expect(options.iconSize(for: .players) == 90)
+        #expect(options.spacing(for: .library) == 32)
+        #expect(options.spacing(for: .players) == 6)
+        #expect(options.glyphWidth(for: .library)
+            == 200 * CollectionViewOptions.glyphWidthFraction)
+    }
+
+    // MARK: Migration off the retired shared keys
+
+    /// A tuned install keeps its grid. The retired keys are read as the fallback for **both** new
+    /// pairs, so the two destinations start life agreeing and diverge only when one is touched -
+    /// which is the difference between carrying a preference over and silently resetting it.
+    @Test func theRetiredSharedKeysSeedBothDestinations() {
+        let defaults = Self.scratch()
+        defaults.set(Double(200), forKey: StorageKeys.legacyCollectionIconSize)
+        defaults.set(Double(32), forKey: StorageKeys.legacyCollectionGridSpacing)
+        defaults.set(CollectionViewMode.icons.rawValue, forKey: StorageKeys.legacyCollectionViewMode)
+
+        let options = CollectionViewOptions(defaults: defaults)
+
+        #expect(options.libraryIconSize == 200)
+        #expect(options.playersIconSize == 200)
+        #expect(options.librarySpacing == 32)
+        #expect(options.playersSpacing == 32)
+        #expect(options.libraryViewMode == .icons)
+        #expect(options.playersViewMode == .icons)
+    }
+
+    /// The new key wins where both exist - otherwise the migration would outlive itself and pin
+    /// every install to whatever it had before the split.
+    @Test func aNewKeyOutranksTheRetiredOne() {
+        let defaults = Self.scratch()
+        defaults.set(Double(200), forKey: StorageKeys.legacyCollectionIconSize)
+        defaults.set(Double(90), forKey: StorageKeys.playersIconSize)
+        defaults.set(CollectionViewMode.icons.rawValue, forKey: StorageKeys.legacyCollectionViewMode)
+        defaults.set(CollectionViewMode.gallery.rawValue, forKey: StorageKeys.playersViewMode)
+
+        let options = CollectionViewOptions(defaults: defaults)
+
+        #expect(options.playersIconSize == 90)
+        #expect(options.playersViewMode == .gallery)
+        // The Library never got its own, so it still follows the retired pair.
+        #expect(options.libraryIconSize == 200)
+        #expect(options.libraryViewMode == .icons)
+    }
+
+    /// A retired value this build cannot read falls back to the default rather than trapping - the
+    /// same rule the sorts follow, applied to the one key whose stored form is a raw value.
+    @Test(arguments: ["", "garbage", "Icons", "list "])
+    func anUnreadableRetiredModeFallsBackToTheDefault(_ stored: String) {
+        let defaults = Self.scratch()
+        defaults.set(stored, forKey: StorageKeys.legacyCollectionViewMode)
+
+        let options = CollectionViewOptions(defaults: defaults)
+
+        #expect(options.libraryViewMode == CollectionViewOptions.defaultViewMode)
+        #expect(options.playersViewMode == CollectionViewOptions.defaultViewMode)
     }
 
     /// A stored spelling this build no longer understands is dropped, and the

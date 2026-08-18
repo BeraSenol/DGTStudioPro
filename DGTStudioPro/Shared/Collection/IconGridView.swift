@@ -31,6 +31,12 @@ struct IconGridView<Item: Identifiable, Card: View>: View {
     /// "playersIconsGrid") so a space never resolves across a destination switch.
     let space: String
 
+    /// Which collection's geometry to lay out with. A parameter for the same reason `space` is
+    /// one: this type is shared by both destinations, and since icon size and spacing became
+    /// per-destination (18 Aug 2026) "the grid geometry" is no longer a single answer the
+    /// environment can give. The caller already knows which surface it is.
+    let collection: CollectionViewOptionsSubject.Collection
+
     /// **The inner `@escaping` is load-bearing.** A closure parameter is non-escaping by default
     /// wherever it appears - inside a function *type* just as much as in a declaration's parameter
     /// list - and every card stores its `onSelect` rather than calling it inline, so a non-escaping
@@ -59,11 +65,13 @@ struct IconGridView<Item: Identifiable, Card: View>: View {
         items: [Item],
         selection: Binding<Set<Item.ID>>,
         space: String,
+        collection: CollectionViewOptionsSubject.Collection,
         @ViewBuilder card: @escaping (Item, Bool, @escaping () -> Void) -> Card
     ) {
         self.items = items
         self._selection = selection
         self.space = space
+        self.collection = collection
         self.card = card
     }
 
@@ -80,8 +88,11 @@ struct IconGridView<Item: Identifiable, Card: View>: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVGrid(
-                        columns: options.columns(containerWidth: geometry.size.width),
-                        spacing: options.spacing
+                        columns: options.columns(
+                            containerWidth: geometry.size.width,
+                            for: collection
+                        ),
+                        spacing: options.spacing(for: collection)
                     ) {
                         ForEach(items) { item in
                             card(item, selection.contains(item.id), { select(item) })
@@ -184,7 +195,7 @@ struct IconGridView<Item: Identifiable, Card: View>: View {
             target = IconGridSelection.destination(
                 from: current,
                 direction: direction,
-                columnCount: options.columnCount(containerWidth: width),
+                columnCount: options.columnCount(containerWidth: width, for: collection),
                 count: items.count
             )
         } else {

@@ -28,8 +28,16 @@ struct LibraryDestination: View {
     
     // MARK: Private Properties
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
-    // Shared with Players (StorageKeys.collectionViewMode); the `.list` default is the documented twin of PlayersDestination's.
-    @AppStorage(StorageKeys.collectionViewMode) private var viewMode: CollectionViewMode = .list
+    // Per-destination since 18 Aug 2026, and owned by `CollectionViewOptions` rather than read here:
+    // that retires the `.list` twin PlayersDestination carried, and lets the stored value fall back
+    // to the retired shared key, which an `@AppStorage` literal default never could.
+    private var viewMode: CollectionViewMode { options.libraryViewMode }
+
+    /// Built by hand rather than projected with `@Bindable`, because the picker lives in a computed
+    /// `@ToolbarContentBuilder` property, which cannot declare one.
+    private var viewModeBinding: Binding<CollectionViewMode> {
+        Binding(get: { options.libraryViewMode }, set: { options.libraryViewMode = $0 })
+    }
     @Environment(\.modelContext) private var modelContext
 
     /// View Options panel subject - read here because this destination owns the sort.
@@ -582,7 +590,7 @@ struct LibraryDestination: View {
         ToolbarItem {
             // NOTE: a `.segmented` Picker from `Label(_:systemImage:)` renders icon-only; AX keys segments by
             // SF Symbol name, not per-segment identifier - only the picker container is tagged.
-            Picker("View Mode", selection: $viewMode) {
+            Picker("View Mode", selection: viewModeBinding) {
                 ForEach(CollectionViewMode.allCases) { mode in
                     Label(mode.displayName, systemImage: mode.systemImage).tag(mode)
                 }

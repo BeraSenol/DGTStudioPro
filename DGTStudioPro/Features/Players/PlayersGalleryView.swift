@@ -28,8 +28,9 @@ struct PlayersGalleryView: View {
     let records: [GameRecord]
 
     let onShowInLibrary: (PlayerStats.ID) -> Void
-    /// Double-click's door - the matchup window (17 Aug 2026). Defaulted so previews stand.
-    var onOpenMatchup: (PlayerStats.ID) -> Void = { _ in }
+    /// Double-click's door - the player's info window (17 Aug 2026; it opened the separate Matchup
+    /// window until that merged into Get Info, 18 Aug 2026). Defaulted so previews stand.
+    var onOpenInfo: (PlayerStats.ID) -> Void = { _ in }
 
     // MARK: Private Properties
 
@@ -54,7 +55,7 @@ struct PlayersGalleryView: View {
                 rank: player.rank,
                 rating: player.rating,
                 onShowInLibrary: { onShowInLibrary(player.id) },
-                onOpen: { onOpenMatchup(player.id) }
+                onOpen: { onOpenInfo(player.id) }
             )
         }
     }

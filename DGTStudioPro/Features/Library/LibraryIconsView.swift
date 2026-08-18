@@ -46,11 +46,12 @@ struct LibraryIconsView: View {
         IconGridView(
             items: games,
             selection: $selectedPGNs,
-            space: "libraryIconsGrid"
+            space: "libraryIconsGrid",
+            collection: .library
         ) { game, isSelected, select in
             LibraryGameCardView(
                 game: game,
-                glyphWidth: options.glyphWidth,
+                glyphWidth: options.glyphWidth(for: .library),
                 analysisState: AnalysisGlyph.state(
                     of: game,
                     isAnalyzed: analyzedIDs.contains(game.id),

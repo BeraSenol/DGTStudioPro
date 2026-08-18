@@ -11,9 +11,25 @@ enum StorageKeys {
 
     // Seed guard for default smart tags: the flag, not tag count, so deleting all defaults sticks.
     static let didSeedDefaultSmartTags = "didSeedDefaultSmartTags"
-    // One view mode for both collection destinations - browsing preference, not per-destination.
-    // The two `.list` defaults are the documented twin.
-    static let collectionViewMode = "collectionViewMode"
+    // View mode, **per destination** (18 Aug 2026, by request). This was one key for both, on the
+    // argument that browsing style is a preference about browsing rather than about a destination;
+    // it is not, in practice - a table of games and a grid of people are wanted in different
+    // shapes. Splitting it also retires the `.list` twin, since two keys have nothing to agree on.
+    //
+    // Owned by `CollectionViewOptions` rather than read here by `@AppStorage`, which is what makes
+    // the migration below possible: an `@AppStorage` default must be a literal, so it can never
+    // fall back to a retired key.
+    static let libraryViewMode = "libraryViewMode"
+    static let playersViewMode = "playersViewMode"
+
+    // Retired, read once each as the fallback for the pair that replaced them, never written.
+    // Kept rather than deleted so an install that had tuned its grid keeps it: the new key is
+    // absent on first launch after the split, and reading the old one is the difference between
+    // carrying a preference over and silently resetting it. Safe to delete once no install
+    // predates the split.
+    static let legacyCollectionViewMode    = "collectionViewMode"
+    static let legacyCollectionIconSize    = "collectionIconSize"
+    static let legacyCollectionGridSpacing = "collectionGridSpacing"
 
     /// What rank 1 means. Absent reads `.wins`. A new key, not the retired
     /// `playersSortOrder`: its stale rank/name values would read as an unknown method - a migration
@@ -89,8 +105,13 @@ enum StorageKeys {
     // Syzygy tablebases: four options plus a location as two keys (bookmark opens the folder; path
     // is a label Settings renders without holding a scoped resource). Defaults stated once, in the
     // owning type's `init`. Icon size / grid spacing follow the same owned-value shape.
-    static let collectionIconSize    = "collectionIconSize"
-    static let collectionGridSpacing = "collectionGridSpacing"
+    // Icon size and grid spacing, per destination like the sorts beneath them and the view mode
+    // above. Game cards and person monograms want different sizes; one slider setting both was
+    // the reason changing either felt like it fought the other surface.
+    static let libraryIconSize       = "libraryIconSize"
+    static let playersIconSize       = "playersIconSize"
+    static let libraryGridSpacing    = "libraryGridSpacing"
+    static let playersGridSpacing    = "playersGridSpacing"
     static let librarySort           = "librarySort"
     static let playersSort           = "playersSort"
     /// Recent-games caps in the Players surfaces: 3 by default (17 Aug 2026, by request),

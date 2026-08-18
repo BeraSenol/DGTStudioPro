@@ -134,14 +134,22 @@ struct CollectionViewOptionsWindow: View {
         // sheet meant nothing on Players, whose cards are person monograms. Spacing keeps the grid
         // glyphs on both - a grid is a grid whatever fills it.
         let sizeGlyph = collection == .players ? "person" : "doc"
-        
+
+        // Since the geometry became per-destination the panel binds the *subject's* pair, not a
+        // shared one. Resolved to real bindings by a switch rather than built from get/set
+        // closures, so the sliders stay one copy of the markup and keep the property setters'
+        // clamp. `Use Defaults` restores this collection only - the other surface is not the
+        // reader's subject and must not move under them.
+        let size = iconSizeBinding(collection, options)
+        let gap = spacingBinding(collection, options)
+
         return Section("Grid") {
             // `in:` takes the ranges the type clamps to, so the slider cannot ask for a value the object
             // silently corrects - extremes that do nothing read as a stuck slider.
             sizedSlider(
                 title: "Icon size",
-                value: "\(Int(options.wrappedValue.iconSize)) pt",
-                binding: options.iconSize,
+                value: "\(Int(size.wrappedValue)) pt",
+                binding: size,
                 range: CollectionViewOptions.iconSizeRange,
                 step: Self.iconSizeStep,
                 minimumGlyph: sizeGlyph,
@@ -153,7 +161,7 @@ struct CollectionViewOptionsWindow: View {
             sizedSlider(
                 title: "Grid spacing",
                 value: nil,
-                binding: options.spacing,
+                binding: gap,
                 range: CollectionViewOptions.spacingRange,
                 step: Self.spacingStep,
                 minimumGlyph: "square.grid.2x2.fill",
@@ -163,10 +171,33 @@ struct CollectionViewOptionsWindow: View {
                 identifier: AccessibilityID.viewOptionsSpacing
             )
             Button("Use Defaults") {
-                options.wrappedValue.iconSize = CollectionViewOptions.defaultIconSize
-                options.wrappedValue.spacing = CollectionViewOptions.defaultSpacing
+                size.wrappedValue = CollectionViewOptions.defaultIconSize
+                gap.wrappedValue = CollectionViewOptions.defaultSpacing
             }
             .accessibilityIdentifier(AccessibilityID.viewOptionsUseDefaults)
+        }
+    }
+
+    /// The subject's own geometry bindings. Two short switches for the reason `sortSection` gives
+    /// for its two: the alternative is a keyed subscript, and `@Bindable` projects bindings through
+    /// key paths, not through subscripts of our own.
+    private func iconSizeBinding(
+        _ collection: CollectionViewOptionsSubject.Collection,
+        _ options: Bindable<CollectionViewOptions>
+    ) -> Binding<CGFloat> {
+        switch collection {
+        case .library: options.libraryIconSize
+        case .players: options.playersIconSize
+        }
+    }
+
+    private func spacingBinding(
+        _ collection: CollectionViewOptionsSubject.Collection,
+        _ options: Bindable<CollectionViewOptions>
+    ) -> Binding<CGFloat> {
+        switch collection {
+        case .library: options.librarySpacing
+        case .players: options.playersSpacing
         }
     }
     

@@ -119,8 +119,16 @@ enum PreviewFixtures {
 
         let options = CollectionViewOptions(defaults: defaults)
         options.activeSubject = subject
-        if let iconSize { options.iconSize = iconSize }
-        if let spacing { options.spacing = spacing }
+        // Both destinations, since the geometry split per destination: a canvas passing `iconSize:`
+        // means "render the grid at this size" and should not have to say which surface it is.
+        if let iconSize {
+            options.libraryIconSize = iconSize
+            options.playersIconSize = iconSize
+        }
+        if let spacing {
+            options.librarySpacing = spacing
+            options.playersSpacing = spacing
+        }
         return options
     }
 }

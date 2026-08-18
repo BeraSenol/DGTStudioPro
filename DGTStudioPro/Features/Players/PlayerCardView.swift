@@ -66,28 +66,35 @@ struct PlayerStatsGrid: View {
 
     /// **Four columns, two rows** (by request, 18 Aug 2026). It was three columns and three rows,
     /// which left the last row half empty with the two dates stranded under a gap. Eight stats
-    /// divide into 4 × 2 exactly, so nothing is stranded and the dates land in the final two cells
-    /// - the position they were asked for and, as the widest values, the one that lets them run to
-    /// the trailing edge instead of pushing a neighbour around.
+    /// divide into 4 × 2 exactly, so nothing is stranded and the dates land in the final column
+    /// - as the widest values, the one that lets them run to the trailing edge instead of pushing
+    /// a neighbour around.
     ///
-    /// The cost is width: this is now four columns wide wherever it appears, and it appears in
-    /// four places (gallery card, columns detail pane, matchup window, profile window). The two
-    /// narrow hosts are the ones to check.
+    /// **Read down the columns, not across the rows** (second pass the same day - Bera asked for
+    /// First Played *above* Last Played, and the dates were side by side). Stacking one pair
+    /// forces the arrangement on all four, so each column is now a related pair: the count and its
+    /// breakdown, the rate and the mates, the rating and its uncertainty (the ±39 sits directly
+    /// under the 1628 it qualifies), the first date and the last. The row order changed as a
+    /// consequence, not as a preference.
+    ///
+    /// The cost is width: this is four columns wide wherever it appears, and it appears in four
+    /// places (gallery card, columns detail pane, matchup window, profile window). The two narrow
+    /// hosts are the ones to check.
     var body: some View {
         Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 6) {
             GridRow {
                 PlayerStatCell("Games", "\(stats.games)")
-                PlayerStatCell("Record", "\(stats.wins)–\(stats.draws)–\(stats.losses)")
                 PlayerStatCell("Win Rate", stats.winRate.formatted(.percent.precision(.fractionLength(0))))
                 PlayerStatCell("Rating", rating?.displaySummary ?? RosterSummary.displayUnknown)
+                PlayerStatCell("First Played", RosterSummary.displayDate(stats.firstPlayed))
             }
             GridRow {
+                PlayerStatCell("Record", "\(stats.wins)–\(stats.draws)–\(stats.losses)")
+                PlayerStatCell("Mates", "\(stats.matesDelivered)")
                 PlayerStatCell(
                     "Uncertainty",
                     rating.map { "±\(Int($0.deviation.rounded()))" } ?? RosterSummary.displayUnknown
                 )
-                PlayerStatCell("Mates", "\(stats.matesDelivered)")
-                PlayerStatCell("First Played", RosterSummary.displayDate(stats.firstPlayed))
                 PlayerStatCell("Last Played", RosterSummary.displayDate(stats.lastPlayed))
             }
         }

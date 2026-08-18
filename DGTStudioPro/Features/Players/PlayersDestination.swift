@@ -29,8 +29,15 @@ struct PlayersDestination: View {
     let onShowInLibrary: (PersistentIdentifier) -> Void
 
     // MARK: Private Properties
-    // Shared with the Library (StorageKeys.collectionViewMode); `.list` default is the documented twin.
-    @AppStorage(StorageKeys.collectionViewMode) private var viewMode: CollectionViewMode = .list
+    // Per-destination since 18 Aug 2026, owned by `CollectionViewOptions`. The `.list` twin with
+    // LibraryDestination is retired: the default is stated once, in that type.
+    private var viewMode: CollectionViewMode { options.playersViewMode }
+
+    /// Built by hand rather than projected with `@Bindable` - the picker lives in a computed
+    /// `@ToolbarContentBuilder` property, which cannot declare one.
+    private var viewModeBinding: Binding<CollectionViewMode> {
+        Binding(get: { options.playersViewMode }, set: { options.playersViewMode = $0 })
+    }
     /// List-mode column sort. Ascending rank is the default and **is** the ladder - ordering by
     /// the badge reproduces the comparator without restating it. Display only; resets per launch.
     private var sortOrder: Binding<[KeyPathComparator<RankedPlayer>]> {
@@ -336,12 +343,12 @@ struct PlayersDestination: View {
                 case .icons:
                     PlayersIconsView(players: players, selectedKeys: $selectedKeys,
                                      onShowInLibrary: showInLibrary,
-                                     onOpenMatchup: { openMatchup($0, in: players) })
+                                     onOpenInfo: { openPlayerInfo($0, in: players) })
                 case .list:
                     PlayersListView(players: players, selectedKeys: $selectedKeys,
                                     onShowInLibrary: showInLibrary,
                                     sortOrder: sortOrder,
-                                    onOpenMatchup: { openMatchup($0, in: players) })
+                                    onOpenInfo: { openPlayerInfo($0, in: players) })
                 case .columns:
                     // Flat list + detail (Finder-columns redesign); the list follows `players`' display order.
                     PlayersColumnsView(players: players,
@@ -354,7 +361,7 @@ struct PlayersDestination: View {
                                        history: history,
                                        records: records,
                                        onShowInLibrary: showInLibrary,
-                                       onOpenMatchup: { openMatchup($0, in: players) })
+                                       onOpenInfo: { openPlayerInfo($0, in: players) })
                 }
             }
         }
@@ -373,16 +380,21 @@ struct PlayersDestination: View {
         )
     }
 
-    /// Double-click's door (17 Aug 2026, by request): the matchup window, keyed on stats key +
-    /// display name. It replaces the double-click route only - Get Info keeps the menus, and
-    /// with them the rename. Columns mode deliberately has no double-click: its detail pane is
-    /// already the profile, and a second door from the same click would race the selection.
-    private func openMatchup(_ key: PlayerStats.ID, in players: [RankedPlayer]) {
+    /// Double-click's door (17 Aug 2026, by request) - **the same window the menus' Get Info opens
+    /// since 18 Aug 2026**, when the Matchup window merged into it. The click lands on the Info tab
+    /// (Bera's order), so the profile it used to open directly is one tab along. Two doors, one
+    /// window: `openWindow(value:)` dedupes on the request, so double-clicking a player whose info
+    /// window is already open focuses it rather than opening a second view of one player.
+    ///
+    /// Columns mode deliberately has no double-click: its detail pane is already the profile, and a
+    /// second door from the same click would race the selection.
+    ///
+    /// The lookup survives the request's shrinking: `GetInfoRequest.player` carries only the key
+    /// (the window re-titles itself from the fetched row), but a double-click on a row that is no
+    /// longer in `players` should open nothing at all, and this guard is what says so.
+    private func openPlayerInfo(_ key: PlayerStats.ID, in players: [RankedPlayer]) {
         guard let player = players.first(where: { $0.id == key }) else { return }
-        openWindow(value: PlayerMatchupRequest(
-            playerKey: player.stats.key,
-            playerName: player.stats.name
-        ))
+        openWindow(value: GetInfoRequest.player(key: player.stats.key))
     }
 
     private var emptyState: some View {
@@ -419,7 +431,7 @@ struct PlayersDestination: View {
         ToolbarItem {
             // macOS segmented-picker caveat (see Library): the identifier tags the container; segments
             // expose as SF Symbol names.
-            Picker("View Mode", selection: $viewMode) {
+            Picker("View Mode", selection: viewModeBinding) {
                 ForEach(CollectionViewMode.allCases) { mode in
                     Label(mode.displayName, systemImage: mode.systemImage).tag(mode)
                 }

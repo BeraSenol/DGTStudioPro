@@ -50,7 +50,8 @@ enum AccessibilityID {
     static let evaluationWindowGraph   = "evaluation.window.graph"
     static let evaluationWindowReadout = "evaluation.window.readout"
     static let evaluationWindowEmpty   = "evaluation.window.empty"
-    static let matchupWindowEmpty      = "matchup.window.empty"
+    // `matchupWindowEmpty` retired 18 Aug 2026 with the Matchup window: its subject is a Get Info
+    // subject now, and a missing one falls to `getInfoEmpty` like the other three.
     static let boardEvaluationBarHideToggle = "board.evaluationBar.hideToggle"
     
     // MARK: Analysis Data (8 Aug 2026)
@@ -92,7 +93,15 @@ enum AccessibilityID {
         "getinfo.game.seatPicker.\(seat)"
     }
     static let getInfoLive             = "getinfo.live"
+    /// The player subject's tab host - the position the flat player form held before the Matchup
+    /// window merged in (18 Aug 2026), so a check naming it still lands on the player content.
     static let getInfoPlayer           = "getinfo.player"
+    /// Its three tabs, the game family's arrangement: identity is the editable one, and the two
+    /// folded surfaces arrived from the deleted Matchup window. `performance` was `profile` for one
+    /// day, and renamed with its tab when the identity content left it for `identity`.
+    static let getInfoPlayerPerformance = "getinfo.player.performance"
+    static let getInfoPlayerMatchup     = "getinfo.player.matchup"
+    static let getInfoPlayerIdentity    = "getinfo.player.identity"
     static let getInfoPlayerTagField   = "getinfo.player.tag"
     static let getInfoEmpty            = "getinfo.empty"
     static let getInfoBoardMenuItem    = "getinfo.menuitem.board"

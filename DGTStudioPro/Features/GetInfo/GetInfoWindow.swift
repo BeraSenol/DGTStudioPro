@@ -484,28 +484,80 @@ extension GetInfoWindow {
         .accessibilityIdentifier(AccessibilityID.getInfoLive)
     }
 
-    /// The registry row, its games, and the app's one rename door. Tag form above display form, in
-    /// that order - names travel tag → display, never back.
+    /// A player. **Three tabs since 18 Aug 2026, when the Matchup window merged in here**: that
+    /// window and this form described one player through two doors - a double-click reached the
+    /// profile, ⌘I reached the rename - and neither could see the other's edits, so a rename left a
+    /// stale name in the open profile beside it. The doors survive; they now arrive at one window.
+    ///
+    /// Tab order is Info, Profile, Matchup, and the cost sits on the other door now: a double-click
+    /// used to open straight onto the profile and opens onto the rename form instead, one tab away
+    /// from what it asked for. ⌘I keeps landing where it always did.
     private func playerForm(_ player: Player) -> some View {
+        PlayerInfoTabs(
+            playerKey: player.normalizedName,
+            playerName: PlayerName.displayForm(of: player.tagName ?? player.name)
+        ) { stats, rating in
+            playerIdentityTab(player, stats: stats, rating: rating)
+        }
+        .accessibilityIdentifier(AccessibilityID.getInfoPlayer)
+    }
+
+    /// The registry row, the folded numbers, and the app's one rename door. Tag form above display
+    /// form, in that order - names travel tag → display, never back.
+    private func playerIdentityTab(
+        _ player: Player,
+        stats: PlayerStats?,
+        rating: Glicko1.Rating?
+    ) -> some View {
         Form {
             Section("Name") {
-                // Commit on Return only - each commit is `retag`, a rewrite across every linked game. Focus loss
-                // would fire on a mere click away, which is not a decision the reader made.
-                TextField("Tag", text: $draftTag)
-                    .onSubmit { commitRename(for: player) }
-                    .accessibilityIdentifier(AccessibilityID.getInfoPlayerTagField)
-                LabeledContent("Shown as", value: PlayerName.displayForm(of: draftTag))
+                // **The seat rows' shape, adopted 18 Aug 2026 by request**: a caption under the
+                // field rather than a `LabeledContent` row of its own. Two rows made the display
+                // form look like a second thing to edit; a caption reads as what the field above
+                // will produce, which is what it is. Same rule as `seatRow` - printed only when it
+                // differs from what was typed, so the ordinary case carries no line repeating
+                // itself.
+                VStack(alignment: .leading, spacing: 2) {
+                    // Commit on Return only - each commit is `retag`, a rewrite across every linked game. Focus loss
+                    // would fire on a mere click away, which is not a decision the reader made.
+                    TextField("Tag", text: $draftTag)
+                        .onSubmit { commitRename(for: player) }
+                        .accessibilityIdentifier(AccessibilityID.getInfoPlayerTagField)
+
+                    if PlayerName.displayForm(of: draftTag) != draftTag {
+                        Text("Shown as \(PlayerName.displayForm(of: draftTag))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            // The 4 × 2 grid, moved here from the other tab (Bera, 18 Aug 2026). It reads as
+            // identity rather than performance - Games, Record, Rating, the two dates - and it left
+            // that tab holding two charts and nothing to compete with them.
+            //
+            // Omitted rather than zeroed when the fold finds nothing: a grid of eight dashes states
+            // less than its absence, and the registry row above still says the player exists.
+            if let stats {
+                Section("Statistics") {
+                    PlayerStatsGrid(stats: stats, rating: rating)
+                }
             }
 
             Section("Library") {
-                // Counted off relationships, not the `PlayerStats` fold - this asks a smaller question than the profile.
-                LabeledContent("Games", value: "\(player.whiteGames.count + player.blackGames.count)")
+                // Counted off relationships, not the `PlayerStats` fold - this asks a smaller
+                // question than the grid above. **"Linked" is load-bearing** (18 Aug 2026): before
+                // the merge these two counts lived in two windows and nobody held them side by side;
+                // now they are adjacent sections, and "Games" up there and "Games" here would read
+                // as the same number while differing - a game the seat backfill has not linked is
+                // counted there and not here. The label is the difference, made visible.
+                LabeledContent("Linked Games", value: "\(player.whiteGames.count + player.blackGames.count)")
                 LabeledContent("As White", value: "\(player.whiteGames.count)")
                 LabeledContent("As Black", value: "\(player.blackGames.count)")
             }
         }
         .formStyle(.grouped)
-        .accessibilityIdentifier(AccessibilityID.getInfoPlayer)
+        .accessibilityIdentifier(AccessibilityID.getInfoPlayerIdentity)
     }
 
     /// One state for every way a subject can be absent - the causes differ, the remedy does not, and
@@ -518,6 +570,129 @@ extension GetInfoWindow {
             identifier: AccessibilityID.getInfoEmpty
         )
         .padding(Self.contentPadding)
+    }
+}
+
+// MARK: - Player Tabs
+
+/// The player subject's tab host. **Profile and Matchup arrived whole from `PlayerMatchupWindow`**
+/// (deleted 18 Aug 2026, this file is where it went); every number still rides the shared folds -
+/// `PlayerStats.index`, `Glicko1.histories` - so nothing here can disagree with a destination.
+///
+/// Its own type, and the `@Query` is the reason: folding the Library belongs to the player subject
+/// alone. Declared on the window it would run for every game and live info window too - the whole
+/// library fetched to render nine roster rows.
+///
+/// The identity tab is passed in rather than built here. The rename's draft, refusal and alert are
+/// window state (`resolve()` seeds `draftTag`, the alert hangs off the window's body), and moving
+/// the app's widest write - a retag rewrites every linked game - into a child to save one closure
+/// would buy tidiness with ownership.
+private struct PlayerInfoTabs<IdentityTab: View>: View {
+
+    // MARK: Stored Properties
+
+    /// `Player.normalizedName`, which is also `PlayerStats.key` - one key space, or the folds below
+    /// silently match nothing and the player reads as having no games.
+    let playerKey: String
+    let playerName: String
+
+    /// **Handed the folded stats**, because the Info tab prints the 4 × 2 grid (Bera, 18 Aug 2026 -
+    /// it lived on the other tab for a day). The window that builds this closure cannot fold: it
+    /// holds a `Player` row, and Games / Win Rate / Rating / Mates / the two dates all come off the
+    /// Library fold that lives here. Nil means the fold found nothing, and the grid is omitted -
+    /// a registry row with no games is ordinary.
+    @ViewBuilder let identityTab: (PlayerStats?, Glicko1.Rating?) -> IdentityTab
+
+    /// Unsorted and unfiltered: both folds take the whole Library and key it themselves. Fetch-all
+    /// -and-map per render, the destinations' own cost family - censused, not optimised ahead of a
+    /// measurement.
+    @Query private var games: [PGN]
+
+    // MARK: Derived
+    private var records: [GameRecord] { games.map(\.gameRecord) }
+
+    private var stats: PlayerStats? {
+        PlayerStats.index(of: records).first { $0.key == playerKey }
+    }
+
+    private var history: [Glicko1.Sample] {
+        Glicko1.histories(from: records)[playerKey] ?? []
+    }
+
+    // MARK: Body
+
+    /// `Tab(_:systemImage:)`, where the game form one file up uses `.tabItem` - the two spellings
+    /// are the two ages of this file, not a distinction. Neither is the beta `Tab(role:)`.
+    var body: some View {
+        TabView {
+            // **Info leads** (Bera, 18 Aug 2026 - the merge's second pass): the first tab is what
+            // both doors land on, and this is the window called Get Info. It also restores what ⌘I
+            // did before the merge, which the first arrangement had cost; the double-click pays the
+            // tab instead, and it is the cheaper of the two to make pay.
+            Tab("Info", systemImage: "info.circle") {
+                identityTab(stats, history.last?.rating)
+            }
+            // **"Performance", not "Profile"** (18 Aug 2026): with the grid gone to Info and the
+            // monogram and name gone entirely, what is left is the record and the rating over
+            // games - how the player has done, not who they are. "Profile" named the tab when it
+            // held the identity; Info holds that now. "Record" was the other candidate and lost to
+            // the grid cell of that name now sitting one tab away, where the two would read as the
+            // same scope.
+            Tab("Performance", systemImage: "chart.line.uptrend.xyaxis") {
+                performanceTab
+            }
+            Tab("Matchup", systemImage: "person.line.dotted.person") {
+                ScrollView {
+                    PlayerMatchupView(
+                        playerKey: playerKey,
+                        playerName: playerName,
+                        records: records
+                    )
+                    // The hosts' standing rule: without it the previous subject's opponent lingers
+                    // when the window is re-pointed.
+                    .id(playerKey)
+                    .padding(24)
+                    .frame(maxWidth: .infinity)
+                }
+                .accessibilityIdentifier(AccessibilityID.getInfoPlayerMatchup)
+            }
+        }
+        .padding(.top, 8)
+    }
+
+    /// **Two charts and nothing else** (Bera, 18 Aug 2026): the career record as a donut and the
+    /// rating over games. The monogram and the name line went with the grid - a window whose title
+    /// bar and whose Info tab both already name the player was introducing him a third time, and
+    /// the tab is stronger as two pictures than as a portrait with pictures under it.
+    ///
+    /// A player with a registry row but no folded games is reachable and ordinary - the row outlives
+    /// the games that made it, and every game of theirs may still be ongoing.
+    @ViewBuilder
+    private var performanceTab: some View {
+        if let stats {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // The same `RecordChart` the Matchup tab draws, so a record is drawn one way in
+                    // this window whichever tab is showing.
+                    RecordChart(wins: stats.wins, draws: stats.draws, losses: stats.losses)
+
+                    if !history.isEmpty {
+                        RatingTrendChart(history: history)
+                            .frame(maxWidth: 460)
+                    }
+                }
+                .padding(24)
+                .frame(maxWidth: .infinity)
+            }
+            .accessibilityIdentifier(AccessibilityID.getInfoPlayerPerformance)
+        } else {
+            ContentUnavailableView(
+                "No Games Yet",
+                systemImage: "person.crop.circle.dashed",
+                description: Text("\(playerName) has no games in the Library.")
+            )
+            .accessibilityIdentifier(AccessibilityID.getInfoPlayerPerformance)
+        }
     }
 }
 

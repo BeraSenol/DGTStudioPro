@@ -16,8 +16,9 @@ struct PlayersListView: View {
     /// The Library's twin (see its doc for binding-not-state). Replaced the sort picker -
     /// the picker's two positions were the Rank and Player columns spelled a second way.
     @Binding var sortOrder: [KeyPathComparator<RankedPlayer>]
-    /// Double-click's door - the matchup window (17 Aug 2026). Defaulted so previews stand.
-    var onOpenMatchup: (PlayerStats.ID) -> Void = { _ in }
+    /// Double-click's door - the player's info window (17 Aug 2026; it opened the separate Matchup
+    /// window until that merged into Get Info, 18 Aug 2026). Defaulted so previews stand.
+    var onOpenInfo: (PlayerStats.ID) -> Void = { _ in }
 
     var body: some View {
         Table(players,
@@ -102,9 +103,9 @@ struct PlayersListView: View {
                 PlayerActionsMenu(key: key, onShowInLibrary: onShowInLibrary)
             }
         } primaryAction: { keys in
-            // Double-click / Return - the matchup window's door (17 Aug 2026). First of the
-            // set: a matchup has one fixed subject.
-            if let key = keys.first { onOpenMatchup(key) }
+            // Double-click / Return - the player info window's door (17 Aug 2026). First of the
+            // set: an info window has one fixed subject.
+            if let key = keys.first { onOpenInfo(key) }
         }
         .accessibilityIdentifier(AccessibilityID.playersTable)
     }

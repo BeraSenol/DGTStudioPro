@@ -10,8 +10,9 @@ struct PlayersIconsView: View {
     let players: [RankedPlayer]
     @Binding var selectedKeys: Set<PlayerStats.ID>
     let onShowInLibrary: (PlayerStats.ID) -> Void
-    /// Double-click's door - the matchup window (17 Aug 2026). Defaulted so previews stand.
-    var onOpenMatchup: (PlayerStats.ID) -> Void = { _ in }
+    /// Double-click's door - the player's info window (17 Aug 2026; it opened the separate Matchup
+    /// window until that merged into Get Info, 18 Aug 2026). Defaulted so previews stand.
+    var onOpenInfo: (PlayerStats.ID) -> Void = { _ in }
 
     // MARK: Private Properties
 
@@ -23,7 +24,8 @@ struct PlayersIconsView: View {
         IconGridView(
             items: players,
             selection: $selectedKeys,
-            space: "playersIconsGrid"
+            space: "playersIconsGrid",
+            collection: .players
         ) { player, isSelected, select in
             // Rank always rides the card - rank is a fact about the player, not the sort.
             PlayerCardView(
@@ -33,10 +35,10 @@ struct PlayersIconsView: View {
                 rank: player.rank,
                 rating: player.rating,
                 onShowInLibrary: { onShowInLibrary(player.id) },
-                onOpen: { onOpenMatchup(player.id) },
+                onOpen: { onOpenInfo(player.id) },
                 // The Library card's `glyphWidth` arrangement with the monogram's own calibration:
                 // 64 pt at the default 120, scaling linearly.
-                monogramSide: options.iconSize
+                monogramSide: options.iconSize(for: .players)
                     * (64 / CollectionViewOptions.defaultIconSize)
             )
         }

@@ -207,24 +207,22 @@ struct DGTStudioProApp: App {
 
         // M10 Get Info - one group for all three subjects, so info windows tab with *each other*, never
         // behind a board. Not floating.
+        //
+        // **It absorbed the Matchup group on 18 Aug 2026.** That group was a second window over a
+        // subject this one already had: the double-click opened a player's profile, ⌘I opened the
+        // same player's rename, and the two could not see each other's writes. Both doors now open
+        // this group, and `value:` dedupes on the request, so one player can only ever have one
+        // window. The player subject grew the Profile and Matchup tabs to take the content.
         WindowGroup("Info", for: GetInfoRequest.self) { $request in
             GetInfoWindow(request: request)
                 .environment(dgtSession)
         }
         .modelContainer(sharedContainer)
-        .defaultSize(width: 460, height: 520)
+        // Taller than the 460 × 520 the game subject wanted alone: the player's Profile tab stacks a
+        // monogram, a four-column grid and a 160 pt chart, and the old Matchup window's 460 × 340
+        // cannot hold it. The tallest subject sets the default; the others get a roomier window.
+        .defaultSize(width: 520, height: 620)
 .windowManagerRole(.associated)        .restorationBehavior(.disabled) // companion - see the graph above
-
-        // The player matchup - the double-click door in every Players view (17 Aug 2026).
-        // Newest wrapper in the `openWindow(value:)` family. Not floating; `value:` dedupes,
-        // so re-opening a player's matchup focuses the existing window.
-        WindowGroup("Matchup", for: PlayerMatchupRequest.self) { $request in
-            PlayerMatchupWindow(request: request)
-        }
-        .modelContainer(sharedContainer)
-        .defaultSize(width: 460, height: 340)
-        .windowManagerRole(.associated)
-        .restorationBehavior(.disabled) // companion - see the graph above
 
         // The smart-tag editor as its own window (16 Aug 2026; was ContentView's sheet). Sixth
         // wrapper in the `openWindow(value:)` family. Not floating; sized by its own fixed frame.
