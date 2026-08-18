@@ -42,8 +42,16 @@ struct BoardSoundPreferenceTests {
         switch cue {
         case .move:      StorageKeys.moveSoundEnabled
         case .capture:   StorageKeys.captureSoundEnabled
+        case .castle:    StorageKeys.castleSoundEnabled
+        case .promote:   StorageKeys.promoteSoundEnabled
         case .check:     StorageKeys.checkSoundEnabled
         case .checkmate: StorageKeys.checkmateSoundEnabled
+        // Not `illegalSoundEnabled`. The key predates the cue - it was the beep's - and is kept
+        // under its old name so an install that had turned the beep off does not get it back as
+        // a sample. Restated here independently, which is this table's whole job.
+        case .illegal:   StorageKeys.illegalMoveSoundEnabled
+        case .gameStart: StorageKeys.gameStartSoundEnabled
+        case .gameEnd:   StorageKeys.gameEndSoundEnabled
         }
     }
 
@@ -51,109 +59,49 @@ struct BoardSoundPreferenceTests {
         switch cue {
         case .move:      sounds.playsMove = value
         case .capture:   sounds.playsCapture = value
+        case .castle:    sounds.playsCastle = value
+        case .promote:   sounds.playsPromote = value
         case .check:     sounds.playsCheck = value
         case .checkmate: sounds.playsCheckmate = value
+        case .illegal:   sounds.playsIllegal = value
+        case .gameStart: sounds.playsGameStart = value
+        case .gameEnd:   sounds.playsGameEnd = value
         }
     }
 
     // MARK: Defaults
 
-    @Test("An untouched preference reads as enabled")
-    func absentKeysReadAsEnabled() throws {
+    /// Driven off `allCases` rather than written out, which is the one place in this suite where
+    /// deriving beats restating: the property under test is "**every** cue defaults to on", and a
+    /// hand-written list silently stops testing a cue the day one is added.
+    @Test("An untouched preference reads as enabled", arguments: BoardCue.allCases)
+    func absentKeysReadAsEnabled(_ cue: BoardCue) throws {
         try withScratchDefaults { defaults in
-            let sounds = makeSounds(defaults)
-            #expect(sounds.playsMove)
-            #expect(sounds.playsCapture)
-            #expect(sounds.playsCheck)
-            #expect(sounds.playsCheckmate)
+            #expect(makeSounds(defaults).isEnabled(cue), "\(cue) did not default to on")
         }
     }
 
-    // MARK: The sound set
-
-    /// `.wood` is what shipped first, so an install that has never seen the picker must keep
-    /// hearing it. A default that drifted would silently re-voice every existing install.
-    @Test("An untouched sound set reads as wood")
-    func absentSoundSetReadsAsWood() throws {
-        try withScratchDefaults { defaults in
-            #expect(makeSounds(defaults).soundSet == .wood)
-        }
-    }
-
-    @Test("A stored sound set is honoured", arguments: BoardSoundSet.allCases)
-    func storedSoundSetIsHonoured(_ chosen: BoardSoundSet) throws {
-        try withScratchDefaults { defaults in
-            defaults.set(chosen.rawValue, forKey: StorageKeys.boardSoundSet)
-            #expect(makeSounds(defaults).soundSet == chosen)
-        }
-    }
-
-    /// A value no case matches falls back rather than trapping - which is what makes **retiring**
-    /// a set safe. Without it, dropping a set would leave anyone who had chosen it unable to
-    /// launch, and the failure would arrive on their machine rather than in this suite.
-    @Test("An unknown stored set falls back to the default")
-    func unknownSoundSetFallsBack() throws {
-        try withScratchDefaults { defaults in
-            defaults.set("granite", forKey: StorageKeys.boardSoundSet)
-            #expect(makeSounds(defaults).soundSet == .wood)
-        }
-    }
-
-    @Test("Picking a set writes through")
-    func soundSetPersists() throws {
-        try withScratchDefaults { defaults in
-            let sounds = makeSounds(defaults)
-            sounds.soundSet = .marble
-            #expect(defaults.string(forKey: StorageKeys.boardSoundSet) == "marble")
-        }
-    }
-
-    /// Construction must not write here either - same reason as the toggles, plus one of its own:
-    /// a stored value is what tells a future default change from a deliberate choice.
-    @Test("Reading the set writes nothing")
-    func soundSetConstructionDoesNotPersist() throws {
-        try withScratchDefaults { defaults in
-            _ = makeSounds(defaults)
-            #expect(defaults.object(forKey: StorageKeys.boardSoundSet) == nil)
-        }
-    }
-
-    /// The cue toggles and the set are independent axes: switching material must not re-arm a cue
-    /// the reader silenced. Cheap to assert and the kind of coupling a shared `didSet` invites.
-    @Test("Changing the set leaves the cue toggles alone")
-    func soundSetDoesNotDisturbTheToggles() throws {
-        try withScratchDefaults { defaults in
-            let sounds = makeSounds(defaults)
-            sounds.playsMove = false
-            sounds.playsCheckmate = false
-
-            sounds.soundSet = .felt
-
-            #expect(sounds.playsMove == false)
-            #expect(sounds.playsCapture)
-            #expect(sounds.playsCheck)
-            #expect(sounds.playsCheckmate == false)
-        }
-    }
+    // The six sound-set tests that lived here are gone with `BoardSoundSet`: the default, the
+    // stored round trip, the unknown-value fallback, the write-through, the read-writes-nothing
+    // twin, and the independence of set and toggles. The app ships one set of sounds, so there is
+    // no selection to store, honour or fall back from - `StorageKeys.boardSoundSet` is retired.
 
     // MARK: Cue toggles
 
-    /// All four off at once. Kept, and **known to be the weaker half**: every input agrees, so it
+    /// All nine off at once. Kept, and **known to be the weaker half**: every input agrees, so it
     /// passes even if two properties read each other's key. `eachCueReadsItsOwnKey` is the version
     /// that could fail - this one only proves nothing is ignored outright.
     @Test("A stored false is honoured")
     func storedFalseIsHonoured() throws {
         try withScratchDefaults { defaults in
-            defaults.set(false, forKey: StorageKeys.moveSoundEnabled)
-            defaults.set(false, forKey: StorageKeys.captureSoundEnabled)
-            defaults.set(false, forKey: StorageKeys.checkSoundEnabled)
-            defaults.set(false, forKey: StorageKeys.checkmateSoundEnabled)
+            for cue in BoardCue.allCases {
+                defaults.set(false, forKey: Self.key(for: cue))
+            }
 
             let sounds = makeSounds(defaults)
-            #expect(sounds.playsMove == false)
-            #expect(sounds.playsCapture == false)
-            #expect(sounds.playsCheck == false)
-            #expect(sounds.playsCheckmate == false)
+            for cue in BoardCue.allCases {
+                #expect(sounds.isEnabled(cue) == false, "\(cue) ignored a stored false")
+            }
         }
     }
 
@@ -164,10 +112,12 @@ struct BoardSoundPreferenceTests {
     func constructionDoesNotPersist() throws {
         try withScratchDefaults { defaults in
             _ = makeSounds(defaults)
-            #expect(defaults.object(forKey: StorageKeys.moveSoundEnabled) == nil)
-            #expect(defaults.object(forKey: StorageKeys.captureSoundEnabled) == nil)
-            #expect(defaults.object(forKey: StorageKeys.checkSoundEnabled) == nil)
-            #expect(defaults.object(forKey: StorageKeys.checkmateSoundEnabled) == nil)
+            for cue in BoardCue.allCases {
+                #expect(
+                    defaults.object(forKey: Self.key(for: cue)) == nil,
+                    "constructing wrote \(cue)'s key"
+                )
+            }
         }
     }
 
@@ -208,9 +158,6 @@ struct BoardSoundPreferenceTests {
                     "flipping \(cue) wrote the wrong key - \(candidate)'s changed too"
                 )
             }
-
-            // And a cue toggle must not disturb the set, which is a different axis entirely.
-            #expect(defaults.object(forKey: StorageKeys.boardSoundSet) == nil)
         }
     }
 
@@ -231,25 +178,16 @@ struct BoardSoundPreferenceTests {
         }
     }
 
-    /// The same loop for the set, which persists a `String` rather than a `Bool` and so has
-    /// its own way to go wrong.
-    /// The parameter is `chosen`, not `set` - a `set` here would shadow this suite's own
-    /// `set(_:to:on:)` helper, which is the shape that already bit `makeSounds`.
-    @Test("A chosen set survives a relaunch", arguments: BoardSoundSet.allCases)
-    func aChosenSetSurvivesARelaunch(_ chosen: BoardSoundSet) throws {
-        try withScratchDefaults { defaults in
-            let first = makeSounds(defaults)
-            first.soundSet = chosen
-
-            #expect(makeSounds(defaults).soundSet == chosen)
-        }
-    }
-
     // MARK: The gate - the crossable wiring
 
-    /// Exactly one flag governs each cue. Driven off `allCases` so a fifth cue arriving without a
+    /// Exactly one flag governs each cue. Driven off `allCases` so a tenth cue arriving without a
     /// flag fails here rather than shipping permanently silent, and asserted in both directions:
     /// the cue's own flag enables it, and no other flag does.
+    ///
+    /// Nine cues over nine flags is seventy-two ways to cross a wire, which is why this is the
+    /// test the suite exists for. The gate is called with one flag on at a time, so a `check` that
+    /// reads the capture flag shows up as a specific, named failure rather than as a wrong sound
+    /// somebody eventually notices.
     @Test("Each cue is governed by its own toggle and no other", arguments: BoardCue.allCases)
     func eachCueReadsItsOwnFlag(_ cue: BoardCue) {
         for candidate in BoardCue.allCases {
@@ -258,8 +196,13 @@ struct BoardSoundPreferenceTests {
                 cue,
                 moves:      candidate == .move,
                 captures:   candidate == .capture,
+                castles:    candidate == .castle,
+                promotions: candidate == .promote,
                 checks:     candidate == .check,
-                checkmates: candidate == .checkmate
+                checkmates: candidate == .checkmate,
+                illegals:   candidate == .illegal,
+                gameStarts: candidate == .gameStart,
+                gameEnds:   candidate == .gameEnd
             )
             #expect(
                 enabled == (candidate == cue),
@@ -274,18 +217,12 @@ struct BoardSoundPreferenceTests {
     func instanceAgreesWithTheStaticGate(_ cue: BoardCue) throws {
         try withScratchDefaults { defaults in
             let sounds = makeSounds(defaults)
-            sounds.playsMove = false
-            sounds.playsCapture = false
-            sounds.playsCheck = false
-            sounds.playsCheckmate = false
+            for other in BoardCue.allCases {
+                set(other, to: false, on: sounds)
+            }
             #expect(sounds.isEnabled(cue) == false)
 
-            switch cue {
-            case .move:      sounds.playsMove = true
-            case .capture:   sounds.playsCapture = true
-            case .check:     sounds.playsCheck = true
-            case .checkmate: sounds.playsCheckmate = true
-            }
+            set(cue, to: true, on: sounds)
             #expect(sounds.isEnabled(cue))
         }
     }

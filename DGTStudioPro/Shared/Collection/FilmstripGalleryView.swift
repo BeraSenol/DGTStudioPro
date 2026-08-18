@@ -56,9 +56,10 @@ struct FilmstripGalleryView<Item: Identifiable, Preview: View, Card: View>: View
     let metrics: FilmstripMetrics
 
     private let preview: () -> Preview
-    /// No `@escaping` on the inner `() -> Void`: it is only spellable in function *parameter*
-    /// position, and a closure parameter of a function **type** is escaping already.
-    private let card: (Item, Bool, () -> Void) -> Card
+    /// The inner `@escaping` is required, for the reason `IconGridView`'s twin spells out: a
+    /// closure parameter is non-escaping by default inside a function type too, and the cards
+    /// store `onSelect` rather than calling it inline.
+    private let card: (Item, Bool, @escaping () -> Void) -> Card
 
     // MARK: Private Properties
 
@@ -72,7 +73,7 @@ struct FilmstripGalleryView<Item: Identifiable, Preview: View, Card: View>: View
         selection: Binding<Set<Item.ID>>,
         metrics: FilmstripMetrics,
         @ViewBuilder preview: @escaping () -> Preview,
-        @ViewBuilder card: @escaping (Item, Bool, () -> Void) -> Card
+        @ViewBuilder card: @escaping (Item, Bool, @escaping () -> Void) -> Card
     ) {
         self.items = items
         self._selection = selection

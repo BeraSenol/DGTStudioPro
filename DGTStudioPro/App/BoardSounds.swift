@@ -3,16 +3,23 @@ import Foundation
 import Observation
 import os
 
-/// Plays the board cues and owns the four preferences that gate them.
+/// Plays the board cues and owns the nine preferences that gate them.
 ///
 /// The owned-value shape rather than `@AppStorage`: the toggles have two readers - Settings
 /// binds them, this type consults them - and a twin default is exactly the arrangement that
 /// agreed perfectly on a value neither side could produce. Every default is stated once,
 /// in `init`; nobody else spells `?? true`.
 ///
-/// Separate from the illegal-move beep on purpose, and the split is audible rather than
-/// architectural: that one is `NSSound.beep()`, which rides the user's **alert** volume because it
-/// is an alert. These are samples at app volume, because a move landing is feedback, not a warning.
+/// **There is one set of sounds.** Selectable sound sets were removed along with `BoardSoundSet`:
+/// the app ships one voice, and the only choice offered is which cues are on. That deletes the
+/// cache-invalidation problem the picker created (samples belonged to a set, so changing it had to
+/// empty the cache) and the audition it needed - a picker over sounds you cannot hear while
+/// picking is a list of adjectives, and with no picker there is nothing to audition.
+///
+/// Every cue is a sample at app volume, including the illegal-move cue, which used to be
+/// `NSSound.beep()` at the user's **alert** volume. That split is gone deliberately: a rejected
+/// position is feedback about the board, the same category as a move landing, and the system beep
+/// made it sound like the machine objecting rather than like this app.
 @MainActor
 @Observable
 final class BoardSounds {
@@ -42,34 +49,22 @@ final class BoardSounds {
 
     // MARK: Preferences
 
-    /// Which material the cues are made of. Absent reads `.wood`, the set that shipped
-    /// first, so an existing install hears exactly what it heard yesterday.
-    ///
-    /// Changing it does three things in one place, which is the argument for `didSet` over a
-    /// view's `onChange`: it persists, it drops the loaded samples (they belong to the old set),
-    /// and it **auditions**. A picker over sounds that you cannot hear while picking is a list of
-    /// adjectives.
-    var soundSet: BoardSoundSet {
-        didSet {
-            // SwiftUI may re-assign an unchanged selection; without this a re-render would clear
-            // the cache and click at the reader.
-            guard soundSet != oldValue else { return }
-
-            defaults.set(soundSet.rawValue, forKey: StorageKeys.boardSoundSet)
-            players.removeAll()
-            Self.logger?.info("Board sound set: \(self.soundSet.rawValue, privacy: .public)")
-            audition()
-        }
-    }
-
-    /// Absent reads **true** for all four - the feature is opt-out, matching the illegal-move
-    /// cue rather than arriving switched off and needing to be discovered.
+    /// Absent reads **true** for all nine - the feature is opt-out rather than arriving switched
+    /// off and needing to be discovered.
     var playsMove: Bool {
         didSet { persist(playsMove, forKey: StorageKeys.moveSoundEnabled, describing: "move") }
     }
 
     var playsCapture: Bool {
         didSet { persist(playsCapture, forKey: StorageKeys.captureSoundEnabled, describing: "capture") }
+    }
+
+    var playsCastle: Bool {
+        didSet { persist(playsCastle, forKey: StorageKeys.castleSoundEnabled, describing: "castle") }
+    }
+
+    var playsPromote: Bool {
+        didSet { persist(playsPromote, forKey: StorageKeys.promoteSoundEnabled, describing: "promote") }
     }
 
     var playsCheck: Bool {
@@ -80,20 +75,42 @@ final class BoardSounds {
         didSet { persist(playsCheckmate, forKey: StorageKeys.checkmateSoundEnabled, describing: "checkmate") }
     }
 
+    /// The illegal-move cue, which used to be `NSSound.beep()` fired from the App's `onDesync`
+    /// closure. The change is audible and was made deliberately, so the old argument is preserved
+    /// here rather than deleted: a beep rides the user's **alert** volume, which suited a warning.
+    ///
+    /// It is now a sample at app volume like the rest. Two reasons. The beep was the system's, so
+    /// it sounded like the *machine* objecting rather than like this board - and it is not a
+    /// warning, it is feedback about a position, which is the same category as every other cue
+    /// here. It stays the quietest cue in each set, which is where the caution belongs.
+    var playsIllegal: Bool {
+        didSet { persist(playsIllegal, forKey: StorageKeys.illegalMoveSoundEnabled, describing: "illegal") }
+    }
+
+    var playsGameStart: Bool {
+        didSet { persist(playsGameStart, forKey: StorageKeys.gameStartSoundEnabled, describing: "game start") }
+    }
+
+    var playsGameEnd: Bool {
+        didSet { persist(playsGameEnd, forKey: StorageKeys.gameEndSoundEnabled, describing: "game end") }
+    }
+
     // MARK: Private Properties
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let audible: Bool
 
-    /// Loaded samples for the **current set**, kept until the set changes. The value is itself
-    /// optional so a *failed* load is remembered: without that, a missing resource logs an error
-    /// on every ply, and a channel that is always noisy is a channel being read past (the UCI
-    /// finding).
+    /// Loaded samples, one array per cue, filled on first use and kept for the life of the
+    /// process. There is a single set of sounds now, so nothing ever invalidates this.
     ///
-    /// Keyed on the cue alone rather than on `(set, cue)` because `soundSet`'s `didSet` empties it
-    /// - one dictionary that is always about one set, instead of a compound key that would hold
-    /// every set a reader ever auditioned for the life of the process.
-    @ObservationIgnored private var players: [BoardCue: AVAudioPlayer?] = [:]
+    /// An **array** because a cue can layer more than one sample - see `BoardCue.resources`, where
+    /// `checkmate` is the move plus the game ending. An empty array is a meaningful, remembered
+    /// outcome: it means every load failed, and remembering it is what stops a missing file
+    /// logging an error on every ply. A channel that is always noisy is a channel being read past.
+    ///
+    /// The old `[BoardCue: AVAudioPlayer?]` shape used the optional for the same purpose; the
+    /// array subsumes it, since "no players" and "load failed" are the same state here.
+    @ObservationIgnored private var players: [BoardCue: [AVAudioPlayer]] = [:]
 
     // MARK: Init
 
@@ -102,15 +119,16 @@ final class BoardSounds {
     init(defaults: UserDefaults = .standard, audible: Bool = BoardSounds.isAudible) {
         self.defaults = defaults
         self.audible = audible
-        // Assignment in `init` does not fire `didSet`, so a first launch reads without writing
-        // back - and, for the set, without auditioning at launch, which would make every start of
-        // the app click at you.
-        self.soundSet = (defaults.string(forKey: StorageKeys.boardSoundSet)
-            .flatMap(BoardSoundSet.init(rawValue:))) ?? .wood
+        // Assignment in `init` does not fire `didSet`, so a first launch reads without writing back.
         self.playsMove = defaults.object(forKey: StorageKeys.moveSoundEnabled) as? Bool ?? true
         self.playsCapture = defaults.object(forKey: StorageKeys.captureSoundEnabled) as? Bool ?? true
+        self.playsCastle = defaults.object(forKey: StorageKeys.castleSoundEnabled) as? Bool ?? true
+        self.playsPromote = defaults.object(forKey: StorageKeys.promoteSoundEnabled) as? Bool ?? true
         self.playsCheck = defaults.object(forKey: StorageKeys.checkSoundEnabled) as? Bool ?? true
         self.playsCheckmate = defaults.object(forKey: StorageKeys.checkmateSoundEnabled) as? Bool ?? true
+        self.playsIllegal = defaults.object(forKey: StorageKeys.illegalMoveSoundEnabled) as? Bool ?? true
+        self.playsGameStart = defaults.object(forKey: StorageKeys.gameStartSoundEnabled) as? Bool ?? true
+        self.playsGameEnd = defaults.object(forKey: StorageKeys.gameEndSoundEnabled) as? Bool ?? true
     }
 
     // MARK: The gate
@@ -122,14 +140,24 @@ final class BoardSounds {
         _ cue: BoardCue,
         moves: Bool,
         captures: Bool,
+        castles: Bool,
+        promotions: Bool,
         checks: Bool,
-        checkmates: Bool
+        checkmates: Bool,
+        illegals: Bool,
+        gameStarts: Bool,
+        gameEnds: Bool
     ) -> Bool {
         switch cue {
         case .move:      moves
         case .capture:   captures
+        case .castle:    castles
+        case .promote:   promotions
         case .check:     checks
         case .checkmate: checkmates
+        case .illegal:   illegals
+        case .gameStart: gameStarts
+        case .gameEnd:   gameEnds
         }
     }
 
@@ -139,38 +167,39 @@ final class BoardSounds {
             cue,
             moves: playsMove,
             captures: playsCapture,
+            castles: playsCastle,
+            promotions: playsPromote,
             checks: playsCheck,
-            checkmates: playsCheckmate
+            checkmates: playsCheckmate,
+            illegals: playsIllegal,
+            gameStarts: playsGameStart,
+            gameEnds: playsGameEnd
         )
     }
 
     // MARK: Playback
 
-    /// Fires `cue` if this process is audible and the cue's toggle is on. Restarts rather than
-    /// layering: holding → walks plies faster than a sample is long, and eight overlapping clicks
-    /// is noise where one click per keypress is feedback.
+    /// Fires `cue` if this process is audible and the cue's toggle is on.
     ///
-    /// `ignoringPreference` exists for the audition and nothing else - see `audition()`. Audibility
-    /// is **not** overridable by it: that flag is about the process, not about the reader's taste.
-    func play(_ cue: BoardCue, ignoringPreference: Bool = false) {
+    /// **Restarts rather than stacking, per sample.** Holding → walks plies faster than a sample is
+    /// long, and eight overlapping clicks is noise where one click per keypress is feedback. Note
+    /// this is a different question from a cue *layering* several samples: `checkmate` plays two
+    /// files at once by design, and each of those two independently restarts if the cue re-fires.
+    ///
+    /// The layers start together rather than in sequence. For `checkmate` that means the move and
+    /// the game ending land on the same instant, which is the literal reading of "a mate is both".
+    /// If it turns out to sound cluttered, staggering them is a delay on the second player here,
+    /// not a change to `BoardCue`.
+    func play(_ cue: BoardCue) {
         guard audible else { return }
-        guard ignoringPreference || isEnabled(cue) else { return }
-        guard let player = player(for: cue) else { return }
-        player.currentTime = 0
-        player.play()
+        guard isEnabled(cue) else { return }
+        for player in players(for: cue) {
+            player.currentTime = 0
+            player.play()
+        }
     }
 
     // MARK: Private Methods
-
-    /// Plays the new set's move cue when the reader picks it.
-    ///
-    /// Deliberately past the per-cue gate: you are auditioning the **set**, not the move cue, so a
-    /// reader who has turned Move off would otherwise pick in silence and reasonably conclude the
-    /// picker was broken. `.move` is the one to play because it is the cue you hear a hundred times
-    /// an evening - the set should be chosen on its most frequent sound, not its most dramatic.
-    private func audition() {
-        play(.move, ignoringPreference: true)
-    }
 
     private func persist(_ value: Bool, forKey key: String, describing cue: String) {
         defaults.set(value, forKey: key)
@@ -179,23 +208,24 @@ final class BoardSounds {
         )
     }
 
-    /// Loads on first use and caches both outcomes. `prepareToPlay()` does the buffer allocation
-    /// now rather than inside the first move of a game.
-    private func player(for cue: BoardCue) -> AVAudioPlayer? {
+    /// Loads on first use and caches the outcome, including an empty one. `prepareToPlay()` does
+    /// the buffer allocation now rather than inside the first move of a game.
+    private func players(for cue: BoardCue) -> [AVAudioPlayer] {
         if let cached = players[cue] { return cached }
 
-        let loaded = load(cue)
+        // `compactMap`, so one missing layer does not silence the rest: a `checkmate` whose
+        // game-end file is gone should still thump, and the error below says which half is absent.
+        let loaded = cue.resources.compactMap(load)
         players[cue] = loaded
         return loaded
     }
 
-    private func load(_ cue: BoardCue) -> AVAudioPlayer? {
-        let name = soundSet.resourceName(for: cue)
+    private func load(_ name: String) -> AVAudioPlayer? {
         guard let url = Bundle.main.url(forResource: name, withExtension: "wav") else {
             Self.logger?.error(
                 """
-                Board cue '\(name, privacy: .public).wav' missing from the app bundle - \
-                that cue stays silent until it is restored
+                Board sample '\(name, privacy: .public).wav' missing from the app bundle - \
+                every cue that uses it stays silent until it is restored
                 """
             )
             return nil
@@ -207,7 +237,7 @@ final class BoardSounds {
         } catch {
             Self.logger?.error(
                 """
-                Board cue '\(name, privacy: .public).wav' unreadable: \
+                Board sample '\(name, privacy: .public).wav' unreadable: \
                 \(error.localizedDescription, privacy: .public)
                 """
             )

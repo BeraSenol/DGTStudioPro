@@ -70,14 +70,26 @@ enum AnalysisGlyph {
     
     // MARK: Badge Tint
     
-    /// Badge colour: green analyzed, red not, **nil while running** - no verdict to report. Here,
-    /// not at render sites: a colour decided per site is the twin-read-site pattern with a `Color`.
-    static func tint(_ state: State) -> Color? {
+    /// Badge colour: green analyzed, red not, **gray while running** (by request). Here, not at
+    /// render sites: a colour decided per site is the twin-read-site pattern with a `Color`.
+    ///
+    /// **Non-optional, and that is the point.** This returned `Color?` while running was untinted,
+    /// and the two icon views below branched on the nil to decide whether to draw the *spinning*
+    /// gear. When `.analyzing` gained its gray, every arm became non-nil, both `else` branches went
+    /// unreachable, and the gear silently stopped turning while still looking correct. One value
+    /// was answering two questions; `isRunning` is now the second one, asked by name.
+    static func tint(_ state: State) -> Color {
         switch state {
         case .unanalyzed: .red
         case .analyzing:  .gray
         case .analyzed:   .green
         }
+    }
+
+    /// Whether the engine has this one right now - the render branch that used to be `tint == nil`.
+    /// Spelled once so the two icon views cannot disagree about what "running" looks like.
+    static func isRunning(_ state: State) -> Bool {
+        state == .analyzing
     }
     
     /// "Analyze", "Analyzing…", "Analyzed" - state over verb: the common reason to look is to find
@@ -170,19 +182,26 @@ struct AnalysisLabel: View {
 
 // MARK: Icon
 
-/// The glyph alone. Palette arrangement scoped to the `Image`; the running gear takes **no**
-/// foreground style - `.primary` would override a host supplying its own (prominent button, selected row).
+/// The glyph alone. Palette arrangement scoped to the `Image`.
+///
+/// The running gear **used to take no foreground style**, so it inherited whatever the host
+/// supplied - white inside a prominent button, the selection colour in a selected row. It is now
+/// explicitly gray by request, which is a real trade: inside a `.borderedProminent` button the
+/// gear no longer matches the white label text beside it. The "Running, In Hosts" preview below
+/// exists to check exactly that pair, and is the only thing that can answer whether it looks wrong.
 struct AnalysisGlyphIcon: View {
-    
+
     let state: AnalysisGlyph.State
-    
+
     var body: some View {
-        if let tint = AnalysisGlyph.tint(state) {
+        if AnalysisGlyph.isRunning(state) {
+            // Bare `gear` - one layer, so palette rendering would have nothing to arrange.
+            AnalyzingGear()
+                .foregroundStyle(AnalysisGlyph.tint(state))
+        } else {
             Image(systemName: AnalysisGlyph.name(state))
                 .symbolRenderingMode(.palette)
-                .foregroundStyle(tint, .foreground)
-        } else {
-            AnalyzingGear()
+                .foregroundStyle(AnalysisGlyph.tint(state), .foreground)
         }
     }
 }
@@ -195,11 +214,14 @@ struct AnalysisBadgeIcon: View {
     let state: AnalysisGlyph.State
     
     var body: some View {
-        if let tint = AnalysisGlyph.tint(state) {
-            Image(systemName: AnalysisGlyph.badgeName(state))
-                .foregroundStyle(tint)
-        } else {
+        if AnalysisGlyph.isRunning(state) {
+            // `badgeName(.analyzing)` and `name(.analyzing)` are both bare `gear`, so swapping the
+            // still Image for the turning one changes the motion and nothing else.
             AnalyzingGear()
+                .foregroundStyle(AnalysisGlyph.tint(state))
+        } else {
+            Image(systemName: AnalysisGlyph.badgeName(state))
+                .foregroundStyle(AnalysisGlyph.tint(state))
         }
     }
 }

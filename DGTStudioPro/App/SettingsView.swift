@@ -13,9 +13,11 @@ struct SettingsView: View {
     /// live at the read site). `StorageKeys` documents the contract.
     @AppStorage(StorageKeys.autoConnectOnLaunch) private var autoConnectOnLaunch = true
     
-    /// Twin default with the App's `onDesync` closure - same unavoidable pairing.
-    @AppStorage(StorageKeys.illegalMoveSoundEnabled) private var illegalMoveSoundEnabled = true
-    
+    // The illegal-move toggle used to sit here as a second `@AppStorage`, twinned with the App's
+    // `onDesync` closure. It is now `boardSounds.playsIllegal` like every other cue, which retires
+    // that twin - the pairing above survives only because `autoConnectAtLaunch()` has no owner to
+    // move it to.
+
     // Engine values bind to the keys `EngineConfiguration.current` reads; initials come from
     // `EngineConfiguration.default`, so the numbers live exactly once.
     @AppStorage(StorageKeys.analysisDepth) private var analysisDepth
@@ -161,22 +163,20 @@ struct SettingsView: View {
 
         return Form {
             Section {
-                // Picking plays the set's move cue, so the list is auditioned rather than
-                // read - and it plays even with Move switched off, because you are choosing a set,
-                // not a cue. A menu picker rather than segmented, the reason: the view-mode
-                // control elsewhere is segmented, and two of those read as one broken one.
-                Picker("Sound Set", selection: $sounds.soundSet) {
-                    ForEach(BoardSoundSet.allCases) { set in
-                        Text(set.displayName).tag(set)
-                    }
-                }
-                .accessibilityIdentifier(AccessibilityID.settingsBoardSoundSetPicker)
-
+                // Listed in precedence order, most general first, which is the order the footer
+                // then explains. Alphabetical would put Capture above Castle and Checkmate above
+                // Check, and the list would stop teaching the rule.
                 Toggle("Move", isOn: $sounds.playsMove)
                     .accessibilityIdentifier(AccessibilityID.settingsMoveSoundToggle)
 
+                Toggle("Castle", isOn: $sounds.playsCastle)
+                    .accessibilityIdentifier(AccessibilityID.settingsCastleSoundToggle)
+
                 Toggle("Capture", isOn: $sounds.playsCapture)
                     .accessibilityIdentifier(AccessibilityID.settingsCaptureSoundToggle)
+
+                Toggle("Promotion", isOn: $sounds.playsPromote)
+                    .accessibilityIdentifier(AccessibilityID.settingsPromoteSoundToggle)
 
                 Toggle("Check", isOn: $sounds.playsCheck)
                     .accessibilityIdentifier(AccessibilityID.settingsCheckSoundToggle)
@@ -192,27 +192,36 @@ struct SettingsView: View {
                 Text(
                     """
                     Plays as moves land on the live board and as you step \
-                    through a game with the arrow keys. Felt is muted, wood \
-                    is the default knock, marble is higher and harder; \
-                    choosing one plays it. Each move makes one sound, the \
-                    most specific one that fits - a capture that gives check \
-                    is a check. Jumping to the start or end of a game is silent.
+                    through a game with the arrow keys. Each move makes one \
+                    sound, the most specific one that fits - a capture that \
+                    gives check is a check, and a promotion that captures is \
+                    a promotion. Promotion uses the move sound, and checkmate \
+                    plays the move and the game-end sound together. Jumping \
+                    to the start or end of a game is silent.
                     """
                 )
             }
 
             Section {
-                Toggle("Play alert on illegal move", isOn: $illegalMoveSoundEnabled)
+                Toggle("Game start", isOn: $sounds.playsGameStart)
+                    .accessibilityIdentifier(AccessibilityID.settingsGameStartSoundToggle)
+
+                Toggle("Game end", isOn: $sounds.playsGameEnd)
+                    .accessibilityIdentifier(AccessibilityID.settingsGameEndSoundToggle)
+
+                Toggle("Illegal move", isOn: $sounds.playsIllegal)
                     .accessibilityIdentifier(AccessibilityID.settingsIllegalMoveSoundToggle)
             } header: {
                 Text("Alerts")
             } footer: {
+                // The volume sentence that used to live here is gone with the beep it described.
                 Text(
                     """
-                    Plays the system alert sound when the pieces on the \
-                    board can't be explained by any legal move. Unlike the \
-                    board sounds above, this one follows your system alert \
-                    volume.
+                    Game start and end play as a game begins and as it reaches \
+                    a result, however it got there - mate, resignation or an \
+                    agreed draw. Illegal move plays once when the pieces on the \
+                    board can't be explained by any legal move, not repeatedly \
+                    while they stay that way. All three follow the app's volume.
                     """
                 )
             }

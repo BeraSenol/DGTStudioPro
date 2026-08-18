@@ -2,26 +2,26 @@ import SwiftUI
 import SwiftData
 
 struct LibraryGameCardView: View {
-    
+
     // MARK: Stored Properties
     let game: PGN
-    
+
     /// Document-sheet width. A parameter, not an environment read, so the gallery filmstrip keeps
     /// its own size while the icons grid follows View Options. A `var` with a default - hosts that
     /// pass nothing render as before.
     var glyphWidth: CGFloat = 60
-    
+
     /// The analysis badge's subject, bottom-trailing on the sheet in every host. Both
     /// production hosts pass state, never the model - no blob decode per card.
     var analysisState: AnalysisGlyph.State = .unanalyzed
-    
+
     let isSelected: Bool
     let onSelect: () -> Void
     let onOpen: () -> Void
     let onAnalyze: () -> Void
     let onExport: () -> Void
     let onDelete: () -> Void
-    
+
     // MARK: Body
     var body: some View {
         VStack(spacing: 5) {
@@ -54,7 +54,7 @@ struct LibraryGameCardView: View {
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier(AccessibilityID.gameCard(game.name))
     }
-    
+
     // MARK: Instance Methods
     private var documentIcon: some View {
         ZStack {
@@ -69,7 +69,7 @@ struct LibraryGameCardView: View {
             // element - the filmstrip squeezed the glyph to half height.
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.leading, 6)
-            
+
             // `.black` is ink on the explicitly-`.white` sheet - the pair must be stated together or Light
             // Mode gets white on white. 14/60 is the pre-slider pair, so the default renders byte-identically.
             Text(displayIndex)
@@ -99,7 +99,7 @@ struct LibraryGameCardView: View {
                 .padding(9)
         }
     }
-    
+
     @ViewBuilder
     private var nameLabel: some View {
         Text(game.name)
@@ -114,7 +114,7 @@ struct LibraryGameCardView: View {
             )
             .foregroundStyle(isSelected ? Color.white : .primary)
     }
-    
+
     /// The file's ordinal, written on the sheet. The placeholder glyph renders a state that is meant
     /// to be unreachable - not a fourth vocabulary. The `#` prefix and the result went 7 Aug 2026
     /// by request; the result still lives in the list's cell.

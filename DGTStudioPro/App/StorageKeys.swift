@@ -38,23 +38,36 @@ enum StorageKeys {
     // Launch auto-connect; absent reads true everywhere.
     static let autoConnectOnLaunch = "autoConnectOnLaunch"
 
-    // Illegal-move sound. Absent reads true; SettingsView and the App's `onDesync` closure
-    // are the documented twin.
+    // Illegal-move sound. Absent reads true. **The twin is gone**: this used to be read in two
+    // places - `SettingsView` via `@AppStorage` and the App's `onDesync` closure via a bare
+    // `UserDefaults` lookup - each spelling its own `?? true`. It is now owned by `BoardSounds`
+    // like every other cue, so the default is stated once, in that type's `init`. The key name is
+    // kept as-is on purpose: renaming it would silently reset the preference of every existing
+    // install to the default, which for an opt-out toggle means switching a sound back *on* for
+    // anyone who had turned it off.
     static let illegalMoveSoundEnabled = "illegalMoveSoundEnabled"
 
     // The four board cues. Absent reads **true** for each. Single read site apiece -
     // `BoardSounds` owns the values and Settings binds to the properties, so unlike the key above
     // these have no twin to document. Four keys rather than one because four toggles were asked
     // for, and a single stored set would make "which cue is off" a decoding question.
-    /// Which sample set the cues come from. Absent reads `.wood` - the set that shipped
-    /// first, so an existing install hears what it heard yesterday. An unknown stored value falls
-    /// back to the same default rather than failing, which is what makes retiring a set safe.
-    static let boardSoundSet = "boardSoundSet"
-
+    // `boardSoundSet` lived here and is gone with `BoardSoundSet`: the app ships one set of
+    // sounds, so there is nothing to store. The key is deliberately **not** cleaned up on launch -
+    // a stale string in an existing install's defaults is inert, and code that deletes keys it no
+    // longer understands is code that will one day delete a key it does.
     static let moveSoundEnabled      = "moveSoundEnabled"
     static let captureSoundEnabled   = "captureSoundEnabled"
+    static let castleSoundEnabled    = "castleSoundEnabled"
+    static let promoteSoundEnabled   = "promoteSoundEnabled"
     static let checkSoundEnabled     = "checkSoundEnabled"
     static let checkmateSoundEnabled = "checkmateSoundEnabled"
+
+    // The two lifecycle cues. Separate keys rather than one shared "game sounds" flag, for the
+    // same reason the six above are separate: one flag per cue is what makes the gate a lookup
+    // instead of a rule, and a shared flag would make "start is on, end is off" unrepresentable
+    // for no saving. Absent reads **true**, like every cue.
+    static let gameStartSoundEnabled = "gameStartSoundEnabled"
+    static let gameEndSoundEnabled   = "gameEndSoundEnabled"
 
     // Idle-sleep play gate. Absent reads **true**. Single read site - `SleepInhibitor` owns
     // the value; Settings binds to the property. The shape the twins above should eventually take.

@@ -220,11 +220,16 @@ enum AccessibilityID {
 
     /// The four board cues. One identifier per toggle rather than one for the section - a
     /// section is not a control, and a cue that stops firing is diagnosed by naming *which* toggle.
-    static let settingsBoardSoundSetPicker  = "settings.boardSoundSetPicker"
+    // `settingsBoardSoundSetPicker` is gone with the picker itself - the app ships one set of
+    // sounds and offers only which cues are on.
     static let settingsMoveSoundToggle      = "settings.moveSoundToggle"
     static let settingsCaptureSoundToggle   = "settings.captureSoundToggle"
+    static let settingsCastleSoundToggle    = "settings.castleSoundToggle"
+    static let settingsPromoteSoundToggle   = "settings.promoteSoundToggle"
     static let settingsCheckSoundToggle     = "settings.checkSoundToggle"
     static let settingsCheckmateSoundToggle = "settings.checkmateSoundToggle"
+    static let settingsGameStartSoundToggle = "settings.gameStartSoundToggle"
+    static let settingsGameEndSoundToggle   = "settings.gameEndSoundToggle"
     
     // MARK: View Options (7 Aug 2026)
     

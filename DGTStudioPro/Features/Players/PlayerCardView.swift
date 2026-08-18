@@ -64,22 +64,29 @@ struct PlayerStatsGrid: View {
     let stats: PlayerStats
     let rating: Glicko1.Rating?
 
+    /// **Four columns, two rows** (by request, 18 Aug 2026). It was three columns and three rows,
+    /// which left the last row half empty with the two dates stranded under a gap. Eight stats
+    /// divide into 4 × 2 exactly, so nothing is stranded and the dates land in the final two cells
+    /// - the position they were asked for and, as the widest values, the one that lets them run to
+    /// the trailing edge instead of pushing a neighbour around.
+    ///
+    /// The cost is width: this is now four columns wide wherever it appears, and it appears in
+    /// four places (gallery card, columns detail pane, matchup window, profile window). The two
+    /// narrow hosts are the ones to check.
     var body: some View {
         Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 6) {
             GridRow {
                 PlayerStatCell("Games", "\(stats.games)")
                 PlayerStatCell("Record", "\(stats.wins)–\(stats.draws)–\(stats.losses)")
                 PlayerStatCell("Win Rate", stats.winRate.formatted(.percent.precision(.fractionLength(0))))
+                PlayerStatCell("Rating", rating?.displaySummary ?? RosterSummary.displayUnknown)
             }
             GridRow {
-                PlayerStatCell("Rating", rating?.displaySummary ?? RosterSummary.displayUnknown)
                 PlayerStatCell(
                     "Uncertainty",
                     rating.map { "±\(Int($0.deviation.rounded()))" } ?? RosterSummary.displayUnknown
                 )
                 PlayerStatCell("Mates", "\(stats.matesDelivered)")
-            }
-            GridRow {
                 PlayerStatCell("First Played", RosterSummary.displayDate(stats.firstPlayed))
                 PlayerStatCell("Last Played", RosterSummary.displayDate(stats.lastPlayed))
             }

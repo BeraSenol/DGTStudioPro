@@ -31,10 +31,13 @@ struct IconGridView<Item: Identifiable, Card: View>: View {
     /// "playersIconsGrid") so a space never resolves across a destination switch.
     let space: String
 
-    /// `@escaping` is absent from the inner `() -> Void` deliberately - it is only spellable in
-    /// function *parameter* position, and a closure parameter of a function **type** is escaping
-    /// already.
-    private let card: (Item, Bool, () -> Void) -> Card
+    /// **The inner `@escaping` is load-bearing.** A closure parameter is non-escaping by default
+    /// wherever it appears - inside a function *type* just as much as in a declaration's parameter
+    /// list - and every card stores its `onSelect` rather than calling it inline, so a non-escaping
+    /// `select` cannot be handed over ("passing non-escaping parameter to function expecting an
+    /// '@escaping' closure"). It was briefly dropped on 18 Aug 2026 on the theory that the
+    /// attribute is unspellable in nested position; it is spellable, and it is required.
+    private let card: (Item, Bool, @escaping () -> Void) -> Card
 
     // MARK: Private Properties
 
@@ -56,7 +59,7 @@ struct IconGridView<Item: Identifiable, Card: View>: View {
         items: [Item],
         selection: Binding<Set<Item.ID>>,
         space: String,
-        @ViewBuilder card: @escaping (Item, Bool, () -> Void) -> Card
+        @ViewBuilder card: @escaping (Item, Bool, @escaping () -> Void) -> Card
     ) {
         self.items = items
         self._selection = selection

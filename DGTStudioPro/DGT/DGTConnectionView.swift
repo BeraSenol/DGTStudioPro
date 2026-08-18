@@ -42,7 +42,7 @@ struct DGTConnectionView: View {
         // an unbounded greedy child reporting a huge ideal is the giant-floating-window bug the
         // New Game dialog shipped with. 380 fits the connected panel with the full banner; the
         // sparser panels centre in it.
-        .frame(width: 420)
+        .frame(width: 360)
         .frame(minHeight: 320, idealHeight: 380, maxHeight: 700)
         .onAppear {
             // Attempt on sight - unless live or mid-reconnect: a player opening this mid-loop wants to see

@@ -208,15 +208,27 @@ struct AnalysisGlyphStateTests {
         #expect(!AnalysisGlyph.badgeName(.unanalyzed).contains("gear"))
     }
 
-    /// The badgeless state takes no tint, and the two verdicts do. Asserted as
-    /// nil-ness rather than against `.red` / `.green` so the colours stay a
-    /// design choice; what is pinned is that a running pass reports no verdict,
-    /// which is what `AnalysisLabel` branches on to leave it unstyled.
-    @Test("Only the two verdict states carry a tint")
-    func onlyVerdictsAreTinted() {
-        #expect(AnalysisGlyph.tint(.analyzing) == nil)
-        #expect(AnalysisGlyph.tint(.unanalyzed) != nil)
-        #expect(AnalysisGlyph.tint(.analyzed) != nil)
+    /// **Every state carries a tint**, running included - the gear is gray by request.
+    ///
+    /// This test used to read `tint(.analyzing) == nil`, and it was right about the design it was
+    /// written for: the tint was optional, and the icon views branched on the nil to decide whether
+    /// to draw the *spinning* gear rather than a still one. Giving `.analyzing` a colour made every
+    /// arm non-nil, which quietly made both of those `else` branches unreachable and stopped the
+    /// gear turning while it still looked correct.
+    ///
+    /// So the failure was load-bearing, and the fix was not to flip the assertion: `tint` is now
+    /// non-optional and `isRunning` answers the render question by name. The pair below is what
+    /// stops the two questions collapsing back into one value.
+    @Test("Every state carries a tint, and only the running one is running")
+    func everyStateIsTintedAndRunningIsSeparate() {
+        // Distinct colours, asserted as distinctness rather than against `.red` / `.gray` /
+        // `.green`, so the palette stays a design choice while "three states look different" does not.
+        let tints = [AnalysisGlyph.State.unanalyzed, .analyzing, .analyzed].map(AnalysisGlyph.tint)
+        #expect(Set(tints).count == tints.count)
+
+        #expect(AnalysisGlyph.isRunning(.analyzing))
+        #expect(!AnalysisGlyph.isRunning(.unanalyzed))
+        #expect(!AnalysisGlyph.isRunning(.analyzed))
     }
 
     @Test("Every state has its own action title")

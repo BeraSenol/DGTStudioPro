@@ -81,22 +81,31 @@ struct DGTStudioProApp: App {
             session?.liveGame != nil
         }
         
-        // The illegal-move cue, fired once per desync entry. `NSSound.beep` respects the user's
-        // alert sound (AppKit - SwiftUI has no sound API). The `?? true` is the Settings twin default.
-        session.onDesync = {
-            let enabled = UserDefaults.standard
-                .object(forKey: StorageKeys.illegalMoveSoundEnabled) as? Bool ?? true
-            if enabled { NSSound.beep() }
-        }
-
-        // The live move cue. Note the shape difference from the line above and why it is an
-        // improvement rather than an inconsistency: that closure re-reads `UserDefaults` and states
-        // its own default, which is the twin `StorageKeys` documents; this one asks an owning type,
-        // so the four defaults are stated once, in `BoardSounds.init`, and Settings and playback
-        // cannot disagree about them.
+        // Every cue now goes through one owning type. The `onDesync` closure below used to re-read
+        // `UserDefaults` and state its own `?? true` - the twin `StorageKeys` documented - and used
+        // to ring `NSSound.beep()`. Both are gone: defaults are stated once, in `BoardSounds.init`,
+        // and Settings and playback cannot disagree about them.
         let sounds = BoardSounds()
+
         session.onMoveCommitted = { cue in
             sounds.play(cue)
+        }
+
+        // Fired once per desync *entry*, not per scan - the session owns that edge, which is what
+        // keeps a board left in a wrong position from cueing repeatedly.
+        session.onDesync = {
+            sounds.play(.illegal)
+        }
+
+        session.onGameStarted = {
+            sounds.play(.gameStart)
+        }
+
+        // Deliberately not `onGameFinished`: that one archives and can throw, and a cue that fires
+        // only when a write succeeds is a cue that reports the wrong thing. This is the game
+        // reaching a result, which is what the reader is listening for.
+        session.onGameEnded = {
+            sounds.play(.gameEnd)
         }
 
         // M4 draft persistence: session owns when, store owns the file. Loading here is what turns a

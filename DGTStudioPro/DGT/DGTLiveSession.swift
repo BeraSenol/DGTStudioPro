@@ -136,6 +136,17 @@ final class DGTLiveSession {
     /// desync entry: never on the manual-result exit, never on recomputation.
     @ObservationIgnored var onDesync: (() -> Void)?
 
+    /// Game-start cue. Fired from `startNewGame` past the archive guard, so a refused start - the
+    /// one where the previous game has not been saved yet - stays silent. A cue for a game that
+    /// did not begin is `onMoveCommitted`'s complaint in a different key.
+    @ObservationIgnored var onGameStarted: (() -> Void)?
+
+    /// Game-end cue. Fired from the `isFinished` transition rather than from a successful archive,
+    /// which is the distinction worth keeping: the reader is listening for the *game* reaching a
+    /// result, and a Library write failing is a banner, not a silence. Fired once - guarded by the
+    /// same `archivedPGN == nil` check that stops the archive repeating.
+    @ObservationIgnored var onGameEnded: (() -> Void)?
+
     /// Move cue. Fired from the `.move` settle arm *after* `commit` returns true, so it can
     /// never sound for a move the game refused - the F5 guard's own argument, applied to audio:
     /// a cue for a commit that did not happen is a lie you hear before you see.
@@ -392,6 +403,10 @@ final class DGTLiveSession {
         // the roster-only snapshot claims the file for the new game.
         pendingDraft = nil
         saveDraft()
+
+        // Last, so the cue follows a start that fully happened. The `archiveFailed` guard at the
+        // top of this method is the one that matters: a refused start makes no sound.
+        onGameStarted?()
     }
     
     /// Dismisses the offer (no re-prompt until the board leaves and returns to the start).
@@ -478,7 +493,11 @@ final class DGTLiveSession {
         guard game.isFinished, game.result != .ongoing else { return }
         // Already archived (stray repeat call) - nothing to do.
         guard archivedPGN == nil else { return }
-        
+
+        // Before the archive, not after: this reports the game reaching a result, and it should
+        // sound the same whether the Library write goes on to succeed or throw.
+        onGameEnded?()
+
         guard let onGameFinished else {
             saveDraft()
             return
