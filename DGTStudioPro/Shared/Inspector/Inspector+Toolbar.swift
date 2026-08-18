@@ -29,26 +29,8 @@ struct InspectorToggleContent: ToolbarContent {
     }
 }
 
-/// The identifier is **required, no default** - a shared fallback would hand two toolbars one
-/// identifier the moment a host forgot. The leading `ToolbarSpacer` is contract: modifiers
-/// render in reverse application order, so applying this last puts the toggle trailing-most.
-struct InspectorToggleModifier: ViewModifier {
-    @Binding var isPresented: Bool
-    let identifier: String
-
-    func body(content: Content) -> some View {
-        content.toolbar {
-            ToolbarSpacer()
-            InspectorToggleContent(isPresented: $isPresented, identifier: identifier)
-        }
-    }
-}
-
-extension View {
-    func inspectorToggle(
-        isPresented: Binding<Bool>,
-        identifier: String
-    ) -> some View {
-        modifier(InspectorToggleModifier(isPresented: isPresented, identifier: identifier))
-    }
-}
+// (`InspectorToggleModifier` and `View.inspectorToggle(isPresented:identifier:)` stood here until
+// 18 Aug 2026 - a `ViewModifier` wrapper that applied its own `.toolbar` carrying a `ToolbarSpacer`
+// and the content above. Every host composes `InspectorToggleContent` into its own builder instead,
+// which is what the type's own note says the arrangement is; the wrapper had no caller. Removed by
+// dead-code scan, not by a change of design.)

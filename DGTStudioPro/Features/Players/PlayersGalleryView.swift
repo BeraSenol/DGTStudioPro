@@ -131,8 +131,9 @@ struct PlayersGalleryView: View {
     // (`profileBand` stood here until 17 Aug 2026 - Recent Form / By Colour / Opponents,
     // replaced by request with the matchup band above. The three panels briefly moved to the
     // matchup window's Profile tab and were deleted from there the same evening, also by
-    // request - they now stand in `PlayerProfilePanels` with no consumer, and whether they
-    // retire is a decision for a calmer day, not this edit's rider.)
+    // request, then stood in `PlayerProfilePanels` with no consumer for a day. The calmer day
+    // came on 18 Aug 2026: a dead-code scan found the file reachable only from its own previews,
+    // and it was deleted whole. Git history holds the three panels if the band is ever wanted back.)
 }
 
 // MARK: Previews
