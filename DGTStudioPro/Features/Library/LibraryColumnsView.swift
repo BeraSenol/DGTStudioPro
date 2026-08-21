@@ -32,6 +32,17 @@ struct LibraryColumnsView: View {
     /// Ambient rather than a parameter - argument at the environment value's declaration.
     @Environment(\.analysisRunningGameID) private var runningAnalysisID
 
+    /// The serialized movetext, memoized on the game's own identity-of-content value
+    /// (21 Aug 2026). `PGN.pgnText` runs the whole game back through `PGNSerializer`, and it sat
+    /// bare in `gameDetail`'s body - so every render of the detail pane rebuilt the entire
+    /// document string *and* re-laid out a large selectable monospaced text. The census note that
+    /// stood here ("one game per render") was the right observation with the wrong conclusion:
+    /// one game is bounded, but the renders are not.
+    ///
+    /// Synchronous memo rather than `.task(id:)`: the work is a string build, and hopping it off
+    /// the render pass would trade a real cost for an empty first frame.
+    @State private var pgnTextCache = CollectionFoldCache<String, String>()
+
     // MARK: Computed Properties
 
     /// Single selection or nil - the detail pane details one thing; multi gets a counting
@@ -144,14 +155,15 @@ struct LibraryColumnsView: View {
 
     /// Raw PGN above, facts below. The preview board is gone - it was the squeeze: a view *asking*
     /// for space rather than taking what is given. `PGN.pgnText` is the inspector's same accessor,
-    /// byte-identical to Export; one game per render, censused.
+    /// byte-identical to Export; read through `pgnTextCache` so a re-render is not a re-serialize.
     private func gameDetail(_ game: PGN) -> some View {
-        VStack(spacing: 0) {
+        let pgnText = pgnTextCache.value(for: game.contentHash) { game.pgnText }
+        return VStack(spacing: 0) {
             ScrollView {
                 // A centred, width-capped container (17 Aug 2026, by request) - full-pane
                 // monospaced text put sixty-character lines against a very wide margin. The
                 // inner frame caps the column; the outer greedy frame centres the cap.
-                Text(game.pgnText)
+                Text(pgnText)
                     .font(.system(.body, design: .monospaced))
                     .textSelection(.enabled)
                     .lineLimit(nil)

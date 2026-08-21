@@ -30,14 +30,42 @@ struct PlayerMatchupView: View {
     /// the whole point is that the reader can point it somewhere else.
     @State private var opponentKey: String?
 
+    /// The head-to-head fold, memoized (21 Aug 2026). `PlayerStats.opponents` opens by sorting the
+    /// **entire** game history, and `body` reads `opponents` twice - once for the picker's
+    /// `ForEach`, once through `opponent` - so the plain computed property sorted the whole history
+    /// twice on every render of this view, with a third sort in `seedOpponent`.
+    ///
+    /// The destinations' own `CollectionFoldCache` box at one-view scale, rather than the simpler
+    /// `@State` + `onAppear` seed: the hosts do apply `.id(playerKey)`, so a subject change would
+    /// re-seed, but `records` can also move underneath a window that stays open (an import, an
+    /// edit), and a seeded array would go quietly stale. Keying on the records costs one array
+    /// compare of `Hashable` values against an `O(n log n)` sort - the same trade the Library's
+    /// fold key already makes.
+    @State private var opponentsCache =
+        CollectionFoldCache<OpponentsKey, [PlayerStats.Opponent]>()
+
+    /// The fold's inputs as one value. `records` is `[GameRecord]` and `GameRecord` is `Hashable`,
+    /// so the whole array participates - a missed input here is a stale opponent list, which is
+    /// the only failure mode a memo key has.
+    private struct OpponentsKey: Equatable {
+        let playerKey: String
+        let records: [GameRecord]
+    }
+
     private var opponents: [PlayerStats.Opponent] {
-        PlayerStats.opponents(of: playerKey, in: records)
+        opponentsCache.value(for: OpponentsKey(playerKey: playerKey, records: records)) {
+            PlayerStats.opponents(of: playerKey, in: records)
+        }
     }
 
     /// The other side of the player's chronologically last game - "the last match up".
     /// Decided-or-not deliberately: the most recent opponent is who you *played*, even if
     /// that game is still ongoing; the score below only ever counts decided games.
-    private var mostRecentOpponentKey: String? {
+    ///
+    /// **A function, not a property** (21 Aug 2026): it sorts the whole history and its one caller
+    /// is `seedOpponent`, which runs on appearance. As a computed property it read like something
+    /// `body` could reach for; the call parentheses are the cheapest way to say it is not.
+    private func mostRecentOpponentKey() -> String? {
         records
             .filter { $0.white?.key == playerKey || $0.black?.key == playerKey }
             .sorted(by: GameRecord.chronologicalOrder)
@@ -95,7 +123,7 @@ struct PlayerMatchupView: View {
     /// in the picker. (Found 18 Aug 2026 while rebuilding this view; the fallback is the fix.)
     private func seedOpponent() {
         guard opponentKey == nil else { return }
-        let recent = mostRecentOpponentKey
+        let recent = mostRecentOpponentKey()
         opponentKey = opponents.contains { $0.key == recent } ? recent : opponents.first?.key
     }
 

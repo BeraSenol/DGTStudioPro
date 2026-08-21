@@ -333,7 +333,12 @@ struct LibraryDestination: View {
     private var coreContent: some View {
         // One walk per render - consumers below read these locals; none re-runs the filter.
         let narrowed = narrowedPairs
-        let games = narrowed.map { $0.game }.sorted(using: sortOrder.wrappedValue)
+        // **`filteredGames`, not a second sort** (21 Aug 2026): `NarrowResult.sorted` already holds
+        // exactly `pairs.map(\.game).sorted(using: sortOrder)`, memoized under the same `NarrowKey`.
+        // Spelling the expression again here bypassed the memo and paid the O(n log n) - and the ECO
+        // comparator's per-comparison rehydration - a second time, every render. The memo's whole
+        // reason for existing was that this sort was the last unconditional per-render sort.
+        let games = filteredGames
         let unanalyzedCount = narrowed.count { !$0.record.hasAnalysis }
         // Row badges: membership built once per render off the same records - one spelling of "analyzed?".
         let analyzedIDs = Set(

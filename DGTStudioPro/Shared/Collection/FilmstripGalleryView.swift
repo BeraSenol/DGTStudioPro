@@ -125,7 +125,13 @@ struct FilmstripGalleryView<Item: Identifiable, Preview: View, Card: View>: View
     private var filmstrip: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: metrics.interitemSpacing) {
+                // **Lazy, like the grids** (21 Aug 2026): a plain `HStack` inside a `ScrollView`
+                // materialises every child, so a 111-game strip built 111 cards to show eight.
+                // `IconGridView` had `LazyVGrid` from the start; the filmstrips were the miss.
+                // `scrollTo` still reaches an unmaterialised card - `ScrollViewReader` resolves
+                // the id against the lazy stack's own bookkeeping, which is why the sync below
+                // needed no change.
+                LazyHStack(spacing: metrics.interitemSpacing) {
                     ForEach(items) { item in
                         card(item, selection.contains(item.id), { select(item) })
                             .frame(width: metrics.cardWidth)

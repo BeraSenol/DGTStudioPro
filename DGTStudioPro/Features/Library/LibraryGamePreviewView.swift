@@ -87,8 +87,12 @@ struct LibraryGamePreviewView: View {
                             // end on unscored plies, and `.last` would fold those to an even
                             // bar. This preview shows the final position, so the final score
                             // is the honest reading.
+                            // `last(where:)`, not `compactMap { $0 }.last`: the old spelling built
+                            // a whole filtered array to read one element of it, per render, per
+                            // card. The `?? nil` collapses `Evaluation??` - `last(where:)` on an
+                            // array of optionals hands back an optional *element*.
                             reading: EvaluationBarReading(
-                                game.evaluations.compactMap { $0 }.last
+                                game.evaluations.last(where: { $0 != nil }) ?? nil
                             ),
                             perspective: .white,
                             style: boardStyle
@@ -120,7 +124,11 @@ struct LibraryGamePreviewView: View {
         }
         // The walk hops off the main actor (`parseSAN` generates every legal move per ply). The
         // cancellation check is load-bearing - `Task.detached` is not auto-cancelled by `.task`'s exit.
-        .task(id: game?.moves) {
+        // Keyed on `contentHash`, not `moves` (21 Aug 2026): a `[String]` as task identity makes
+        // SwiftUI compare the whole movetext element-by-element on every render to decide whether
+        // the task should restart. `contentHash` is a single `String` compare and is already the
+        // app's identity-of-content value - if the movetext changed, the hash changed.
+        .task(id: game?.contentHash) {
             guard let moves = game?.moves else {
                 preview = nil
                 return

@@ -49,13 +49,33 @@ struct MoveHistoryView: View {
         .scrollsToCurrentMove(currentMoveIndex)
     }
     
+    /// **Lazy only where laziness can work** (21 Aug 2026). A `LazyVStack` needs a scrolling
+    /// viewport to clip against; inside a host `List`'s cell it is handed an unbounded height
+    /// proposal and materialises every row regardless - so the embedded form was paying a lazy
+    /// container's indirection for a claim it could not honour, and a 90-ply game built all
+    /// forty-five rows into one list cell either way. The self-scrolling `pane` keeps
+    /// `LazyVStack`, where the viewport exists and the laziness is real.
+    ///
+    /// The other candidate - giving the embedded form its own bounded-height `ScrollView` - stays
+    /// rejected for the reason `scrollsIndependently` already states above: a nested scroll view is
+    /// a fixed-size box inside an infinite proposal. Matching the container to the proposal is the
+    /// honest half of that decision.
+    @ViewBuilder
     private var moveRows: some View {
-        LazyVStack(spacing: 0) {
-            ForEach(0 ..< pairCount, id: \.self) { pairIndex in
-                movePairRow(pairIndex: pairIndex)
-            }
+        if scrollsIndependently {
+            LazyVStack(spacing: 0) { pairRows }
+                .padding(.vertical, 4)
+        } else {
+            VStack(spacing: 0) { pairRows }
+                .padding(.vertical, 4)
         }
-        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private var pairRows: some View {
+        ForEach(0 ..< pairCount, id: \.self) { pairIndex in
+            movePairRow(pairIndex: pairIndex)
+        }
     }
     
     private func movePairRow(pairIndex: Int) -> some View {

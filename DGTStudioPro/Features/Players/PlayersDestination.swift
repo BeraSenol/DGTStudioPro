@@ -117,6 +117,20 @@ struct PlayersDestination: View {
 
     @State private var displayCache = CollectionFoldCache<DisplayKey, Display>()
 
+    /// The selected player's games, keyed and cached (21 Aug 2026). A **separate** box rather than
+    /// a field on `DisplayKey`: that key's completeness is pinned by its own suite, and widening it
+    /// would re-fold the whole ladder every time the selection moved - which is the opposite of
+    /// what this needs. Ranking and selection change for different reasons and deserve different
+    /// keys.
+    @State private var selectedGamesCache =
+        CollectionFoldCache<SelectionKey, [PGN]>()
+
+    /// Content plus the selection - the two things the recent-games walk reads.
+    struct SelectionKey: Equatable {
+        let content: CollectionFoldKey
+        let keys: Set<String>
+    }
+
     // MARK: Search (2 Aug 2026)
     @State private var searchText = ""
     /// Rated-ness as chips. Was `.searchScopes`, which only existed while the field was focused -
@@ -139,18 +153,29 @@ struct PlayersDestination: View {
 
     // MARK: Derived Data
     // `records` / `index` / `histories` fold once in `body` and thread down (`index` used to be
-    // re-derived three times a render). `selectedGames` stays computed: it reads one player's games.
+    // re-derived three times a render). `selectedGames` joined them on 21 Aug 2026.
 
     /// The selected player's games, newest first. Matching goes through the resolved link - never raw
     /// tags. Single-selection only.
-    private var selectedGames: [PGN] {
-        guard selectedKeys.count == 1, let selectedKey = selectedKeys.first else { return [] }
-        return games
-            .filter {
-                $0.whitePlayer?.normalizedName == selectedKey
-                || $0.blackPlayer?.normalizedName == selectedKey
-            }
-            .sorted { $0.effectiveDate > $1.effectiveDate }
+    ///
+    /// **Memoized and threaded, not computed twice** (21 Aug 2026). The old computed property was
+    /// excused from the fold as "it reads one player's games" - but it read one player's games *by
+    /// filtering all of them*, faulting two SwiftData relationships per game and then sorting, and
+    /// `body` read it twice (the inspector's `recentGames` and the columns mode's). So the whole
+    /// Library was walked and sorted twice per render whenever exactly one player was selected.
+    /// Now it folds under `SelectionKey` and travels down as a value.
+    private func selectedGames(content: CollectionFoldKey) -> [PGN] {
+        selectedGamesCache.value(
+            for: SelectionKey(content: content, keys: selectedKeys)
+        ) {
+            guard selectedKeys.count == 1, let selectedKey = selectedKeys.first else { return [] }
+            return games
+                .filter {
+                    $0.whitePlayer?.normalizedName == selectedKey
+                    || $0.blackPlayer?.normalizedName == selectedKey
+                }
+                .sorted { $0.effectiveDate > $1.effectiveDate }
+        }
     }
 
     // MARK: Derived Data
@@ -232,7 +257,15 @@ struct PlayersDestination: View {
                     (record.wins, record.draws, record.losses))
         }()
 
-        return coreContent(players: searched, history: history, records: records)
+        // One walk per render, threaded to both consumers - it was read twice.
+        let recentGames = selectedGames(content: contentKey)
+
+        return coreContent(
+            players: searched,
+            history: history,
+            records: records,
+            recentGames: recentGames
+        )
             .navigationTitle("Players")
             .navigationSubtitle(
                 DestinationSubtitle.players(
@@ -248,7 +281,7 @@ struct PlayersDestination: View {
                 PlayersInspectorView(
                     ranked: selected,
                     history: history,
-                    recentGames: selectedGames,
+                    recentGames: recentGames,
                     selectionCount: selectedKeys.count
                 )
                 // Pinned to the app-wide width - `InspectorColumn.width` owns the number and
@@ -328,7 +361,8 @@ struct PlayersDestination: View {
     private func coreContent(
         players: [RankedPlayer],
         history: [Glicko1.Sample],
-        records: [GameRecord]
+        records: [GameRecord],
+        recentGames: [PGN]
     ) -> some View {
         // Nil when there is nobody to select, so the system menu item disables itself.
         let selectAllAction: (() -> Void)? = players.isEmpty
@@ -362,7 +396,7 @@ struct PlayersDestination: View {
                     // Flat list + detail (Finder-columns redesign); the list follows `players`' display order.
                     PlayersColumnsView(players: players,
                                        selectedKeys: $selectedKeys,
-                                       recentGames: selectedGames,
+                                       recentGames: recentGames,
                                        onShowInLibrary: showInLibrary,
                                        sortOrder: sortOrder)
                 case .gallery:

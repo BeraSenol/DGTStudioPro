@@ -142,6 +142,21 @@ final class PGN: Identifiable {
         evaluations.contains { $0 != nil }
     }
 
+    /// The evaluation curve as White win probabilities, an unscored ply reading 50/50 - the shape
+    /// the graph, the graph window and the inspector all want. **One spelling** (21 Aug 2026): the
+    /// expression `evaluations.map { $0?.whiteWinProbability ?? 0.5 }` stood verbatim at three call
+    /// sites, which is the twin-read-site pattern with a `??` in it - a fourth surface would have
+    /// been a fourth chance to pick a different fallback than the bar's.
+    ///
+    /// Deliberately **not** memoized, and the reason is worth stating so it is not re-litigated:
+    /// the only cost is one `[Double]` allocation per render of a surface that is showing this
+    /// game's graph, and the only writer is `GameAnalysisDriver`'s per-ply store - so the renders
+    /// that pay it are exactly the renders that need the new value. A memo here would cache a
+    /// value whose invalidation signal is the array it is caching.
+    var winProbabilityCurve: [Double] {
+        evaluations.map { $0?.whiteWinProbability ?? 0.5 }
+    }
+
     // MARK: Instance Methods
     /// Evaluation after the move at `ply`, or nil - safe against both invariant shapes.
     func evaluation(atPly ply: Int) -> Evaluation? {

@@ -100,9 +100,7 @@ private struct LoadedSection: View {
         // is the fold-proof replacement.
         CollapsibleSection(.evaluation, title: "Evaluation") {
             EvaluationGraphView(
-                evaluations: pgn.evaluations.map {
-                    $0?.whiteWinProbability ?? 0.5
-                },
+                evaluations: pgn.winProbabilityCurve,
                 currentMoveIndex: nil,
                 style: boardStyle
             )

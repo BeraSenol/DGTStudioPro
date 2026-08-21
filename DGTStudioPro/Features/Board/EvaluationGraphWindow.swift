@@ -71,7 +71,7 @@ struct EvaluationGraphWindow: View {
         EvaluationGraphContent(
             moves: pgn.moves,
             evaluations: pgn.evaluations,
-            curve: pgn.evaluations.map { $0?.whiteWinProbability ?? 0.5 },
+            curve: pgn.winProbabilityCurve,
             style: boardStyle
         )
     }

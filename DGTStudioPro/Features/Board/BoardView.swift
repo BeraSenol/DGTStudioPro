@@ -44,8 +44,9 @@ struct BoardView: View {
             let layout = layout(for: totalSide)
             
             ZStack {
-                boardFrame(size: totalSide, frameThickness: layout.squareSize)
-                
+                BoardFrame(size: totalSide, frameThickness: layout.squareSize, style: style)
+                    .equatable()
+
                 VStack(spacing: 0) {
                     fileStrip(layout: layout, isTop: true)
                     
@@ -73,41 +74,6 @@ struct BoardView: View {
             borderInset: borderInset,
             innerSquareSize: innerSquareSize
         )
-    }
-    
-    private func boardFrame(size: CGFloat, frameThickness: CGFloat) -> some View {
-        let trapezoid = Path { path in
-            path.move(to: CGPoint(x: 0, y: 0))
-            path.addLine(to: CGPoint(x: size, y: 0))
-            path.addLine(to: CGPoint(x: size - frameThickness, y: frameThickness))
-            path.addLine(to: CGPoint(x: frameThickness, y: frameThickness))
-            path.closeSubpath()
-        }
-        
-        return ZStack {
-            Rectangle()
-                .fill(style.dark)
-                .frame(width: size, height: size)
-            
-            ForEach(0..<4, id: \.self) { side in
-                ZStack(alignment: .top) {
-                    trapezoid.fill(style.dark)
-                    
-                    if style != .leather {
-                        Image("WoodGrainFine")
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: size, height: frameThickness)
-                            .rotationEffect(.degrees(90))
-                            .blendMode(.overlay)
-                            .opacity(0.25)
-                    }
-                }
-                .frame(width: size, height: size)
-                .clipShape(trapezoid)
-                .rotationEffect(.degrees(Double(side) * 90), anchor: .center)
-            }
-        }
     }
     
     private func fileStrip(layout: Layout, isTop: Bool) -> some View {
@@ -189,16 +155,7 @@ struct BoardView: View {
                 perspective: perspective
             )
         }
-        .overlay {
-            if style != .leather {
-                Image("WoodGrainCoarse")
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .blendMode(.overlay)
-                    .opacity(0.25)
-                    .allowsHitTesting(false)
-            }
-        }
+        .overlay { BoardGrainOverlay(style: style).equatable() }
         .clipped()
         .padding(layout.borderInset)
         .overlay { gridBorder(squareSize: layout.squareSize) }
@@ -280,6 +237,81 @@ private struct Layout {
     let squareSize: CGFloat
     let borderInset: CGFloat
     let innerSquareSize: CGFloat
+}
+
+/// The four mitred frame boards, as an `Equatable` view (21 Aug 2026).
+///
+/// **Extracted rather than `.drawingGroup()`-ed**, deliberately. The chrome is a pure function of
+/// `(size, frameThickness, style)` and nothing else - it does not know about pieces, highlights,
+/// hints or the last move - yet as an inline `ZStack` in `BoardView.body` it was re-declared and
+/// re-composited on every board redraw, which during live play is every settle. Four
+/// `.blendMode(.overlay)` layers is four offscreen composites; the cheapest of them is the one
+/// that never runs.
+///
+/// `.drawingGroup()` was the other candidate and is **wrong here**: `.blendMode(.overlay)` blends
+/// against what lies beneath it, and rasterising these layers into their own offscreen group would
+/// isolate them from the board face below - the grain would composite against transparency and the
+/// wood would change appearance. `.equatable()` skips the work without changing the picture, which
+/// is the only kind of performance fix worth making to a rendering path.
+private struct BoardFrame: View, Equatable {
+
+    let size: CGFloat
+    let frameThickness: CGFloat
+    let style: BoardStyle
+
+    var body: some View {
+        let trapezoid = Path { path in
+            path.move(to: CGPoint(x: 0, y: 0))
+            path.addLine(to: CGPoint(x: size, y: 0))
+            path.addLine(to: CGPoint(x: size - frameThickness, y: frameThickness))
+            path.addLine(to: CGPoint(x: frameThickness, y: frameThickness))
+            path.closeSubpath()
+        }
+
+        return ZStack {
+            Rectangle()
+                .fill(style.dark)
+                .frame(width: size, height: size)
+
+            ForEach(0..<4, id: \.self) { side in
+                ZStack(alignment: .top) {
+                    trapezoid.fill(style.dark)
+
+                    if style != .leather {
+                        Image("WoodGrainFine")
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: size, height: frameThickness)
+                            .rotationEffect(.degrees(90))
+                            .blendMode(.overlay)
+                            .opacity(0.25)
+                    }
+                }
+                .frame(width: size, height: size)
+                .clipShape(trapezoid)
+                .rotationEffect(.degrees(Double(side) * 90), anchor: .center)
+            }
+        }
+    }
+}
+
+/// The fifth grain layer - the coarse pass over the playing surface. Same argument as `BoardFrame`:
+/// a pure function of `style`, previously re-declared per redraw inside `squareGrid`'s `.overlay`.
+/// Leather draws nothing, which is why the empty arm is a state and not an absence.
+private struct BoardGrainOverlay: View, Equatable {
+
+    let style: BoardStyle
+
+    var body: some View {
+        if style != .leather {
+            Image("WoodGrainCoarse")
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .blendMode(.overlay)
+                .opacity(0.25)
+                .allowsHitTesting(false)
+        }
+    }
 }
 
 // MARK: Previews

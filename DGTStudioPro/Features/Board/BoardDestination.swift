@@ -49,6 +49,14 @@ struct BoardDestination: View {
     /// view has. A trigger, not a stored request - the subject is derivable here (`getInfoSubject`).
     @State private var getInfoRequested = false
 
+    /// The Library ordinal the live game will carry, cached (21 Aug 2026). **Was a computed
+    /// property**, which put a `PGNStore` construction and a `FetchDescriptor` execution inside
+    /// `liveInspector`'s render path - and `.inspector`'s content builder runs whether the panel
+    /// is open or closed, so the fetch fired on every unrelated invalidation of this view, which
+    /// during live play means every board settle. The value only moves when a game archives, so
+    /// it is refreshed on arrival and on `session.archivedPGN` instead.
+    @State private var prospectiveGameNumber: Int?
+
     /// Registry for the archive sheet's seat pickers. Queried *here*: `EditGameInfoSheet` is
     /// container-free so its previews build - a `@Query` inside it would trap the canvas.
     @Query(sort: \Player.name) private var knownPlayers: [Player]
@@ -128,6 +136,7 @@ struct BoardDestination: View {
         }
         .onAppear {
             loadIfNeeded()
+            refreshProspectiveGameNumber()
             // A pending offer raised while no Board destination was on screen - `onChange` never
             // saw a change, so arrival is the moment to present it.
             if session.shouldOfferNewGame && tabState.boardPGN == nil {
@@ -135,6 +144,12 @@ struct BoardDestination: View {
             }
         }
         .onChange(of: loadedGameID) { _, _ in loadIfNeeded() }
+        // The ordinal's only mover: an archive stamps max+1, so the *next* game's number is one
+        // higher. Keyed on the archived row's identity rather than the row - a `PGN` is a reference
+        // type and `onChange` needs a value that differs.
+        .onChange(of: session.archivedPGN?.persistentModelID) { _, _ in
+            refreshProspectiveGameNumber()
+        }
     }
     
     // MARK: Toolbar
@@ -298,9 +313,7 @@ struct BoardDestination: View {
         .inspector(isPresented: $tabState.boardInspectorPresented) {
             BoardInspectorView(
                 pgn: pgn,
-                evaluations: pgn.evaluations.map {
-                    $0?.whiteWinProbability ?? 0.5
-                },
+                evaluations: pgn.winProbabilityCurve,
                 moves: pgn.moves,
                 currentMoveIndex: game.currentPly > 0 ? game.currentPly - 1 : nil,
                 style: boardStyle,
@@ -462,14 +475,18 @@ struct BoardDestination: View {
         }
     }
 
-    /// "Recording 112." - the number the game will carry in the Library, D58′'s own max+1
-    /// (via `PGNStore.highestLibraryIndex`, predicated + limit 1 - not a fetch-all), NOT the
+    /// Recomputes "Recording 112." - the number the game will carry in the Library, D58′'s own
+    /// max+1 (via `PGNStore.highestLibraryIndex`, predicated + limit 1 - not a fetch-all), NOT the
     /// roster's round (17 Aug 2026, by request: round 12 against Lorenzo made the headline
     /// read "Recording 12." while 111 games sat in the Library). Round stays a roster fact
     /// everywhere else - the New Game prefill, the tags, export.
-    private var prospectiveGameNumber: Int? {
+    ///
+    /// **Called, not computed** (21 Aug 2026): the two callers are arrival and an archive, which
+    /// are the only two moments the answer can change. See `prospectiveGameNumber`'s own note for
+    /// why a computed property was the wrong shape - a fetch in a render path, run per settle.
+    private func refreshProspectiveGameNumber() {
         let highest = (try? PGNStore(modelContext: modelContext).highestLibraryIndex()) ?? nil
-        return (highest ?? 0) + 1
+        prospectiveGameNumber = (highest ?? 0) + 1
     }
 
     /// What ⌘I would open, or nil. Review before live, matching `body`'s branch. The live case
@@ -563,7 +580,11 @@ struct BoardDestination: View {
                     physical: connection.physicalBoard
                 )
                 : [],
-            liftedGhosts:     liftedGhostPieces
+            // The hoisted `guidance`, not a second read of the computed property (21 Aug 2026).
+            // Cheap either way - `RecoveryGuidance.current` short-circuits on `needsRecovery`, so
+            // outside a desync the second read cost a Bool - but inside one it rebuilt the whole
+            // 64-square fold to answer a question this scope had already answered.
+            liftedGhosts:     liftedGhostPieces(guidance: guidance)
         )
     }
 
@@ -576,10 +597,14 @@ struct BoardDestination: View {
     /// nothing under recovery chrome (two overlay vocabularies on one square contradict).
     /// A capture mid-flight ghosts both lifted pieces; a mid-castle rook ghosts at its origin
     /// and its castling destination alike - one 25% for every ghost, same day's request.
-    private var liftedGhostPieces: [Square: Piece] {
+    ///
+    /// Takes `guidance` rather than reading `recoveryGuidance` again: the one caller has already
+    /// resolved it for the two highlight sets and the hint gate, and the answer cannot differ
+    /// within a render pass.
+    private func liftedGhostPieces(guidance: RecoveryGuidance?) -> [Square: Piece] {
         guard let state = session.liveGame?.currentState,
               !session.awaitingPhysicalSetup,
-              recoveryGuidance == nil else { return [:] }
+              guidance == nil else { return [:] }
         var lifted: [Square: Piece] = [:]
         for square in Square.all {
             let expected = state.position[square]
