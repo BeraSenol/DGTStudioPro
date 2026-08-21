@@ -5,7 +5,7 @@ import SwiftData
 
 /// Transport-level pin - the one defect that lived *between* the pure queue and the engine.
 @MainActor
-@Suite("Analysis Queue Controller - drain race")
+@Suite("Analysis Queue Controller - Drain Race")
 struct AnalysisQueueControllerTests {
 
     // `nonisolated`, load-bearing: `.enabled(if:)` evaluates in a `Sendable` closure outside the

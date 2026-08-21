@@ -44,7 +44,7 @@ struct ECOOpening: Sendable, Hashable {
     }
 }
 
-// MARK: - Classification
+// MARK: Classification
 
 /// Longest-prefix ECO classification. Pure and table-injected - I/O lives in `ECOTable`.
 /// Longest prefix, not first match: the table deliberately carries duplicate transposition rows.
@@ -111,7 +111,7 @@ struct ECOClassifier: Sendable {
     }
 }
 
-// MARK: - String Trimming
+// MARK: String Trimming
 
 /// Space-only trims. Deliberately not Foundation's `trimmingCharacters` - the chess core's one
 /// Foundation import is the SAN layer's `CharacterSet`.

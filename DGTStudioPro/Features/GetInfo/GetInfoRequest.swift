@@ -1,6 +1,6 @@
 import SwiftData
 
-// MARK: - Request
+// MARK: Request
 
 /// One Get Info subject. An enum, and a wrapper - `openWindow(value:)` routes by type, and the
 /// main group claims `PersistentIdentifier`. `.live` carries nothing: a live game has no id

@@ -383,78 +383,10 @@ struct NewLiveGameSheet: View {
     }
 }
 
-// MARK: Edit Details Sheet
-
-/// Edits a running (or archived-pending) game's roster. Staged on a local copy so Cancel
-/// genuinely discards; Save hands the normalized roster back.
-struct EditLiveGameDetailsSheet: View {
-    
-    // MARK: Stored Properties
-    
-    let onSave: (LiveGame.Roster) -> Void
-    
-    // MARK: Environment
-    
-    @Environment(\.dismiss) private var dismiss
-    
-    // MARK: View State
-    
-    @State private var roster: LiveGame.Roster
-    
-    // MARK: Initializer
-    
-    init(
-        initialRoster: LiveGame.Roster,
-        onSave: @escaping (LiveGame.Roster) -> Void
-    ) {
-        self.onSave = onSave
-        // Seed with form-friendly values ("?" → empty).
-        var seed = initialRoster
-        seed.event = formValue(initialRoster.event)
-        seed.site  = formValue(initialRoster.site)
-        seed.white = formValue(initialRoster.white)
-        seed.black = formValue(initialRoster.black)
-        _roster = State(initialValue: seed)
-    }
-    
-    // MARK: Body
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            Text("Edit Game Details")
-                .font(.title2.bold())
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding([.horizontal, .top])
-            
-            LiveGameRosterForm(roster: $roster)
-            
-            Divider()
-            
-            HStack {
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                    .accessibilityIdentifier(AccessibilityID.liveEditDetailsCancel)
-                
-                Spacer()
-                
-                // Gated since 16 Aug 2026 - this Save was the one roster door with *no* guard: the
-                // shared form drew the seat warning here and nothing stopped the gesture, so an
-                // edit could mint by hand what the self-play guard scoped out. Site joins under the same rule.
-                Button("Save") {
-                    onSave(normalized(roster))
-                    dismiss()
-                }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.defaultAction)
-                .disabled(roster.seatsNameOnePlayer || roster.siteViolatesFormat)
-                .accessibilityIdentifier(AccessibilityID.liveEditDetailsSave)
-            }
-            .padding()
-        }
-        .frame(minWidth: 400, idealWidth: 440, minHeight: 360)
-        .accessibilityIdentifier(AccessibilityID.liveEditDetailsSheet)
-    }
-}
+// (`EditLiveGameDetailsSheet` stood here until 21 Aug 2026 - it is `EditLiveGameDetailsSheet.swift`
+// now, matching its sibling `EditGameInfoSheet`, which had always had a file of its own. The
+// placeholder helpers at the top of this file and `LiveGameRosterForm` stayed: three sheets share
+// them, and this is the file that names the form.)
 
 // MARK: Previews
 
@@ -465,19 +397,6 @@ struct EditLiveGameDetailsSheet: View {
         replacesUnfinishedGame: false
     )
     .modelContainer(for: [PGN.self, Player.self], inMemory: true)
-}
-
-#Preview("Edit Details") {
-    EditLiveGameDetailsSheet(
-        initialRoster: .init(
-            event: "Club Night",
-            site: "?",
-            round: 3,
-            white: "Alice",
-            black: "?"
-        ),
-        onSave: { _ in }
-    )
 }
 
 /// The site-format guard's warning arm (16 Aug 2026) - the branch a well-behaved fixture

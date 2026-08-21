@@ -83,7 +83,7 @@ enum SpecialCheckmate: String, Codable, Sendable, CaseIterable {
     }
 }
 
-// MARK: - Context
+// MARK: Context
 
 extension SpecialCheckmate {
 
@@ -104,7 +104,7 @@ extension SpecialCheckmate {
     }
 }
 
-// MARK: - Geometry
+// MARK: Geometry
 
 extension SpecialCheckmate.Context {
 
@@ -149,7 +149,7 @@ extension SpecialCheckmate.Context {
     }
 }
 
-// MARK: - Attack queries
+// MARK: Attack queries
 
 extension SpecialCheckmate.Context {
 
@@ -234,7 +234,7 @@ extension SpecialCheckmate.Context {
     }
 }
 
-// MARK: - Recognisers
+// MARK: Recognisers
 
 extension SpecialCheckmate.Context {
 

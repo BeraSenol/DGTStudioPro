@@ -76,7 +76,7 @@ struct EvaluationGraphWindow: View {
         )
     }
 
-    /// Two causes, one state: gone, or never analysed. Splitting would explain a deletion the
+    /// Two causes, one state: gone, or never analyzed. Splitting would explain a deletion the
     /// reader performed; the remedy is identical.
     private var unavailable: some View {
         InspectorEmptyState(

@@ -123,7 +123,7 @@ struct Move: Equatable, Hashable, Sendable {
     }
 }
 
-// MARK: - Last Move
+// MARK: Last Move
 
 /// The two squares a board highlights after a move. **Deliberately not a `Move`** - the mirror
 /// must highlight without claiming move-level knowledge it doesn't have.

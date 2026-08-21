@@ -24,7 +24,7 @@ struct EvaluationBarReadingTests {
 
     // MARK: Nil - the `.drawn` Fold
 
-    /// Ply 0 and unanalysed plies read neutral, exactly like the graph's
+    /// Ply 0 and unanalyzed plies read neutral, exactly like the graph's
     /// `?? 0.5` - and this is `Evaluation.drawn`'s named consumer finally
     /// consuming it.
     @Test func nilFoldsToDrawn() {

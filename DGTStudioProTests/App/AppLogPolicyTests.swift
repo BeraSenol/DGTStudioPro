@@ -3,7 +3,7 @@ import Testing
 
 /// The logging gate. Nonisolated; the pure twins exist because the constants are fixed
 /// in any given process - only the parameterized forms make the other arm reachable.
-@Suite("App log policy")
+@Suite("App Log Policy")
 struct AppLogPolicyTests {
 
     // MARK: The host probe

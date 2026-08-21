@@ -2,7 +2,7 @@ import Testing
 @testable import DGTStudioPro
 
 /// `Player.identity(forTag:)` - is there a player in this seat tag, and which.
-@Suite("Player identity from a seat tag")
+@Suite("Player Identity from a Seat Tag")
 struct PlayerIdentityTests {
 
     // MARK: The absence of a player

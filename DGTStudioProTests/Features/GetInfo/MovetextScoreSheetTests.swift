@@ -4,7 +4,7 @@ import Testing
 /// The score-sheet rendering. Nonisolated (compile-time witness it stays pure). The round trip
 /// is asserted against the **real tokenizer**, not a literal - numbers and padding must be
 /// decoration the validator never sees.
-@Suite("Movetext score sheet")
+@Suite("Movetext Score Sheet")
 struct MovetextScoreSheetTests {
 
     // MARK: Shape

@@ -72,7 +72,7 @@ extension FEN {
     }
 }
 
-// MARK: - String Parsing (folded in from FEN+Parsing.swift at M13 - 80 lines of type, 209 of extension)
+// MARK: String Parsing (folded in from FEN+Parsing.swift at M13 - 80 lines of type, 209 of extension)
 extension FEN {
     
     // MARK: String Parsing (7P prerequisite)

@@ -85,7 +85,7 @@ struct CollectionSort<Field: CollectionSortField>: Equatable, Sendable {
     }
 }
 
-// MARK: - Library
+// MARK: Library
 
 /// The Library table's sortable columns. Raw values are **hand-written persistence contracts**
 /// (`StorageKeys.librarySort`) - the trap; pinned on literals.
@@ -151,7 +151,7 @@ enum LibrarySortField: String, CollectionSortField {
     static var defaultIsReverse: Bool { true }
 }
 
-// MARK: - Players
+// MARK: Players
 
 /// The Players table's columns - same persistence contract. **`rank` is a sort, not the ranking
 /// method** (the ranking method decides what rank 1 means; this decides row order).

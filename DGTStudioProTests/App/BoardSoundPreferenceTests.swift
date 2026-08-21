@@ -13,7 +13,7 @@ import Testing
 /// audible manual check is its witness. What is tested is every decision made before a sample is
 /// asked for.
 @MainActor
-@Suite("Board sound preferences")
+@Suite("Board Sound Preferences")
 struct BoardSoundPreferenceTests {
 
     /// A throwaway suite per test - `.standard` would edit the developer's own settings and a

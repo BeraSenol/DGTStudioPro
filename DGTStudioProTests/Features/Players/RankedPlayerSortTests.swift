@@ -4,7 +4,7 @@ import Testing
 
 /// The column sort that replaced the picker. Nonisolated, load-bearing. Not tested: that
 /// `sorted(using:)` sorts - that is the framework's.
-@Suite("Ranked player column sort")
+@Suite("Ranked Player Column Sort")
 struct RankedPlayerSortTests {
 
     // MARK: Fixtures

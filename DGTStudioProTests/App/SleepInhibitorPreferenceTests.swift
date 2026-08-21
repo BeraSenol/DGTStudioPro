@@ -14,7 +14,7 @@ import Testing
 /// two gates over two causes can be crossed. `activityReason` is pure, so the
 /// truth table is cheap and the crossed wiring is reachable from a test.
 @MainActor
-@Suite("Sleep inhibition preference")
+@Suite("Sleep Inhibition Preference")
 struct SleepInhibitorPreferenceTests {
 
     /// A throwaway suite per test - `.standard` would edit the developer's

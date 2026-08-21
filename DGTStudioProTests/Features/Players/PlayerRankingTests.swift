@@ -3,7 +3,7 @@ import Testing
 @testable import DGTStudioPro
 
 /// The three ranking methods. Nonisolated, matching a pure value type.
-@Suite("Player ranking methods")
+@Suite("Player Ranking Methods")
 struct PlayerRankingTests {
 
     // MARK: Fixtures

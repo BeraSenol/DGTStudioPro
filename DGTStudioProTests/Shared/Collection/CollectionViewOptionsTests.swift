@@ -6,7 +6,7 @@ import Testing
 /// The panel's value layer: grid geometry, sort grammar, persistence contract. @MainActor - a
 /// fact about the type, not a constraint worth routing around.
 @MainActor
-@Suite("Collection view options")
+@Suite("Collection View Options")
 struct CollectionViewOptionsTests {
 
     // MARK: Helpers
@@ -294,7 +294,7 @@ struct CollectionViewOptionsTests {
 
 /// The sort grammar - the half that survives a header and a picker writing one value.
 /// Nonisolated, load-bearing: the types must stay value-layer.
-@Suite("Collection sort fields")
+@Suite("Collection Sort Fields")
 struct CollectionSortFieldTests {
 
     /// **The round trip that makes two doors safe.** The panel reads the

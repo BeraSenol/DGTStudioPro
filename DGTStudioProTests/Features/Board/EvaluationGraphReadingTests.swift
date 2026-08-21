@@ -9,7 +9,7 @@ import Testing
 /// The suite exists because this arithmetic now has **two** consumers pointing
 /// in opposite directions, and the round trip between them is the property
 /// neither one can check alone.
-@Suite("Evaluation graph geometry")
+@Suite("Evaluation Graph Geometry")
 struct EvaluationGraphGeometryTests {
 
     // MARK: Degenerate Inputs
@@ -98,7 +98,7 @@ struct EvaluationGraphGeometryTests {
 }
 
 /// What the magnifier window says about one ply.
-@Suite("Evaluation graph reading")
+@Suite("Evaluation Graph Reading")
 struct EvaluationGraphReadingTests {
 
     private let moves = ["e4", "e5", "Nf3", "Nc6", "Bb5"]
@@ -142,7 +142,7 @@ struct EvaluationGraphReadingTests {
 
     /// An unevaluated ply still happened, so it still reads - it just folds to
     /// the bar's nil rule. The alternative, failing the whole reading, would
-    /// blank the move name too and make a partially analysed game unreadable
+    /// blank the move name too and make a partially analyzed game unreadable
     /// exactly where the analysis stopped.
     @Test func anUnevaluatedPlyStillNamesItsMove() throws {
         let reading = try #require(

@@ -4,6 +4,10 @@ import Testing
 
 /// Nonisolated deliberately - the search types are pure values, and the
 /// suite's isolation matches its subject.
+///
+/// Display names added 21 Aug 2026: all three suites in this file carried none, so they surfaced
+/// in the navigator as bare type names while every neighbour had a readable one.
+@Suite("Collection Search - Query Matching")
 struct SearchMatchTests {
 
     @Test func emptyAndWhitespaceQueriesMatchEverything() {
@@ -64,6 +68,7 @@ struct SearchMatchTests {
 /// Was `PlayersSearchScopeTests`. The per-case assertions survive verbatim
 /// minus `.all`, which was deleted with the scope bar - an empty token list
 /// is what "all" means now, so the case could never be selected.
+@Suite("Collection Search - Players Tokens")
 struct PlayersSearchTokenTests {
 
     /// Deviations either side of the provisional threshold (110): the
@@ -116,6 +121,7 @@ struct PlayersSearchTokenTests {
 /// The Library's faceted rule: **OR within a facet, AND across facets**.
 /// Every test here exists because the other reading is plausible and its
 /// failure is a list that silently empties.
+@Suite("Collection Search - Library Tokens")
 struct LibrarySearchTokenTests {
 
     @Test func noTokensAdmitEverything() {

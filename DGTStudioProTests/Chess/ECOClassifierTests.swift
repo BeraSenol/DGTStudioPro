@@ -157,7 +157,7 @@ struct ECOClassifierTests {
     }
 }
 
-// MARK: - The Bundled Table
+// MARK: The Bundled Table
 
 /// Spot checks against the real asset. Every expectation here is a line read
 /// off the source file's own bytes, never inferred from a neighbour - the

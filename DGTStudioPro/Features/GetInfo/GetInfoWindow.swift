@@ -2,7 +2,7 @@ import os
 import SwiftData
 import SwiftUI
 
-// MARK: - Window
+// MARK: Window
 
 /// M10 - Get Info over three subjects, and the app's one rename door.
 /// A window, not a popover or sheet by design: it must survive a click elsewhere.
@@ -101,7 +101,7 @@ struct GetInfoWindow: View {
     }
 }
 
-// MARK: - Game Fields
+// MARK: Game Fields
 
 extension GetInfoWindow {
 
@@ -120,7 +120,7 @@ extension GetInfoWindow {
     }
 }
 
-// MARK: - Subject
+// MARK: Subject
 
 extension GetInfoWindow {
 
@@ -206,7 +206,7 @@ extension GetInfoWindow {
     }
 }
 
-// MARK: - Content
+// MARK: Content
 
 extension GetInfoWindow {
 
@@ -575,7 +575,7 @@ extension GetInfoWindow {
     }
 }
 
-// MARK: - Player Tabs
+// MARK: Player Tabs
 
 /// The player subject's tab host. **Profile and Matchup arrived whole from `PlayerMatchupWindow`**
 /// (deleted 18 Aug 2026, this file is where it went); every number still rides the shared folds -
@@ -698,7 +698,7 @@ private struct PlayerInfoTabs<IdentityTab: View>: View {
     }
 }
 
-// MARK: - Rename
+// MARK: Rename
 
 extension GetInfoWindow {
 
@@ -915,7 +915,7 @@ extension GetInfoWindow {
     }
 }
 
-// MARK: - Previews
+// MARK: Previews
 
 /// The branch a reader hits by accident, and the one state needing no resolved subject - the
 /// content forms need a model in a container, and a preview building one tests SwiftData, not layout.

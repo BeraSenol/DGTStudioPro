@@ -3,7 +3,7 @@ import Testing
 
 /// `PGN.hasScoredPly` - the one spelling of "is there analysis to show?", extracted after
 /// `!evaluations.isEmpty` drew a fabricated flat curve over an all-nil array.
-@Suite("PGN - has a scored ply")
+@Suite("PGN - Has a Scored Ply")
 struct PGNScoredPlyTests {
 
     private static func game(evaluations: [Evaluation?]) -> PGN {
@@ -13,7 +13,7 @@ struct PGNScoredPlyTests {
         )
     }
 
-    /// Never analysed: the array the initializer leaves alone.
+    /// Never analyzed: the array the initializer leaves alone.
     @Test func anEmptyArrayHasNoScoredPly() {
         #expect(Self.game(evaluations: []).hasScoredPly == false)
     }

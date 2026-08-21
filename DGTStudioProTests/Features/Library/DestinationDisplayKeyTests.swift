@@ -6,7 +6,7 @@ import Foundation
 /// stale rows on screen with a green build. Each assertion moves ONE field and expects
 /// inequality - a field the key stops covering goes red here before it goes stale there.
 @MainActor
-@Suite("Display memo keys")
+@Suite("Display Memo Keys")
 struct DestinationDisplayKeyTests {
 
     // MARK: Library

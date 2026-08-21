@@ -86,7 +86,7 @@ struct DestinationSubtitleTests {
     }
 
     /// The backlog clause vanishes at zero rather than reading "0
-    /// unanalyzed" - a fully analysed Library shows a bare title, which is
+    /// unanalyzed" - a fully analyzed Library shows a bare title, which is
     /// the entire argument for putting the backlog here instead of a count.
     @Test func libraryGoesQuietWithNothingToDo() {
         #expect(DestinationSubtitle.library(selected: 0, unanalyzed: 7) == "7 unanalyzed")

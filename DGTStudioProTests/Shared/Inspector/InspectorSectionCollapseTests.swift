@@ -5,7 +5,7 @@ import Testing
 
 /// The collapse store's contract: the default and the persistence are the whole promise.
 @MainActor
-@Suite("Inspector section collapse")
+@Suite("Inspector Section Collapse")
 struct InspectorSectionCollapseTests {
 
     /// A throwaway suite per test - `.standard` would edit the developer's own
