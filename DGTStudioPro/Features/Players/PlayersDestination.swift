@@ -33,6 +33,17 @@ struct PlayersDestination: View {
     // LibraryDestination is retired: the default is stated once, in that type.
     private var viewMode: CollectionViewMode { options.playersViewMode }
 
+    /// What this destination tells the ⌘J panel it is - the Library's twin, see there.
+    private var subject: CollectionViewOptionsSubject {
+        CollectionViewOptionsSubject(collection: .players, mode: viewMode)
+    }
+
+    /// The mirror, gated on this window being key. The Library's twin, see there.
+    private func latchSubjectIfKey() {
+        guard controlActiveState == .key else { return }
+        options.activeSubject = subject
+    }
+
     /// Built by hand rather than projected with `@Bindable` - the picker lives in a computed
     /// `@ToolbarContentBuilder` property, which cannot declare one.
     private var viewModeBinding: Binding<CollectionViewMode> {
@@ -63,8 +74,11 @@ struct PlayersDestination: View {
     /// The View Options panel's subject (7 Aug 2026) - see `sortOrder`.
     @Environment(CollectionViewOptions.self) private var options
 
-    /// Resolves the key window's value: nil whenever another window is front - the signal the mirror needs.
-    @FocusedValue(\.collectionViewOptionsSubject) private var focusedSubject
+    /// Is this destination's window the key one? The Library's twin - the full account of why this
+    /// is not `@FocusedValue(\.collectionViewOptionsSubject)` any more lives there. Short version:
+    /// reading back the key this view publishes made the body depend on its own output, which is
+    /// the launch-time `FocusedValue update tried to update multiple times per frame` line.
+    @Environment(\.controlActiveState) private var controlActiveState
     @Query(sort: \PGN.importedAt, order: .reverse) private var games: [PGN]
 
     /// A set (the Library's selection model): rubber-band and ⌘-click work, and every single-player
@@ -258,18 +272,13 @@ struct PlayersDestination: View {
             ) { token in
                 Label(token.displayName, systemImage: token.symbol)
             }
-            // The Library's twin - see there for why the subject carries the mode too.
-            .focusedSceneValue(
-                \.collectionViewOptionsSubject,
-                CollectionViewOptionsSubject(collection: .players, mode: viewMode)
-            )
-            // Mirrors the focused subject into the global options object - this view is on screen while its
-            // window is key; the panel never is. Only non-nil writes land.
-            .onChange(of: focusedSubject, initial: true) { _, newValue in
-                guard let newValue else { return }
-                options.activeSubject = newValue
-            }
+            // The Library's twin - see there for why the subject carries the mode too, and why
+            // this view publishes the key without reading it back.
+            .focusedSceneValue(\.collectionViewOptionsSubject, subject)
+            .onChange(of: subject) { _, _ in latchSubjectIfKey() }
+            .onChange(of: controlActiveState) { _, _ in latchSubjectIfKey() }
             .onAppear {
+                latchSubjectIfKey()
                 // Players must work even if Library was never visited this launch - store-owned, second call site.
                 PGNStore.healPlayers(in: modelContext, logger: Self.logger)
                 applyInspectorPolicy(for: viewMode)

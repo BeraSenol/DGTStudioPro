@@ -33,6 +33,21 @@ struct LibraryDestination: View {
     // to the retired shared key, which an `@AppStorage` literal default never could.
     private var viewMode: CollectionViewMode { options.libraryViewMode }
 
+    /// What this destination tells the ⌘J panel it is. Constructed once and used twice - published
+    /// as the focused value and latched into `options` - so the two can never disagree, which the
+    /// old arrangement guaranteed only by routing the second through the first.
+    private var subject: CollectionViewOptionsSubject {
+        CollectionViewOptionsSubject(collection: .library, mode: viewMode)
+    }
+
+    /// The mirror, gated on this window being key. Non-key windows stay silent rather than writing
+    /// nil, so a second browser window in the background cannot claim the panel, and focus moving
+    /// to the panel itself leaves the last browser's subject standing.
+    private func latchSubjectIfKey() {
+        guard controlActiveState == .key else { return }
+        options.activeSubject = subject
+    }
+
     /// Built by hand rather than projected with `@Bindable`, because the picker lives in a computed
     /// `@ToolbarContentBuilder` property, which cannot declare one.
     private var viewModeBinding: Binding<CollectionViewMode> {
@@ -43,8 +58,20 @@ struct LibraryDestination: View {
     /// View Options panel subject - read here because this destination owns the sort.
     @Environment(CollectionViewOptions.self) private var options
 
-    /// Resolves the key window's value: nil whenever another window is front, which is the signal the mirror needs.
-    @FocusedValue(\.collectionViewOptionsSubject) private var focusedSubject
+    /// Is this destination's window the key one? Asked directly, and that is the fix for the
+    /// launch-time `FocusedValue update tried to update multiple times per frame` line (18 Aug
+    /// 2026). This read used to be `@FocusedValue(\.collectionViewOptionsSubject)` - the very key
+    /// this view *publishes* four hundred lines down, so the body depended on its own output:
+    /// publish → self-read invalidates → body re-runs → publish, inside one update pass, which is
+    /// what the warning names. `nil → value` at first render is the one transition
+    /// `CollectionViewOptionsSubject`'s `Equatable` conformance cannot dedupe, which is why the
+    /// line appeared at launch and never again.
+    ///
+    /// `CollectionViewOptionsWindow` had already found this shape and fixed it there - "a pure
+    /// reader, no `@FocusedValue` here, and that is the fix" - and the two destinations carrying
+    /// the same pair were missed. Shipping macOS API, deliberately not the 2027 SDK's
+    /// `\.appearsActive`, which is the tidier spelling and a forward note under D27′.
+    @Environment(\.controlActiveState) private var controlActiveState
 
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
@@ -272,17 +299,21 @@ struct LibraryDestination: View {
             )
             // Plain ⌫ deliberately does not delete (one slip from a forgotten multi-selection); ⌘⌫ is the only key,
             // resting on the row menu's copy - known only to render, an open question rather than settled.
-            .focusedSceneValue(
-                \.collectionViewOptionsSubject,
-                CollectionViewOptionsSubject(collection: .library, mode: viewMode)
-            )
-            // Mirrors the focused subject into the global options object - this view is on screen while its window is key;
-            // the panel never is. Only non-nil writes land, so focus moving away keeps the last collection.
-            .onChange(of: focusedSubject, initial: true) { _, newValue in
-                guard let newValue else { return }
-                options.activeSubject = newValue
-            }
+            // Published for `CollectionViewOptionsCommands`, which reads it to enable ⌘J - a writer
+            // here and a reader in a `Commands` scene is the shape that does not cycle. This view
+            // no longer reads it back; see `controlActiveState`.
+            .focusedSceneValue(\.collectionViewOptionsSubject, subject)
+            // Mirrors this destination's subject into the global options object while its window is
+            // key, so the panel - which is never key while a browser is - reads the last browser
+            // rather than nothing. Latched from three places rather than one `onChange(initial:)`:
+            // the subject changing, the window becoming key, and arrival. Arrival is `onAppear`
+            // rather than `initial: true` deliberately - it runs *after* the first render instead
+            // of during it, so the `@Observable` write cannot land inside the update pass this
+            // whole change exists to keep quiet.
+            .onChange(of: subject) { _, _ in latchSubjectIfKey() }
+            .onChange(of: controlActiveState) { _, _ in latchSubjectIfKey() }
             .onAppear {
+                latchSubjectIfKey()
                 backfillEmptyNames()
                 // Store-owned and idempotent, behind the converged stamp; both collection
                 // destinations call it on appear, under their own console category.
