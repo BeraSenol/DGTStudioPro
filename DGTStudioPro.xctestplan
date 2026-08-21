@@ -9,6 +9,14 @@
     }
   ],
   "defaultOptions" : {
+    "codeCoverage" : true,
+    "codeCoverageTargets" : [
+      {
+        "containerPath" : "container:DGTStudioPro.xcodeproj",
+        "identifier" : "C5D920C02F732FE8003D0A74",
+        "name" : "DGTStudioPro"
+      }
+    ],
     "performanceAntipatternCheckerEnabled" : true,
     "targetForVariableExpansion" : {
       "containerPath" : "container:DGTStudioPro.xcodeproj",
