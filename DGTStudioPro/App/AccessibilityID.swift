@@ -24,9 +24,19 @@ enum AccessibilityID {
     static let sidebarTagsAdd = "sidebar.tags.add"
     
     /// Session panel; `sidebar.loaderror` family is the former `board.loaderror` - a deliberate breaking rename.
-    static let sessionPanel            = "sidebar.session"
-    static let sidebarLoadError        = "sidebar.loaderror"
-    static let sidebarLoadErrorDismiss = "sidebar.loaderror.dismiss"
+    // The session surface. The `sidebar.` prefix is kept though the surface is a window since
+    // 18 Aug 2026 (D84′) - renaming it would break every check that names it for a move that
+    // changed the surface's home, not its identity. The prefix is now historical, like the
+    // `SessionSidebarPanel` type name was before the type was renamed with the move.
+    static let sessionPanel      = "sidebar.session"
+    /// The window's quiet state - a scene must render something where an inset could render nothing.
+    static let sessionWindowEmpty = "session.window.empty"
+    /// View ▸ Show Session.
+    static let showSessionWindow = "session.show"
+    // `sidebar.loaderror` / `sidebar.loaderror.dismiss` retired 18 Aug 2026 with the same move:
+    // the load error is per-tab and could not follow an app-global window, so it is an `.alert`
+    // on `BoardDestination` now. An alert's buttons are AX-reachable by title, so the constants
+    // had no surface left to name.
     
     // MARK: Tag Editor (M-prs.5)
     
@@ -227,8 +237,9 @@ enum AccessibilityID {
     static let settingsSyzygy50MoveToggle      = "settings.syzygy.fiftyMoveToggle"
     static let settingsPieceAnimationSlider    = "settings.pieceAnimationSlider"
 
-    /// The four board cues. One identifier per toggle rather than one for the section - a
-    /// section is not a control, and a cue that stops firing is diagnosed by naming *which* toggle.
+    /// The eight gated board cues - six move-family, two lifecycle (four until 17 Aug 2026).
+    /// One identifier per toggle rather than one for the section - a section is not a control, and
+    /// a cue that stops firing is diagnosed by naming *which* toggle.
     // `settingsBoardSoundSetPicker` is gone with the picker itself - the app ships one set of
     // sounds and offers only which cues are on.
     static let settingsMoveSoundToggle      = "settings.moveSoundToggle"

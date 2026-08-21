@@ -36,8 +36,9 @@ struct SettingsView: View {
     
     @Environment(\.modelContext) private var modelContext
     @Environment(SleepInhibitor.self) private var sleepInhibitor
-    /// The four cue gates. An owning type, not four more `@AppStorage` twins: playback and
-    /// this form must agree about the defaults, and the way to guarantee that is to have one.
+    /// The nine cue gates (four until 17 Aug 2026). An owning type, not nine more `@AppStorage`
+    /// twins: playback and this form must agree about the defaults, and the way to guarantee that
+    /// is to have one.
     @Environment(BoardSounds.self) private var boardSounds
     @Query private var allGames: [PGN]
     

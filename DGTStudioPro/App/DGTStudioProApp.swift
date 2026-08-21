@@ -173,6 +173,9 @@ struct DGTStudioProApp: App {
             SmartTagCommands()
             // View ▸ Show View Options (⌘J); enabled only when a collection tab publishes the subject.
             CollectionViewOptionsCommands()
+            // View ▸ Show Session - the door to the surface that stopped being an overlay (D84′).
+            // Unconditional: a panel that used to appear by itself needs a way to be asked for.
+            SessionWindowCommands()
         }
         
         // The evaluation graph. A separate group: macOS only tabs windows from the same group,
@@ -274,6 +277,29 @@ struct DGTStudioProApp: App {
         }
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled) // see the Analysis window above
+        .windowLevel(.floating)
+        .windowManagerRole(.associated)
+
+        // The session surface (18 Aug 2026, D84′; was BoardDestination's `.overlay` over the
+        // board's top edge). A singleton `Window` for the connection scene's reason: one session,
+        // one surface, opened by id. Floating and associated like every other companion - it is
+        // consulted *while* looking at the board, so it must join the board's full-screen space
+        // rather than claim one (D80′).
+        //
+        // The three DGT observables are injected here as they are into the main group: a scene
+        // gets no environment from the destination that used to host this view.
+        Window("Session", id: SessionWindow.sceneID) {
+            SessionWindow()
+                .environment(dgtConnection)
+                .environment(dgtSession)
+                .environment(sessionLog)
+        }
+        .defaultSize(width: 320, height: 200)
+        .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled) // see the Analysis window above
+        // NO `.windowResizability` - the 17 Aug rule, and this scene has the strongest claim to
+        // want it: content-derived limits on a companion are what stopped the main window
+        // height-resizing during live games. The frame in `SessionWindow` bounds it instead.
         .windowLevel(.floating)
         .windowManagerRole(.associated)
 

@@ -63,10 +63,11 @@ enum StorageKeys {
     // anyone who had turned it off.
     static let illegalMoveSoundEnabled = "illegalMoveSoundEnabled"
 
-    // The four board cues. Absent reads **true** for each. Single read site apiece -
-    // `BoardSounds` owns the values and Settings binds to the properties, so unlike the key above
-    // these have no twin to document. Four keys rather than one because four toggles were asked
-    // for, and a single stored set would make "which cue is off" a decoding question.
+    // The six move-family cues (four until 17 Aug 2026, when promote and check joined them).
+    // Absent reads **true** for each. Single read site apiece - `BoardSounds` owns the values and
+    // Settings binds to the properties, so unlike the key above these have no twin to document.
+    // One key per cue rather than one shared set, because one toggle per cue was asked for, and a
+    // single stored set would make "which cue is off" a decoding question.
     // `boardSoundSet` lived here and is gone with `BoardSoundSet`: the app ships one set of
     // sounds, so there is nothing to store. The key is deliberately **not** cleaned up on launch -
     // a stale string in an existing install's defaults is inert, and code that deletes keys it no

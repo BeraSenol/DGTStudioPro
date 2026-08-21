@@ -1,21 +1,24 @@
 import SwiftUI
 
-/// The live-play status card (M3.1; re-homed into the sidebar's
-/// `SessionSidebarPanel`) - the answer to "what is the app doing
-/// with my board right now?", shown whenever a board is connected or
-/// being chased (`reconnecting`). Plain disconnected has no card at all:
-/// the message carried no action, so it lives in the live inspector's
-/// empty state. Laid out as a narrow vertical card for the sidebar; the
-/// container owns outer spacing. The `live.hud.*` identifiers are
-/// unchanged - their witness stays the hardware checklist, so the
-/// re-home is not a contract break.
+/// The live-play status card (M3.1) - the answer to "what is the app
+/// doing with my board right now?", shown whenever a board is connected
+/// or being chased (`reconnecting`). Plain disconnected has no card at
+/// all: the message carried no action, so it lives in the live
+/// inspector's empty state. Laid out as a narrow vertical card; the
+/// container owns outer spacing.
+///
+/// Its host has moved four times (sidebar list → Board inspector →
+/// board overlay → `SessionWindow`, D84′) and the `live.hud.*`
+/// identifiers have not changed once - their witness is the hardware
+/// checklist, not the container, so no re-home was a contract break.
+/// That is the point of naming the card rather than its home.
 struct LiveGameHUDView: View {
 
     // MARK: Phase
 
     /// Everything the banner can say. Derivation (including priority between
-    /// overlapping session flags) lives in `SessionSidebarPanel.hudPhase` -
-    /// moved there with the card itself.
+    /// overlapping session flags) lives in `SessionWindow.hudPhase` - it has
+    /// travelled with the card through every re-home.
     enum Phase: Equatable {
         case reconnecting
         /// Connected, no game running: invite setup or a manual New Game.

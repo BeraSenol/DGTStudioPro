@@ -502,6 +502,41 @@ number lives in `DECISIONS.md`, which owns it since M14.
   tidy-up. Guessing at a fix for something nobody has observed is how the 295
   got into the open items list.
 
+  **Discriminated by a reproduction, 18 Aug 2026, and the reading above is not
+  the whole story.** Bera: the warning fires launching into **Library icon
+  view**. `ContentView`'s detail is a `switch` on the selection, so on that
+  launch `BoardDestination` is never constructed — its `.onAppear`, its
+  `\.activeGame` and its fresh `$getInfoRequested` are all absent from the tree.
+  The chain reasoned out above therefore **cannot be the only cause**, and this
+  is the first observation that could have shown that. The 12 Aug launch log
+  corroborated the Board chain without discriminating against a second one,
+  because nothing had asked which destination was on screen.
+
+  **A Library-side cause found by reading, and fixed.** Both collection
+  destinations *published* `\.collectionViewOptionsSubject` via
+  `.focusedSceneValue` and *read the same key back* through
+  `@FocusedValue`, then wrote `options.activeSubject` from
+  `.onChange(…, initial: true)` — during the first update pass. The body
+  depended on its own output: publish → self-read invalidates → body re-runs →
+  publish, one frame. `CollectionViewOptionsSubject` is `Equatable`, so
+  `nil → value` at first render is the single transition SwiftUI cannot dedupe,
+  which is exactly the launch-only signature. `CollectionViewOptionsWindow` had
+  already found and fixed this shape — *"a pure reader, no `@FocusedValue`
+  here, and that is the fix"* — and the two destinations carrying the same pair
+  were missed. Both now ask `@Environment(\.controlActiveState)` whether their
+  window is key and latch the subject they already construct; the
+  `.focusedSceneValue` write stays, because `CollectionViewOptionsCommands`
+  reads it to enable ⌘J, and a writer in a view with its reader in a `Commands`
+  scene is the shape that does not cycle.
+
+  **Still owed, and this is the point of writing it down:** the Board chain is
+  **untouched** — `$getInfoRequested` is still minted fresh on every pass at
+  `BoardDestination:121` and `Binding` is still not `Equatable`. If the warning
+  survives on a Library launch, the fix above is wrong and the destinations are
+  exonerated. If it goes on a Library launch but returns on a **Board** launch,
+  there were two independent causes all along and the reading above was right
+  about the second. Those two runs are the whole experiment, and they are cheap.
+
 - ~~**The library-index backfill, built.**~~ — **landed 6 August 2026.**
   `PGNStore.backfillLibraryIndices(from:)` matches PGN files in a chosen folder
   to Library rows **by content hash** and stamps each match with the ordinal

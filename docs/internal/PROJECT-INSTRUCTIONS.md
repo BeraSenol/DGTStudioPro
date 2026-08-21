@@ -39,9 +39,10 @@ D48′). The two collection destinations share four `CollectionViewMode`s (icons
 list / columns / gallery) under one `@AppStorage` key — the last mode used
 anywhere is the mode everywhere. Columns is Finder-style list-plus-detail. The
 sidebar carries user-editable, rule-based smart tags (Apple Music
-smart-playlist shape) that filter the Library, and pins the session panel, which
-is the single surface for connection and session status. The stage above the
-board stays clear.
+smart-playlist shape) that filter the Library. Connection and session status have
+a single surface, `SessionWindow`, opened from View ▸ Show Session — it hung in
+the sidebar until 16 Aug 2026 and moved twice more before landing as a scene
+(D84′). The stage above the board stays clear.
 
 **This app is for one person, one Mac, one board.** No release, no App Store, no
 other users. That is a standing input to every trade-off here: the App Store
@@ -51,54 +52,46 @@ six months" is the test.
 
 ## Where things stand
 
-Tree: **`34c7043`** — the 12 August sitting, committed: the board cues (D81′),
-the cue sets (D82′), the sandbox entitlement without which the first of them
-killed the app, and the Settings five-tab split. Two paths are dirty and they
-are **not** this sitting's: `RELEASE-AUDIT-2026-08-08.md` and
-`WASTE-AUDIT-2026-08-09.md` are deleted-unstaged, deleted by Bera after
-`424b4e1`, and left alone rather than swept into a commit that had nothing to
-do with them. Named here rather than discovered next time.
+Tree: **`c8eea2d`** plus the 18 August session-window work, uncommitted as this
+is written. Committed beneath it: the collection split and the Get Info merge
+(`ed876a3`), and the dead-code pass (`c8eea2d`). Uncommitted and belonging to
+this sitting: D84′ — the session surface becomes a scene — and the ledger
+corrections it forced. Nothing else is dirty.
 
-**The sentence above was wrong for two commits, and the correction is the point.**
-It read "`2db96e8` plus the 9–10 August close's uncommitted work" — an accurate
-description of a dirty tree that had been clean since `407c846` and `424b4e1`,
-which are exactly the commits that landed the work it called uncommitted. That is
-the **fourth** recorded instance of this same line decaying, and it decays the
-same way every time: it is written at the moment of committing and never re-read
-afterwards, so it survives as a confident description of a tree that no longer
-exists. It is caught only by `git log` — never by reading it, because it reads
-perfectly. The remedy this file already prescribes is the one used here: write it
-*before* the commit, in a form that is true when read.
-
-The committed run beneath it: the comment reduction (`bc92c65`), the waste-audit
-fixes D74′–D78′ (`4d81150`), the diagrams re-authoring (`2db96e8`), D79′
-(`1ad5975`), two visual tweaks (`42820be`), D80′ (`407c846`) and the 9–10 August
-recording (`424b4e1`) — each sitting's ROADMAP entry carries its list.
+**This line has now decayed five recorded times, and the fifth is the worst.**
+The four earlier instances were the same failure — written at the moment of
+committing, never re-read, surviving as a confident description of a tree that no
+longer exists. This one sat at `34c7043` for six days across four commits while
+describing dirty audit files that had long since gone, and it was not caught by
+reading, because it reads perfectly. It was caught by a scan that compared every
+number in this file against the tree. The remedy the file prescribes — write it
+*before* the commit, in a form true when read — is used above, and the standing
+answer is now the audit, not the intention: **run the count block below whenever
+this section is touched.**
 
 | | |
 |---|---|
-| Sources on disk | **257** — 152 app, 105 unit-test, 0 UITest |
-| Tracked (`git ls-files '*.swift'`) | **258** |
-| Accessibility registry | **161** |
+| Sources on disk | **272** — 164 app, 108 unit-test, 0 UITest |
+| Tracked (`git ls-files '*.swift'`) | **272** |
+| Accessibility registry | **142** constants + **23** functions |
 
-The tracked count is one **higher** than the source count for the first time,
-and the reason is stated so the gap is not read as a leftover: `git ls-files`
-counts `Tools/make-cues.swift`, which is in no target. Every other `.swift` on
-disk is now tracked — the two counts have not otherwise agreed since 4 August.
+*Re-measured 18 Aug 2026, after D83′, the dead-code pass and D84′.* The two source
+counts **agree** for the first time since 4 August, and the reason the gap closed
+is that `Tools/` is gone: `make-cues.swift` was the whole of the discrepancy this
+table used to explain, and it went with the cue sets. Three files left the app
+target this week — `PlayerProfilePanels.swift` and `PlayerMatchupWindow.swift`
+deleted, `SessionSidebarPanel.swift` renamed to `SessionWindow.swift` — and two
+arrived, `PlayerMatchupView.swift` and `RecordChart.swift`.
 
-*Re-measured 12 Aug 2026 after D82′.* Five sources arrived across the two
-decisions — `BoardCue`, `BoardSounds`, `BoardSoundSet` and two suites — and the
-registry took four cue toggles plus the set picker. The counts now disagree in
-the **other** direction from the 10 August snapshot: D80′'s two deletions are
-still unstaged and the new files are untracked, so `git ls-files` lags disk. All
-three are dated snapshots; the registry count lives in its grep (D42′) and the
-source counts in `find`/`git ls-files`, because a number in prose decays and a
-number in a command cannot.
+All three counts are dated snapshots. The registry count lives in its grep (D42′)
+and the source counts in `find` / `git ls-files`, because a number in prose decays
+and a number in a command cannot — which is exactly what the paragraph above is
+about.
 
-The **source** counts deliberately exclude `Tools/`, which is not in any target.
-Not counted at all, because they are not sources: twelve `.wav` samples under
-`Features/Board/Sounds/`, 268 KB — three sets × four cues, the first audio the
-app has shipped and the second data asset after the ECO tables.
+Not counted, because they are not sources: **seven** `.wav` samples under
+`Features/Board/Sounds/`, **136 KB** — nine cues over seven samples, one voice.
+This read "twelve samples, 268 KB, three sets × four cues" until 18 Aug 2026, six
+days after D82′ was reversed and the packs deleted.
 
 **Language mode 6 on all three targets (D43′).** Two warnings in the whole
 project, both `Binding(present:)`, both waived below with a sunset condition.
@@ -228,27 +221,35 @@ review), which is why the refinement milestones start at M12.
   the one door for must-reach-somewhere errors.
 - **A move makes exactly one sound (D81′).** `BoardCue.cue(for:landing:)` is the
   single classifier and its precedence is total — checkmate over check over
-  capture over move — so no surface layers two samples or spells the ordering a
-  second time. Classified from `Move` + `GameState`, never from SAN: a third
+  promote over capture over castle over move — so no surface layers two samples or
+  spells the ordering a second time. A promoting capture is a promotion first:
+  captures are common where promotions are not. `BoardCue` carries a `family`
+  split because `gameStart` and `gameEnd` made "what a landed move sounds like"
+  stop being true of the whole enum, and `cue(for:landing:)` never returning an
+  event is tested rather than assumed. Classified from `Move` + `GameState`,
+  never from SAN: a third
   string reading of `#` would land on the open item where the app's two existing
   spellings already disagree. Live rides the session hook above; review rides
   `Game.onStep`, which `advance()` and `retreat()` call and `jump(to:)`,
   `toStart()` and `toEnd()` deliberately do not — the step/jump split is which
   methods fire the hook, so no caller can get it wrong.
-- **`BoardSounds` is the only thing that plays a sample**, owns the four gates and
-  the chosen set as observable properties (D25′, not `@AppStorage` twins), and is
-  silent under the test host. D13′'s illegal-move `NSSound.beep()` is deliberately
-  outside it: that is an alert at the user's alert volume, these are feedback at
-  app volume. **Playing anything at all needs the `audioanalyticsd` mach-lookup
-  exception** — without it a sandboxed process is killed on first playback, not
-  warned (D81′).
-- **A cue set is chosen whole (D82′).** `BoardSoundSet` — felt, wood, marble —
-  holds all four cues, so a felt move beside a marble capture is unrepresentable.
-  `resourceName(for:)` lives on the **set**, the axis that grows, and names
-  `<set>-<cue>.wav`; the suite pins the whole product because a collision across
-  sets is one cue playing another's sound with every string spelled correctly. The
-  musical gesture is constant across sets and only the material varies, so
-  switching never changes what a cue means.
+- **`BoardSounds` is the only thing that plays a sample**, owns the **nine** gates
+  as observable properties (D25′, not `@AppStorage` twins), and is silent under
+  the test host. Nine cues over seven samples: `resources` is a list, so
+  `checkmate` layers the move and the game ending — a mate is both — and
+  `promote` borrows the move sample. D13′'s illegal-move `NSSound.beep()` became a
+  sample with the rest; it is no longer an `NSSound` call. **Playing anything at
+  all needs the `audioanalyticsd` mach-lookup exception** — without it a sandboxed
+  process is killed on first playback, not warned (D81′).
+- **There is one voice, and the only choice is which cues are on.** D82′ made the
+  cue set a user choice — felt, wood, marble — and was **reversed 17 Aug 2026 by
+  request**: `BoardSoundSet`, the twelve pack samples and `Tools/make-cues.swift`
+  are all deleted. Its invariant survives the reversal in a stronger form: one set
+  meant a felt move beside a marble capture was unrepresentable, and no sets means
+  there is nothing to make representable. The licensing finding recorded at the
+  reversal is the part worth not rediscovering — the `lichess-org` sounds anybody
+  means are listed non-free in that project's own COPYING.md, and the four broken
+  out as free carry AGPLv3+ into a shipping app.
 - **Auto-connect decisions are pure; transport is not.**
 - **Idle-sleep inhibition is App-owned and preference-gated**, two causes with
   two gates (D66′). Display sleep is intentionally left alone, structurally, via
@@ -262,7 +263,13 @@ review), which is why the refinement milestones start at M12.
   everything else is anonymous and can only fade. No surface may pair a vacate
   with a place by inference — that inference has one home, `DGTReconstructor`,
   and one standard, full-position verification.
-- **The sidebar owns session info; the stage above the board stays clear (D15′).**
+- **One surface owns session info; the stage above the board stays clear (D15′).**
+  That surface is `SessionWindow`, a scene since D84′ — the sidebar, the Board
+  inspector and a board overlay were all homes it outgrew, and the stage-clear
+  half is the reason the overlay did not last. Recovery marks on squares are the
+  one thing drawn over the board, and they are the mirror's, not messaging. The
+  per-tab load error is an `.alert` on `BoardDestination`, deliberately not here:
+  it is a fact about one tab, and this surface is app-global.
 - **id→model resolution guards tombstones, and a snapshot held across a dialog is
   the same hazard without the cast.** Every site pairs the cast with an
   `isDeleted` check.
@@ -768,8 +775,13 @@ are in `git log`.
   gate's first 4 pt select nothing, Finder's own feel; a band that never
   selects means the transform gate did not re-arm on the drag's first
   render, and the fallback is ungating the transform). Then re-observe the
-  `FocusedValue` warning: it was read as this cycle's shadow, and whether it
-  went with the cycle is the remaining open question of the pair.
+  `FocusedValue` warning — **partly answered 18 Aug 2026** and now a two-run
+  check rather than an open question. A Library-side cause was found and fixed
+  (both collection destinations read back the focused key they publish; see the
+  ROADMAP entry). Launch into **Library** — the line should be gone. Launch into
+  **Board** — if it returns, the second cause is the one the 6 Aug reading
+  named, `$getInfoRequested` minting a non-`Equatable` `Binding` per pass, and
+  that half is still unfixed.
 - **The chevron's gap rests on `EmptyView` not being laid out.** The one thing in
   D45′ written from reasoning rather than read off a compiler. It compiles either
   way, so ⌘U cannot answer it; the *Collapsible, No Actions* row in the **Actions
@@ -874,13 +886,14 @@ are in `git log`.
 - **⌘U stays silent.** The player is off under the test host, so a full run must
   make no sound at all. A suite that clicks its way through `GameTests` means
   `TestHost` stopped being consulted.
-- **The generator runs.** `swift Tools/make-cues.swift` should print four lines
-  and rewrite the four samples in place. It has never been executed — it was
-  ported from a working Python implementation of the same algorithm by a hand
-  with no Swift toolchain, which makes "it compiles" a claim rather than a
-  result. Worth one run now, while the samples it would overwrite are known
-  good: `git diff --stat` afterwards says whether the port is faithful, and a
-  diff of a few bytes is platform `libm`, not a defect.
+- (**"The generator runs"** stood here until 18 Aug 2026 — a standing check on
+  `swift Tools/make-cues.swift`, owed since 12 Aug and never once performed. It is
+  moot: the generator was deleted with the cue sets on 17 Aug, having never been
+  executed. It is worth recording *why* it was deleted rather than finally run,
+  because the check itself named the reason without drawing the conclusion — a
+  generator ported by a hand with no Swift toolchain, whose output nothing loads,
+  is a trap for the next reader, and six days of an unperformed check is the
+  evidence that nobody was going to be that reader.)
 
 - **Syzygy: does the sandbox let the child process read the folder?** Press
   Settings ▸ Engine ▸ Endgame Tablebases ▸ **Check** (the Engine *tab* since

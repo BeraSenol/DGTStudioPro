@@ -26,10 +26,12 @@ final class TabState {
     /// Board inspector open? Default true.
     var boardInspectorPresented: Bool = true
     
-    /// A manually-requested new-game sheet (sidebar's New Game). Here rather than destination
-    /// `@State` so an unanswered request survives a destination round trip and re-presents.
-    var manualNewGameRequested: Bool = false
-    
+    // (`manualNewGameRequested` stood here until 18 Aug 2026. It carried the session panel's
+    // New Game press from inside this tab's hierarchy out to `BoardDestination`, which owned the
+    // `openWindow` the panel could not reach. `SessionWindow` is a scene and reaches it directly,
+    // so the flag, its setter and its `onChange` consumer all left together - D84′. The auto-offer
+    // path never used it and is unaffected.)
+
     // MARK: Library Destination
     
     /// Library inspector open? Default `true` (code is truth - this doc had rotted to false).

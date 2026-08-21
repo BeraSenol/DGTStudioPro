@@ -2,3 +2,12 @@ stockfish
 UserInterfaceState.xcuserstate
 xcuserdata/
 .DS_Store
+
+# Audit documents are working notes, not the record. The findings that survive an
+# audit get written into DECISIONS.md or ROADMAP.md, which are tracked; the audit
+# file itself is scaffolding and would otherwise sit in `git status` forever. The
+# 7 Aug 2026 revision deleted three earlier audits by decision for the same reason
+# - a document that carries method rather than conclusions stops being read for
+# either. Ignored by pattern rather than by name so the next one needs no edit.
+*-AUDIT.md
+*-AUDIT-*.md

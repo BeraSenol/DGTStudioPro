@@ -9,7 +9,7 @@ struct RecoveryGuidanceView: View {
     
     let guidance: RecoveryGuidance
     
-    /// Wired by `SessionSidebarPanel` to `sessionLog.exportViaSavePanel()`.
+    /// Wired by `SessionWindow` to `sessionLog.exportViaSavePanel()`.
     let onExportDiagnostics: () -> Void
     
     // MARK: Body

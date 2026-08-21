@@ -26,7 +26,7 @@ Locked product decisions #1–#8 and their interpretation flags were recorded in
 
 Old milestone and finding tags (M7.2, M-prs.1, F1–F9…) survive in code comments and below as provenance only — they identify where a decision came from; they schedule nothing.
 
-D-numbers are sequential and never reused. Next free number: **D84′**. (D82′ minted 12 Aug 2026 with the cue sets, by request. D81′ minted 12 Aug 2026 with the board cues, by request. D80′ minted 10 Aug 2026 with the companion-window fix, by defect report. D79′ minted 9 Aug 2026 with the red-ply highlight, the game-98 sitting's feature. D74′–D78′ minted 9 Aug 2026, in the waste-audit sitting, *with* the work. D71′–D73′ minted 8 Aug 2026, in the release-audit sitting, *with* the work rather than after it. D69′ and D70′ were minted 8 Aug 2026 for the View Options panel and the memoized collection folds — both recording work that had already shipped into the working tree unnumbered, which is the failure their entries open by naming.) (This line said D47′ until the 3 Aug audit — it had not been advanced since the M6 revision while the header above was; the header is the owner and this line now just repeats it.)
+D-numbers are sequential and never reused. Next free number: **D85′**. (D84′ minted 18 Aug 2026 with the session window, by request — and it is the entry that corrects the one real breach of the rule above: the 17 Aug revision of the project instructions minted **D64′** for the session overlay, a number this document had already spent, along with every number through D83′. That revision's own next-free line read D65′, nineteen behind. The overlay was never written up here, which is how the collision survived a week; D84′ covers both arrangements and names the mistake rather than renumbering it away. D82′ minted 12 Aug 2026 with the cue sets, by request. D81′ minted 12 Aug 2026 with the board cues, by request. D80′ minted 10 Aug 2026 with the companion-window fix, by defect report. D79′ minted 9 Aug 2026 with the red-ply highlight, the game-98 sitting's feature. D74′–D78′ minted 9 Aug 2026, in the waste-audit sitting, *with* the work. D71′–D73′ minted 8 Aug 2026, in the release-audit sitting, *with* the work rather than after it. D69′ and D70′ were minted 8 Aug 2026 for the View Options panel and the memoized collection folds — both recording work that had already shipped into the working tree unnumbered, which is the failure their entries open by naming.) (This line said D47′ until the 3 Aug audit — it had not been advanced since the M6 revision while the header above was; the header is the owner and this line now just repeats it.)
 
 ### D9′ — Player is a machine-managed @Model
 
@@ -104,7 +104,7 @@ Execution consequences: DGTConnection.recorder is not @ObservationIgnored — is
 
 Forward note: the self-rescheduling loop is correct on the shipping toolchain. Swift 6.4's withContinuousObservation gives it a token-lifetime spelling — see Toolchain forward notes; D27′ governs when.
 
-### D15′ — the sidebar is the master of session info; the stage stays clear
+### D15′ — the sidebar is the master of session info; the stage stays clear *(the master is a window since D84′ — the sidebar, inspector and board overlay were all homes it outgrew; the stage-clear half is unchanged and better honoured than before)*
 
 Everything that rendered above or over the board — the status HUD with its New Game affordance, the recovery checklist, the restored flash, and the boardLoadError banner — lives in the sidebar's SessionSidebarPanel, the single surface for connection and session status. The space above the board is kept clear so the board, the star of the show, gets the whole stage.
 
@@ -1253,11 +1253,17 @@ By defect report, 10 Aug 2026: with the main window full screen, the evaluation 
 
 Rejected: **growing `updateNSView` a body** (the reserved remedy — still after placement, so it ships the same bug with more code); **re-asserting from an earlier AppKit hook** (a race against the framework's own configuration, where a scene modifier is a declaration to it); **keeping the transform test-only beside the modifier** (a door with no surface — D52′'s words — and the transform's whole content is two flags the role now owns).
 
-### D81′ — board cues are one sound per move, classified from typed values, gated four ways
+### D81′ — board cues are one sound per move, classified from typed values, gated per cue *(four ways when minted; nine since 17 Aug 2026 — castle and promote joined the move family, illegal, game-start and game-end arrived as session events)*
 
 By request, 12 Aug 2026: a sound when a move is played or replayed, and separate sounds for check
 and checkmate. Four bundled samples, one classifier, four toggles — and one rule that is the whole
 of the design: **a move makes exactly one sound, the most specific one that fits.**
+
+*The counts in this entry are as-minted and left that way, because the rule is what the entry is
+for and the rule did not change. Current shape: nine cues over seven samples, nine gates, one key
+per cue in `StorageKeys`. `BoardCue` gained a `family` split when `gameStart` made "what a landed
+move sounds like" stop being true of the whole enum, and precedence below the check tests reads
+promote > capture > castle > move.*
 
 **Precedence rather than layering, and the alternative was real.** A capture that gives check could
 plausibly play both samples, and two clips fired at one instant is mush — no listener separates
@@ -1394,7 +1400,18 @@ puts audio in the append-only model and re-wires per game, where the session hoo
 **a flag on `jump(to:)` for whether it announces** (one method instead of two paths, and it makes
 the machine-gun a caller's mistake to make).
 
-### D82′ — the cue set is a user choice; D81′'s samples become one material among three
+### D82′ — the cue set is a user choice; D81′'s samples become one material among three ***(REVERSED 17 Aug 2026 by request, commit `141b9fa` — there is no cue set and no picker; the app ships one voice and the only choice is which cues are on. The entry stands for its argument, not its arrangement.)***
+
+> **Reversed, in full.** `BoardSoundSet` is deleted, the twelve generated pack samples with it, and
+> `Tools/make-cues.swift` along with them. Settings offers enable/disable per cue and nothing else.
+> Two things are worth keeping from the wreck. The **invariant below still holds by construction**
+> rather than by choice: one set means a felt move beside a marble capture is unrepresentable, and
+> deleting the choice is a stronger way to guarantee that than picking whole. And the entry's
+> licensing note — recorded at the reversal — was wrong in both halves: it named `lichess-org/files`
+> as CC0, but that repository holds no audio, and the sounds live in `lichess-org/lila` under
+> `public/sound`, whose COPYING.md lists "the other sounds" as non-free. The set anybody means was
+> never licensed for this, and the ones that are carry copyleft into a shipping app. That is the
+> half of this decision most worth not rediscovering.
 
 By request, 12 Aug 2026, once D81′ was green and audible. `BoardSoundSet` — **felt**, **wood**,
 **marble** — is picked in Settings and holds all four cues; wood is what shipped and stays the
@@ -1545,3 +1562,67 @@ metrics now** (above); **`PGN` fixtures on `PreviewFixtures`** (costs it `import
 model fixtures into the file whose Foundation-only character is the point); **logging both player
 backfills under `.pgnstore`** (above); and **collapsing `applyInspectorPolicy` into a shared function
 taking the destination** (the objection the old doc raised, and it stands).
+
+### D84′ — the session surface is a window; nothing is drawn over the board but the board's own marks
+
+By request, 18 Aug 2026, and the number is the second decision in this entry. `SessionSidebarPanel`
+is `SessionWindow`: a singleton `Window` opened by id, floating and `.windowManagerRole(.associated)`
+like every other companion (D80′). It is the surface's **fourth** home in three days — sidebar list,
+Board inspector top, board overlay, scene — and the churn is the reason the entry is worth its
+length.
+
+**The overlay was right about the cause and wrong about the remedy.** The 17 Aug hunt convicted
+*participation in window layout while the card changes at game start* — differentially, across eight
+arrangements, with `BarAppearanceBridge`'s KVO double-remove inside `setToolbar:` as the mechanism's
+visible edge. That conviction stands and is not reopened here. An overlay does dodge it: it renders
+without proposing a size. But it still draws inside the main window, and it bought the dodge with a
+card that floats over the board's top rank on a short window — a cost the 17 Aug entry named and
+accepted. A scene dodges layout participation *and* keeps the stage clear, so it strictly dominates
+the arrangement it replaces. The app had already reached this conclusion once: the 16 Aug
+everything-is-a-window pass moved the connect dialog and the New Game sheet out for the same reason.
+This finishes that pass rather than opening an argument.
+
+**D15′ is honoured, not narrowed.** The 17 Aug revision recorded the stage-clear rule as
+"consciously narrowed" because the panel floated over the stage instead of occupying it. That
+narrowing is withdrawn: the stage above the board carries nothing again, because session messaging is
+not in that window at all. The recovery *overlays* stay on the board and are not an exception — they
+are the mirror's marks on specific squares, and a window cannot point at a square.
+
+**What could not come along, and why that is a correction.** The load-error card read
+`TabState.boardLoadError`, which is per-tab; an app-global window cannot honestly show one tab's
+failure to open a game. It is an `.alert` on `BoardDestination` now, which is also the shape that
+keeps it out of the layout conversation. This is D15′ read properly rather than a loss: a load error
+is not session info, and the constants `sidebar.loaderror` / `sidebar.loaderror.dismiss` retired with
+the card because an alert's buttons are AX-reachable by title. `sidebar.session` is **kept** despite
+naming a sidebar that has not hosted this for two days — renaming it would break every check that
+names it, for a move that changed the surface's home rather than its identity.
+
+**Three things left with the move.** `TabState.manualNewGameRequested`, its setter and its `onChange`
+consumer: the flag existed only because the panel lived inside the tab's hierarchy and could not
+reach `openWindow`, and a scene reaches it directly. The auto-offer path never used the flag and is
+untouched.
+
+**A window must render something**, which an inset need not. The old empty guard produced no view
+when there was nothing to say — correct in a stack, impossible in a scene, where it reads as a
+defect. `SessionWindow` states the quiet case instead, and View ▸ Show Session is the door, with no
+keyboard shortcut: the surface is consulted, not driven, and ⌘J is View Options'.
+
+**The number, and the collision it corrects.** The 17 Aug revision minted **D64′** for the overlay.
+D64′ was already taken — "the app is grouped by what a file serves" — and so were D65′ through D83′,
+so that revision collided with nineteen live numbers while its own next-free line read D65′. Named
+here rather than quietly renumbered, per the 7 Aug rule about reversing decisions in the open. The
+overlay never got an entry in this document at all, which is why the collision survived a week: this
+entry is that entry, arriving one arrangement late and covering both.
+
+**Witness:** scene wiring has no unit seam, so the manual check is the feature — main window full
+screen, open Session, start a live game and end it: the window must appear over the board rather
+than switching Spaces, the toolbar must survive, and nothing may zoom. Then windowed, fresh launch:
+the Board must height-resize freely during a live game.
+
+Rejected: **keeping the overlay** (the arrangement this replaces — dodges layout participation but
+still spends the board's top rank, and the scene gives that back for free); **a fixed-height slot in
+a VStack** (rejected on 17 Aug and still rejected — it restores participation with a constant answer
+and spends permanent blank space); **moving the load-error card into the window** (it is per-tab and
+would have to lie about which tab it means); **a keyboard shortcut on Show Session** (a claim to own
+a verb globally, which D69′'s ⌘J note says only the menu may make, and this surface is not driven
+often enough to earn one).

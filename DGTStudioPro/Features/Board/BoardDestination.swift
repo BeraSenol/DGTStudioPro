@@ -92,10 +92,25 @@ struct BoardDestination: View {
         .onChange(of: session.shouldOfferNewGame && tabState.boardPGN == nil) { _, offered in
             if offered { openWindow(id: NewLiveGameWindow.sceneID) }
         }
-        .onChange(of: tabState.manualNewGameRequested) { _, requested in
-            guard requested else { return }
-            tabState.manualNewGameRequested = false
-            openWindow(id: NewLiveGameWindow.sceneID)
+        // (`manualNewGameRequested`'s consumer stood here until 18 Aug 2026. The flag existed so
+        // the session panel, which lived inside this hierarchy and could not reach `openWindow`,
+        // could ask this destination to open the door. `SessionWindow` is a scene and opens it
+        // directly, so the flag and both halves of the hop went with the move - D84′.)
+        //
+        // The per-tab load error, which could NOT follow an app-global window: an alert rather
+        // than a card, because a failure to open *this tab's* game is a modal fact about this
+        // tab, and because a card that appears and disappears above the board is exactly the
+        // layout-participating shape D84′ exists to keep out of this window.
+        .alert(
+            "Couldn't open the game",
+            isPresented: isLoadErrorPresented,
+            presenting: tabState.boardLoadError
+        ) { _ in
+            // Dismiss clears `loadedGameID` - unbinding is the real resolution, and the tab
+            // becomes an honest live tab. Same action the card's button carried.
+            Button("OK") { loadedGameID = nil }
+        } message: { message in
+            Text(message)
         }
         // The removed the last editing surface here: an archived game's roster is edited in Get Info.
         .focusedSceneValue(\.activeGame, tabState.boardGame)
@@ -301,16 +316,15 @@ struct BoardDestination: View {
 
     // MARK: Live Surface
     
-    /// The live surface: mirror board, session panel atop the live inspector, resume/corrupt
-    /// forks, archive confirmation. The stage above the board is clear again - the panel's
-    /// day-trip up there is recorded on `sessionPanel`.
+    /// The live surface: mirror board, resume/corrupt forks, archive confirmation.
+    ///
+    /// **Nothing is drawn over the stage.** The session panel was an `.overlay` here until
+    /// 18 Aug 2026, when it became `SessionWindow` (D84′) - the stage above the board carries
+    /// nothing again, which is D15′ honoured rather than narrowed. The recovery *overlays* stay
+    /// on the board for their own older reason: they are the mirror's marks on squares, not
+    /// messaging, and a window cannot point at a square.
     private var liveSurface: some View {
         mirrorBoard
-            .overlay(alignment: .top) {
-                sessionPanel
-                    .frame(maxWidth: 420)
-                    .padding(.top, 8)
-            }
             .inspector(isPresented: $tabState.boardInspectorPresented) {
                 liveInspector
                     .inspectorColumnWidth(
@@ -368,6 +382,19 @@ struct BoardDestination: View {
         Binding(
             get: { session.resumableDraft != nil },
             set: { _ in }
+        )
+    }
+
+    /// Presents the load-error alert while the tab holds one. The setter clears the message
+    /// rather than ignoring the write, unlike its two siblings above: those read session state
+    /// the session owns and re-answers, where this reads a `TabState` field nothing else clears -
+    /// swallowing the dismissal would leave the alert unclosable.
+    private var isLoadErrorPresented: Binding<Bool> {
+        Binding(
+            get: { tabState.boardLoadError != nil },
+            set: { presented in
+                if !presented { tabState.boardLoadError = nil }
+            }
         )
     }
     
@@ -498,38 +525,14 @@ struct BoardDestination: View {
         }
     }
     
-    // MARK: Session Panel
+    // MARK: Session Surface
 
-    /// The session surface, in its FOURTH home: a floating overlay over the board's top edge
-    /// (17 Aug 2026) - after the sidebar, the inspector top (16 Aug), and one afternoon above
-    /// the board in a VStack. **Live branch only since the same evening**: a review tab is not
-    /// party to the session, and the panel floating over an archived game announced someone
-    /// else's business (the subtitle already made this exact call - "a tab reviewing a PGN has
-    /// no business announcing a desync it isn't party to").
-    ///
-    /// **The overlay is the point, not the look.** The full-screen toolbar fault
-    /// (`BarAppearanceBridge` "displayMode" KVO double-remove inside `setToolbar:`, re-entered
-    /// through the menu-bar companion's `_endLiveResize`) fired with this panel in the
-    /// inspector column, above the board in a VStack, painted `.bar`, and painted
-    /// `.regularMaterial` - and never once fired with the panel absent. The card itself is
-    /// ordinary SwiftUI (texts, a symbol, two conditional buttons), so the conviction is not
-    /// any single modifier: it is the panel's *participation in window layout* while its card
-    /// changes at game start. An overlay participates in rendering but not in layout - it
-    /// proposes nothing to the window, so the card's changes stay out of the sizing
-    /// negotiation the fault re-enters. If the fault survives even this, the panel's content
-    /// is implicated beyond its layout role, and the next probe is a static-text stand-in.
-    ///
-    /// Costs, named: the panel floats OVER the board's top rank on short windows (max width
-    /// 420, top-aligned - the board is centred square, so overlap needs a genuinely small
-    /// window), and it no longer pushes the inspector's content down.
-    private var sessionPanel: some View {
-        SessionSidebarPanel(
-            tabState: tabState,
-            // Already on Board - the sidebar's copy had to navigate here first.
-            onNewGame: { tabState.manualNewGameRequested = true },
-            onDismissLoadError: { loadedGameID = nil }
-        )
-    }
+    // (`sessionPanel` stood here until 18 Aug 2026 - a floating `.overlay` over the board's top
+    // edge, the session surface's third home in as many days. It is `SessionWindow` now (D84′),
+    // and the whole of that argument moved with it rather than being repeated here: the overlay
+    // was right that layout participation armed the full-screen toolbar fault, and a scene dodges
+    // participation the same way while also leaving the stage clear, which is what D15′ asked for
+    // to begin with.)
 
     // MARK: Live Mirror
     
