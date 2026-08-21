@@ -401,7 +401,7 @@ struct SettingsView: View {
                 Text("Reset")
             } footer: {
                 Text(
-                    "Permanently deletes every game in your library. This cannot be undone. Any open game tabs will revert to the live board view."
+                    "Permanently deletes every game in your Library. This cannot be undone. Any open game tabs will revert to the live board view."
                 )
             }
         }

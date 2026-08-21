@@ -183,7 +183,7 @@ struct RecordChart: View {
         }
     }
 
-    /// Rounded to whole percent, matching the stats grid's Win Rate. Three rounded shares need not
+    /// Rounded to whole percent, matching the stats grid's Win %. Three rounded shares need not
     /// sum to 100, which is a property of rounding rather than a defect to correct here - the counts
     /// beside them are the exact answer.
     private func share(_ count: Int) -> String {

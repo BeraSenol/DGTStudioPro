@@ -175,7 +175,7 @@ private struct ImportResultRow: View {
     private var icon: String {
         switch result.outcome.category {
         case .imported:  "checkmark.circle.fill"
-        case .duplicate: "doc.on.doc"
+        case .duplicate: "document.on.document"
         case .failed:    "exclamationmark.triangle.fill"
         }
     }
@@ -200,7 +200,7 @@ private struct ImportResultRow: View {
         case .imported:
             return result.fileName
         case .failed(.duplicate):
-            return "Already in your library, skipped."
+            return "Already in your Library, skipped."
         case .failed(.missingRequiredTags(let tags)):
             return "Missing required tags: \(tags.sorted().joined(separator: ", "))."
         case .failed(.malformedPGN(let reason)):

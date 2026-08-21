@@ -75,14 +75,21 @@ private struct ProfileSection: View {
             LabeledContent("Rank", value: "#\(ranked.rank)")
             LabeledContent("Games", value: "\(ranked.stats.games)")
             LabeledContent("Record", value: "\(ranked.stats.wins)–\(ranked.stats.draws)–\(ranked.stats.losses)")
-            LabeledContent("Win Rate", value: ranked.stats.winRate.formatted(.percent.precision(.fractionLength(0))))
+            // "Win %", not "Win Rate" (21 Aug 2026): one statistic, one label. The sort field, the
+            // table header and the ranking toolbar all already said "Win %"; the two profile
+            // surfaces said "Win Rate", which is `CollectionSortField`'s stated rule
+            // ("two names for one column otherwise") broken on the Players side.
+            LabeledContent("Win %", value: ranked.stats.winRate.formatted(.percent.precision(.fractionLength(0))))
             LabeledContent("Rating", value: ranked.rating?.displaySummary ?? "Unrated")
             if let rating = ranked.rating {
                 // The deviation IS the honesty of the number above - surfaced, not hidden in the provisional flag.
                 LabeledContent("Uncertainty", value: "±\(Int(rating.deviation.rounded()))")
             }
             LabeledContent("Rated Games", value: "\(ratedGames)")
-            LabeledContent("Mates Delivered", value: "\(ranked.stats.matesDelivered)")
+            // "Mates", not "Mates Delivered" (21 Aug 2026): the card already said "Mates", and the
+            // long form sitting near "Special Mates" implied the special ones were undelivered.
+            // The short pair reads as a pair.
+            LabeledContent("Mates", value: "\(ranked.stats.matesDelivered)")
             LabeledContent("First Played", value: RosterSummary.displayDate(ranked.stats.firstPlayed))
             LabeledContent("Last Played", value: RosterSummary.displayDate(ranked.stats.lastPlayed))
         } actions: {

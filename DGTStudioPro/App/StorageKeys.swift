@@ -38,6 +38,13 @@ enum StorageKeys {
 
     // The two tables' column layouts. Two keys, not one: a column set is per-table. One
     // `@AppStorage` site each - no twins. Absent reads the shipped layout.
+    //
+    // **The file's two undocumented exceptions to `name == value`**, now stated (21 Aug 2026).
+    // Every other key in this file spells its constant and its stored string identically, which is
+    // what makes the invariant greppable; these two, and the three `legacyCollection*` keys above,
+    // are the whole exception list. The stored names carry `Customization` because that is what
+    // `TableColumnCustomization` writes and the value already shipped under them - renaming the
+    // string would reset a reader's column layout to buy a symmetry nobody reads.
     static let libraryColumns = "libraryColumnCustomization"
     static let playersColumns = "playersColumnCustomization"
 
@@ -103,12 +110,13 @@ enum StorageKeys {
     static let engineHashMB  = "engineHashMB"
     static let engineThreads = "engineThreads"
 
-    // Syzygy tablebases: four options plus a location as two keys (bookmark opens the folder; path
-    // is a label Settings renders without holding a scoped resource). Defaults stated once, in the
-    // owning type's `init`. Icon size / grid spacing follow the same owned-value shape.
     // Icon size and grid spacing, per destination like the sorts beneath them and the view mode
     // above. Game cards and person monograms want different sizes; one slider setting both was
     // the reason changing either felt like it fought the other surface.
+    //
+    // (A Syzygy paragraph stood above this one until 21 Aug 2026, describing keys that live twenty
+    // lines further down - it had been appended to rather than replaced when these keys arrived.
+    // It is back with the keys it describes.)
     static let libraryIconSize       = "libraryIconSize"
     static let playersIconSize       = "playersIconSize"
     static let libraryGridSpacing    = "libraryGridSpacing"
@@ -124,6 +132,10 @@ enum StorageKeys {
     /// wants it off until they choose otherwise, and wants that to survive the next launch.
     static let evaluationBarHidden   = "evaluationBarHidden"
 
+    // Syzygy tablebases: four options plus a location as two keys (bookmark opens the folder; path
+    // is a label Settings renders without holding a scoped resource). Defaults stated once, in the
+    // owning type's `init`. `syzygy50MoveRule` mirrors Stockfish's own `Syzygy50MoveRule` option
+    // name - the spelling belongs to the engine, not to this file.
     static let syzygyBookmark    = "syzygyBookmark"
     static let syzygyDisplayPath = "syzygyDisplayPath"
     static let syzygyProbeDepth  = "syzygyProbeDepth"

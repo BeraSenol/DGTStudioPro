@@ -199,7 +199,9 @@ extension GetInfoWindow {
         case .game(let pgn):     pgn.name
         case .live:              "Recording"
         case .player(let player): PlayerName.displayForm(of: player.tagName ?? player.name)
-        case .none:              "Info"
+        // The unresolved arm names the affordance, not the category - "Get Info" is what the menu
+        // item and the scene title say (21 Aug 2026).
+        case .none:              "Get Info"
         }
     }
 }
@@ -598,7 +600,7 @@ private struct PlayerInfoTabs<IdentityTab: View>: View {
 
     /// **Handed the folded stats**, because the Info tab prints the 4 × 2 grid (Bera, 18 Aug 2026 -
     /// it lived on the other tab for a day). The window that builds this closure cannot fold: it
-    /// holds a `Player` row, and Games / Win Rate / Rating / Mates / the two dates all come off the
+    /// holds a `Player` row, and Games / Win % / Rating / Mates / the two dates all come off the
     /// Library fold that lives here. Nil means the fold found nothing, and the grid is omitted -
     /// a registry row with no games is ordinary.
     @ViewBuilder let identityTab: (PlayerStats?, Glicko1.Rating?) -> IdentityTab

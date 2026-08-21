@@ -47,7 +47,10 @@ struct PlayersListView: View {
                 Text(player.stats.name)
                     .accessibilityIdentifier(AccessibilityID.playerRow(player.stats.name))
             }
-            .customizationID("player")
+            // **`"name"`, matching `PlayersSortField`'s raw value** (Bera, 21 Aug 2026) - the
+            // Library's `mate`/`checkmateType` twin, and the only other column in either table
+            // whose layout ID and sort ID disagreed. One rename, one reset, one identifier space.
+            .customizationID("name")
             TableColumn("Games", value: \.stats.games) { player in
                 Text("\(player.stats.games)").foregroundStyle(.secondary)
             }
@@ -85,7 +88,9 @@ struct PlayersListView: View {
             .width(min: 84, ideal: 96)
             .customizationID("specialMates")
             TableColumn("Rating", sortUsing: KeyPathComparator(\RankedPlayer.rating?.mean)) { player in
-                Text(player.rating?.displaySummary ?? RosterSummary.displayUnknown)
+                // "Unrated", not `displayUnknown` (21 Aug 2026): a missing rating has a name, and
+                // it is the same word in all three surfaces that can show one.
+                Text(player.rating?.displaySummary ?? "Unrated")
                     .foregroundStyle(.secondary)
             }
             .width(120)

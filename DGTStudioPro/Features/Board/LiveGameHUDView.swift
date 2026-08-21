@@ -81,7 +81,9 @@ struct LiveGameHUDView: View {
             }
 
             if showsNewGameButton {
-                Button("New Game", action: onNewGame)
+                // The HIG ellipsis: this opens `NewLiveGameWindow` rather than starting a game.
+                // The doc comment above already spelled it "New Game…"; the button did not.
+                Button("New Game…", action: onNewGame)
                     .padding(.top, 10)
                     .buttonStyle(.bordered)
                     .foregroundStyle(tint)

@@ -615,7 +615,7 @@ struct LibraryDestination: View {
                 } label: {
                     Label("Match Folder", systemImage: "number.square")
                 }
-                .help("Fill in missing library numbers by matching a folder of PGN files")
+                .help("Fill in missing Library numbers by matching a folder of PGN files")
                 .accessibilityIdentifier(AccessibilityID.libraryBackfillButton)
             }
         }

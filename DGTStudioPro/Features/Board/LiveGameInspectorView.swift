@@ -43,10 +43,14 @@ struct LiveGameInspectorView: View {
             "Who resigns?",
             isPresented: $isChoosingResign
         ) {
-            Button("White Resigns (0–1)", role: .destructive) {
+            // **ASCII hyphens in result tokens** (21 Aug 2026): `0-1`, `1-0` and `1/2-1/2` are PGN
+            // tokens, and PGN spells them with a hyphen. These two were typeset with an en dash
+            // while the draw button beside them was correct, so one menu showed a result score two
+            // ways. The en dash keeps its own job one file over - a W–D–L record is a range.
+            Button("White Resigns (0-1)", role: .destructive) {
                 onResign(.white)
             }
-            Button("Black Resigns (1–0)", role: .destructive) {
+            Button("Black Resigns (1-0)", role: .destructive) {
                 onResign(.black)
             }
             Button("Cancel", role: .cancel) {}

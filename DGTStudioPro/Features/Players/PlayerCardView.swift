@@ -84,8 +84,12 @@ struct PlayerStatsGrid: View {
         Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 6) {
             GridRow {
                 PlayerStatCell("Games", "\(stats.games)")
-                PlayerStatCell("Win Rate", stats.winRate.formatted(.percent.precision(.fractionLength(0))))
-                PlayerStatCell("Rating", rating?.displaySummary ?? RosterSummary.displayUnknown)
+                // "Win %" and "Unrated" (21 Aug 2026): one label per statistic, app-wide. The
+                // sort field owns the first; the second is the word `Glicko1` documents as the
+                // nil rendering ("'Unrated' (nil) stays at call sites"), and `displayUnknown`'s
+                // bare hyphen said nothing a reader could act on.
+                PlayerStatCell("Win %", stats.winRate.formatted(.percent.precision(.fractionLength(0))))
+                PlayerStatCell("Rating", rating?.displaySummary ?? "Unrated")
                 PlayerStatCell("First Played", RosterSummary.displayDate(stats.firstPlayed))
             }
             GridRow {

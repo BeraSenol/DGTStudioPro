@@ -98,9 +98,15 @@ struct LibraryListView: View {
                 Text(game.specialCheckmate?.displayName ?? RosterSummary.displayUnknown)
                     .foregroundStyle(.secondary)
             }
-            // The customization ID stays `"mate"` - stored state; a rename must not reset a column layout.
+            // **`"checkmateType"`, matching `LibrarySortField`'s raw value** (Bera, 21 Aug 2026).
+            // This ID was `"mate"` and the comment here defended it as stored state a rename must
+            // not reset - which was true, and was also how one column came to carry two identifiers
+            // in two persisted spaces: `StorageKeys.libraryColumns` stored `"mate"`, `.librarySort`
+            // stored `"checkmateType"`. Only this column and Players' `player`/`name` diverged; the
+            // other seventeen agreed on both sides. The reset is paid once, deliberately, to end a
+            // second identifier for a thing that already had one.
             .width(min: 96, ideal: 110)
-            .customizationID("mate")
+            .customizationID("checkmateType")
             TableColumn("Event", value: \.event) { Text($0.event).lineLimit(1) }
                 .customizationID("event")
             // `effectiveDate` (date ?? importedAt) - the app's one ordering rule, so this column

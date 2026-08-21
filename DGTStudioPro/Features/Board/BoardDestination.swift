@@ -649,7 +649,7 @@ struct BoardDestination: View {
         // Blessed id→model resolution + tombstone guard: `model(for:)` resurrects deleted ids, and
         // `as?` alone waves the ghost through.
         guard let loadedPGN = modelContext.model(for: id) as? PGN, !loadedPGN.isDeleted else {
-            clearBoard(error: "The game could not be found in the library.")
+            clearBoard(error: "The game could not be found in the Library.")
             Self.logger?.error(
                 "PGN lookup failed for id \(String(describing: id), privacy: .public)"
             )

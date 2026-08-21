@@ -150,7 +150,7 @@ final class GameAnalysisDriver {
             )
             status = persist(modelContext, of: pgn)
                 ? .done
-                : .failed(message: "Nothing needed searching, but the library refused the save.")
+                : .failed(message: "Nothing needed searching, but the Library refused the save.")
             return
         }
 
@@ -203,7 +203,7 @@ final class GameAnalysisDriver {
                     message: "\(Self.moveLabel(plyIndex: index, san: san)) won't parse, "
                     + "analysis stopped there"
                     + (saved ? "; earlier evaluations were kept."
-                             : ", and the library refused the save - earlier evaluations were lost.")
+                             : ", and the Library refused the save - earlier evaluations were lost.")
                 )
                 return
             }
@@ -250,7 +250,7 @@ final class GameAnalysisDriver {
                     message: "The engine quit at \(Self.moveLabel(plyIndex: index, san: san)) "
                     + "(ply \(index + 1) of \(total))"
                     + (saved ? "; evaluations up to there were kept."
-                             : ", and the library refused the save - evaluations were lost.")
+                             : ", and the Library refused the save - evaluations were lost.")
                 )
                 return
             }
@@ -284,7 +284,7 @@ final class GameAnalysisDriver {
             status = .done
         } else {
             status = .failed(
-                message: "Analysis finished, but the library refused the save; "
+                message: "Analysis finished, but the Library refused the save; "
                 + "the evaluations were not stored and will be gone after a relaunch."
             )
         }

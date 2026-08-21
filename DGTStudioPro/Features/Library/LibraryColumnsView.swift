@@ -118,7 +118,8 @@ struct LibraryColumnsView: View {
             runningID: runningAnalysisID
         )
         return HStack(spacing: 6) {
-            Image(systemName: "text.document.fill")
+            // `document.fill` - the app's one glyph for one game (21 Aug 2026).
+            Image(systemName: "document.fill")
                 .imageScale(.medium)
             Text(game.name)
                 .lineLimit(1)

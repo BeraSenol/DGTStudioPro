@@ -136,7 +136,9 @@ struct LibraryQueueStatusLabel: View {
             if queue.isActive {
                 AnalyzingGear()
             } else {
-                Image(systemName: "exclamationmark.triangle")
+                // Filled - a queue holding failures is a concluded bad outcome, and the app's
+                // other three failure triangles are filled. See `DGTConnectionView` for the rule.
+                Image(systemName: "exclamationmark.triangle.fill")
             }
             // `batchPosition`, not `completedCount` - the queue owns the arithmetic; both surfaces read it.
             Text("\(queue.batchPosition)/\(queue.totalCount)")

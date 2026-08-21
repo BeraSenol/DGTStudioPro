@@ -216,7 +216,10 @@ struct DGTStudioProApp: App {
         // same player's rename, and the two could not see each other's writes. Both doors now open
         // this group, and `value:` dedupes on the request, so one player can only ever have one
         // window. The player subject grew the Profile and Matchup tabs to take the content.
-        WindowGroup("Info", for: GetInfoRequest.self) { $request in
+        // Titled "Get Info", after the menu item and the row-menu label that open it (21 Aug 2026).
+        // The per-subject title below replaces this for a resolved request; this is what the Window
+        // menu and an unresolved window show, and it should name the affordance the reader used.
+        WindowGroup("Get Info", for: GetInfoRequest.self) { $request in
             GetInfoWindow(request: request)
                 .environment(dgtSession)
         }
@@ -244,7 +247,12 @@ struct DGTStudioProApp: App {
 
         // The analysis queue's window - a `Window`, not a `WindowGroup`: exactly one queue, opened by
         // `openWindow(id:)`, so the wrapper-type trap is sidestepped rather than paid.
-        Window("Analysis", id: AnalysisQueueStatusWindowView.sceneID) {
+        // **"Analysis Queue", not "Analysis"** (21 Aug 2026): the Window menu listed this beside
+        // "Analysis - Kasparov vs Karpov" and left the reader to guess which was the queue. Its own
+        // help text, its type name and its identifier (`analysis.queue.window`) all already said
+        // queue; the window title was the one place that didn't. The unqualified name belongs to
+        // nothing when everything else qualifies.
+        Window("Analysis Queue", id: AnalysisQueueStatusWindowView.sceneID) {
             AnalysisQueueStatusWindowView()
                 .environment(analysisQueue)
         }

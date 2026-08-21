@@ -127,7 +127,7 @@ extension InspectorSectionHeader where Actions == EmptyView {
             }
         }
         Section {
-            Text("Games, Win Rate, Mates Delivered…")
+            Text("Games, Win %, Mates…")
                 .foregroundStyle(.secondary)
         } header: {
             InspectorSectionHeader("Bera Senol")
@@ -169,7 +169,7 @@ extension InspectorSectionHeader where Actions == EmptyView {
             // the actions slot's whole content, the chevron trails (the 2 Aug reversal). This row
             // showed pencil + glyph + chevron until 16 Aug 2026 - an arity no header had any more.
             InspectorSectionHeader("Glyph and Chevron", section: .pgn) {
-                Button { } label: { Image(systemName: "doc.on.doc") }
+                Button { } label: { Image(systemName: "document.on.document") }
                     .buttonStyle(.borderless)
                     .font(.body)
             }

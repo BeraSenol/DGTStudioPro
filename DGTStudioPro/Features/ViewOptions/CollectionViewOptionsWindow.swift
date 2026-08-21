@@ -8,11 +8,11 @@ struct CollectionViewOptionsSubject: Equatable, Sendable {
         case library
         case players
         
+        /// `rawValue.capitalized`, matching `Destination.displayName` (21 Aug 2026). The
+        /// hand-written switch returned the same two strings the raw values already capitalise
+        /// to - two derivations for one answer, on two enums that are parallel by construction.
         var displayName: String {
-            switch self {
-            case .library: "Library"
-            case .players: "Players"
-            }
+            rawValue.capitalized
         }
     }
     

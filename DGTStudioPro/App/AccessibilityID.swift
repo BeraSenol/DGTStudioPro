@@ -3,8 +3,29 @@
 //  Signatures stay String-only - re-typing them buys type safety nothing checks; callers hold the real type.
 //  An identifier is not surfaced to VoiceOver; that is `accessibilityLabel`, set at the control.
 
-/// The accessibility-identifier registry. Dotted lowercase throughout. Renames break nothing at
-/// compile time - treat entries as the stable contract they were.
+/// The accessibility-identifier registry. Renames break nothing at compile time - treat entries as
+/// the stable contract they were.
+///
+/// **Two spellings, and the boundary between them** (corrected 21 Aug 2026). This doc used to claim
+/// "dotted lowercase throughout", which 60 of the 145 values contradict. The registry actually runs
+/// two schemes, and the honest description is the one that matches the file:
+///
+/// - **Dotted camelCase** is the house style and the majority: `board.flipButton`,
+///   `library.viewModePicker`, `dgt.stopReconnectingButton`, `settings.autoConnectToggle`,
+///   `analysisData.window.table`, `viewOptions.grid.iconSize`, `analysis.queue.stopAll`. Segments
+///   are dot-separated; multi-word segments camel-case. **New entries use this.**
+/// - **Compressed all-lowercase** is the older scheme, surviving where it was minted:
+///   `live.hud.awaitingsetup`, `live.inspector.editdetails`, `live.newgame.notnow`,
+///   `live.recovery.restoredflash`, `getinfo.game.movetext`, `movetext.editor.field`.
+///
+/// The split runs by minting date, not by meaning, and it reaches the first segment too -
+/// `getinfo` and `movetext` are compressed where `analysisData`, `viewOptions`, `gameCard` and
+/// `playerRow` are camel. Correcting the doc rather than renaming sixty identifiers is deliberate:
+/// the file's own bet is that these are a stable contract a future suite reads on day one, and a
+/// mass rename spends that contract to satisfy a sentence.
+///
+/// The four row/card helpers (`gameCard.…`, `gameRow.…`, `playerRow.…`, `playerCard.…`) carry no
+/// destination prefix where everything else does. Same call: recorded, not renamed.
 enum AccessibilityID {
     
     // MARK: Shell
@@ -50,11 +71,17 @@ enum AccessibilityID {
     static let board                = "board"
     static let boardFlipButton      = "board.flipButton"
     static let boardInspectorToggle = "board.inspectorToggle"
-    /// M3 evaluation bar - present only on the review surface over an analysed game.
+    /// M3 evaluation bar - present only on the review surface over an analyzed game.
     static let boardEvaluationBar   = "board.evaluationBar"
-    
+    /// The bar's spoiler switch. Filed with the Board block, where its `board.` prefix says it
+    /// belongs - it sat under the Evaluation Magnifier MARK until 21 Aug 2026.
+    static let boardEvaluationBarHideToggle = "board.evaluationBar.hideToggle"
+    /// Toolbar connect control - the value once hid as a *parameter default*, which the enforcement
+    /// grep cannot see. Also moved here from under the Analysis Data MARK, same day, same reason.
+    static let boardConnectButton = "board.connectButton"
+
     // MARK: Evaluation Magnifier (M8)
-    
+
     /// One identifier for the magnifier across both inspectors - one verb, one window.
     static let evaluationMagnifier     = "evaluation.magnifier"
     static let evaluationWindowGraph   = "evaluation.window.graph"
@@ -62,17 +89,14 @@ enum AccessibilityID {
     static let evaluationWindowEmpty   = "evaluation.window.empty"
     // `matchupWindowEmpty` retired 18 Aug 2026 with the Matchup window: its subject is a Get Info
     // subject now, and a missing one falls to `getInfoEmpty` like the other three.
-    static let boardEvaluationBarHideToggle = "board.evaluationBar.hideToggle"
-    
+
     // MARK: Analysis Data (8 Aug 2026)
-    
+
     /// Analysis Data glyph and window; one identifier, `evaluationMagnifier`'s reasoning.
     static let analysisDataButton      = "analysisData.button"
     static let analysisDataWindowTable = "analysisData.window.table"
     static let analysisDataWindowEmpty = "analysisData.window.empty"
-    /// Toolbar connect control - the value once hid as a *parameter default*, which the enforcement grep cannot see.
-    static let boardConnectButton = "board.connectButton"
-    
+
     /// `square.e4`, … - keyed by algebraic notation (byte-identical to the old construction, pinned by `SquareTests`).
     static func boardSquare(_ algebraic: String) -> String {
         "square.\(algebraic)"
@@ -234,7 +258,11 @@ enum AccessibilityID {
     static let settingsSyzygyVerify            = "settings.syzygy.verify"
     static let settingsSyzygyProbeDepthStepper = "settings.syzygy.probeDepthStepper"
     static let settingsSyzygyProbeLimitStepper = "settings.syzygy.probeLimitStepper"
-    static let settingsSyzygy50MoveToggle      = "settings.syzygy.fiftyMoveToggle"
+    /// `50Move`, not `fiftyMove`: the constant and its own value disagreed, and `Syzygy50MoveRule`
+    /// is the UCI option's own spelling (`EngineConfiguration`'s `setoption` line) - which is also
+    /// what `StorageKeys.syzygy50MoveRule` mirrors. One spelling of the rule, taken from the engine
+    /// that names it. (21 Aug 2026)
+    static let settingsSyzygy50MoveToggle      = "settings.syzygy.50MoveToggle"
     static let settingsPieceAnimationSlider    = "settings.pieceAnimationSlider"
 
     /// The eight gated board cues - six move-family, two lifecycle (four until 17 Aug 2026).
@@ -315,8 +343,12 @@ enum AccessibilityID {
     static let libraryFilterChipClear = "library.filterChip.clear"
     
     /// Present only while some game lacks an ordinal (an affordance that cannot act is not on screen).
-    static let libraryBackfillButton = "library.backfill.button"
-    static let libraryExport       = "library.export"
+    // The import / export / backfill trio, one shape (21 Aug 2026). They named the same kind of
+    // control three different ways: `library.importButton`, `library.export` (no Button at all,
+    // for a toolbar button), and `library.backfill.button` - the file's only value putting Button
+    // in its own dotted segment. `noun + Button` in one segment is the house form.
+    static let libraryBackfillButton = "library.backfillButton"
+    static let libraryExport       = "library.exportButton"
     
     /// `gameCard.Quick Mate`, … - keyed by display name.
     static func gameCard(_ name: String) -> String {

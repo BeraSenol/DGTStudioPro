@@ -73,7 +73,7 @@ extension InspectorEmptyState {
         InspectorEmptyState(
             title: "No Game Selected",
             systemImage: "document.fill",
-            message: "Select a game from the library to view its details and analysis.",
+            message: "Select a game from the Library to view its details and analysis.",
             identifier: AccessibilityID.libraryInspectorEmpty
         )
         Divider()
@@ -90,7 +90,7 @@ extension InspectorEmptyState {
         InspectorEmptyState(
             title: "No Analysis",
             systemImage: "chart.line.uptrend.xyaxis",
-            message: "This game has no recorded evaluations, or it is no longer in the library.",
+            message: "This game has no recorded evaluations, or it is no longer in the Library.",
             identifier: AccessibilityID.evaluationWindowEmpty
         )
     }
@@ -103,7 +103,7 @@ extension InspectorEmptyState {
     InspectorEmptyState(
         title: "No Game Selected",
         systemImage: "document.fill",
-        message: "Select a game from the library to view its details and analysis.",
+        message: "Select a game from the Library to view its details and analysis.",
         identifier: AccessibilityID.libraryInspectorEmpty
     )
     .frame(width: 325, height: 420)

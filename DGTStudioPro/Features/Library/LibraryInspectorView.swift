@@ -45,7 +45,7 @@ struct LibraryInspectorView: View {
         InspectorEmptyState(
             title: "No Game Selected",
             systemImage: "document.fill",
-            message: "Select a game from the library to view its details and analysis.",
+            message: "Select a game from the Library to view its details and analysis.",
             identifier: AccessibilityID.libraryInspectorEmpty
         )
         .scrollBacked()
@@ -166,12 +166,16 @@ private struct LoadedSection: View {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(pgn.pgnText, forType: .string)
         } label: {
-            Image(systemName: "doc.on.doc")
+            // `document.on.document`, the modern family's unfilled stacked pair (21 Aug 2026).
+            // The filled variant one screen up means "N games selected"; unfilled means "two of
+            // this document" - a copy, or an import that found a twin. Same family, and the fill
+            // carries the distinction rather than the catalogue era carrying it.
+            Image(systemName: "document.on.document")
         }
         .buttonStyle(.borderless)
         // A glyph at header font size is an ~11 pt mouse target.
         .font(.body)
-        .help("Copy PGN")
+        .help("Copy this game's PGN")
         .accessibilityLabel("Copy PGN")
         .accessibilityIdentifier(AccessibilityID.libraryInspectorCopyPGN)
     }

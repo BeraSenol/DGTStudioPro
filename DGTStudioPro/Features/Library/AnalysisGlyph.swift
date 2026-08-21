@@ -295,7 +295,7 @@ struct AnalysisStatusBadge: View {
     HStack(spacing: 24) {
         ForEach([AnalysisGlyph.State.unanalyzed, .analyzing, .analyzed], id: \.self) { state in
             VStack(spacing: 12) {
-                Image(systemName: "doc.fill")
+                Image(systemName: "document.fill")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .foregroundStyle(.white)

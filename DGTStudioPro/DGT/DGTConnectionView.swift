@@ -200,7 +200,13 @@ struct DGTConnectionView: View {
 
     private func failedPanel(_ message: String) -> some View {
         ContentUnavailableView {
-            Label("Couldn't Connect", systemImage: "exclamationmark.triangle")
+            // **Filled** (21 Aug 2026). The app's unstated rule, now stated: a *terminal* state
+            // fills its glyph, a *resting* state leaves it hollow - `.idle`'s hollow check, the
+            // empty session card's hollow check, the movetext editor's hollow valid state, against
+            // the filled triangles on a failed import, a failed analysis and a recovery. A failure
+            // to connect is terminal; this was the one site that broke the rule in the direction
+            // that made it look like there wasn't one.
+            Label("Couldn't Connect", systemImage: "exclamationmark.triangle.fill")
         } description: {
             Text(message)
         }

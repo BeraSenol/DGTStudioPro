@@ -58,8 +58,13 @@ struct LibraryGameCardView: View {
     // MARK: Instance Methods
     private var documentIcon: some View {
         ZStack {
-            // `doc.fill`, not `doc`: a filled sheet is paper, and the ordinal is written on it.
-            Image(systemName: "doc.fill")
+            // `document.fill`, not `doc`: a filled sheet is paper, and the ordinal is written on it.
+            // The `document.*` family, not `doc.*` (21 Aug 2026): one game was drawn with three
+            // different symbols across two eras of the catalogue - `doc.fill` here,
+            // `text.document.fill` in the columns row, `document.fill` in the inspector - and the
+            // card and the inspector sat in the same destination. `document.*` is the current
+            // family and already had the majority.
+            Image(systemName: "document.fill")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .foregroundStyle(.white)

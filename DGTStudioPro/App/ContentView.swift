@@ -58,7 +58,7 @@ struct ContentView: View {
             List(selection: $selection) {
                 Section("Favorites") {
                     ForEach(Destination.allCases) { destination in
-                        Label(destination.title, systemImage: destination.systemImage)
+                        Label(destination.displayName, systemImage: destination.systemImage)
                             .tag(SidebarSelection.destination(destination))
                             .accessibilityIdentifier(AccessibilityID.sidebarDestination(destination.rawValue))
                     }
@@ -100,7 +100,7 @@ struct ContentView: View {
                                 .padding(.trailing, 8)
                         }
                         .buttonStyle(.borderless)
-                        .help("New Smart Tag")
+                        .help("Create a new smart tag")
                         // Pointer-only affordance: macOS exposes no AXButton for a borderless button in a List section
                         // header - proven 29 July; the menu-bar door is the AX-reachable one.
                         .accessibilityIdentifier(AccessibilityID.sidebarTagsAdd)
@@ -237,7 +237,13 @@ enum Destination: String, CaseIterable, Identifiable, Hashable {
 
     var id: String { rawValue }
 
-    var title: String {
+    /// `displayName`, not `title` (21 Aug 2026). Thirteen types in the tree spell this accessor
+    /// `displayName`; this was the one holdout, and the only non-private `var title: String` there
+    /// was - the other four are private view-local computeds correctly named for what they are.
+    /// `CollectionViewOptionsSubject.Collection` is the parallel enum over two of these same cases
+    /// and already used this name, so the two now rhyme where they used to diverge on both the
+    /// accessor's name and its derivation.
+    var displayName: String {
         rawValue.capitalized
     }
 

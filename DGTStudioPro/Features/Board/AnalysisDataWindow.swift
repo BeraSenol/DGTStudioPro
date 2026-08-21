@@ -150,7 +150,7 @@ struct AnalysisDataWindow: View {
         InspectorEmptyState(
             title: "No Analysis",
             systemImage: "tablecells",
-            message: "This game has no recorded evaluations, or it is no longer in the library.",
+            message: "This game has no recorded evaluations, or it is no longer in the Library.",
             identifier: AccessibilityID.analysisDataWindowEmpty
         )
     }
