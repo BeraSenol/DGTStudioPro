@@ -38,13 +38,6 @@ struct BoardDestination: View {
     /// losing it across a sidebar round-trip re-offers, which is the safe direction.
     @State private var corruptOfferDeferred = false
     
-    // (An orphaned doc block for `activeEditor` stood here until 16 Aug 2026 - the property left
-    // when Get Info absorbed the game editors, its doc did not. A doc comment with no declaration under it is debris, not record;
-    // the epitaph lives in the decision log.)
-
-    // (`showConnectSheet` stood here until 16 Aug 2026 - the connect dialog is its own
-    // window now, opened by id from the toolbar control.)
-    
     /// Set by the Game menu's ⌘I (a `Commands` scene cannot open windows); cleared as soon as this
     /// view has. A trigger, not a stored request - the subject is derivable here (`getInfoSubject`).
     @State private var getInfoRequested = false
@@ -76,12 +69,10 @@ struct BoardDestination: View {
         .navigationTitle(tabState.boardPGN?.name ?? "Board")
         // Subtitle is *state*; title is identity; the inspector's `GameHeadline` is the pairing.
         // A tab reviewing a PGN has no business announcing a desync it isn't party to.
-        // Round trip, recorded: dropped 16 Aug 2026 and re-added 17 Aug by request. It was
-        // twice built into a fix for the full-screen toolbar fault - removed outright, then
-        // held permanently present with a no-break space - and the crash survived both, while
-        // review tabs flip subtitle text every arrow step without incident. Exonerated as the
-        // trigger, so the echo argument lost to wanting the words in the titlebar, and the
-        // fault hunt continues elsewhere.
+        // **Exonerated as a full-screen-toolbar-fault trigger**, which is why it is back: removed
+        // outright and then pinned present with a no-break space, and the fault survived both,
+        // while review tabs flip this text every arrow step without incident. Worth not
+        // re-suspecting.
         .navigationSubtitle(
             DestinationSubtitle.board(
                 phase: .current(session: session, connection: connection),
@@ -91,24 +82,18 @@ struct BoardDestination: View {
             ) ?? ""
         )
         .toolbar { boardToolbarContent }
-        // The connect dialog is its own window since 16 Aug 2026 - one fewer sheet contending
-        // for this window's single modal slot.
-        // The New Game dialog is a window since 16 Aug 2026 (`NewLiveGameWindow`). This destination
-        // still translates the session's auto-offer into presentation - gated off the review
-        // branch, so a tab reviewing a PGN isn't interrupted - and the manual request into the
-        // same door, `getInfoRequested`'s reset-then-open shape.
+        // The connect and New Game dialogs are windows since 16 Aug 2026 - two fewer sheets
+        // contending for this window's single modal slot. This destination translates only the
+        // session's *auto*-offer, gated off the review branch so a tab reviewing a PGN isn't
+        // interrupted; the manual button belongs to `SessionWindow`, which as a scene reaches
+        // `openWindow` itself (D84′ took the flag that used to hop through here).
         .onChange(of: session.shouldOfferNewGame && tabState.boardPGN == nil) { _, offered in
             if offered { openWindow(id: NewLiveGameWindow.sceneID) }
         }
-        // (`manualNewGameRequested`'s consumer stood here until 18 Aug 2026. The flag existed so
-        // the session panel, which lived inside this hierarchy and could not reach `openWindow`,
-        // could ask this destination to open the door. `SessionWindow` is a scene and opens it
-        // directly, so the flag and both halves of the hop went with the move - D84′.)
-        //
-        // The per-tab load error, which could NOT follow an app-global window: an alert rather
-        // than a card, because a failure to open *this tab's* game is a modal fact about this
-        // tab, and because a card that appears and disappears above the board is exactly the
-        // layout-participating shape D84′ exists to keep out of this window.
+        // The per-tab load error, which could NOT follow those windows: an alert rather than a
+        // card, because a failure to open *this tab's* game is a modal fact about this tab, and
+        // because a card appearing above the board is the layout-participating shape D84′ exists
+        // to keep out of this window.
         .alert(
             "Couldn't open the game",
             isPresented: isLoadErrorPresented,
@@ -120,10 +105,11 @@ struct BoardDestination: View {
         } message: { message in
             Text(message)
         }
-        // The removed the last editing surface here: an archived game's roster is edited in Get Info.
+        // No editing surface on this destination: an archived game's roster is edited in Get Info.
         .focusedSceneValue(\.activeGame, tabState.boardGame)
         // Get Info trigger published only when this tab has a subject, so the menu item's `disabled(_:)`
-        // reads a condition producible both ways.
+        // reads a condition producible both ways. The `Binding` is minted fresh per body pass and
+        // `Binding` is not `Equatable` - M16's owed FocusedValue check, argued at `GetInfoRequestKey`.
         .focusedSceneValue(
             \.boardGetInfoRequest,
             getInfoSubject == nil ? nil : $getInfoRequested
@@ -455,6 +441,10 @@ struct BoardDestination: View {
     
     /// Applies edited details through `PGNStore.applyEdit` (which owns the rehash structurally).
     /// Also renames the row when it still carried the default "White vs Black" name.
+    ///
+    /// **Six named columns, and `board` is deliberately not among them.** `EditGameInfoSheet` builds
+    /// its `Roster` fresh from the `PGN`, so `roster.board` is always nil here; writing it would
+    /// erase the archived row's board tag on every details edit.
     private func applyEditedInfo(_ roster: LiveGame.Roster, to pgn: PGN) {
         do {
             try PGNStore(modelContext: modelContext).applyEdit(to: pgn) { pgn in
@@ -476,10 +466,8 @@ struct BoardDestination: View {
     }
 
     /// Recomputes "Recording 112." - the number the game will carry in the Library, D58′'s own
-    /// max+1 (via `PGNStore.highestLibraryIndex`, predicated + limit 1 - not a fetch-all), NOT the
-    /// roster's round (17 Aug 2026, by request: round 12 against Lorenzo made the headline
-    /// read "Recording 12." while 111 games sat in the Library). Round stays a roster fact
-    /// everywhere else - the New Game prefill, the tags, export.
+    /// max+1 (via `PGNStore.highestLibraryIndex`, predicated + limit 1, not a fetch-all). Why it is
+    /// this and not the roster's round is argued at `GameHeadline.text`.
     ///
     /// **Called, not computed** (21 Aug 2026): the two callers are arrival and an archive, which
     /// are the only two moments the answer can change. See `prospectiveGameNumber`'s own note for
@@ -495,11 +483,6 @@ struct BoardDestination: View {
         if let pgn = tabState.boardPGN { return .game(pgn.persistentModelID) }
         return session.liveGame == nil ? nil : .live
     }
-
-
-    // (`isNewGameSheetPresented` stood here until 16 Aug 2026 - the dialog is a window now, and
-    // the binding's dismiss half lives on the window's own `onDisappear`.)
-
 
     /// Live-branch inspector: game details when one exists, otherwise a connection-aware hint -
     /// the toggle is never a dead switch on the mirror.
@@ -542,15 +525,6 @@ struct BoardDestination: View {
         }
     }
     
-    // MARK: Session Surface
-
-    // (`sessionPanel` stood here until 18 Aug 2026 - a floating `.overlay` over the board's top
-    // edge, the session surface's third home in as many days. It is `SessionWindow` now (D84′),
-    // and the whole of that argument moved with it rather than being repeated here: the overlay
-    // was right that layout participation armed the full-screen toolbar fault, and a scene dodges
-    // participation the same way while also leaving the stage clear, which is what D15′ asked for
-    // to begin with.)
-
     // MARK: Live Mirror
     
     /// The mirror whenever no game is loaded. The *position* always renders `physicalBoard`
@@ -616,8 +590,9 @@ struct BoardDestination: View {
     }
     
     /// Recovery overlays, recomputed per observable change so highlights shrink as squares are fixed -
-    /// a 64-square diff per render is cheap. The sidebar's checklist computes its own
-    /// (`RecoveryGuidance.current`: two computations, one spelling).
+    /// a 64-square diff per render is cheap. `SessionWindow` computes its own for the checklist
+    /// (`RecoveryGuidance.current`: two computations, one spelling). It read "the sidebar's" until
+    /// 24 Aug 2026, six days after that surface became a scene.
     private var recoveryGuidance: RecoveryGuidance? {
         .current(session: session, connection: connection)
     }

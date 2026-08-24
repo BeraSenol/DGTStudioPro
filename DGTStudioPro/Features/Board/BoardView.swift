@@ -34,7 +34,9 @@ struct BoardView: View {
     
     // MARK: Preferences
     
-    /// The coordinates - read here (one consumer) rather than threaded like `style`.
+    /// The coordinates - read here (one consumer) rather than threaded like `style`. All eight
+    /// previews below inherit the *real* setting, so a canvas showing an unlabelled board is the
+    /// preference, not a regression.
     @AppStorage(StorageKeys.showBoardCoordinates) private var showsCoordinates = true
     
     // MARK: Body
@@ -192,6 +194,10 @@ struct BoardView: View {
         }
     }
     
+    /// **Must equal what `gridBorder` above actually draws**, or the playing surface starts
+    /// somewhere other than where the frame ends. Walnut and wenge match their strokes exactly;
+    /// rosewood's three sum to `thin * 5/3` and this returns a fifteenth less on purpose - which is
+    /// why the expression stays a subtraction. Simplifying it to `thin * 5/3` moves the board.
     private func gridBorderInset(squareSize: CGFloat) -> CGFloat {
         let thin = squareSize / 28
         switch style {
@@ -202,6 +208,11 @@ struct BoardView: View {
         }
     }
     
+    /// Visual cell → board square: XOR the rank bits for White (`56`), the file bits for Black
+    /// (`7`). **The same flip is spelled three more times** - `BoardPieceLayer` runs this mask in
+    /// the opposite direction, and the two coordinate strips above restate it as ternaries rather
+    /// than deriving from here. They agree across all 128 cells today; nothing in the suite checks
+    /// that they still will.
     private func square(visualRow: Int, visualColumn: Int) -> Square {
         (visualRow * 8 + visualColumn) ^ (perspective == .white ? 56 : 7)
     }

@@ -25,6 +25,9 @@ struct EvaluationBarReading: Equatable, Sendable {
         switch evaluation {
         case .centipawns(let cp):
             let pawns = (Double(cp) / 100 * 10).rounded() / 10
+            // **The zero case is a guard, not a shortcut.** A small negative - anything from -1 to
+            // -4 centipawns - rounds to `-0.0`, and `%+.1f` preserves the sign bit and prints
+            // "-0.0". `-0.0 == 0` is true, so this arm catches it and prints the unsigned form.
             self.label = pawns == 0
             ? "0.0"
             : String(format: "%+.1f", pawns)

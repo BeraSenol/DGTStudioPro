@@ -11,9 +11,10 @@ struct BoardInspectorView: View {
     let style: BoardStyle
     let onMoveTapped: ((Int) -> Void)?
     
-    /// The edit request: presentation and the write belong to `BoardDestination` (modals are
-    /// destination furniture); this view only asks, which keeps it canvas-renderable. The Board
-    /// presents no editor at all.
+    // The Board presents no editor: an archived game's roster is edited in Get Info, and live
+    // movetext is append-only. Kept as a plain note because there is no declaration left to
+    // document - a `///` block for a removed edit-request callback floated here until
+    // 24 Aug 2026, detached from anything by a blank line.
 
     var body: some View {
         List {
@@ -31,8 +32,11 @@ struct BoardInspectorView: View {
     /// The roster under the headline - the same shape and place as the live inspector's, so
     /// the two metadata surfaces read as one idea in two states.
     private var metadataSection: some View {
-        // The action slot is empty and kept: an empty `@ViewBuilder` slot is the honest
-        // statement that this host has no verb.
+        // No actions slot is passed at all - this takes `SevenTagRosterSection`'s
+        // `Actions == EmptyView` convenience init. That is a different thing from `movesSection`'s
+        // explicitly-empty closure below, and it is the arrangement M16's chevron check is about:
+        // the header's 12 pt gap to the actions slot rests on a bare `EmptyView` not being laid
+        // out, which compiles either way and so ⌘U cannot answer.
         SevenTagRosterSection(
             roster: pgn.map { RosterSummary($0) },
             headline: headline
@@ -42,10 +46,9 @@ struct BoardInspectorView: View {
     /// The headline; falls back to a bare noun with no game - "? vs ?" would over-claim.
     private var headline: String {
         guard let pgn else { return "Game" }
-        // The number slot carries the LIBRARY ordinal since 17 Aug 2026 - "Reviewing 47." for
-        // game 47 - the live headline's rule, applied to its review twin the same day (round
-        // is a rivalry counter, and the two inspectors must not number differently). A game
-        // without an ordinal omits the number, which the grammar already does for nil.
+        // `libraryIndex`, not `round` - see `GameHeadline.text`. The two inspectors must not
+        // number differently, and a game without an ordinal omits the number, which the grammar
+        // already does for nil.
         return GameHeadline.text(
             .reviewing, round: pgn.libraryIndex, white: pgn.white, black: pgn.black
         )
@@ -89,6 +92,11 @@ struct BoardInspectorView: View {
 }
 
 // MARK: Previews
+
+/// **The fixture below is internally inconsistent**: 39 evaluations against 20 moves, so the graph
+/// spans a longer game than the list does and `currentMoveIndex: 14` lands at a different fraction
+/// in each. Fine for checking either surface alone; useless for the one question this preview looks
+/// like it answers - whether the graph's marker tracks the selected move.
 #Preview("Game Data") {
     BoardInspectorView(
         pgn: PGN(

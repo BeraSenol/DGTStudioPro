@@ -10,6 +10,9 @@ struct EvaluationGraphGeometry: Equatable, Sendable {
     let plyCount: Int
 
     // MARK: Initializers
+
+    /// Identical to the memberwise init it suppresses - both properties are `let` with no defaults,
+    /// so nothing is gained or lost. Kept only because deleting it is a change with no reader.
     init(width: CGFloat, plyCount: Int) {
         self.width = width
         self.plyCount = plyCount
@@ -34,7 +37,8 @@ struct EvaluationGraphGeometry: Equatable, Sendable {
     }
 
     /// The nearest ply, clamped to the ends - a pointer past the edge still means the nearest end;
-    /// an empty curve is the only genuine "no answer".
+    /// an empty curve is the only genuine "no answer". The upper clamp is safe because a non-nil
+    /// `step` already means `plyCount >= 2`, so `plyCount - 1` is never below the lower bound.
     func ply(nearestTo x: CGFloat) -> Int? {
         guard let step else { return nil }
         let index = Int((x / step).rounded())
@@ -55,6 +59,11 @@ struct EvaluationGraphReading: Equatable, Sendable {
 
     /// Fails when `ply` names no move; a move without an evaluation folds to the bar's nil rule -
     /// the move happened either way.
+    ///
+    /// **The move grammar below is `GameAnalysisDriver.moveLabel`'s, spelled a second time.** It
+    /// cannot simply call it: that method is `static` on a `@MainActor` type and this initializer is
+    /// nonisolated, so sharing needs the grammar hoisted somewhere neutral, or `moveLabel` marked
+    /// `nonisolated` (it touches nothing but its two arguments).
     init?(ply: Int, moves: [String], evaluations: [Evaluation?]) {
         guard ply >= 0, ply < moves.count else { return nil }
 

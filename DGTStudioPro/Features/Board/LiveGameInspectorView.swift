@@ -33,6 +33,10 @@ struct LiveGameInspectorView: View {
         .listStyle(.sidebar)
         .scrollsToCurrentMove(currentMoveIndex)
         .accessibilityIdentifier(AccessibilityID.liveInspector)
+        // Still a sheet after the 16 Aug 2026 everything-is-a-window pass, with the archive
+        // confirmation - the two surfaces that edit *this tab's* roster. What moved to windows edits
+        // app-global state (connection, session, New Game, smart tags); a tab-scoped modal has
+        // nowhere else to be.
         .sheet(isPresented: $isEditingDetails) {
             EditLiveGameDetailsSheet(
                 initialRoster: game.roster,
@@ -46,7 +50,7 @@ struct LiveGameInspectorView: View {
             // **ASCII hyphens in result tokens** (21 Aug 2026): `0-1`, `1-0` and `1/2-1/2` are PGN
             // tokens, and PGN spells them with a hyphen. These two were typeset with an en dash
             // while the draw button beside them was correct, so one menu showed a result score two
-            // ways. The en dash keeps its own job one file over - a W–D–L record is a range.
+            // ways. The en dash keeps its own job in the Players surfaces - a W–D–L record is a range.
             Button("White Resigns (0-1)", role: .destructive) {
                 onResign(.white)
             }
@@ -100,14 +104,10 @@ struct LiveGameInspectorView: View {
         game.sanMoves.isEmpty ? nil : game.sanMoves.count - 1
     }
     
-    /// "Recording 101. Magnus Carlsen vs Ian Nepomniachtchi", the
-    /// live twin of the review headline. Same formatter, so the two
-    /// inspectors can't drift apart on the grammar.
+    /// "Recording 101. Magnus Carlsen vs Ian Nepomniachtchi", the live twin of the review
+    /// headline. Same formatter, so the two inspectors can't drift apart on the grammar - and see
+    /// `GameHeadline.text` on why `round:` takes the library ordinal here.
     private var headline: String {
-        // The number slot carries the LIBRARY ordinal since 17 Aug 2026, not the roster's
-        // round - "Recording 112." for the game that will archive as 112. The formatter's
-        // grammar is untouched; only the number's source moved (the round-12-vs-game-112
-        // report). Round stays a roster fact everywhere else.
         GameHeadline.text(
             .recording,
             round: recordingNumber,

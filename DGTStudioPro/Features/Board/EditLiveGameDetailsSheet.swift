@@ -33,6 +33,13 @@ struct EditLiveGameDetailsSheet: View {
     ) {
         self.onSave = onSave
         // Seed with form-friendly values ("?" → empty).
+        //
+        // **Copy-and-mutate, not rebuild - and that is what keeps `board`.** It is the one roster
+        // field the shared form never shows; `date` and `round` are shown and bound straight
+        // through `$roster`, needing no conversion. So `board` survives on the copy alone, here and
+        // again in `normalized`. The sibling named above rebuilds its `Roster` from a `PGN` and
+        // drops it; `DGTLiveSession.updateRoster` restores it, so neither sheet can lose it - but
+        // only this one would have been safe unaided.
         var seed = initialRoster
         seed.event = formValue(initialRoster.event)
         seed.site  = formValue(initialRoster.site)
@@ -85,6 +92,9 @@ struct EditLiveGameDetailsSheet: View {
 
 // MARK: Previews
 
+/// Both `"?"` seeds arrive as empty fields, and Save stays **enabled**: `siteViolatesFormat`
+/// re-tags an empty site back to `"?"` and exempts the unknown tag, so a blank site is not a
+/// violation. Worth knowing before reading the disabled state as broken.
 #Preview("Edit Details") {
     EditLiveGameDetailsSheet(
         initialRoster: .init(

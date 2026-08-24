@@ -8,6 +8,11 @@ struct MoveHistoryView: View {
     let onMoveTapped: ((Int) -> Void)?
     /// Whether this view brings its own `ScrollView` - `false` lets a host `List` own scrolling
     /// (a nested scroll view is a fixed-size box inside an infinite proposal).
+    ///
+    /// **Both hosts pass `false`, so `pane`, its `.thinMaterial`, the `LazyVStack` and the scroll
+    /// sync inside `pane` render on canvas only.** Kept as the honest shape for a standalone move
+    /// list, and because the split is what makes the embedded form correct. Note the default is
+    /// the *unrendered* value - the reverse of `DGTConnectionToolbarContent.identifier`'s rule.
     var scrollsIndependently: Bool = true
     
     // MARK: Computed Properties
@@ -26,6 +31,8 @@ struct MoveHistoryView: View {
                 moveRows
             }
         }
+        // Cancels the 8 pt leading/trailing `listRowInsets` both hosts apply, so the rows run to
+        // the section's edge. One decision, spelled in three files.
         .padding(.horizontal, -8)
     }
     
@@ -71,6 +78,10 @@ struct MoveHistoryView: View {
         }
     }
 
+    /// `id: \.self` is load-bearing, not redundant: it selects `ForEach`'s
+    /// `RandomAccessCollection` initializer. Dropping it picks the constant-`Range<Int>` one,
+    /// which SwiftUI supports only for a range that never changes - and `pairCount` grows on
+    /// every move.
     @ViewBuilder
     private var pairRows: some View {
         ForEach(0 ..< pairCount, id: \.self) { pairIndex in
@@ -104,7 +115,11 @@ struct MoveHistoryView: View {
     private func moveCell(at index: Int) -> some View {
         let san = moves[index]
         let isSelected = index == currentMoveIndex
-        
+
+        // The Button is built either way, so a nil handler leaves a control that does nothing -
+        // live play passes nil, and every SAN there is clickable and announced as a button while
+        // acting on nothing. `.disabled(onMoveTapped == nil)` would fix the semantics at the cost
+        // of greying the text.
         return Button {
             onMoveTapped?(index)
         } label: {
@@ -166,7 +181,11 @@ private struct CurrentMoveScrollSync: ViewModifier {
 }
 
 // MARK: Previews
-#Preview("Ruy Lopez with Classifications") {
+
+/// **Four of these five take `scrollsIndependently`'s default, so they render `pane`** - the
+/// branch neither host uses. Read them as the standalone shape; "Inspector Integration" is the
+/// only one showing what ships.
+#Preview("Ruy Lopez") {
     MoveHistoryView(
         moves: [
             "e4", "e5", "Nf3", "Nc6", "Bb5", "a6",

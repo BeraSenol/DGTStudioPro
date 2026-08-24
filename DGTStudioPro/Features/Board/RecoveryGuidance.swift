@@ -38,7 +38,9 @@ struct RecoveryGuidance: Equatable, Sendable {
         /// Prose piece names live here - the chess core stays presentation-free.
         private static func name(of piece: Piece) -> String {
             guard let color = piece.color, let type = piece.type else {
-                return "piece"      // unreachable for occupied squares; kept total
+                // Unreachable: every `Piece` an `Item` carries came from a diff map or from a
+                // square already tested `isOccupied`, so both halves are non-nil. Kept total.
+                return "piece"
             }
             let colorName = switch color {
             case .white: "White"
@@ -84,7 +86,12 @@ struct RecoveryGuidance: Equatable, Sendable {
     var isEmpty: Bool { items.isEmpty }
     
     // MARK: Initializer
-    
+
+    /// **The diff runs backwards here, and that is the point.** Every other construction in the app
+    /// asks `(from: game, to: physical)` - "what did the player do?". This one asks
+    /// `(from: physical, to: target)` - "what must the player still do?" - so the type's vocabulary
+    /// inverts with it: `vacated` names squares the *board* holds and the target does not, and
+    /// `placed` names what the *target* wants. Read the two loops with that swap in mind.
     init(physical: Position, target: Position) {
         let diff = DGTBoardDiff(from: physical, to: target)
         var items: [Item] = []
@@ -112,8 +119,16 @@ struct RecoveryGuidance: Equatable, Sendable {
 
 extension RecoveryGuidance {
     
-    /// The live checklist, or nil. Two consumers compute this independently by decision - two
+    /// The live checklist, or nil. Two consumers compute this independently by decision -
+    /// `BoardDestination` for the board's overlays, `SessionWindow` for the written checklist. Two
     /// *computations* was the decision; two *spellings* was not, hence one static.
+    ///
+    /// Non-nil is not the same as non-empty: a board restored while `needsRecovery` is still set
+    /// yields an empty checklist. The two consumers handle that window differently and both are
+    /// right - `SessionWindow` tests `isEmpty`, because an empty written list is a heading over
+    /// nothing; `BoardDestination` does not need to, because empty square sets draw nothing anyway.
+    /// It does still gate move hints on the *optional*, so hints stay down for the whole window
+    /// rather than flickering back for the frame before recovery clears.
     @MainActor
     static func current(
         session: DGTLiveSession,

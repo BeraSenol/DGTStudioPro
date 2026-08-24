@@ -3,6 +3,11 @@ import SwiftUI
 struct EvaluationGraphView: View {
     
     // MARK: Stored Properties
+
+    /// `[Double]`, already flattened: `PGN.winProbabilityCurve` folds an unscored ply to 0.5
+    /// before it arrives, so this view cannot tell the unsearched opening book from a genuinely
+    /// level game. Drawing that gap would need the optionality kept across the boundary, not a
+    /// change in here.
     let evaluations: [Double]
     let currentMoveIndex: Int?
     let style: BoardStyle
@@ -26,8 +31,8 @@ struct EvaluationGraphView: View {
             
             context.stroke(
                 midline,
-                // Neutral, not `style.light`: the 50/50 line is structure, and the wash already places the
-                // grid-border colour at this height.
+                // Neutral, not `style.light`: the 50/50 line is structure, and it has to carry
+                // itself - the wash below is at its faintest exactly here.
                 with: .color(.black.opacity(0.15)),
                 lineWidth: 0.5
             )
@@ -81,9 +86,13 @@ struct EvaluationGraphView: View {
             }
         }
         .background {
-            // The triple wash, final form (Bera's design after four iterations): native window ground at
-            // both poles - melts into whatever the window is - and the board's grid-border colour at the
-            // seam, backing the near-equality slivers; extreme advantages carry themselves on fill mass.
+            // The triple wash (Bera's design, four iterations): a symmetric neutral gradient,
+            // heaviest at the poles and near-clear at the seam. **It has never contained
+            // `.gridBorder`** - three grays in every commit that ever touched this file, while
+            // successive comments claimed the seam carried the app's structural-line colour.
+            // Those comments also described the inverse shape - seam tinted to back the thin
+            // near-equality sliver, poles left to the fill's own mass - which is what these stops
+            // would do reversed.
             LinearGradient(
                 colors: [
                     .gray.opacity(0.1),
@@ -95,6 +104,7 @@ struct EvaluationGraphView: View {
             )
         }
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        // Cancels the hosts' 8 pt `listRowInsets`, as `MoveHistoryView` does for the same reason.
         .padding(.horizontal, -8)
     }
     

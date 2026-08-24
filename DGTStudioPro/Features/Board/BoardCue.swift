@@ -13,6 +13,10 @@
 /// two samples fired at one instant is mush, and the more informative fact is the one worth
 /// hearing. Stated here because "capture+check plays capture" is the equally defensible rule and
 /// a future reader will wonder which was chosen.
+///
+/// **Every raw value is a filename stem**, for all nine cases: `BoardSounds` asks the bundle for
+/// `rawValue + ".wav"` and nothing parses the name further. The two hyphenated values are spelled
+/// out rather than derived from their case names, which would put a capital in a filename.
 enum BoardCue: String, CaseIterable, Sendable {
 
     // MARK: Move family - what a landed move sounds like
@@ -28,10 +32,6 @@ enum BoardCue: String, CaseIterable, Sendable {
 
     /// The pieces on the board stopped agreeing with the position. Fired on desync *entry*, once,
     /// not per scan.
-    ///
-    /// The two hyphenated raw values are explicit rather than taken from the case names, which
-    /// would put a capital in a filename. Each raw value **is** a filename stem: `game-start` is
-    /// `game-start.wav` in the bundle, and nothing parses these names apart.
     case illegal
     case gameStart = "game-start"
     case gameEnd = "game-end"
@@ -39,7 +39,9 @@ enum BoardCue: String, CaseIterable, Sendable {
     // MARK: Family
 
     /// Which half of the enum a cue belongs to. Exists so the invariant below is testable rather
-    /// than merely documented: `cue(for:landing:)` must never return an event.
+    /// than merely documented: `cue(for:landing:)` must never return an event - asserted from both
+    /// sides in `BoardCueTests`, and the split itself is asserted total, so a case added and
+    /// forgotten here fails a test rather than silently joining a family.
     enum Family: Sendable {
         case move
         case event
@@ -100,7 +102,9 @@ enum BoardCue: String, CaseIterable, Sendable {
     /// audibly two pieces, and `castle` is the only cue that says so.
     ///
     /// Stalemate deliberately has no cue and falls through to `move`/`capture`: the position is
-    /// drawn, the move was ordinary, no sample. The drawn *game* is `gameEnd`'s business.
+    /// drawn, the move was ordinary, no sample. The drawn *game* is `gameEnd`'s business - and it
+    /// costs nothing, because `legalMoves()` is reached only inside the check branch, which
+    /// stalemate by definition is not.
     static func cue(for move: Move, landing: GameState) -> BoardCue {
         if landing.isInCheck {
             return landing.legalMoves().isEmpty ? .checkmate : .check

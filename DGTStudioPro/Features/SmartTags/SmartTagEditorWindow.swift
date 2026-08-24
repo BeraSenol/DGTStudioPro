@@ -2,7 +2,7 @@ import os
 import SwiftData
 import SwiftUI
 
-/// Routing wrapper, fifth in the `EvaluationGraphRequest` family: `openWindow(value:)` routes by
+/// Routing wrapper, one of the `EvaluationGraphRequest` family: `openWindow(value:)` routes by
 /// the value's *type*, and the main group already owns `PersistentIdentifier` - a bare id here
 /// would make opening a game open a tag editor.
 enum SmartTagEditorRequest: Hashable, Codable, Sendable {

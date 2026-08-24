@@ -86,8 +86,9 @@ struct RecoveryGuidanceView: View {
     .frame(width: 420)
 }
 
-/// A full scramble - the scrolling / vertical-growth case for a sidebar-pinned
-/// panel, where the checklist must not push the panel past its inset.
+/// A full scramble (32 items) - the scrolling case: the list must stay inside the 140 pt cap and
+/// not grow the panel. The rationale said "sidebar-pinned" until 24 Aug 2026; the session surface
+/// has been a `Window` since D84′, so the constraint is the window's own height now, not an inset.
 #Preview("Scrambled Board") {
     var physical = Position.empty
     physical[Squares.e4] = .whiteKing
@@ -102,8 +103,10 @@ struct RecoveryGuidanceView: View {
     .frame(width: 420, height: 520)
 }
 
-/// Already fixed: an empty guidance renders nothing. The panel guards on
-/// `!guidance.isEmpty`, so this pins that the view itself degrades cleanly.
+/// Already fixed. An empty guidance does **not** render nothing - it renders the whole panel with
+/// an empty list: heading, a count of 0, the material and its red border, and a live Export
+/// Diagnostics button. That is why `SessionWindow` guards on `!guidance.isEmpty` rather than on the
+/// optional alone, and what this preview is for: seeing what the guard prevents.
 #Preview("Resolved") {
     RecoveryGuidanceView(
         guidance: RecoveryGuidance(physical: .starting, target: .starting),

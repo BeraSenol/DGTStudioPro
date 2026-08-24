@@ -4,8 +4,10 @@ import SwiftData
 // MARK: Placeholder Normalization
 
 /// PGN's `"?"` ↔ empty-field boundary: `"?"` → `""` seeding a form, trimmed `""` → `"?"`
-/// committing one. Kept adjacent so the round trip is obviously symmetric; not private,
-/// because `EditGameInfoSheet` stages the same round trip.
+/// committing one. Kept adjacent so the round trip is obviously symmetric; not private, because
+/// all three roster sheets stage it - this one, `EditLiveGameDetailsSheet`, `EditGameInfoSheet`.
+/// They live here rather than in a file of their own because this is the file that declares the
+/// form they serve.
 func formValue(_ tag: String) -> String {
     tag == "?" ? "" : tag
 }
@@ -247,7 +249,9 @@ struct NewLiveGameSheet: View {
     @Query(sort: \Player.name) private var players: [Player]
     
     /// Library games projected for the pairing fold. An unhealed row projects nil seats and simply
-    /// doesn't inform - degrades to no suggestion, never a wrong one.
+    /// doesn't inform - degrades to no suggestion, never a wrong one. Unfiltered, and re-folded on
+    /// every seat keystroke: one of the deferred known costs, measured at M17, not scale-critical
+    /// at personal size.
     @Query private var games: [PGN]
     
     /// The last value the prefill wrote, so it only overwrites its own suggestion - a typed round is
@@ -383,13 +387,11 @@ struct NewLiveGameSheet: View {
     }
 }
 
-// (`EditLiveGameDetailsSheet` stood here until 21 Aug 2026 - it is `EditLiveGameDetailsSheet.swift`
-// now, matching its sibling `EditGameInfoSheet`, which had always had a file of its own. The
-// placeholder helpers at the top of this file and `LiveGameRosterForm` stayed: three sheets share
-// them, and this is the file that names the form.)
-
 // MARK: Previews
 
+/// The scratch suite is not decoration here: `start()` **writes** the three defaults, so a Start
+/// pressed on canvas would otherwise overwrite the real stored Event, Site and White. Board is the
+/// only folder whose previews had never adopted the spelling Players, Library and Engine use.
 #Preview("New Game") {
     NewLiveGameSheet(
         onStart: { _ in },
@@ -397,6 +399,7 @@ struct NewLiveGameSheet: View {
         replacesUnfinishedGame: false
     )
     .modelContainer(for: [PGN.self, Player.self], inMemory: true)
+    .defaultAppStorage(UserDefaults(suiteName: "preview")!)
 }
 
 /// The site-format guard's warning arm (16 Aug 2026) - the branch a well-behaved fixture

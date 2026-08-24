@@ -26,8 +26,12 @@ struct EvaluationBarView: View {
     /// their score labels, so bar and label can never disagree about being hidden.
     @AppStorage(StorageKeys.evaluationBarHidden) private var isHidden = false
 
-    /// Pointer-only affordance, hence a written manual check rather than a UI test: canvases
-    /// have no pointer, and a hover state with no witness is how it silently stops working.
+    /// Pointer-only affordance: canvases have no pointer, and a hover state with no witness is how
+    /// it silently stops working.
+    ///
+    /// **The manual check this sentence promised does not exist.** No document mentions the spoiler
+    /// switch - the evaluation-bar checklist predates it (17 Aug 2026) and was never extended, and
+    /// no preview covers `isHidden`. Three witnesses short: no test, no canvas, no written check.
     @State private var isHovering = false
 
     // MARK: Derived
@@ -107,6 +111,10 @@ struct EvaluationBarView: View {
 
 /// Previews the bar and nothing else - the score label moved to `BoardDestination`, which is
 /// waived from previews; the arrangement is manual-check territory.
+///
+/// **All five read the real `evaluationBarHidden`.** None passes `.defaultAppStorage`, so if the
+/// spoiler switch has ever been turned on in the app, every one of these renders a flat grey bar
+/// and not one shows the state it is named for. Nothing on canvas would say why.
 #Preview("Drawn (nil folds here)") {
     EvaluationBarView(
         reading: EvaluationBarReading(nil),

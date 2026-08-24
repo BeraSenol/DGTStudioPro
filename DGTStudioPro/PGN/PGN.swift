@@ -143,7 +143,14 @@ final class PGN: Identifiable {
     }
 
     /// The evaluation curve as White win probabilities, an unscored ply reading 50/50 - the shape
-    /// the graph, the graph window and the inspector all want. **One spelling** (21 Aug 2026): the
+    /// the graph, the graph window and the inspector all want.
+    ///
+    /// **Since D74′ that fold is systematic, not incidental**: the opening book is never searched,
+    /// so every freshly analyzed game plots a flat dead-equal run over its book prefix, which is
+    /// indistinguishable from a genuinely level opening. The Analysis Data window refuses the same
+    /// fold (em dashes, D77′) because a table can show an absence and a line cannot.
+    ///
+    /// **One spelling** (21 Aug 2026): the
     /// expression `evaluations.map { $0?.whiteWinProbability ?? 0.5 }` stood verbatim at three call
     /// sites, which is the twin-read-site pattern with a `??` in it - a fourth surface would have
     /// been a fourth chance to pick a different fallback than the bar's.

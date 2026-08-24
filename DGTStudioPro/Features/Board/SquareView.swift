@@ -28,8 +28,13 @@ struct SquareView: View {
             Rectangle()
                 .fill(fillColor)
             
-            // Highlight *fills* under the piece, *strokes* after it; check paints over last-move - the king
-            // in danger outranks "this just moved".
+            // Highlight *fills* first, *strokes* last, and the piece goes between them - in
+            // `BoardPieceLayer`, a sibling view stacked on top, so the bracket spans two files and
+            // nothing in this ZStack shows it. Check paints over last-move: the king in danger
+            // outranks "this just moved".
+            //
+            // Every stroke below repeats `max(2, squareSize * 0.05)`. Three literals, one intended
+            // border weight - tune one and the three chrome styles stop matching.
             if highlight.contains(.lastMove) {
                 Rectangle().fill(.yellow.opacity(0.35))
             }
@@ -78,7 +83,11 @@ struct SquareView: View {
                 )
             }
             if highlight.contains(.target) {
-                // Dashed green border: "a piece belongs here" - a drop target, not an error.
+                // "A piece belongs here" - a drop target, not an error, which is why it is dashed
+                // where `.attention` is solid. **Accent-coloured, not green** (this comment said
+                // green until 24 Aug 2026): `AccentColor.colorset` pins `systemBlueColor`. So the
+                // only thing separating this from `.selected` above is the dash - fine while
+                // `.selected` is pre-wiring, worth revisiting the day it isn't.
                 Rectangle().strokeBorder(
                     Color.accentColor,
                     style: StrokeStyle(
@@ -165,9 +174,11 @@ struct SquareView: View {
     .padding()
 }
 
-// The hint's two renderings: dot on empty (both fills), ring around an occupied square (a
-// capture) - the defect this guards is visual: a dot that reads as a piece, or a ring the
-// glyph swallows.
+// The hint's two renderings: dot on empty (both fills), ring around an occupied square (a capture).
+// **Half of what this claims to guard is unwitnessable here.** "A dot that reads as a piece" shows
+// on canvas; "a ring the glyph swallows" cannot, because `SquareView` stopped drawing pieces at M6 -
+// the third square below passes `.blackPawn` and renders a bare ring. The clearance is the piece
+// layer's 6% padding, so seeing that half needs `BoardPieceLayer`'s previews or the app.
 #Preview("Move Hints") {
     HStack(spacing: 4) {
         SquareView(

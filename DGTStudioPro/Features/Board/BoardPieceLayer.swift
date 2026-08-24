@@ -2,6 +2,10 @@ import SwiftUI
 
 /// One piece, drawn - glyph, aspect fit, 6% breathing room, stated once. Shared by the layer
 /// and the mid-castle ghost, which must be pixel-identical to the piece it foreshadows.
+///
+/// Draws **nothing** for a piece with no `imageName`, silently. Unreachable in practice: the layer's
+/// input skips unoccupied squares and the ghost is always a real king or rook, so the only way in is
+/// a `Piece` built from a raw value outside 1-6 and 9-14.
 struct PieceGlyph: View {
 
     // MARK: Stored Properties
@@ -35,6 +39,10 @@ struct BoardPieceLayer: View {
     nonisolated static let durationRange: ClosedRange<Double> = 0.1...1.0
     nonisolated static let defaultDuration: Double = 0.22
 
+    /// Hand-rolled, though `Comparable.clamped(to:)` is in scope and does exactly this - the
+    /// difference is that this one is a *named, pinned* entry point (`BoardPieceLayerTests` asserts
+    /// eight values through it, `.infinity` included). Swapping the body for `raw.clamped(to:)`
+    /// keeps every one of them.
     nonisolated static func clampedDuration(_ raw: Double) -> Double {
         min(max(raw, durationRange.lowerBound), durationRange.upperBound)
     }
@@ -75,8 +83,12 @@ struct BoardPieceLayer: View {
 
     // MARK: Instance Methods
 
-    /// The inverse of `BoardView.square(visualRow:visualColumn:)` - same mask, involutive XOR, so a
-    /// flip moves every cell and the layer follows without a second rule.
+    /// The inverse of `BoardView.square(visualRow:visualColumn:)` - involutive XOR, so a flip moves
+    /// every cell and the layer follows without a second rule.
+    ///
+    /// **The mask itself is spelled twice**, here and at `BoardView:206`, in two files. Same rule,
+    /// two literals: change one and squares and pieces disagree about which end of the board is
+    /// which - pieces render on the wrong squares, visibly, but only at runtime.
     private func center(of square: Square) -> CGPoint {
         let visual = square ^ (perspective == .white ? 56 : 7)
         let row = visual / 8

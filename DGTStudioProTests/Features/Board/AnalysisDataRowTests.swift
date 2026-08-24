@@ -76,6 +76,27 @@ struct AnalysisDataRowTests {
         #expect(!rows[3].swingIsMajor)
     }
 
+    /// **Emphasis reads the printed number, not the raw delta.** Branching the threshold on the
+    /// unrounded value left a 14.50 pp step printing an un-emphasized "+15" beside a bold "+15"
+    /// from 15.05 - two identical strings, one bold, which reads as random. Both witnesses are
+    /// ordinary centipawn pairs, and this test fails against the pre-24 Aug 2026 fold.
+    @Test("Emphasis follows the printed swing across the rounding boundary")
+    func emphasisFollowsThePrintedSwing() {
+        let boundary = AnalysisDataRow.rows(
+            moves: ["e4", "e5"],
+            evaluations: [.centipawns(-400), .centipawns(-139)]   // 14.50 pp
+        )
+        #expect(boundary[1].swing == "+15")
+        #expect(boundary[1].swingIsMajor)
+
+        let below = AnalysisDataRow.rows(
+            moves: ["e4", "e5"],
+            evaluations: [.centipawns(-400), .centipawns(-150)]   // 13.84 pp
+        )
+        #expect(below[1].swing == "+14")
+        #expect(!below[1].swingIsMajor)
+    }
+
     // MARK: Shared Grammars
 
     /// The move column is `EvaluationGraphReading`'s spelling, asserted

@@ -45,6 +45,11 @@ struct EditGameInfoSheet: View {
         self.onSave = onSave
         self.knownPlayers = knownPlayers
         // Seed with form-friendly values ("?" → empty), the live sheets' boundary conversion.
+        //
+        // **A fresh `Roster`, so `board` takes its nil default** - where `EditLiveGameDetailsSheet`
+        // copies and keeps it. Nothing is lost, by two mechanisms neither visible from here:
+        // `applyEditedInfo` writes six named columns and never `pgn.board`, so the archived row
+        // keeps its tag; and `DGTLiveSession.updateRoster` re-stamps the live roster's.
         _roster = State(initialValue: LiveGame.Roster(
             event: formValue(pgn.event),
             site: formValue(pgn.site),
@@ -78,6 +83,9 @@ struct EditGameInfoSheet: View {
             Divider()
             
             HStack {
+                // "Done" is the *discard* path - it dismisses without calling `onSave`, and ⎋ maps
+                // here. Affirmative wording because the game is already archived by the time this
+                // appears: there is nothing to cancel, only edits to skip.
                 Button("Done") { dismiss() }
                     .keyboardShortcut(.cancelAction)
                     .accessibilityIdentifier(AccessibilityID.archiveDone)
@@ -119,6 +127,9 @@ struct EditGameInfoSheet: View {
 
 // MARK: Previews
 
+/// **Neither passes `knownPlayers`, so the seat pickers do not render** - `LiveGameRosterForm`
+/// hides the menu on an empty list. The `archive.form.*Picker` identifiers have no canvas witness;
+/// only the live host supplies players.
 #Preview("Saved") {
     EditGameInfoSheet(
         pgn: PGN(

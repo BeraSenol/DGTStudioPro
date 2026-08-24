@@ -1,8 +1,10 @@
 import SwiftData
 import SwiftUI
 
-/// The data button's request - the fourth `openWindow(value:)` wrapper, for the standing
-/// reason: the call routes by type.
+/// The data button's request - a wrapper rather than a bare `PersistentIdentifier`, for the
+/// standing reason: `openWindow(value:)` routes by *type*, and the main group already owns that
+/// one. Deliberately not numbered: an ordinal in prose decays with the next window, and this
+/// one's disagreed with `SmartTagEditorRequest`'s.
 struct AnalysisDataRequest: Codable, Hashable, Sendable {
 
     let gameID: PersistentIdentifier
@@ -30,7 +32,8 @@ struct AnalysisDataRow: Equatable, Sendable, Identifiable {
     /// or nil when either side of the step is unscored: no fake deltas across book gaps.
     /// White-relative, like every number on this surface; the blunder signal is the magnitude.
     let swing: String?
-    /// |swing| ≥ 15 pp - the emphasis threshold, a judgement call documented as one.
+    /// |swing| ≥ 15 pp of the **printed** step - the emphasis threshold, a judgement call
+    /// documented as one.
     let swingIsMajor: Bool
 
     var id: Int { ply }
@@ -48,6 +51,11 @@ struct AnalysisDataRow: Equatable, Sendable, Identifiable {
                 guard let evaluation, let previous else { return nil }
                 return (evaluation.whiteWinProbability - previous.whiteWinProbability) * 100
             }()
+            // Round once, then let both the label and the threshold read that. Branching the
+            // threshold on the raw delta printed a 14.50 pp step as an un-emphasized "+15" beside
+            // a bold "+15" from 15.05 - the same display-vs-branch split already found in
+            // `BatchProgressEstimate`.
+            let points: Int? = delta.map { Int($0.rounded()) }
             return AnalysisDataRow(
                 ply: ply,
                 move: EvaluationGraphReading(
@@ -57,11 +65,8 @@ struct AnalysisDataRow: Equatable, Sendable, Identifiable {
                 whiteWinPercent: evaluation.map {
                     "\(Int(($0.whiteWinProbability * 100).rounded()))%"
                 },
-                swing: delta.map { d in
-                    let points = Int(d.rounded())
-                    return points >= 0 ? "+\(points)" : "\(points)"
-                },
-                swingIsMajor: delta.map { abs($0) >= 15 } ?? false
+                swing: points.map { $0 >= 0 ? "+\($0)" : "\($0)" },
+                swingIsMajor: points.map { abs($0) >= 15 } ?? false
             )
         }
     }
@@ -194,7 +199,8 @@ struct AnalysisDataButton: View {
 }
 
 /// The populated table; the partial array is the canonical fixture (rows 4–5 must read as
-/// placeholder gaps, not zeros).
+/// placeholder gaps, not zeros). No swing here clears the emphasis threshold - bold Swing has no
+/// canvas witness, only `AnalysisDataRowTests`.
 #Preview("Data") {
     let container = try! ModelContainer(
         for: PGN.self,

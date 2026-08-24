@@ -15,6 +15,11 @@ enum GameHeadline {
     private static let unknownPlayer = "?"
     
     /// Takes **raw tag form** - the display transform happens here, so the two call sites can't drift.
+    ///
+    /// **`round:` is a display slot, not `Roster.round`.** Both callers pass the *library ordinal* -
+    /// "Recording 112." for the game that will archive as 112 - since 17 Aug 2026, when round 12
+    /// against Lorenzo headlined a 111-game library as "Recording 12.". The parameter kept its name,
+    /// so a third caller wiring `roster.round` here would re-introduce that report.
     static func text(
         _ activity: Activity,
         round: Int?,

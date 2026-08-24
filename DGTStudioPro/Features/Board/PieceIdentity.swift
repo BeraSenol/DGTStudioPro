@@ -6,6 +6,10 @@ struct ResolvedPiece: Equatable, Hashable, Sendable, Identifiable {
     /// A proven tracker identity or a square-bound anonymous one. `anonymous` carries the `Piece`
     /// too: a replaced occupant must produce a fresh key (a fade, never a morph - morphing is
     /// promotion's grammar alone).
+    ///
+    /// Promotion morphs because the key does *not* change: `placements(for:)` lands the promoted
+    /// piece under the pawn's identity, so `key` persists while `piece` differs, and the layer's
+    /// `ForEach` cross-fades one glyph in place rather than swapping two.
     enum Key: Equatable, Hashable, Sendable {
         case tracked(PieceID)
         case anonymous(Square, Piece)
@@ -60,6 +64,9 @@ enum PieceIdentity {
             let key: ResolvedPiece.Key
             if game.position[square] == piece, let identity = tracker[square] {
                 key = .tracked(identity)
+            // The second `let identity` is the "proven or absent" rule enforced: a proven arrival
+            // whose *origin* the tracker cannot name falls through to anonymous rather than
+            // borrowing one. Nothing here invents an identity.
             } else if let placement = proven.first(where: {
                 $0.square == square && $0.piece == piece
             }), let identity = tracker[placement.origin] {
@@ -80,9 +87,13 @@ enum PieceIdentity {
         let origin: Square
     }
 
-    /// The landing squares a recognized move explains. `.move` and `.correctable` prove theirs;
-    /// `.unresolved` and `.noChange` prove nothing, deliberately - mid-thought and mid-desync get
-    /// parity and anonymity only.
+    /// The landing squares a recognized move explains, across **all six** reconstruction cases -
+    /// exhaustive on purpose, so a seventh is a compile error here rather than a silent fade.
+    ///
+    /// Proving: `.move`, `.correctable`, and `.castlingInProgress` - that last one is why a
+    /// mid-gesture king glides to g1 while the rook still sits at home on parity. Not proving:
+    /// `.noChange`, `.inProgress`, `.unresolved` - mid-thought and mid-desync get parity and
+    /// anonymity only, because the reconstructor has not verified a whole position.
     private static func provenPlacements(
         game: GameState,
         physical: Position

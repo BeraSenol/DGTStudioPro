@@ -109,20 +109,29 @@ struct LiveGameHUDView: View {
         // `BarAppearanceBridge` - the KVO observer in every full-screen fault stack. This card
         // re-renders exactly at game start (phase flip), and with `.bar` on it that churn made
         // SwiftUI replace the window's `NSToolbar` mid-frame: the toolbar-vanishes-and-layout-
-        // zooms fault, in every home this panel ever had. The app's only `.bar` users were this
-        // card and the load-error card - which is why removing the panel was the one thing that
-        // ever ran clean.
+        // zooms fault, in every home this panel ever had - which is why removing the panel was
+        // the one thing that ever ran clean. **The hazard is `.bar` under a toolbar**, not `.bar`:
+        // `AnalysisQueueStatusWindowView`'s footer still paints it, in a window with no toolbar
+        // to replace.
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
         .overlay(
             RoundedRectangle(cornerRadius: 8)
                 .strokeBorder(tint.opacity(0.35), lineWidth: 1)
         )
+        // `.combine` merges the children's properties into one element, so the card speaks as a
+        // single utterance and the two button identifiers below it are **not** separately
+        // addressable - `EvaluationBarView` uses `.contain` where a child control must stay
+        // reachable. Whether VoiceOver can still operate New Game and Retry here is unwitnessed.
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier(accessibilityIdentifier)
     }
 
     // MARK: Phase Presentation
 
+    // **Five parallel exhaustive switches, deliberately un-collapsed**: one `PhaseStyle` fold
+    // would trade five compile errors for a single silent row of defaults when a case is added.
+    // `showsNewGameButton` is the exception that proves it - its `default` means a new phase gets
+    // no button and no diagnostic.
     private var showsNewGameButton: Bool {
         switch phase {
         case .idle, .finished: true

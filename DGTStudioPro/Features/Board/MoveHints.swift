@@ -14,9 +14,12 @@ enum MoveHints {
     ///
     /// An opponent's piece lifted on your turn yields the empty set for free - `legalMoves()`
     /// has no moves from a square the side to move doesn't own, which also covers fiddling
-    /// with captured stock beside the board. Cost: one full move generation per render while
-    /// (and only while) a single lift is outstanding - the recovery overlays' "recompute per
-    /// observable change" family, and user-paced.
+    /// with captured stock beside the board.
+    ///
+    /// Cost is two tiers, not one: the 64-square diff runs on **every** render this is called from,
+    /// and the move generation only while a single lift is outstanding. `BoardDestination` calls it
+    /// once per live-mirror render, and only when no recovery guidance is up - the recovery
+    /// overlays' "recompute per observable change" family, and user-paced either way.
     static func destinations(for game: GameState?, physical: Position) -> Set<Square> {
         guard let game else { return [] }
 

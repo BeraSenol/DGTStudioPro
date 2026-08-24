@@ -67,7 +67,9 @@ struct EvaluationGraphWindow: View {
     }
 
     private func graph(for pgn: PGN) -> some View {
-        // The curve maps *here*, once per resolved game - not per pointer move.
+        // The curve maps *here*, once per resolved game - not per pointer move. Both arrays go
+        // down: the curve draws, `evaluations` answers the read-out. See `winProbabilityCurve` on
+        // why a flat opening run is the unsearched book rather than a level game.
         EvaluationGraphContent(
             moves: pgn.moves,
             evaluations: pgn.evaluations,
@@ -111,7 +113,9 @@ private struct EvaluationGraphContent: View {
     }
 
     /// Above the graph in a fixed-height slot: below, the cursor would sit on the answer; an
-    /// appearing/vanishing read-out makes the layout jump on hover.
+    /// appearing/vanishing read-out makes the layout jump on hover. The "N plies" count is `moves`
+    /// while the curve and the pointer map against `evaluations` - equal lengths for any stored
+    /// game, but a fixture can make them differ and the caption then contradicts the picture.
     private var readout: some View {
         let reading = hoveredPly.flatMap {
             EvaluationGraphReading(
@@ -166,10 +170,9 @@ private struct EvaluationGraphContent: View {
 
 // MARK: Magnifier
 
-/// The header control that opens the window, both Evaluation sections. (Tried as a popover
-/// for a day; reverted.) Not an `InspectorEditButtonView`
-/// - that hardcodes the pencil on purpose; shares only `.font(.body)` + one label for both
-/// `.help` and `.accessibilityLabel`.
+/// The header control that opens the window, both Evaluation sections. Not an
+/// `InspectorEditButtonView` - that hardcodes the pencil on purpose; shares only `.font(.body)`
+/// plus one label for both `.help` and `.accessibilityLabel`.
 struct EvaluationMagnifierButton: View {
 
     // MARK: Stored Properties
