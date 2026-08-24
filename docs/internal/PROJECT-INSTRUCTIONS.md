@@ -232,8 +232,12 @@ document §2 and remain in force. Two are restated rather than cited:
   admits it deliberately; the archive door refuses it.
 
 Old milestone and finding tags (M7.2, M-prs.1, F1–F9…) survive in code comments
-and in `DECISIONS.md` as provenance only — they identify where a decision came
-from and schedule nothing. **M11** is one of them (the pre-roadmap decoupling
+as provenance only — they identify where a decision came from and schedule
+nothing. **They do not all survive in `DECISIONS.md`**, which this sentence
+claimed until 24 Aug 2026: of the F family only F5 is reconstructable there, and
+seven others are defined in no document at all. The grep in Working agreements
+names them (hyphenated, for the reason given there) and is what makes the list
+visible instead of assumed. **M11** is one of them (the pre-roadmap decoupling
 review), which is why the refinement milestones start at M12.
 
 ## Architecture invariants
@@ -520,9 +524,27 @@ review), which is why the refinement milestones start at M12.
 ```sh
 git status                                     # first, always
 
-# Milestone numbers in code but in no document (species 5)
-comm -23 <(grep -rhoE "\bM[0-9]+" --include='*.swift' DGTStudioPro DGTStudioProTests | sort -u) \
-         <(grep -rhoE "\bM[0-9]+" *.md | sort -u)
+# Provenance tags in code but in no document (species 5). Rewritten 24 Aug 2026, twice broken:
+# `*.md` is a shell glob reaching only the repo root, so from the day the documents moved into
+# docs/internal this read exactly one file (README.md) and reported all twelve milestones as
+# undefined — noise, which is why nobody ran it twice. And M-only could not see the D and F
+# families, where the real gap was. `--include` walks the tree; primed tags cancel because they
+# match identically on both sides, so no lookahead is needed (BSD grep has no -P).
+comm -23 <(grep -rhoE "\b[MDF][0-9]+" --include='*.swift' DGTStudioPro DGTStudioProTests | sort -u) \
+         <(grep -rhoE "\b[MDF][0-9]+" --include='*.md' . | sort -u)
+# **Every tag below is written with a hyphen — D-2, not the literal.** The rule against writing
+# a prohibited token inside the thing that scans for it applies here exactly: spelled straight,
+# these lines would put the tags in a document, the grep would find them there, and the check
+# would pass by describing its own failure.
+#
+# Expected: two ECO volume codes from ECOClassifierTests (D-00 and D-06, not tags), plus the
+# standing gap. The B family is deliberately absent — B-00/B-01/B-10/B-20/B-7 are ECO codes and
+# B-9600 is a baud rate, six false positives burying the one real B-tag.
+#
+# **Standing gap, 24 Aug 2026:** D-2, D-6, D-7, F-2, F-3, F-4, F-7 — cited in code, defined in
+# no document. A retired layer scheme (D-1 decode, D-2 transport, D-6 recovery, D-7 archive)
+# and four findings. Every citing sentence reads correctly with its tag deleted, which is what
+# makes them survivable; shrinking this list means writing them up or dropping them.
 
 # Declared names referenced nowhere. Comments stripped BEFORE the frequency
 # table — the comment most likely to name a symbol is the one explaining its
@@ -745,8 +767,9 @@ not listed individually; a view with **no preview** needs its own entry.
 | View | Reason no preview | Witness |
 |---|---|---|
 | `BoardDestination` | needs session, connection, log, queue registry and a container — a canvas would be a second app | live-play manual checks |
-| `DGTConnectionView` (dialog body) | `status` is `private(set)`; only `DeviceRow` and the load-error arm are canvas-reachable | connect-flow manual checks |
-| `Inspector+Toolbar`, `DGTConnectionToolbarContent` | toolbar content with no standalone visual | the destinations that apply them |
+| `DGTConnectionView` (dialog body) | `status` is `private(set)`, so a canvas can pass no state. The shipped not-found preview is honest **only with the board unplugged** — it takes a live `DGTConnection`, and `onAppear` runs a real IOKit walk and will open the port (24 Aug 2026; the old reason named `DeviceRow` and a load-error arm, neither of which exists) | connect-flow manual checks |
+| `Inspector+Toolbar` | toolbar content with no standalone visual | the destinations that apply them |
+| `DGTConnectionToolbarContent` | the `ToolbarContent` wrapper has no standalone visual — but `ConnectButton`, the plain `View` it wraps, has five (24 Aug 2026: splitting the button out retired this row's original reason, and nothing replaced the coverage) | connect-flow manual checks |
 | `AnalysisQueueStatusWindowView` | `queue` is `private(set)` by design; the states worth seeing need an engine subprocess and a container | ships the idle-branch preview; the rest is the batch checklist |
 
 | Type | Reason | Witness |
@@ -768,7 +791,12 @@ not listed individually; a view with **no preview** needs its own entry.
 **Test-only by decision, not gaps:** `FEN.legalMoves()`; `CastlingRights`' no-arg
 init; `Square.dgtField`; `DGTBoardDiff.changedSquares`; `Evaluation`'s eval-tag
 emitting half; `DGTSessionLog.clear()`; `FEN.startingString`;
-`DGTSessionRecording.decoded(from:)` and `.reconstructions(from:quiescence:)`;
+`DGTSessionRecording.decoded(from:)`, `.reconstructions(from:quiescence:)`,
+`.settledBoards(quiescence:)` and `Step` (added 24 Aug 2026 — the whole Replay
+Analysis extension is test-only, and listing two of its four members read as if
+the others had consumers); `DGTReconstructor.move(from:to:promotion:in:)` (same
+sitting — `reconstruct` matches against its own `legal` array and never calls
+it, so both callers are suites);
 `AnalysisQueueController.shutdown()` (teardown, not a feature — one line from an
 app-termination hook); `OpenGamesRegistry.markDirty` (dormant with a *named*
 future consumer and a live read side); `CollectionFoldCache.isCached` (the

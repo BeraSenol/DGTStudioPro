@@ -1,69 +1,66 @@
 import SwiftUI
 
-/// The board connection window - a confirmation/error surface since the device picker was
-/// deleted (the app connects to `onlyBoardPath`, never anything else). A thin view over the
-/// app-global `DGTConnection`; never opens a port itself.
+/// The board connection window - a confirmation/error surface since the device picker was deleted
+/// (the app connects to `onlyBoardPath`, never anything else). A thin view over the app-global
+/// `DGTConnection`; never opens a port itself.
 struct DGTConnectionView: View {
-
+    
     /// Its own window since 16 Aug 2026 (was `BoardDestination`'s sheet - the everything-is-a-window
     /// pass). A singleton `Window` opened by id, the View Options shape: one board, one connection,
     /// no wrapper type to mint. `dismiss` closes the window now; the buttons read the same.
     static let sceneID = "boardConnection"
-
+    
     @Environment(DGTConnection.self) private var connection
     @Environment(\.dismiss) private var dismiss
-
-    /// HIG-derived spacing, named: 20 pt sheet margins, 12 pt siblings, 4 pt captions. The
-    /// 420 × 320 frame and 260 pt table are *sizing*, not spacing.
+    
+    /// HIG-derived spacing, named: 20 pt dialog margins, 12 pt siblings, 4 pt captions. The
+    /// 260 pt table is *sizing*, not spacing, and lives here only to stay next to its siblings.
     private enum Metrics {
-        /// Sheet edge margin (the standard 20 pt dialog content margin).
         static let margin: CGFloat = 20
-        /// Sibling controls and grouped elements (12 pt Aqua spacing).
         static let groupSpacing: CGFloat = 12
-        /// A text line and its caption.
         static let captionSpacing: CGFloat = 4
-        /// The connected panel's info table width - sizing, see above.
         static let infoTableWidth: CGFloat = 260
     }
-
+    
     var body: some View {
         VStack(spacing: 0) {
             header
             Divider()
-
+            
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-
+            
             Divider()
             footer
         }
-        // Width fixed, height bounded (was a fixed 320 until the trademark showed in full,
-        // 16 Aug 2026): under `.contentSize` the window opens at the *ideal*, so one is stated -
-        // an unbounded greedy child reporting a huge ideal is the giant-floating-window bug the
-        // New Game dialog shipped with. 380 fits the connected panel with the full banner; the
-        // sparser panels centre in it.
+        // Width fixed, height bounded. Under `.contentSize` the window opens at its *ideal*, so one
+        // is stated - an unbounded greedy child reporting a huge ideal is the giant-floating-window
+        // bug the New Game dialog shipped with. 380 fits the connected panel with the full banner.
         .frame(width: 360)
         .frame(minHeight: 320, idealHeight: 380, maxHeight: 700)
         .onAppear {
-            // Attempt on sight - unless live or mid-reconnect: a player opening this mid-loop wants to see
-            // (or stop) the retry, not restart it.
-            if connection.isReconnecting || connection.isConnected { return }
+            // Attempt on sight, unless something is already in flight: a player opening this
+            // mid-handshake or mid-retry wants to watch (or stop) it, not restart it - and
+            // `connect` tears the port down before re-opening, so a restart really is one.
+            if connection.isConnecting || connection.isReconnecting || connection.isConnected {
+                return
+            }
             attemptConnect()
         }
         .accessibilityIdentifier(AccessibilityID.dgtConnectSheet)
     }
-
+    
     // MARK: The One Attempt
-
+    
     private func attemptConnect() {
         // `search()` resolves the board itself - the "what counts as the board" rule stays out of views.
         connection.search()
         guard let board = connection.attachedBoard else { return }  // not-found panel renders
         Task { await connection.connect(to: board) }
     }
-
+    
     // MARK: Header
-
+    
     private var header: some View {
         VStack(alignment: .leading, spacing: Metrics.captionSpacing) {
             Text(title).font(.headline)
@@ -71,7 +68,9 @@ struct DGTConnectionView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Metrics.margin)
     }
-
+    
+    /// **This switch and `content`'s must agree.** Both ask `attachedBoard == nil` in the resting
+    /// arm, and neither derives from the other; drift shows as "Connecting…" over a not-found panel.
     private var title: String {
         switch connection.status {
         case .disconnected, .searching:
@@ -82,9 +81,9 @@ struct DGTConnectionView: View {
         case .failed:       "Connection Failed"
         }
     }
-
+    
     // MARK: Content
-
+    
     @ViewBuilder
     private var content: some View {
         switch connection.status {
@@ -107,7 +106,7 @@ struct DGTConnectionView: View {
             failedPanel(message)
         }
     }
-
+    
     /// The one absence the window can name precisely: the path is a constant, so "not found" always
     /// means the same cable.
     private var notFoundPanel: some View {
@@ -118,7 +117,7 @@ struct DGTConnectionView: View {
         }
         .accessibilityIdentifier(AccessibilityID.dgtNotFoundPanel)
     }
-
+    
     private func connectingPanel(_ device: DGTSerialDevice) -> some View {
         VStack(spacing: Metrics.groupSpacing) {
             ProgressView()
@@ -133,7 +132,7 @@ struct DGTConnectionView: View {
         .padding(Metrics.margin)
         .accessibilityIdentifier(AccessibilityID.dgtConnectingPanel)
     }
-
+    
     /// The retry loop's face; the loop lives in `DGTConnection` - this panel is pure status.
     private func reconnectingPanel(_ device: DGTSerialDevice) -> some View {
         VStack(spacing: Metrics.groupSpacing) {
@@ -152,25 +151,24 @@ struct DGTConnectionView: View {
         .padding(Metrics.margin)
         .accessibilityIdentifier(AccessibilityID.dgtReconnectingPanel)
     }
-
+    
     private func connectedPanel(_ device: DGTSerialDevice) -> some View {
         VStack(spacing: Metrics.groupSpacing) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 40))
                 .foregroundStyle(.green)
-
+            
             Text(device.name)
                 .font(.headline)
-
+            
             VStack(alignment: .leading, spacing: Metrics.captionSpacing) {
                 infoRow("Serial", connection.boardInfo.serialNumber)
                 infoRow("Version", connection.boardInfo.version)
                 infoRow("Hardware", connection.boardInfo.hardwareVersion)
-
-                // The trademark is the handshake's whole multi-line banner - name, copyright,
-                // firmware and hardware lines - so a label:value row truncated it to its first
-                // line. A block of its own, shown fully (16 Aug 2026, by request); `fixedSize`
-                // is the anti-truncation half of the fix, the window's flexible height the other.
+                
+                // The trademark is the handshake's whole multi-line banner, so a label:value row
+                // truncated it to its first line. `fixedSize` is the anti-truncation half of the
+                // fix; the window's flexible height above is the other.
                 if let trademark = connection.boardInfo.trademark, !trademark.isEmpty {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Trademark").foregroundStyle(.secondary)
@@ -186,7 +184,8 @@ struct DGTConnectionView: View {
         .padding(Metrics.margin)
         .accessibilityIdentifier(AccessibilityID.dgtConnectedPanel)
     }
-
+    
+    /// Renders nothing for a nil or empty value, so an absent fact leaves no blank row.
     @ViewBuilder
     private func infoRow(_ label: String, _ value: String?) -> some View {
         if let value, !value.isEmpty {
@@ -197,24 +196,20 @@ struct DGTConnectionView: View {
             }
         }
     }
-
+    
     private func failedPanel(_ message: String) -> some View {
         ContentUnavailableView {
-            // **Filled** (21 Aug 2026). The app's unstated rule, now stated: a *terminal* state
-            // fills its glyph, a *resting* state leaves it hollow - `.idle`'s hollow check, the
-            // empty session card's hollow check, the movetext editor's hollow valid state, against
-            // the filled triangles on a failed import, a failed analysis and a recovery. A failure
-            // to connect is terminal; this was the one site that broke the rule in the direction
-            // that made it look like there wasn't one.
+            // App-wide rule, stated here because this is where it was broken: a *terminal* state
+            // fills its glyph, a *resting* state leaves it hollow. Failing to connect is terminal.
             Label("Couldn't Connect", systemImage: "exclamationmark.triangle.fill")
         } description: {
             Text(message)
         }
         .accessibilityIdentifier(AccessibilityID.dgtFailedPanel)
     }
-
+    
     // MARK: Footer
-
+    
     private var footer: some View {
         HStack(spacing: Metrics.groupSpacing) {
             switch connection.status {
@@ -224,7 +219,7 @@ struct DGTConnectionView: View {
                 Button("Try Again") { attemptConnect() }
                     .keyboardShortcut(.defaultAction)
                     .accessibilityIdentifier(AccessibilityID.dgtRetryButton)
-
+                
             case .connecting:
                 Spacer()
                 // Dismisses too: a cancelled attempt would otherwise read as an attempt that isn't happening.
@@ -235,7 +230,7 @@ struct DGTConnectionView: View {
                     }
                 }
                 .accessibilityIdentifier(AccessibilityID.dgtCancelButton)
-
+                
             case .reconnecting:
                 // Standing down is deliberate but not destructive; `search()` refreshes so the resolved panel
                 // tells the truth.
@@ -249,7 +244,7 @@ struct DGTConnectionView: View {
                 Spacer()
                 Button("Close") { dismiss() }
                     .keyboardShortcut(.defaultAction)
-
+                
             case .connected:
                 // Dismisses - a deliberate disconnect shouldn't resolve to a panel that looks like a stalled connect.
                 Button("Disconnect", role: .destructive) {
@@ -262,10 +257,12 @@ struct DGTConnectionView: View {
                 Spacer()
                 Button("Done") { dismiss() }
                     .keyboardShortcut(.defaultAction)
-
+                
             case .failed:
                 Spacer()
                 Button("Cancel") { dismiss() }
+                // Shares `dgtRetryButton` with the resting arm above. Safe only because the arms are
+                // mutually exclusive - two of these on screen at once would be one address for two controls.
                 Button("Try Again") { attemptConnect() }
                     .keyboardShortcut(.defaultAction)
                     .accessibilityIdentifier(AccessibilityID.dgtRetryButton)
@@ -277,8 +274,11 @@ struct DGTConnectionView: View {
 
 // MARK: Previews
 
-/// `status` is `private(set)`, so a canvas can't pass the resting state - the standing waiver.
-/// The not-found panel is what a boardless canvas honestly shows.
+/// `status` is `private(set)`, so a canvas cannot pass a state - the standing waiver.
+///
+/// **The name holds only with the board unplugged.** `DGTConnection()` takes the real
+/// `DGTSerialPort` and the real IOKit walk, and `onAppear` runs `attemptConnect()`: with hardware
+/// attached this canvas opens the port and sends the handshake.
 #Preview("Board Not Found") {
     DGTConnectionView()
         .environment(DGTConnection())

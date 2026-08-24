@@ -26,6 +26,9 @@ actor DGTSerialPort: DGTPortProviding {
     
     // MARK: Errors
     
+    /// Five ways to fail, none inspected: `DGTConnection` catches and interpolates the error into
+    /// a message string, never matching a case, and `Equatable` has no consumer at all. A new case
+    /// buys nothing until something switches on one.
     enum PortError: Error, Equatable {
         case openFailed(errno: Int32)
         case configureFailed(errno: Int32)
@@ -47,10 +50,12 @@ actor DGTSerialPort: DGTPortProviding {
     /// The single actor-isolated consumer; `readSourceEnded()` decides whether an end was deliberate.
     private var readLoopTask: Task<Void, Never>?
     
+    /// Not redundant: the stored properties are private, so the synthesized memberwise init is
+    /// private too and `DGTSerialPort()` would not compile in `DGTConnection`.
     init() {}
     
-    /// Whether the port holds a file descriptor. **The app target's one symbol with no consumer,
-    /// kept by decision** (not the disposition - no better sibling answers this question).
+    /// Whether the port holds a file descriptor. **Kept with no consumer, by decision** (M12.3) -
+    /// not the disposition case: nothing else can answer whether the descriptor is live.
     var isOpen: Bool { fileDescriptor >= 0 }
     
     // MARK: Open / Close
@@ -85,8 +90,10 @@ actor DGTSerialPort: DGTPortProviding {
         self.byteContinuation = byteContinuation
         
         let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: false)
-        // Raw `read(2)` instead of `availableData` (F1). The closure captures no `self` - it only
-        // bridges bytes and the end signal.
+        // Raw `read(2)` rather than `availableData`: only the raw call separates EOF from a
+        // retryable wakeup from a fatal error, which is the three-way branch below (F1). The
+        // closure captures the *local* continuation and never `self`, so `self.fileHandle` → this
+        // handler cannot close a retain cycle.
         handle.readabilityHandler = { handle in
             var buffer = [UInt8](repeating: 0, count: 512)
             let count = Darwin.read(handle.fileDescriptor, &buffer, buffer.count)
@@ -106,8 +113,11 @@ actor DGTSerialPort: DGTPortProviding {
         }
         fileHandle = handle
         
-        // One long-lived actor-isolated consumer, in stream order. Created before `eventContinuation`
-        // exists would be a bug - a Task in actor-isolated code cannot run until this method suspends.
+        // One long-lived actor-isolated consumer, in stream order. It is created *before*
+        // `eventContinuation` is set below, and that is safe only because `open` is not `async`:
+        // a Task made in actor-isolated code cannot start until the current run yields, and this
+        // method never suspends. Add an `await` anywhere between here and the return and the first
+        // events yield into a nil continuation - silently.
         readLoopTask = Task {
             for await chunk in bytes {
                 ingest(chunk)
@@ -133,7 +143,8 @@ actor DGTSerialPort: DGTPortProviding {
         fileDescriptor = -1
         
         // End the byte pipeline; the read loop drains and stands down (late frames yield into a
-        // finished stream, harmlessly).
+        // finished stream, harmlessly). Dropping the task handle is not a cancel - the `finish()`
+        // is what ends the `for await`.
         byteContinuation?.finish()
         byteContinuation = nil
         readLoopTask = nil
@@ -173,7 +184,8 @@ actor DGTSerialPort: DGTPortProviding {
     
     // MARK: Inbound
     
-    /// Framer + decoder over received bytes; runs only on `readLoopTask`, in order (F2).
+    /// Framer + decoder over received bytes; runs only on `readLoopTask`, in order (F2). `\(data)`
+    /// carries no `privacy:`, so Console redacts the bytes to `<private>` and only the counts survive.
     private func ingest(_ data: Data) {
         Self.logger?.debug("Received \(data.count) \(data.count == 1 ? "byte" : "bytes"): \(data)")
         for frame in framer.ingest(data) {
@@ -211,7 +223,8 @@ actor DGTSerialPort: DGTPortProviding {
             throw PortError.configureFailed(errno: errno)
         }
         
-        // Drop O_NONBLOCK so the readability source behaves like a pipe.
+        // Drop O_NONBLOCK so the readability source behaves like a pipe. A failed `F_GETFL` is
+        // ignored on purpose: the flag stays set and the handler's EAGAIN branch already covers it.
         let flags = fcntl(fd, F_GETFL)
         if flags != -1 {
             _ = fcntl(fd, F_SETFL, flags & ~O_NONBLOCK)

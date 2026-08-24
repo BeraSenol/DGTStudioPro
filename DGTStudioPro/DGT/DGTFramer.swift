@@ -1,21 +1,27 @@
-/// One received DGT message. The framer is semantics-free - it carries the raw message byte
-/// (even unrecognized ones), which is what makes it resumable and testable.
+/// One received DGT message. `message` is the raw byte rather than a `DGTMessage`, which is what
+/// keeps the framer semantics-free: an unrecognized ID still frames, and `DGTSerialPort` logs it as
+/// "Undecoded frame" instead of dropping it unseen.
 struct DGTFrame: Equatable, Sendable {
-    /// The response byte that opened the frame (MSB set, e.g. `0x86`).
+    /// The response byte that opened the frame - MSB set, e.g. `0x86`.
     let message: UInt8
-    /// The payload bytes (frame length minus the 3 header bytes). May be empty.
+    /// Frame length minus its 3 header bytes. May be empty.
     let data: [UInt8]
 }
 
-/// Incremental receiver state machine per the DGT protocol pseudocode: byte 0 is the message
-/// byte (MSB set), then two 7-bit length bytes; MSB-based resync skips junk between frames.
-/// Holds partial progress across calls - chunk boundaries land anywhere.
+/// Incremental receiver: message byte (MSB set), two 7-bit length bytes, then payload. Holds
+/// partial progress across calls, because chunk boundaries land anywhere.
+///
+/// **Only a message byte carries the MSB**, which is why the length is encoded as two 7-bit bytes
+/// rather than one - the bit is reserved for marking a frame start. So an MSB-set byte arriving
+/// mid-frame means the frame before it was truncated, and `ingest` abandons it there instead of
+/// counting on into the next message.
 struct DGTFramer {
     
     // MARK: Configuration
     
-    /// The largest real message is the 64-byte board dump; anything claiming much more is a corrupt
-    /// length field, not a frame to buffer for.
+    /// Headroom over the 64-byte board dump, not a measured maximum: the text messages are
+    /// variable-length and nothing here has seen a real trademark banner. Too small would surface
+    /// as the Trademark row never filling in, silently.
     private static let maxPayloadLength = 256
     
     // MARK: State
@@ -35,12 +41,13 @@ struct DGTFramer {
     
     // MARK: Initializers
     
+    /// Not redundant: the stored properties are private, so the synthesized memberwise init is
+    /// private too and `DGTFramer()` would not compile in `DGTSerialPort`.
     init() {}
     
     // MARK: Ingestion
     
-    /// Feeds a chunk through the machine, returning frames completed within it; a partial frame is
-    /// retained for the next call.
+    /// Frames completed within this chunk; a partial one is retained for the next call.
     mutating func ingest(_ bytes: some Sequence<UInt8>) -> [DGTFrame] {
         var frames: [DGTFrame] = []
         for byte in bytes {
@@ -51,11 +58,24 @@ struct DGTFramer {
         return frames
     }
     
-    /// Feeds a single byte, returning a frame iff that byte completed one.
+    /// A frame iff this byte completed one.
     mutating func ingest(_ byte: UInt8) -> DGTFrame? {
+        // A message byte mid-frame: the frame in progress lost a byte. Drop it and let the switch
+        // below open a fresh one here. Without this, the truncated frame closes on this very byte
+        // - emitting a bogus frame - and then swallows everything up to the *next* message, which
+        // for a board dump is the whole 64-byte payload `DGTConnection` waits on to reach
+        // `.connected`. Exhaustive on purpose: a new state has to declare which side it is on.
+        if byte & 0x80 != 0 {
+            switch state {
+            case .awaitingMessage:
+                break
+            case .lengthHigh, .lengthLow, .payload:
+                resync()
+            }
+        }
+
         switch state {
         case .awaitingMessage:
-            // Skip stray bytes until a response byte (MSB set) appears.
             if byte & 0x80 != 0 {
                 message = byte
                 state = .lengthHigh
@@ -71,14 +91,13 @@ struct DGTFramer {
             declaredLength = (declaredLength << 7) | Int(byte & 0x7F)
             buffer.removeAll(keepingCapacity: true)
             
-            // length counts the 3 header bytes; a length ≤ 3 carries no payload.
+            // Length counts the 3 header bytes, so ≤ 3 carries no payload.
             guard declaredLength > 3 else {
                 return completeFrame()
             }
             
             expectedPayload = declaredLength - 3
             
-            // Corrupt/oversized length: drop and resynchronize.
             guard expectedPayload <= Self.maxPayloadLength else {
                 resync()
                 return nil

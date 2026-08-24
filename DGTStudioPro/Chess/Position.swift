@@ -1,6 +1,7 @@
 /// The 64 squares and nothing else - no side to move, no rights, no clocks. `Codable` is
-/// synthesized but has no encode or decode call site in the tree: nothing persists a `Position`,
-/// and the draft sidecar stores a FEN string instead.
+/// synthesized, and `DGTSessionRecording.Entry` is its one call site - so the synthesized shape,
+/// `{"squares":[{"rawValue":N} × 64]}`, is a recording-file format. Renaming `squares` or
+/// re-packing `Piece` invalidates recordings already on disk. Drafts store a FEN string instead.
 struct Position: Codable, Equatable, Sendable {
     
     // MARK: Static Constants

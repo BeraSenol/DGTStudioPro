@@ -170,6 +170,22 @@ struct DGTLiveSessionTests {
         #expect(session.liveGame?.roster == edited)
     }
     
+    /// `board` is equipment, not a seat: stamped once at game start and preserved through this
+    /// door, so a form that rebuilds the roster around it cannot drop it. `EditGameInfoSheet`
+    /// builds a fresh `Roster` from a `PGN` and passes no `board:`, which is exactly this shape.
+    /// One input varies; the assertion is that the other did not move.
+    @Test func updateRosterKeepsTheBoardIdentity() {
+        let session = DGTLiveSession()
+        session.boardIdentity = { "DGT 3000448278" }
+        session.startNewGame(roster: roster())
+        #expect(session.liveGame?.roster.board == "DGT 3000448278")
+
+        session.updateRoster(LiveGame.Roster(white: "Alice", black: "Bob"))
+
+        #expect(session.liveGame?.roster.white == "Alice")
+        #expect(session.liveGame?.roster.board == "DGT 3000448278")
+    }
+
     /// With no game running there is nothing to edit - a documented no-op.
     @Test func updateRosterWhileIdleIsANoOp() {
         let session = DGTLiveSession()

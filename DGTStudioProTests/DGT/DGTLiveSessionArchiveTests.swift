@@ -398,6 +398,77 @@ struct DGTLiveSessionArchiveTests {
         #expect(try drafts.load()?.result == .blackWins)
     }
 
+    // MARK: The Game-End Cue
+
+    /// Announced once per game. `archivedPGN` cannot be the guard: a failed archive leaves it nil,
+    /// so it readmits every Retry - which re-sounded the ending on each press.
+    @Test func theGameEndCueIsAnnouncedOnceAcrossAFailedArchiveAndItsRetry() throws {
+        let context = try Self.makeContext()
+        let (session, _, door) = Self.flakySession(context: context)
+        var endings = 0
+        session.onGameEnded = { endings += 1 }
+
+        session.startNewGame(roster: Self.roster())
+        session.resign(.white)
+        #expect(endings == 1)
+
+        session.retryArchive()          // still failing
+        #expect(endings == 1)
+
+        door.shouldFail = false
+        session.retryArchive()          // now succeeding
+        #expect(session.archiveOutcome == .archived)
+        #expect(endings == 1)
+    }
+
+    /// A draft carrying a result ended in a previous run, so the self-heal archives it in silence:
+    /// nobody wants the game-over sound at launch for a game they finished yesterday.
+    @Test func resumingAFinishedDraftDoesNotAnnounceItsEnding() throws {
+        let context = try Self.makeContext()
+        let drafts = Self.temporaryStore()
+        let original = LiveGame(roster: Self.roster())
+        original.commit(try original.currentState.parseSAN("e4"))
+        original.resign(.white)
+        try drafts.save(original.draftSnapshot)
+
+        let session = DGTLiveSession()
+        session.draftStore = drafts
+        let store = PGNStore(modelContext: context)
+        session.onGameFinished = { try store.archive($0) }
+        var endings = 0
+        session.onGameEnded = { endings += 1 }
+
+        session.loadPendingDraft()
+        session.resumePendingDraft()
+
+        #expect(session.archiveOutcome == .archived)
+        #expect(endings == 0)
+    }
+
+    /// The counterpart: a game resumed *unfinished* still owes its ending, so the flag the test
+    /// above sets must not carry over into the game that follows.
+    @Test func resumingAnUnfinishedDraftStillAnnouncesItsEnding() throws {
+        let context = try Self.makeContext()
+        let drafts = Self.temporaryStore()
+        let original = LiveGame(roster: Self.roster())
+        original.commit(try original.currentState.parseSAN("e4"))
+        try drafts.save(original.draftSnapshot)
+
+        let session = DGTLiveSession()
+        session.draftStore = drafts
+        let store = PGNStore(modelContext: context)
+        session.onGameFinished = { try store.archive($0) }
+        var endings = 0
+        session.onGameEnded = { endings += 1 }
+
+        session.loadPendingDraft()
+        session.resumePendingDraft()
+        #expect(endings == 0)
+
+        session.resign(.black)
+        #expect(endings == 1)
+    }
+
     // MARK: Post-Archive Edits
 
     /// Once archived, roster edits flow through the PGN door at the caller;

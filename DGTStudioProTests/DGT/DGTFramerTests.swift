@@ -93,6 +93,34 @@ struct DGTFramerTests {
         #expect(frames.first?.message == 0x8E)
     }
     
+    // MARK: Truncation
+
+    /// A byte lost inside a frame must cost that frame and nothing else. Before the mid-frame MSB
+    /// check, this emitted `DGTFrame(0x8E, [0x0C, 0x8E])` - the next message byte counted as
+    /// payload - and then skipped the good frame entirely, because every byte after it is MSB-clear.
+    @Test func aTruncatedFrameDoesNotSwallowTheNextOne() {
+        var framer = DGTFramer()
+        let frames = framer.ingest(Array(Self.fieldUpdate.dropLast()) + Self.fieldUpdate)
+        #expect(frames == [DGTFrame(message: 0x8E, data: [0x0C, 0x01])])
+    }
+
+    /// The expensive case: the swallowed frame is the board dump `DGTConnection` waits on to reach
+    /// `.connected`.
+    @Test func aTruncatedFrameDoesNotSwallowABoardDump() {
+        var framer = DGTFramer()
+        let frames = framer.ingest(Array(Self.fieldUpdate.dropLast()) + Self.boardDump)
+        #expect(frames.count == 1)
+        #expect(frames.first?.message == 0x86)
+        #expect(frames.first?.data.count == 64)
+    }
+
+    /// Truncation inside the two length bytes, not the payload - the other side of the same rule.
+    @Test func aMessageByteInsideTheLengthRestartsTheFrame() {
+        var framer = DGTFramer()
+        let frames = framer.ingest([0x8E, 0x00] + Self.fieldUpdate)
+        #expect(frames == [DGTFrame(message: 0x8E, data: [0x0C, 0x01])])
+    }
+
     @Test func oversizedLengthIsRejectedAndResyncs() {
         var framer = DGTFramer()
         // A corrupt length claiming a huge payload: hi=0x7F, lo=0x7F → 16383.

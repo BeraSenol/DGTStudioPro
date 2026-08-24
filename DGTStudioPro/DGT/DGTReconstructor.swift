@@ -1,8 +1,7 @@
-/// The outcome of trying to explain a settled physical board against the last
-/// known-legal game state.
+/// The outcome of trying to explain a settled physical board against the last known-legal state.
 enum DGTReconstruction: Equatable {
-    /// The physical board matches the last legal position - nothing happened
-    /// (e.g. a piece was lifted and put back).
+    /// The physical board matches the last legal position - nothing happened (e.g. a piece was
+    /// lifted and put back).
     case noChange
     /// A single legal move fully explains the board. Commit it.
     case move(Move)
@@ -10,13 +9,18 @@ enum DGTReconstruction: Equatable {
     /// commit waits for completion.
     case castlingInProgress(Move)
     /// A legal move one physical correction away - the en-passant capture whose taken pawn wasn't
-    /// lifted. `clear` lists the squares to fix. A nudge, NOT a desync.
+    /// lifted. A nudge, NOT a desync. `clear` is always exactly one square, from the single
+    /// producer below; `expectedAfter` has no reader at all - both consumers destructure it away.
     case correctable(move: Move, clear: [Square], expectedAfter: Position)
-    /// Pieces have been lifted but none placed yet - a move is in the player's
-    /// hand. Keep waiting; this is NOT a desync.
+    /// Pieces have been lifted but none placed yet - a move is in the player's hand. Keep waiting;
+    /// this is NOT a desync.
     case inProgress
-    /// The board has settled into a configuration that no single legal move
-    /// produces - an illegal move or a fumble. Hand off to recovery (D6).
+    /// The board settled into a configuration no single legal move produces - an illegal move or a
+    /// fumble. Hand off to recovery (D6).
+    ///
+    /// **A pawn parked on the last rank lands here.** `legalMoves()` gives every back-rank pawn
+    /// move a promotion type, so e7-e8 with a pawn sitting on e8 matches nothing: the player has
+    /// to place the new piece before the settle can read the move.
     case unresolved
 }
 
@@ -28,7 +32,8 @@ enum DGTReconstructor {
     // MARK: Coordinate Resolver
     
     /// `(from, to, promotion?) → Move`: the unique legal move, or nil - relies on the uniqueness
-    /// invariant pinned by `MoveFootprintTests`.
+    /// invariant pinned by `MoveFootprintTests`. **Test-only**: `reconstruct` matches against its
+    /// own `legal` array, and both callers are suites.
     static func move(
         from: Square,
         to: Square,
@@ -103,24 +108,26 @@ enum DGTReconstructor {
             }
         }
         
-        // 2) Castle in progress: FIDE castling is king-first and usually two motions, so a quiescence
-        //    can fire mid-gesture - three interim boards are legitimate. (Rook-first with the king
-        //    untouched is deliberately absent: byte-identical to a completed legal rook move.)
+        // 2) Castle in progress. FIDE castling is king-first and usually two motions, so quiescence
+        //    can fire mid-gesture. The three interims with something placed are checked here; the
+        //    fourth - king lifted, nothing down - never reaches this far, because step 0 already
+        //    returned `.inProgress`. Rook-first with the king untouched is deliberately absent:
+        //    byte-identical to a completed legal rook move.
         for castling in legal where castling.isCastling {
             guard let rookFrom = castling.rookFrom else { continue }
             let kingMoved = kingOnlyApplied(castling, mover: mover, before: before)
             if physical == kingMoved {
-                return .castlingInProgress(castling)                    // a
+                return .castlingInProgress(castling)                    // king landed, rook home
             }
             var rookInHand = kingMoved
             rookInHand[rookFrom] = .empty
             if physical == rookInHand {
-                return .castlingInProgress(castling)                    // b
+                return .castlingInProgress(castling)                    // king landed, rook in hand
             }
             var kingInHand = before.applying(castling)
             kingInHand[castling.to] = .empty
             if physical == kingInHand {
-                return .castlingInProgress(castling)                    // c
+                return .castlingInProgress(castling)                    // rook landed, king in hand
             }
         }
         
@@ -137,7 +144,9 @@ enum DGTReconstructor {
         mover: PieceColor,
         before: Position
     ) -> (from: Square, to: Square)? {
-        // Completed castle: the king appears among both vacated and placed.
+        // A *completed* castle: the king appears in both maps. An interim castle has one vacate and
+        // one place, so it takes the branch below, fails step 1's `applying` check, and reaches
+        // step 2 - which is the only path that recognizes it.
         let king = Piece(mover, .king)
         if vacatedByMover.count >= 2,
            let kingFrom = vacatedByMover.first(where: { $0.value == king })?.key,

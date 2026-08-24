@@ -2,9 +2,13 @@ import Foundation
 
 // MARK: Recording
 
-/// Immutable `Codable` recording of a live board session: timestamped physical-board snapshots
-/// plus the board identity. Captured from hardware, replayed deterministically for regression -
-/// pure; reads the chess/reconstruction types, never the session.
+/// Immutable `Codable` recording of a live board session: timestamped physical-board snapshots plus
+/// the board identity. Captured from hardware, replayed deterministically for regression - pure;
+/// reads the chess/reconstruction types, never the session.
+///
+/// **The one place the app persists a `Position`.** `Entry.board` is what makes `Position: Codable`
+/// load-bearing rather than incidental, so its JSON shape - `{"squares":[{"rawValue":N} × 64]}` -
+/// is a file format. Nothing else encodes one; drafts store a FEN string instead.
 struct DGTSessionRecording: Codable, Equatable {
     
     /// One captured physical-board snapshot.
@@ -51,7 +55,8 @@ struct DGTSessionRecording: Codable, Equatable {
 extension DGTSessionRecording {
     
     /// The snapshots the live session would have *settled* on - reproduces the 300 ms debounce from
-    /// recorded timestamps, deterministically.
+    /// recorded timestamps, deterministically: an entry settles when nothing follows it inside the
+    /// window. **Test-only**, like everything else in this extension.
     func settledBoards(quiescence: Duration = .milliseconds(300)) -> [Position] {
         let gap = quiescence.inMilliseconds
         var settled: [Position] = []
@@ -94,6 +99,8 @@ extension DGTSessionRecording {
 
 extension DGTSessionRecording {
     
+    /// Pretty-printed and key-sorted deliberately: a recording is read and diffed by hand when it
+    /// becomes a regression fixture. That formatting is most of the file size noted at `maxEntries`.
     func jsonData() throws -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -101,6 +108,7 @@ extension DGTSessionRecording {
         return try encoder.encode(self)
     }
     
+    /// **Test-only** - the app writes recordings and never reads one back.
     static func decoded(from data: Data) throws -> DGTSessionRecording {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -126,8 +134,10 @@ final class DGTSessionRecorder {
         start = clock.now
     }
     
-    /// Hard cap - the recorder's half of the growth bound (the log's is `maxEntries`). A forgotten
-    /// marathon recording stays under a megabyte; replay reads gaps between retained neighbours.
+    /// Hard cap on retained snapshots - a **memory** bound, not a file-size one: each snapshot is
+    /// 64 `{"rawValue":N}` objects, roughly 2.6 KB pretty-printed, so a full ring exports at tens
+    /// of megabytes and one megabyte arrives around 400 entries. Offsets stay absolute after a
+    /// drop, so replay still reads correct gaps between the retained neighbours.
     private let maxEntries = 10_000
     
     func record(_ board: Position) {
@@ -154,6 +164,7 @@ extension Duration {
 
 // MARK: Save-Panel Export (macOS)
 
+// Always true - this app has one platform.
 #if canImport(AppKit)
 import AppKit
 import UniformTypeIdentifiers
@@ -174,6 +185,9 @@ extension DGTSessionRecording {
         return url
     }
     
+    /// A formatter per call, deliberately: `DateFormatter` is not `Sendable`, so a cached
+    /// `static let` out here - outside any isolated type - would not compile. `DGTSessionLog`
+    /// caches its two because they sit inside a `@MainActor` class.
     private static func fileTimestamp() -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyyMMdd-HHmmss"

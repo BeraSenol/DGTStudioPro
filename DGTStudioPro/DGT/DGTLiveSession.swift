@@ -135,37 +135,39 @@ final class DGTLiveSession {
     /// Illegal-move cue. Fired only by `enterRecovery` - the one door - so exactly once per
     /// desync entry: never on the manual-result exit, never on recomputation.
     @ObservationIgnored var onDesync: (() -> Void)?
-
+    
     /// Game-start cue. Fired from `startNewGame` past the archive guard, so a refused start - the
     /// one where the previous game has not been saved yet - stays silent. A cue for a game that
     /// did not begin is `onMoveCommitted`'s complaint in a different key.
     @ObservationIgnored var onGameStarted: (() -> Void)?
-
+    
     /// Game-end cue. Fired from the `isFinished` transition rather than from a successful archive,
     /// which is the distinction worth keeping: the reader is listening for the *game* reaching a
-    /// result, and a Library write failing is a banner, not a silence. Fired once - guarded by the
-    /// same `archivedPGN == nil` check that stops the archive repeating.
+    /// result, and a Library write failing is a banner, not a silence.
+    ///
+    /// Once per game, guarded by `announcedGameEnd` rather than by `archivedPGN` - a failed archive
+    /// leaves that nil, so every Retry would fire again.
     @ObservationIgnored var onGameEnded: (() -> Void)?
-
+    
     /// Move cue. Fired from the `.move` settle arm *after* `commit` returns true, so it can
     /// never sound for a move the game refused - the F5 guard's own argument, applied to audio:
     /// a cue for a commit that did not happen is a lie you hear before you see.
     /// Nil in headless tests = silent by construction, like every hook above it.
     @ObservationIgnored var onMoveCommitted: ((BoardCue) -> Void)?
-
+    
     /// Board-resync request: the field stream is not lossless, and one lost update leaves
     /// `physicalBoard` wrong by one square forever. First `.unresolved` divergence asks for a full
     /// dump instead of entering recovery; nil hook = straight to recovery (pre-pinned).
     @ObservationIgnored var requestBoardResync: (() -> Void)?
-
+    
     /// One shot per divergence; cleared by any explained settle and the lifecycle exits.
     /// Deliberately NOT cleared in `clearPlayingOverlays()` - that runs every settle and would re-arm forever.
     @ObservationIgnored private var resyncAttempted = false
-
+    
     /// Board identity for `[Board "…"]`; consulted once per game in `startNewGame`.
     /// Capture-at-start survives cable pulls and crash-resume. Nil in headless tests.
     @ObservationIgnored var boardIdentity: (() -> String?)?
-
+    
     // MARK: Private State
     
     /// The armed settle - readable so tests `await` the settle itself instead of polling wall clock
@@ -175,6 +177,10 @@ final class DGTLiveSession {
     /// Stillness window before reconstruction; 300 ms in production. Internal-settable for tests
     /// (F7); production code must never write it.
     @ObservationIgnored var quiescence: Duration = .milliseconds(300)
+    /// One game-end cue per game. Not `archivedPGN`: that is nil again after a failed archive, so
+    /// Retry would re-announce an ending the player already heard. Set by the announcement, cleared
+    /// by the lifecycle doors, and pre-set when a resumed draft ended in a previous run.
+    @ObservationIgnored private var announcedGameEnd = false
     /// Guards re-offering every quiescence while the board sits at the start.
     @ObservationIgnored private var offeredNewGameForCurrentStart = false
     /// Last observed physical board; `startNewGame` uses it to decide whether setup is needed.
@@ -237,12 +243,12 @@ final class DGTLiveSession {
     private func settlePlaying(_ game: LiveGame, board: Position) {
         // Transient overlays are mutually exclusive and recomputed each settle: clear both, branch re-sets its own.
         clearPlayingOverlays()
-
+        
         let outcome = DGTReconstructor.reconstruct(from: game.currentState, physical: board)
-
+        
         // Any explained outcome retires the one-shot resync debt.
         if case .unresolved = outcome {} else { resyncAttempted = false }
-
+        
         switch outcome {
         case .noChange:
             sessionLog?.capture(.debug, "settle: no change")
@@ -279,7 +285,14 @@ final class DGTLiveSession {
             }
             // The cue rides the accepted commit, above the diagnostic capture: `currentState`
             // is now the position the move landed in, which is what the cue describes.
-            onMoveCommitted?(BoardCue.cue(for: move, landing: game.currentState))
+            let cue = BoardCue.cue(for: move, landing: game.currentState)
+            onMoveCommitted?(cue)
+            // A mate's cue already carries the ending, so the archive must not lay a second copy
+            // of the same sample over the first. Asked of `resources` rather than of the case, so
+            // "which cues already end the game" keeps one spelling - `BoardCue`'s.
+            if cue.resources.contains(BoardCue.gameEnd.rawValue) {
+                announcedGameEnd = true
+            }
             sessionLog?.capture(
                 .info,
                 "settle: committed \(game.sanMoves.last ?? "?") [ply \(game.plyCount)]"
@@ -300,7 +313,7 @@ final class DGTLiveSession {
             escalateOrResync(game, board: board)
         }
     }
-
+    
     /// The `.unresolved` gate: first divergence requests a dump and stays in `playing`;
     /// a board the dump still can't explain escalates for real. No hook: straight to recovery.
     private func escalateOrResync(_ game: LiveGame, board: Position) {
@@ -379,13 +392,14 @@ final class DGTLiveSession {
         // Stamp board identity at game start - the one write to `Roster.board`, unconditional.
         var roster = roster
         roster.board = boardIdentity?()
-
+        
         let game = LiveGame(roster: roster)
         archiveOutcome = nil
         archivedPGN = nil
         shouldOfferNewGame = false
         offeredNewGameForCurrentStart = true
         resyncAttempted = false   // a fresh game owes no dump debt
+        announcedGameEnd = false  // and owes its own ending
         clearPlayingOverlays()
         
         let alreadySetUp = beginTracking(game)
@@ -403,7 +417,7 @@ final class DGTLiveSession {
         // the roster-only snapshot claims the file for the new game.
         pendingDraft = nil
         saveDraft()
-
+        
         // Last, so the cue follows a start that fully happened. The `archiveFailed` guard at the
         // top of this method is the one that matters: a refused start makes no sound.
         onGameStarted?()
@@ -420,6 +434,7 @@ final class DGTLiveSession {
         mode = .idle
         clearPlayingOverlays()
         resyncAttempted = false   // the debt dies with the game
+        announcedGameEnd = false
         offeredNewGameForCurrentStart = false
         // Explicit-Discard exit from a failed archive: the player chose to lose the game.
         archiveOutcome = nil
@@ -470,8 +485,16 @@ final class DGTLiveSession {
     
     /// Replaces the roster wholesale. Routed through the session so the timeline gets a breadcrumb
     /// and draft persistence has one choke point. No-op while idle.
+    ///
+    /// Wholesale except for `board`, which is equipment rather than a seat: stamped once in
+    /// `startNewGame` and preserved here, so no roster form can drop it by rebuilding around it.
+    /// `EditLiveGameDetailsSheet` copies the running roster and would have kept it anyway;
+    /// `EditGameInfoSheet` builds a fresh one from a `PGN` and would not. Enforced once, here,
+    /// instead of trusted at each caller.
     func updateRoster(_ roster: LiveGame.Roster) {
         guard let liveGame else { return }
+        var roster = roster
+        roster.board = liveGame.roster.board
         liveGame.roster = roster
         sessionLog?.record(
             .info,
@@ -493,11 +516,19 @@ final class DGTLiveSession {
         guard game.isFinished, game.result != .ongoing else { return }
         // Already archived (stray repeat call) - nothing to do.
         guard archivedPGN == nil else { return }
-
+        
         // Before the archive, not after: this reports the game reaching a result, and it should
         // sound the same whether the Library write goes on to succeed or throw.
-        onGameEnded?()
-
+        //
+        // Once per game: a failed archive leaves `archivedPGN` nil, so the guard above readmits
+        // every Retry. A checkmate has already sounded the ending inside its own cue
+        // (`BoardCue.checkmate` layers `gameEnd` over the move sample), which is why the mate arm
+        // pre-sets this rather than relying on a second, overlapping play of the same file.
+        if !announcedGameEnd {
+            announcedGameEnd = true
+            onGameEnded?()
+        }
+        
         guard let onGameFinished else {
             saveDraft()
             return
@@ -572,6 +603,9 @@ final class DGTLiveSession {
         guard case .resumable(let draft) = pendingDraft else { return }
         do {
             let game = try LiveGame(resuming: draft)
+            // A draft that already carries a result ended in a previous run; the self-heal below
+            // archives it silently rather than announcing an ending at launch.
+            announcedGameEnd = game.isFinished
             pendingDraft = nil
             shouldOfferNewGame = false
             offeredNewGameForCurrentStart = true

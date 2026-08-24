@@ -32,7 +32,7 @@ final class DGTConnection {
         var trademark: String?
         var version: String?
         var hardwareVersion: String?
-
+        
         /// The `[Board "…"]` value: `"DGT "` + the long serial, matching the reference exports
         /// byte for byte; short-serial fallback (truthful beats pretty). On the value type - testable
         /// without a port.
@@ -47,10 +47,12 @@ final class DGTConnection {
     /// The one board this app will ever open (user decree): the literal callout path, matched
     /// exactly. Enumeration-number drift is an accepted failure mode - if macOS renames the port,
     /// Connect shows the error until the board is back on this path.
+    ///
+    /// `nonisolated` because `DGTDeviceDiscovery` reads it off the main actor to build its match.
     nonisolated static let onlyBoardPath = "/dev/cu.usbmodem01"
-
+    
     private(set) var status: Status = .disconnected
-
+    
     /// The board, if the last enumeration found it - nil otherwise. Was the whole enumeration array
     /// until the picker retired; a board or nothing is the only distinction the panels draw.
     private(set) var attachedBoard: DGTSerialDevice?
@@ -65,6 +67,13 @@ final class DGTConnection {
         return false
     }
 
+    /// A handshake in flight. Third of the derived status flags, and the connect window's reason
+    /// for existing: opening it must not restart an attempt already running.
+    var isConnecting: Bool {
+        if case .connecting = status { return true }
+        return false
+    }
+    
     /// One on-demand full dump for the session's `.unresolved` pre-flight. `sendBoard` doesn't
     /// change the board's mode, so the dump rides the existing `.boardDump` handling - free.
     /// Fire-and-forget: a dead port cannot strand the one-shot gate.
@@ -138,8 +147,9 @@ final class DGTConnection {
     /// Init-command spacing so a shallow input buffer isn't overrun; tests zero it (F9).
     @ObservationIgnored var initCommandStagger: Duration = .milliseconds(75)
     
-    /// How long a `.failed` status lingers before auto-clearing to
-    /// `.disconnected`.
+    /// How long a `.failed` status lingers before auto-clearing to `.disconnected`. A `private let`
+    /// where `initCommandStagger` and `reconnectRetryInterval` are injectable `var`s, so testing the
+    /// auto-clear would mean waiting five real seconds - and nothing does.
     @ObservationIgnored private let errorLingerDuration: Duration = .seconds(5)
     
     /// M7.3 lap spacing. Timed retry over IOKit arrival notifications is a deliberate v1 simplification.
@@ -153,7 +163,9 @@ final class DGTConnection {
     // MARK: Discovery
     
     /// Enumerates for the connect dialog; synchronous and cheap. Precondition: not connected -
-    /// `search()` demotes status without tearing the port down.
+    /// `search()` demotes status without tearing the port down, so calling it during `.connecting`
+    /// leaves that port open with no status pointing at it. Survivable only because every caller
+    /// reaches `connect` next, and `connect` tears down first.
     func search() {
         assert(!isConnected, "search() while connected strands status in .searching")
         cancelReconnect()
@@ -188,7 +200,7 @@ final class DGTConnection {
     func autoConnectAtLaunch() async {
         // Absent reads as true - matches the `@AppStorage` default in Settings (documented twin).
         let enabled = defaults.object(forKey: StorageKeys.autoConnectOnLaunch) as? Bool ?? true
-
+        
         guard let target = DGTAutoConnectPolicy.launchTarget(
             enabled: enabled,
             boardPath: Self.onlyBoardPath,
@@ -199,7 +211,7 @@ final class DGTConnection {
         }
         // Paranoia more than necessity - nothing else connects this early.
         guard case .disconnected = status else { return }
-
+        
         Self.logger?.info("Auto-connecting to the board at \(target.path, privacy: .public)")
         sessionLog?.capture(.info, "Auto-connecting to \(target.name) [\(target.path)]")
         await connect(to: target, failureStyle: .quiet)
@@ -220,6 +232,11 @@ final class DGTConnection {
         sessionLog?.capture(.info, "Connecting to \(device.name) [\(device.path)]")
         
         if let failure = await openPortAndRunInit(to: device) {
+            // The init half can fail *after* `port.open` succeeded, and `fail` is synchronous, so
+            // the port has to come down here or it stays open under `.failed`: `readTask` keeps
+            // consuming, board changes keep publishing, and nothing reclaims the device until the
+            // next connect. A no-op on the `open` failure, where there is no port.
+            await teardownPort()
             fail(failure, style: failureStyle)
         }
     }
@@ -238,6 +255,9 @@ final class DGTConnection {
     
     /// Opens the port, starts event consumption, sends init. Touches no `status` - each caller owns
     /// its own state story. Success is only confirmed later, by the first dump.
+    ///
+    /// Assumes an already-torn-down port: `readTask` below is overwritten without being cancelled,
+    /// so every caller must have run `teardownPort()` first. Both do.
     private func openPortAndRunInit(to device: DGTSerialDevice) async -> String? {
         let events: AsyncStream<DGTEvent>
         do {
@@ -376,6 +396,10 @@ final class DGTConnection {
         
         // M7.3 - mid-game vanish begins the reconnect loop instead of the banner. Convergence after
         // replug needs no session changes: the fresh dump flows through settle.
+        //
+        // **`.connecting` never takes this branch.** `connectedDevice` reads `.connected` alone, so
+        // a stream that ends before the first dump always falls to `fail` - `shouldAutoReconnect`
+        // is not even asked. The switch above admits `.connecting`; this line filters it back out.
         if let device = connectedDevice, shouldAutoReconnect?() == true {
             beginReconnect(to: device)
         } else {
@@ -466,7 +490,7 @@ final class DGTConnection {
         reconnectTask?.cancel()
         reconnectTask = nil
     }
-
+    
     // MARK: Session Recording
     
     /// Begins capturing board changes for offline replay; replaces any in-progress recording.
@@ -504,6 +528,9 @@ final class DGTConnection {
         case quiet
     }
     
+    /// Sets the failure state; synchronous, so it cannot tear the port down. Every caller reaches
+    /// it with the port already closed - by its own teardown, or because a stream end means the
+    /// port closed itself.
     private func fail(_ message: String, style: FailureStyle = .announced) {
         Self.logger?.error("\(message, privacy: .public)")
         sessionLog?.capture(.error, "Connection failure: \(message)")

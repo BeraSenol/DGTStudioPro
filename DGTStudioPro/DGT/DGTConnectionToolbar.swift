@@ -4,17 +4,16 @@ import SwiftUI
 /// `.toolbar` modifier leaves the toolbar undivided. Opens the connection *window* since
 /// 16 Aug 2026 (the sheet binding it carried went with the everything-is-a-window pass).
 struct DGTConnectionToolbarContent: ToolbarContent {
-
+    
     /// Status as a plain value: dynamic properties inside a custom `ToolbarContent` are not
-    /// reliably observed - which is also why the button below is its own `View`: the
-    /// `openWindow` environment read lives where SwiftUI promises to resolve it.
+    /// reliably observed - which is also why the button below is its own `View`, where the
+    /// `openWindow` environment read is one SwiftUI promises to resolve.
     let status: DGTConnection.Status
-
-    /// No default, per the `board.connectButton` agreement: a shared fallback
-    /// silently gives two hosts the same identifier, and a required parameter
-    /// makes forgetting a compile error.
+    
+    /// Required rather than defaulted. `BoardDestination` is the only host today; a default would
+    /// let a second silently inherit `board.connectButton`, and forgetting is a compile error.
     let identifier: String
-
+    
     var body: some ToolbarContent {
         ToolbarItem {
             ConnectButton(status: status, identifier: identifier)
@@ -22,15 +21,15 @@ struct DGTConnectionToolbarContent: ToolbarContent {
     }
 }
 
-/// The `ShowViewOptionsButton` arrangement: a plain `View` carries the action so the
-/// environment is honestly available.
+/// The `ShowViewOptionsButton` arrangement: a plain `View` carries the action so the environment
+/// is honestly available.
 private struct ConnectButton: View {
-
+    
     let status: DGTConnection.Status
     let identifier: String
-
+    
     @Environment(\.openWindow) private var openWindow
-
+    
     var body: some View {
         Button {
             openWindow(id: DGTConnectionView.sceneID)
@@ -40,14 +39,13 @@ private struct ConnectButton: View {
         .help(helpText)
         .accessibilityIdentifier(identifier)
     }
-
+    
     @ViewBuilder
     private var label: some View {
         switch status {
         case .connecting, .reconnecting:
-            // A spinner in the toolbar communicates the in-progress
-            // handshake - or the M7.3 retry loop working to get the board
-            // back (the HUD carries the words; this is just the pulse).
+            // The handshake, or the M7.3 retry loop working to get the board back. The HUD carries
+            // the words; this is just the pulse.
             ProgressView()
                 .controlSize(.small)
         default:
@@ -56,10 +54,9 @@ private struct ConnectButton: View {
         }
     }
     
-    /// Failure reads as "not connected" here by design - `tint` is what
-    /// distinguishes it (red vs plain). The enumerated `.failed` case returned
-    /// the same string as `default` and decided nothing; if a distinct failure
-    /// glyph is ever wanted, it goes back here.
+    /// **`helpText` is exhaustive; this and `tint` are not.** A new `Status` case is a compile
+    /// error there and a silent fall-through here. `.failed` already takes that fall-through - it
+    /// wears the disconnected glyph, and only `tint` is left to distinguish it.
     private var symbol: String {
         switch status {
         case .connected: "cable.connector"
@@ -67,6 +64,9 @@ private struct ConnectButton: View {
         }
     }
     
+    /// The app's only `.tint(` - every comparable site uses `.foregroundStyle`. Whether it colours
+    /// a `Label` inside a toolbar `Button` at all is unwitnessed; if it does not, `.failed` and
+    /// `.disconnected` render identically, because `symbol` hands them the same glyph.
     private var tint: Color? {
         switch status {
         case .connected: .green

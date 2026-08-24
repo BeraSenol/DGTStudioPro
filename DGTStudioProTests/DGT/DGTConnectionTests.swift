@@ -17,11 +17,16 @@ struct DGTConnectionTests {
         private(set) var openedPaths: [String] = []
         private(set) var sentCommands: [DGTCommand] = []
         private(set) var closeCount = 0
+        /// Whether a port is *currently* held - the semantic question a close count can't answer,
+        /// since `connect` closes once on entry before it opens anything.
+        private(set) var isOpen = false
         private var continuation: AsyncStream<DGTEvent>.Continuation?
         private var failNextOpen = false
+        private var failSends = false
         private var autoDumpPosition: Position?
 
         struct OpenFailure: Error {}
+        struct SendFailure: Error {}
 
         func open(path: String) throws -> AsyncStream<DGTEvent> {
             openedPaths.append(path)
@@ -31,17 +36,20 @@ struct DGTConnectionTests {
             }
             let (stream, continuation) = AsyncStream.makeStream(of: DGTEvent.self)
             self.continuation = continuation
+            isOpen = true
             return stream
         }
 
         func close() {
             closeCount += 1
+            isOpen = false
             continuation?.finish()
             continuation = nil
         }
 
         func send(_ command: DGTCommand) throws {
             sentCommands.append(command)
+            if failSends { throw SendFailure() }
             // The real board answers `sendBoard` with a dump - loop tests need that fidelity.
             if command == .sendBoard, let autoDumpPosition {
                 continuation?.yield(.boardDump(autoDumpPosition))
@@ -62,6 +70,11 @@ struct DGTConnectionTests {
 
         func setFailNextOpen() {
             failNextOpen = true
+        }
+
+        /// Every `send` throws from now on - the init sequence failing *after* a successful open.
+        func setFailSends() {
+            failSends = true
         }
 
         /// From now on, `.sendBoard` is answered with a dump of `position`.
@@ -162,6 +175,45 @@ struct DGTConnectionTests {
             Issue.record("Expected .failed, got \(connection.status)")
             return
         }
+        let held = await port.isOpen
+        #expect(held == false)
+    }
+
+    /// The other failure: `open` succeeded and an init command threw. `fail` is synchronous and
+    /// cannot close, so `connect` owes the teardown - otherwise the port stays held under
+    /// `.failed`, its read loop still publishing board changes to a session that thinks it is
+    /// disconnected, and nothing reclaims the device until the next connect.
+    @Test func initFailureClosesThePortItOpened() async throws {
+        let port = FakePort()
+        await port.setFailSends()
+        let connection = makeConnection(port: port)
+
+        await connection.connect(to: Self.device)
+
+        guard case .failed = connection.status else {
+            Issue.record("Expected .failed, got \(connection.status)")
+            return
+        }
+        let opened = await port.openedPaths
+        let held = await port.isOpen
+        #expect(opened == [Self.device.path], "the port must have opened first")
+        #expect(held == false, "an opened port must not survive an init failure")
+    }
+
+    /// The third derived status flag. Varying one input: the dump moves `isConnecting` false and
+    /// `isConnected` true together, so neither can be reading the other's case.
+    @Test func isConnectingHoldsBetweenTheOpenAndTheFirstDump() async throws {
+        let port = FakePort()
+        let connection = makeConnection(port: port)
+        #expect(connection.isConnecting == false)
+
+        await connection.connect(to: Self.device)
+        #expect(connection.isConnecting == true)
+        #expect(connection.isConnected == false)
+
+        await port.emit(.boardDump(.starting))
+        try await poll { connection.isConnected }
+        #expect(connection.isConnecting == false)
     }
 
     // MARK: Stream End Routing (F1 consumer side)

@@ -3,14 +3,19 @@ import IOKit
 import IOKit.serial
 import os
 
-/// Enumerates the board's serial device - and *only* it: `kIOTTYDeviceKey` is pinned to the
-/// board's TTY name (derived from `onlyBoardPath`), so the app cannot see a device it would
-/// never connect to. The decree is a fact about the query, not a filter after it.
+/// Enumerates the board's serial device and **only** it: the match pins `kIOTTYDeviceKey` to the
+/// TTY name derived from `onlyBoardPath`, so a stranger is invisible rather than filtered out
+/// afterwards.
+///
+/// None of this runs under ⌘U. The one production caller is `DGTConnection.enumerateDevices`, a
+/// seam tests replace (F9), so hardware is the only witness.
 enum DGTDeviceDiscovery {
     
     private static let logger = AppLog.logger(.dgt)
     
-    /// Every matching callout device, unsorted - enumeration order is not an opinion about order.
+    /// The board, or nothing. At most one service can carry the pinned TTY name, so the result is
+    /// 0 or 1 - which is why `DGTAutoConnectPolicy` takes the `first` match with no tiebreak.
+    /// Unsorted: enumeration order is not an opinion about order.
     static func availableDevices() -> [DGTSerialDevice] {
         guard let matching = IOServiceMatching(kIOSerialBSDServiceValue) else {
             logger?.error("IOServiceMatching returned nil for serial services")
@@ -23,10 +28,11 @@ enum DGTDeviceDiscovery {
         let calloutPrefix = "/dev/cu."
         if DGTConnection.onlyBoardPath.hasPrefix(calloutPrefix) {
             (matching as NSMutableDictionary)[kIOTTYDeviceKey] =
-                String(DGTConnection.onlyBoardPath.dropFirst(calloutPrefix.count))
+            String(DGTConnection.onlyBoardPath.dropFirst(calloutPrefix.count))
         } else {
-            // A non-callout constant would be a programmer error at one symbol; matching wide keeps the
-            // membership checks correct while this line names the surprise.
+            // Unreachable today: `onlyBoardPath` is a literal `/dev/cu.` path, so this is a
+            // tripwire for a future edit to that one constant, not a runtime branch. Matching wide
+            // keeps the membership checks correct while this line names the surprise.
             logger?.error("Configured board path is not a /dev/cu. path; matching all serial devices")
         }
         
@@ -42,6 +48,8 @@ enum DGTDeviceDiscovery {
         var service = IOIteratorNext(iterator)
         while service != 0 {
             if let path = stringProperty(service, kIOCalloutDeviceKey) {
+                // This reads back the very property the match pinned, so `name` is that TTY name
+                // every time; `?? path` needs a service that matched on a key it then failed to report.
                 let name = stringProperty(service, kIOTTYDeviceKey) ?? path
                 devices.append(DGTSerialDevice(path: path, name: name))
             }
@@ -49,13 +57,13 @@ enum DGTDeviceDiscovery {
             service = IOIteratorNext(iterator)
         }
         
-        // Debug, not info: fires on every launch, Rescan and reconnect lap - present/absent is the one
-        // fact callers ask about.
+        // Debug, not info: fires on every launch, Rescan and reconnect lap - present/absent is the
+        // one fact callers ask about.
         logger?.debug("Board node \(devices.isEmpty ? "absent" : "present", privacy: .public)")
         return devices
     }
     
-    /// Reads a string-valued IORegistry property for a service, or nil.
+    /// `takeRetainedValue` because `IORegistryEntryCreateCFProperty` follows the Create rule.
     private static func stringProperty(_ service: io_object_t, _ key: String) -> String? {
         guard let cf = IORegistryEntryCreateCFProperty(
             service, key as CFString, kCFAllocatorDefault, 0

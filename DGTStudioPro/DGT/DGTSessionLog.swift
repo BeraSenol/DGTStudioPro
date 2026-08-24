@@ -3,9 +3,12 @@ import Foundation
 import os
 import UniformTypeIdentifiers
 
-/// Exportable diagnostic timeline for live play - the in-memory sibling of the per-type
-/// Console loggers. `record` buffers + mirrors; `capture` buffers only (callers that already
-/// Console-log); `recordDesync` is the full-context capture. Ring-bounded.
+/// Exportable diagnostic timeline for live play - the in-memory sibling of the per-type Console
+/// loggers. `record` buffers *and* mirrors; `capture` buffers only. Which one to call is the
+/// caller's judgement about Console rather than a property of the event: most `capture` sites are
+/// per-settle chatter that deliberately never reaches Console at all.
+///
+/// Ring-bounded, and the ring spans the whole app session - nothing resets per game.
 @Observable
 @MainActor
 final class DGTSessionLog {
@@ -34,14 +37,15 @@ final class DGTSessionLog {
     
     // MARK: Configuration
     
-    /// Hard cap; a full game is well under it. Oldest dropped first.
+    /// Hard cap across the whole app session, not per game: `clear()` has no production caller, so
+    /// a long sitting of several games shares this one ring. Oldest dropped first.
     @ObservationIgnored private let maxEntries = 2000
     
     init() {}
     
     // MARK: Recording
     
-    /// Buffers *and* mirrors to Console - for events the caller doesn't otherwise log.
+    /// Buffers *and* mirrors to Console.
     func record(_ level: Level, _ message: String) {
         append(level: level, message: message)
         switch level {
@@ -51,7 +55,8 @@ final class DGTSessionLog {
         }
     }
     
-    /// Buffers only - for milestones whose caller already Console-logs (no duplicate lines).
+    /// Buffers only. Whether Console also needs a line is decided separately at the call site, and
+    /// most callers decide it does not.
     func capture(_ level: Level, _ message: String) {
         append(level: level, message: message)
     }
@@ -91,7 +96,8 @@ final class DGTSessionLog {
         ]
         for entry in entries {
             let head = "\(stamp.string(from: entry.timestamp))  [\(entry.level.rawValue.uppercased())]  "
-            // Continuation lines indent under the head so a block stays attached to its timestamp.
+            // Continuation lines indent under *this* head, so a block stays attached to its
+            // timestamp - the width follows the level string and is not uniform down the file.
             let indent = String(repeating: " ", count: head.count)
             lines.append(head + entry.message.replacingOccurrences(of: "\n", with: "\n" + indent))
         }
@@ -119,8 +125,8 @@ final class DGTSessionLog {
         }
     }
     
-    /// No production caller - ring-bounded, nothing resets per game; exists so the suite can assert
-    /// the bound and the append path independently.
+    /// No production caller - nothing resets the ring; exists so the suite can assert the bound and
+    /// the append path independently.
     func clear() {
         entries.removeAll()
     }
@@ -134,6 +140,8 @@ final class DGTSessionLog {
         }
     }
     
+    // `DateFormatter` is not `Sendable`, so both of these have to stay inside the `@MainActor`
+    // type - hoisting either to file scope is a mode-6 error, not a style change.
     private static let timestampFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "HH:mm:ss.SSS"
@@ -152,10 +160,11 @@ final class DGTSessionLog {
 // MARK: Debug Formatters
 
 /// Side-effect-free renderers of the pure DGT/chess values - reads only, which is what lets the
-/// pure types stay logger-free.
+/// pure types stay logger-free. `recordDesync` above is the only consumer in the tree.
 enum DGTDebugFormat {
     
-    /// FEN rank notation via a neutral FEN wrap - no new chess-core code.
+    /// FEN rank notation via a neutral FEN wrap - no new chess-core code. Every field but the
+    /// position is a placeholder; only `piecePlacement` is read.
     static func placement(_ position: Position) -> String {
         FEN(
             position: position,

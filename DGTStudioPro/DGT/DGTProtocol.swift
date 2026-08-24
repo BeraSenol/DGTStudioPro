@@ -1,3 +1,9 @@
+// The DGT wire vocabulary: outbound command bytes, inbound message IDs, the board's piece codes.
+// Transcribed from the protocol document - the compiler cannot check a byte, so `DGTProtocolTests`
+// pins every raw value below and is the only witness they are right.
+
+/// Everything the app can say to the board. `DGTSerialPort.send` writes `rawValue` and nothing
+/// else, so a command is always one byte with no payload.
 enum DGTCommand: UInt8, Sendable {
     case sendReset              = 0x40
     case sendBoard              = 0x42
@@ -9,6 +15,10 @@ enum DGTCommand: UInt8, Sendable {
     case returnLongSerialNumber = 0x55
 }
 
+/// Everything the board says back.
+///
+/// **Bit 7 is set on every value, and that is load-bearing** - `DGTFramer` finds frame starts by
+/// scanning for a byte with the MSB set, so a constant below `0x80` is a frame it never opens.
 enum DGTMessage: UInt8, Sendable {
     case boardDump        = 0x86
     case fieldUpdate      = 0x8E
@@ -19,10 +29,14 @@ enum DGTMessage: UInt8, Sendable {
     case longSerialNumber = 0xA2
 }
 
+/// The board's piece numbering, which is **not** the app's. DGT counts pawn, rook, knight, bishop,
+/// king, queen with black at +6; `Piece` counts pawn, knight, bishop, rook, queen, king with colour
+/// in bit 3, so black is at +8.
+///
+/// **The ranges overlap, so `Piece(rawValue: wireByte)` compiles and mostly succeeds** - nine of the
+/// twelve occupied codes yield an occupied piece of the wrong type. Only 0 and 1 survive, empty and
+/// white pawn, which are the two anyone checks by eye. `piece` is the one conversion.
 enum DGTPiece: UInt8, Sendable {
-    // The DGT piece ordering differs from the app's `PieceType`:
-    // Use the `piece` property to convert to the app's `Piece` type at
-    // the protocol boundary.
     case empty       = 0
     case whitePawn   = 1
     case whiteRook   = 2
@@ -38,10 +52,9 @@ enum DGTPiece: UInt8, Sendable {
     case blackQueen  = 12
     
     // MARK: Computed Properties
-    /// Converts this DGT piece to the app's `Piece` type. A `switch`, not a
-    /// raw-value-indexed table: a new DGT case would have compiled against the
-    /// table and trapped out of range at the decode boundary - here it's a
-    /// build error, which is the only witness a wire enum can rely on.
+    
+    /// A `switch`, not a table indexed by raw value: a new DGT case is then a build error here
+    /// rather than an out-of-range trap at the decode boundary.
     var piece: Piece {
         switch self {
         case .empty:       .empty
