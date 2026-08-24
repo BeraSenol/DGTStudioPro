@@ -1,20 +1,20 @@
 /// One named opening from the bundled table. `init(code:name:)` is the one place lichess's
 /// `Family: Variation` convention is read - split once per row at load, not per surface.
 struct ECOOpening: Sendable, Hashable {
-
-    /// The ECO volume code - deliberately not unique: it names a region; `family` identifies the
-    /// opening. Keying on code alone is reading it wrong.
+    
+    /// The ECO volume code - deliberately **not unique**: it names a region, `family` identifies
+    /// the opening. Keying on code alone is reading it wrong.
     let code: String
-
+    
     /// Left of the first colon - the short form the Library column shows.
     let family: String
-
+    
     /// Right of the first colon, or nil for a bare family line. The initializer folds an empty
     /// remainder to nil, so nil is the only spelling of "no variation".
     let variation: String?
-
-    /// Splits at the **first** colon - lichess nests subvariations after commas, never a second
-    /// colon, so a later colon is inside the variation text.
+    
+    /// Splits at the **first** colon: lichess nests subvariations after commas, never a second
+    /// colon, so any later colon belongs to the variation text.
     init(code: String, name: String) {
         self.code = code
         guard let colon = name.firstIndex(of: ":") else {
@@ -28,16 +28,17 @@ struct ECOOpening: Sendable, Hashable {
             .trimmingLeadingSpaces()
         self.variation = rest.isEmpty ? nil : rest
     }
-
+    
     /// Rehydrates already-split parts (`PGN.opening`'s door). Two initializers, two jobs: this one
-    /// must not parse - re-splitting a stored family would corrupt names containing colons.
+    /// must not parse - re-splitting a stored family would corrupt a name containing a colon.
     init(code: String, family: String, variation: String?) {
         self.code = code
         self.family = family
         self.variation = variation
     }
-
-    /// The source's own form - the inverse of the split, so a stored pair round-trips.
+    
+    /// The inverse of the split, and byte-exact against the table: every colonated row there
+    /// writes `": "`.
     var fullName: String {
         guard let variation else { return family }
         return "\(family): \(variation)"
@@ -49,16 +50,16 @@ struct ECOOpening: Sendable, Hashable {
 /// Longest-prefix ECO classification. Pure and table-injected - I/O lives in `ECOTable`.
 /// Longest prefix, not first match: the table deliberately carries duplicate transposition rows.
 struct ECOClassifier: Sendable {
-
+    
     /// Keyed by the folded SAN line, plies joined by one space.
     private let table: [String: ECOOpening]
-
+    
     /// The deepest table line, where the walk starts - starting at the game's length would waste a
     /// lookup per ply beyond the table's reach.
     private let deepestLine: Int
-
-    /// Duplicate lines resolve first-wins rather than trapping: a bundled-asset defect should not
-    /// stop the other 3,500 openings classifying. First-wins matches the app's identity rule.
+    
+    /// Duplicate lines resolve first-wins rather than trapping: one bad row in a bundled asset
+    /// should not stop the rest of the table classifying.
     init(_ entries: [(line: [String], opening: ECOOpening)]) {
         table = Dictionary(
             entries.map { (Self.key(for: $0.line), $0.opening) },
@@ -67,10 +68,10 @@ struct ECOClassifier: Sendable {
         // A closure, not `map(\.line.count)`: key paths don't reach tuple elements.
         deepestLine = entries.map { $0.line.count }.max() ?? 0
     }
-
-    /// The named opening and the matched prefix length in plies, or nil (the length is what
-    /// the analysis book-skip reads). Cost, recorded: quadratic prefix re-join, bounded at 36
-    /// plies - revisit only if Instruments says so.
+    
+    /// The named opening and the matched prefix length in plies, or nil - the length is what the
+    /// analysis book-skip reads. Recorded cost: a quadratic prefix re-join, bounded by the table's
+    /// deepest line. Revisit only if Instruments says so.
     func match(for moves: [String]) -> (opening: ECOOpening, plies: Int)? {
         let folded = moves.prefix(deepestLine).map(Self.foldedSAN)
         var depth = folded.count
@@ -82,21 +83,22 @@ struct ECOClassifier: Sendable {
         }
         return nil
     }
-
-    /// `match(for:)` without the length, for the callers that never need the book depth.
+    
+    /// `match(for:)` without the length. **No production caller** - the suites use it; production
+    /// goes through `GameClassification`, which needs the book depth.
     func opening(for moves: [String]) -> ECOOpening? {
         match(for: moves)?.opening
     }
-
+    
     // MARK: Folding
-
+    
     private static func key(for line: [String]) -> String {
         line.map(foldedSAN).joined(separator: " ")
     }
-
-    /// The **matching fold** for one SAN ply - a comparison fold, NOT a third content stripper
-    /// (the app's two strippers differ on purpose and stored text is never touched here). Exists
-    /// only to build and probe dictionary keys.
+    
+    /// The **matching fold** for one SAN ply - a comparison fold, not a third content stripper.
+    /// The app's two strippers differ on purpose, and stored text is never touched here: this
+    /// exists only to build and probe dictionary keys.
     private static func foldedSAN(_ san: String) -> String {
         var result = san
         while let last = result.last,
@@ -113,15 +115,15 @@ struct ECOClassifier: Sendable {
 
 // MARK: String Trimming
 
-/// Space-only trims. Deliberately not Foundation's `trimmingCharacters` - the chess core's one
-/// Foundation import is the SAN layer's `CharacterSet`.
+/// Space-only trims, deliberately not Foundation's `trimmingCharacters`: this file imports nothing
+/// at all, and two trims do not earn the first import.
 extension String {
     fileprivate func trimmingTrailingSpaces() -> String {
         var result = self
         while result.last == " " { result.removeLast() }
         return result
     }
-
+    
     fileprivate func trimmingLeadingSpaces() -> String {
         var result = self
         while result.first == " " { result.removeFirst() }

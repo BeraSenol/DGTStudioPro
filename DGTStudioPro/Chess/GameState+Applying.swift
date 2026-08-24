@@ -1,9 +1,10 @@
 extension GameState {
-    
+
     // MARK: State Application
-    
-    /// Applies `move`, returning a new state with all six fields updated. Every path to a next
-    /// state goes through here; hand-built states are the caller's problem.
+
+    /// Applies `move`, returning a new state with all six fields recomputed. Every path to a next
+    /// state goes through here - nothing in the app hand-builds a mid-game `GameState`, and the
+    /// move generator's guards assume that.
     func applying(_ move: Move) -> GameState {
         GameState(
             position: position.applying(move),
@@ -14,19 +15,20 @@ extension GameState {
             fullmoveNumber: updatedFullmoveNumber()
         )
     }
-    
+
     // MARK: Per-Field Helpers
-    
-    /// Rights revoke on: any king move (both sides), a rook leaving home (that side), a capture on
-    /// a rook's home corner (that side).
+
+    /// Three revocation causes, and they are the whole list: any king move (both sides, castling
+    /// included), a rook leaving home (that side), a capture on a rook's home corner (that side).
+    /// Rights are never restored.
     private func updatedCastlingRights(for move: Move) -> CastlingRights {
         var rights = castlingRights
         let color = activeColor
-        
+
         if move.pieceType == .king {
             rights.revokeAll(for: color)
         }
-        
+
         if move.pieceType == .rook {
             let homeKingsideRook  = color == .white ? Squares.h1 : Squares.h8
             let homeQueensideRook = color == .white ? Squares.a1 : Squares.a8
@@ -36,7 +38,7 @@ extension GameState {
                 rights.revoke(.mask(for: color, .queenSide))
             }
         }
-        
+
         if move.isCapture {
             let opponent = color.opponent
             let oppKingsideRook  = opponent == .white ? Squares.h1 : Squares.h8
@@ -47,26 +49,27 @@ extension GameState {
                 rights.revoke(.mask(for: opponent, .queenSide))
             }
         }
-        
+
         return rights
     }
-    
-    /// EP target is set only after a double pawn push; otherwise cleared.
-    /// The target is the square the pawn skipped over, not its landing square.
+
+    /// The square the pawn skipped over, not its landing square. Cleared by every other move.
+    ///
+    /// **Permissive: stamped after any double push**, whether or not an enemy pawn could actually
+    /// capture there. FIDE's repetition rule is about the en-passant *right*, so this line is why
+    /// `FEN.positionKey` under-reports repetitions - the fix belongs here, not there.
     private func updatedEnPassantTarget(for move: Move) -> Square? {
         guard move.isDoublePawnPush else { return nil }
         return activeColor == .white ? move.from + 8 : move.from - 8
     }
-    
-    /// Halfmove clock resets on pawn moves and captures (FIDE 50-move rule
-    /// counter); otherwise increments.
+
+    /// The FIDE 50-move counter: resets on any pawn move and any capture, otherwise increments.
     private func updatedHalfmoveClock(for move: Move) -> Int {
         if move.pieceType == .pawn || move.isCapture { return 0 }
         return halfmoveClock + 1
     }
-    
-    /// Fullmove number increments after black's move (i.e., when transitioning
-    /// from black to move → white to move).
+
+    /// Increments after black's move only - it counts moves, where the halfmove clock counts plies.
     private func updatedFullmoveNumber() -> Int {
         activeColor == .black ? fullmoveNumber + 1 : fullmoveNumber
     }

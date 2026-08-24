@@ -1,22 +1,25 @@
+// The chess core's one Foundation import, and it buys exactly one call: `trimmingCharacters`
+// below. Everything else in `Chess/` is import-free by design.
 import Foundation
 
 extension GameState {
-    
-    // MARK: SAN Parser (7e)
-    
+
+    // MARK: SAN Parser
+
     /// Parses SAN in this state's context, returning the matching legal move. Strict SAN: `x`
     /// present iff capture; pawn captures carry the source file; promotion in `=Q`, `(Q)`, bare `Q`.
     func parseSAN(_ san: String) throws(SANParseError) -> Move {
         var s = san.trimmingCharacters(in: .whitespaces)
         guard !s.isEmpty else { throw SANParseError.empty }
-        
-        // Drops all four suffixes; `PGNParser.stripAnnotations` keeps `+`/`#` - the app's two strippers
-        // differ on purpose (the movetext validator turns on which is which).
+
+        // Drops all four suffixes; `PGNParser.stripAnnotations` drops only `!`/`?` and keeps
+        // `+`/`#`. The app's two strippers differ on purpose - the movetext validator needs the
+        // mate claim that this one throws away.
         while let last = s.last, "+#!?".contains(last) {
             s.removeLast()
         }
         guard !s.isEmpty else { throw SANParseError.malformed(san) }
-        
+
         // Castling: `O-O`/`0-0` both read; the serializer emits canonical `O-O`.
         if s == "O-O" || s == "0-0" {
             return try matchCastling(kingside: true, original: san)
@@ -24,32 +27,32 @@ extension GameState {
         if s == "O-O-O" || s == "0-0-0" {
             return try matchCastling(kingside: false, original: san)
         }
-        
+
         let tokens = try Self.tokenize(s, original: san)
         return try matchMove(tokens, original: san)
     }
-    
-    // MARK: SAN Serializer (7f)
-    
+
+    // MARK: SAN Serializer
+
     /// Canonical SAN for a legal `move` in this state.
     func san(for move: Move) -> String {
         if move.isCastling {
             let castle = move.castlingSide == .kingSide ? "O-O" : "O-O-O"
             return castle + checkOrMateSuffix(after: move)
         }
-        
+
         let piece = move.pieceType.notation               // "" for pawn, NBRQK otherwise
         let disamb = disambiguator(for: move)
         let capture = move.isCapture ? "x" : ""
         let target = move.to.algebraicNotation
         let promo = move.promotionType.map { "=\($0.notation)" } ?? ""
         let suffix = checkOrMateSuffix(after: move)
-        
+
         return piece + disamb + capture + target + promo + suffix
     }
-    
+
     // MARK: Match Helpers (parser)
-    
+
     private func matchMove(_ tokens: SANTokens, original: String) throws(SANParseError) -> Move {
         let candidates = legalMoves().filter { move in
             if move.pieceType != tokens.pieceType { return false }
@@ -60,10 +63,10 @@ extension GameState {
             if let r = tokens.fromRank, move.from.rank != r { return false }
             return true
         }
-        
+
         return try Self.unique(candidates, original: original)
     }
-    
+
     private func matchCastling(kingside: Bool, original: String) throws(SANParseError) -> Move {
         let destinationFile = (kingside ? CastlingSide.kingSide : .queenSide).kingDestinationFile
         let candidates = legalMoves().filter {
@@ -71,9 +74,9 @@ extension GameState {
         }
         return try Self.unique(candidates, original: original)
     }
-    
-    /// Zero matches = parse failure, one = answer, more = ambiguity - both matchers ended in this
-    /// exact switch, free to drift.
+
+    /// Zero matches = parse failure, one = answer, more = ambiguity. Extracted because both matchers
+    /// ended in this exact switch, free to drift.
     private static func unique(
         _ candidates: [Move], original: String
     ) throws(SANParseError) -> Move {
@@ -83,41 +86,43 @@ extension GameState {
         default: throw SANParseError.ambiguous(original, count: candidates.count)
         }
     }
-    
+
     // MARK: Disambiguation (serializer)
-    
+
     /// FIDE preference order: file → rank → both.
+    ///
+    /// **Filtered from `legalMoves()`, not pseudo-legal ones**, which the standard requires: when
+    /// two knights can reach a square but one is pinned, the move needs no disambiguator at all.
+    /// Reading the pseudo-legal list here would emit a spurious file letter.
     private func disambiguator(for move: Move) -> String {
         // Pawn captures always carry the file letter; pushes never.
         if move.pieceType == .pawn {
             return move.isCapture ? String(move.from.fileIndicator) : ""
         }
-        
+
         let others = legalMoves().filter {
             $0 != move
             && $0.pieceType == move.pieceType
             && $0.to == move.to
         }
-        
+
         if others.isEmpty { return "" }
-        
+
         let conflictOnFile = others.contains { $0.from.file == move.from.file }
         let conflictOnRank = others.contains { $0.from.rank == move.from.rank }
-        
-        // No file conflict → file letter alone is unique. (FIDE first preference.)
+
         if !conflictOnFile {
             return String(move.from.fileIndicator)
         }
-        // File conflicts but rank doesn't → rank digit alone is unique.
         if !conflictOnRank {
             return String(move.from.rankIndicator)
         }
-        // Both conflict (rare; needs ≥3 attackers, e.g. promoted-piece scenarios).
+        // Both conflict - rare, and needs three or more attackers, so in practice a promoted piece.
         return move.from.algebraicNotation
     }
-    
+
     // MARK: Check / Mate Suffix (serializer)
-    
+
     private func checkOrMateSuffix(after move: Move) -> String {
         let next = applying(move)
         // `isCheckmate` recomputes `isInCheck` (two full scans). Ask once; pay `legalMoves()` only when
@@ -125,17 +130,17 @@ extension GameState {
         guard next.isInCheck else { return "" }
         return next.legalMoves().isEmpty ? "#" : "+"
     }
-    
+
     // MARK: Tokenization (parser)
-    
+
     /// Back-to-front tokenizer over cleaned SAN - the target square is always the trailing information.
     private static func tokenize(_ input: String, original: String) throws(SANParseError) -> SANTokens {
         var s = input
-        
-        // Promotion, most specific first: `(X)`, `=X`, bare trailing letter (unambiguous - non-promotion
-        // SAN ends in a rank digit).
+
+        // Promotion, most specific first: `(X)`, `=X`, bare trailing letter - which is unambiguous
+        // because non-promotion SAN always ends in the target square's rank digit.
         var promotion: PieceType? = nil
-        
+
         if s.hasSuffix(")") {
             let chars = Array(s)
             let n = chars.count
@@ -159,7 +164,7 @@ extension GameState {
                 s = String(s.dropLast())
             }
         }
-        
+
         // -- Target square ----------------------------------------------------
         guard s.count >= 2 else { throw SANParseError.malformed(original) }
         let targetStr = String(s.suffix(2))
@@ -167,21 +172,21 @@ extension GameState {
             throw SANParseError.malformed(original)
         }
         s = String(s.dropLast(2))
-        
+
         // -- Capture marker ---------------------------------------------------
         var isCapture = false
         if s.hasSuffix("x") {
             isCapture = true
             s = String(s.dropLast())
         }
-        
+
         // -- Leading piece letter (optional; absence ⇒ pawn) ------------------
         var pieceType: PieceType = .pawn
         if let first = s.first, let piece = pieceTypeFromSANLetter(first) {
             pieceType = piece
             s = String(s.dropFirst())
         }
-        
+
         // -- Disambiguator (0–2 remaining chars: file, rank, or file+rank) ----
         var fromFile: Int? = nil
         var fromRank: Int? = nil
@@ -208,15 +213,17 @@ extension GameState {
         default:
             throw SANParseError.malformed(original)
         }
-        
-        // -- Cross-field validity --------------------------------------------
+
+        // -- Cross-field validity ---------------------------------------------
+        // Shape only. A promotion on the wrong rank is left to `matchMove`, which simply finds no
+        // legal candidate.
         if promotion != nil, pieceType != .pawn {
             throw SANParseError.malformed(original)
         }
         if pieceType == .pawn, isCapture, fromFile == nil {
             throw SANParseError.malformed(original)
         }
-        
+
         return SANTokens(
             pieceType: pieceType,
             fromFile: fromFile,
@@ -226,9 +233,9 @@ extension GameState {
             promotion: promotion
         )
     }
-    
+
     // MARK: Character Helpers
-    
+
     private static func pieceTypeFromSANLetter(_ c: Character) -> PieceType? {
         switch c {
         case "N": return .knight
@@ -239,7 +246,7 @@ extension GameState {
         default:  return nil
         }
     }
-    
+
     private static func promotionPieceType(from c: Character) -> PieceType? {
         switch c {
         case "Q": return .queen
@@ -253,11 +260,13 @@ extension GameState {
 
 // MARK: FEN Forwarding
 
+/// **Test-only by decision**, like `FEN.legalMoves()` and `FEN.replay`: production always works
+/// from a `GameState`.
 extension FEN {
     func parseSAN(_ san: String) throws(SANParseError) -> Move {
         try GameState(self).parseSAN(san)
     }
-    
+
     func san(for move: Move) -> String {
         GameState(self).san(for: move)
     }
@@ -278,12 +287,11 @@ private struct SANTokens {
 // MARK: Errors
 
 enum SANParseError: Error, Equatable {
-    /// SAN string was empty or whitespace-only.
     case empty
-    /// SAN string didn't match the syntactic shape of a move.
+    /// Didn't match the syntactic shape of a move.
     case malformed(String)
-    /// SAN parsed correctly but no legal move in the current position matches.
+    /// Parsed correctly, but no legal move in this position matches.
     case noMatchingMove(String)
-    /// SAN matches more than one legal move (caller should add a disambiguator).
+    /// Matches more than one legal move - the caller owes a disambiguator.
     case ambiguous(String, count: Int)
 }

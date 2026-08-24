@@ -525,7 +525,7 @@ struct BoardDestination: View {
             // same hour, kept pending the bisect ladder's verdict; the record is on the wrapper.
             InspectorEmptyState(
                 title: "No Live Game",
-                systemImage: "checkerboard.rectangle",
+                systemImage: "rectangle.dashed.badge.record",
                 message: "Start a game from the board to see its details and moves here.",
                 identifier: AccessibilityID.liveInspectorNoGame
             )

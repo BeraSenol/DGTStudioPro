@@ -1,5 +1,12 @@
+/// A board index, `rank * 8 + file`: a1 = 0 through h8 = 63.
+///
+/// **It is a bare `Int`, so the extension below lands on every `Int` in the app.** `5.file` and
+/// `someCount.algebraicNotation` both compile, and the second traps - unlike `asciiDigit` it carries
+/// no bounds assert, because a real square is always 0-63. That is the cost of the typealias, paid
+/// so board geometry has exactly one home.
 typealias Square = Int
 
+/// Named indices, rank-major: a1 = 0, h1 = 7, a8 = 56, h8 = 63.
 enum Squares {
     static let a1 = 0,  b1 = 1,  c1 = 2,  d1 = 3,  e1 = 4,  f1 = 5,  g1 = 6,  h1 = 7
     static let a2 = 8,  b2 = 9,  c2 = 10, d2 = 11, e2 = 12, f2 = 13, g2 = 14, h2 = 15
@@ -27,16 +34,12 @@ extension Square {
     static let rookDirections:   [Int] = [1, 8, -1, -8]
     static let bishopDirections: [Int] = [7, 9, -7, -9]
     static let queenDirections:  [Int] = [1, 7, 8, 9, -1, -7, -8, -9]
-
+    
     /// The two squares a pawn of `color` attacks *from*, as offsets from the **attacked** square -
-    /// backwards, which is the convention `isSquareAttacked` scans in and the opposite of the
-    /// direction a pawn moves. The one color-dependent member of this block, and it earns the place:
-    /// `Position.isSquareAttacked` and `SpecialCheckmate.Context.pawnAttacks` each spelled the
-    /// ternary inline until 18 Aug 2026, the second with a comment pointing at the first for the
-    /// convention - a shared rule documented as shared and stored twice.
-    ///
-    /// Pairs with `maxFileDistance: 1` at every use, like every offset here: the offset alone wraps
-    /// the a/h seam.
+    /// backwards, which is the direction `isSquareAttacked` scans and the opposite of the direction
+    /// a pawn moves. The one colour-dependent member of this block, shared by
+    /// `Position.isSquareAttacked` and `SpecialCheckmate.Context.pawnAttacks` so the convention is
+    /// stored once rather than described twice. Pairs with a file-distance guard of 1, like the rest.
     static func pawnAttackOrigins(of color: PieceColor) -> [Int] {
         color == .white ? [-7, -9] : [7, 9]
     }
@@ -49,8 +52,7 @@ extension Square {
         rankIndicatorTable[rank]
     }
     
-    /// Inverses of `fileCharacter`/`rankCharacter`, nil outside 0–7 - third home for arithmetic
-    /// whose forward direction already lived here.
+    /// Inverses of `fileCharacter` / `rankCharacter`; nil outside 0-7.
     static func file(from character: Character) -> Int? {
         index(of: character, base: "a", in: Square.files)
     }
@@ -59,10 +61,9 @@ extension Square {
         index(of: character, base: "1", in: Square.ranks)
     }
     
-    /// `bounds` is passed rather than assumed: this helper serves both
-    /// `file(from:)` and `rank(from:)`, and hardcoding `Square.files` made the
-    /// rank path bounds-check against the file range. Identical values today -
-    /// which is the state a shared constant drifts out of.
+    /// `bounds` is a parameter rather than a constant: this serves both `file(from:)` and
+    /// `rank(from:)`, and hardcoding `Square.files` made the rank path bounds-check the file range.
+    /// Identical values today - which is the state a shared constant drifts out of.
     private static func index(
         of character: Character, base: Unicode.Scalar, in bounds: Range<Int>
     ) -> Int? {
@@ -92,6 +93,9 @@ extension Square {
     }()
     
     // MARK: Computed Properties
+    
+    /// One comparison covers both ends: the bit-pattern cast turns a negative square into a huge
+    /// `UInt`, so off-board-below and off-board-above fail the same test.
     var isOnBoard: Bool { UInt(bitPattern: self) < Square.count }
     var file: Int { self % 8 }
     var rank: Int { self / 8 }
@@ -104,6 +108,8 @@ extension Square {
         Int.rankIndicatorTable[rank]
     }
     
+    /// A FEN empty-run digit, so 0-8 rather than a square index. `assert`, not `precondition`:
+    /// Release trusts the caller.
     var asciiDigit: Character {
         assert(UInt(bitPattern: self) <= 8, "asciiDigit called with value \(self), expected 0–8")
         return Character(UnicodeScalar(UInt8(ascii: "0") + UInt8(self)))

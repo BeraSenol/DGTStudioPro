@@ -29,7 +29,7 @@ struct PGNStore {
     }
     
     // MARK: Errors
-    enum Error: Swift.Error {
+    enum Error: Swift.Error, LocalizedError {
         /// Hash matches an existing game. Carries id + name, never the model - `Swift.Error`
         /// refines `Sendable`, and a live `@Model` never is.
         case duplicate(existingID: PersistentIdentifier, existingName: String)
@@ -38,6 +38,25 @@ struct PGNStore {
         case fileReadFailed(URL, underlying: Swift.Error)
         /// `archive(_:)` got a `*` result - no ongoing game reaches the Library.
         case ongoingGame
+
+        /// `LocalizedError` for the generic catches: the archive door renders
+        /// `localizedDescription` into the HUD's Retry/Discard message (`DGTLiveSession`), where
+        /// the Foundation fallback read "…error 4." The import sheet keeps its own per-surface
+        /// copy (`ImportStatusView`) and never reads this - view prose stays in views.
+        var errorDescription: String? {
+            switch self {
+            case .duplicate(_, let name):
+                return "Already in the Library as '\(name)'."
+            case .missingRequiredTags(let tags):
+                return "Missing required tags: \(tags.sorted().joined(separator: ", "))."
+            case .malformedPGN(let reason):
+                return reason
+            case .fileReadFailed(let url, let underlying):
+                return "Couldn't read \(url.lastPathComponent): \(underlying.localizedDescription)"
+            case .ongoingGame:
+                return "The game is still ongoing - only a finished game archives."
+            }
+        }
     }
     
     /// Archive outcome: a hash match here is *success* (game is in the Library), not the error import throws.

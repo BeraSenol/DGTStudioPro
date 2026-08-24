@@ -1,7 +1,8 @@
 extension Position {
     
     /// Whether any offset, stepped once and wrap-guarded, holds `piece`. `maxFileDistance` is NOT
-    /// derivable from the offsets - a knight legitimately changes file by 2.
+    /// derivable from the offsets - a knight legitimately changes file by 2. Internal rather than
+    /// private because `SpecialCheckmate` reads it.
     func hasPiece(
         _ piece: Piece,
         steppingFrom square: Square,
@@ -16,10 +17,15 @@ extension Position {
         }
     }
     
-    /// Whether `square` is attacked by any piece of the given `attacker` color.
+    /// Whether `square` is attacked by any piece of the given `attacker` colour.
+    ///
+    /// **All six attacker types, and the enumeration below is the whole safety argument** - a
+    /// missing case is an illegal move the legality filter then waves through, visible only as a
+    /// wrong result many plies later. The queen is deliberately checked twice, once with each
+    /// slider pair.
     func isSquareAttacked(_ square: Square, by attacker: PieceColor) -> Bool {
-        // Pawn attacks: an enemy pawn one rank "in front of" us (from the attacker's
-        // perspective) on either adjacent file would be attacking this square.
+        // Pawn attacks. The offsets run *backwards* from the attacked square, which
+        // `Square.pawnAttackOrigins` owns - it is the one colour-dependent offset table.
         if hasPiece(
             Piece(attacker, .pawn),
             steppingFrom: square,
@@ -33,7 +39,9 @@ extension Position {
             steppingFrom: square, offsets: Square.knightOffsets, maxFileDistance: 2
         ) { return true }
         
-        // King attacks: any of the 8 neighbor squares holds an enemy king.
+        // King attacks: any of the 8 neighbour squares holds an enemy king. Same predicate as
+        // `hasPiece(attackingKing, offsets: Square.kingOffsets, maxFileDistance: 1)`, hand-rolled
+        // with no reason on record - collapsible.
         let attackingKing = Piece(attacker, .king)
         for offset in Square.kingOffsets {
             let from = square + offset
@@ -63,8 +71,9 @@ extension Position {
         return false
     }
     
-    /// Walks a ray; true iff the first occupied square holds a matching enemy slider. Internal -
-    /// `SpecialCheckmate` reads it.
+    /// Walks a ray; true iff the **first occupied** square holds a matching enemy slider - so a
+    /// blocker of either colour ends the ray, which is what makes this an attack test rather than
+    /// a line-of-sight one. Internal because `SpecialCheckmate` reads it.
     func rayHitsSlider(
         from square: Square,
         direction: Int,

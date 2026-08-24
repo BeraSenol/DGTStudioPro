@@ -9,7 +9,7 @@ enum AnalysisGlyph {
     
     /// Three states, not a `Bool`: `isAnalyzed` is true for any scored ply and the driver writes
     /// plies as it walks, so a `Bool` went green at ply one.
-    enum State: Equatable {
+    enum State: Equatable, CaseIterable {
         /// Nothing scored, nothing working on it. Queued games sit here too.
         case unanalyzed
         /// On the engine now. Beats the array, which is mid-write underneath.
@@ -296,7 +296,7 @@ struct AnalysisStatusBadge: View {
 /// only a canvas can answer it.
 #Preview("Status Badge, Both Grounds") {
     HStack(spacing: 24) {
-        ForEach([AnalysisGlyph.State.unanalyzed, .analyzing, .analyzed], id: \.self) { state in
+        ForEach(AnalysisGlyph.State.allCases, id: \.self) { state in
             VStack(spacing: 12) {
                 Image(systemName: "document.fill")
                     .resizable()

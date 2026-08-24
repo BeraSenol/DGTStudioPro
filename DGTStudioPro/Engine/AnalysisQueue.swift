@@ -19,7 +19,7 @@ struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
     }
     
     /// One completed item, in completion order.
-    struct Finished: Equatable, Sendable {
+    struct Finished: Equatable, Sendable, Identifiable {
         let id: ID
         let outcome: Outcome
     }

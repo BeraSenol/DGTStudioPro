@@ -1,6 +1,9 @@
 struct GameState: Equatable, Sendable {
     
     // MARK: Static Constants
+    
+    /// Guarded by the perft suite rather than by an equality test: a wrong field here shows up as
+    /// `Chess.perft(.starting, depth: 4) != 197_281`.
     static let starting = GameState(
         position: .starting,
         activeColor: .white,
@@ -17,14 +20,12 @@ struct GameState: Equatable, Sendable {
     let enPassantTarget: Square?
     let halfmoveClock: Int
     let fullmoveNumber: Int
-    
 }
 
 // MARK: FEN Conversion
 
-/// Deliberately in an extension, not the type body: a conversion init inside
-/// the struct suppresses the synthesized memberwise init, which every call
-/// site here wants and which was previously hand-written to match exactly.
+/// Both conversions live in extensions, not in their type bodies: an init inside the struct
+/// suppresses the synthesized memberwise init, which every call site here wants.
 extension GameState {
     init(_ fen: FEN) {
         self.init(
@@ -37,6 +38,7 @@ extension GameState {
         )
     }
 }
+
 extension FEN {
     init(_ state: GameState) {
         self.init(
@@ -50,10 +52,10 @@ extension FEN {
     }
 }
 
-// MARK: Replay (folded in from GameState+Replay.swift at M13)
+// MARK: Replay
 
 extension GameState {
-
+    
     /// Replays SAN to the final state; the first failure throws `ReplayError` with index, string
     /// and parser error.
     func replay(_ sanMoves: [String]) throws(ReplayError) -> GameState {
@@ -72,15 +74,14 @@ extension GameState {
 }
 
 extension FEN {
+    /// **Test-only by decision**, like `FEN.legalMoves()`; production replays from `GameState`.
     func replay(_ sanMoves: [String]) throws(ReplayError) -> GameState {
         try GameState(self).replay(sanMoves)
     }
 }
 
 enum ReplayError: Error, Equatable {
-    /// The SAN string at the given move index failed to parse. The
-    /// underlying parser error captures the specific reason; the index
-    /// and string allow callers to surface diagnostic context like
-    /// "move 14 ('Bxd5'): no legal move matches".
+    /// Index and string are carried so a caller can say which ply failed - "move 14 ('Bxd5'): no
+    /// legal move matches" - rather than only why.
     case invalidMove(index: Int, san: String, underlying: SANParseError)
 }

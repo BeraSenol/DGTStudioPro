@@ -1,3 +1,6 @@
+/// The 64 squares and nothing else - no side to move, no rights, no clocks. `Codable` is
+/// synthesized but has no encode or decode call site in the tree: nothing persists a `Position`,
+/// and the draft sidecar stores a FEN string instead.
 struct Position: Codable, Equatable, Sendable {
     
     // MARK: Static Constants
@@ -20,6 +23,9 @@ struct Position: Codable, Equatable, Sendable {
     }()
     
     // MARK: Stored Properties
+    
+    /// An array, so `applying` pays a heap allocation per ply. On the deferred-cost census: fine at
+    /// personal scale, and any fix touches `Chess/` and so inherits the perft gate.
     private var squares: [Piece]
     
     // MARK: Initializers
@@ -34,6 +40,11 @@ struct Position: Codable, Equatable, Sendable {
     }
     
     // MARK: Instance Methods
+    
+    /// **The step order is load-bearing.** For an ordinary capture `capturedSquare == to`, so the
+    /// clear must precede writing the mover there; reversed, the moving piece vanishes. En passant
+    /// is what makes the clear a separate step at all - its captured square is neither `from` nor
+    /// `to`. Castling's rook squares collide with neither, so it can come last.
     func applying(_ move: Move) -> Position {
         var result = self
         
@@ -57,6 +68,10 @@ struct Position: Codable, Equatable, Sendable {
     /// which is per node in perft. `firstIndex(of:)` is the same complexity
     /// but hands the search to the stdlib rather than a Swift loop over an
     /// index range.
+    ///
+    /// Returns the **first** king found, which is only correct because two same-colour kings is on
+    /// the assumed-never list. `FEN(parsing:)` does not count kings, so a hand-edited file can put
+    /// two on the board and this will silently pick the lower square.
     func kingSquare(for color: PieceColor) -> Square? {
         squares.firstIndex(of: Piece(color, .king))
     }

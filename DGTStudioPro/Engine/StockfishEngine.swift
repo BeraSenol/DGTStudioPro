@@ -16,10 +16,22 @@ actor StockfishEngine {
     
     // MARK: Errors
     
-    enum EngineError: Error, Equatable {
+    enum EngineError: Error, Equatable, LocalizedError {
         case startupFailed(String)
         case alreadyStarted
         case notStarted
+
+        /// `LocalizedError` because generic catches render `localizedDescription` (the Syzygy
+        /// check's failure line, the queue window's failure row) - without it Foundation prints
+        /// the type-and-code fallback and the `startupFailed` payload never surfaces. Exhaustive
+        /// and `String`-per-arm, so "every case has prose" is compiler-checked, not tested.
+        var errorDescription: String? {
+            switch self {
+            case .startupFailed(let message): return message
+            case .alreadyStarted:            return "The engine is already running."
+            case .notStarted:                return "The engine hasn't started."
+            }
+        }
     }
     
     // MARK: Stored State

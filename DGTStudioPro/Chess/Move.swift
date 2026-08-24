@@ -1,5 +1,14 @@
+/// A move packed into one `UInt32`:
+///
+///     bits  0-5   from             bits 16-18  capturedPieceType  (0 = none)
+///     bits  6-11  to               bits 19-21  promotionType      (0 = none)
+///     bits 12-14  pieceType        bit  22     castling
+///     bit  15     pieceColor       bit  23     enPassant
+///                                  bit  24     doublePawnPush
+///
+/// Bits 25-31 are spare - a new flag goes there. `PieceType` starts at raw value 1 precisely so
+/// that 0 can mean "no captured piece" and "no promotion" in the two 3-bit fields.
 struct Move: Equatable, Hashable, Sendable {
-    // Packed: bits 0-5 from, 6-11 to, 12-14 piece type, 15-17 captured, 18-20 promotion, 21+ flags.
     
     // MARK: Static Constants
     private static let toShift:            Int = 6
@@ -24,6 +33,8 @@ struct Move: Equatable, Hashable, Sendable {
         Int(rawValue >> Self.toShift) & 0x3F
     }
     
+    /// Force-unwrapped safely: `make` is the only way to build a `Move` and always writes both
+    /// fields, and `init(rawValue:)` is private, so no caller can leave them zero.
     var pieceType: PieceType {
         PieceType(rawValue: UInt8((rawValue >> Self.pieceTypeShift) & 0x07))!
     }
@@ -54,13 +65,16 @@ struct Move: Equatable, Hashable, Sendable {
         rawValue & Self.doublePawnPushFlag != 0
     }
     
-    /// A bit test, not an enum construction: the captured field is 0 (none) or
-    /// a valid 1–6, so "any bit set" and "decodes to non-nil" are the same
-    /// question. Called once per generated move by the castling-rights update.
+    /// A bit test, not an enum construction: the captured field is 0 (none) or a valid 1-6, so
+    /// "any bit set" and "decodes to non-nil" are the same question. Called once per generated
+    /// move by the castling-rights update.
     var isCapture: Bool {
         rawValue & (0x07 << Self.capturedTypeShift) != 0
     }
     
+    /// Where the captured piece actually stands - which is *not* `to` for en passant, the one move
+    /// that removes a piece from a square the mover never occupies. Every "clear the destination"
+    /// shortcut is wrong for it.
     var capturedSquare: Square? {
         guard isCapture else { return nil }
         if isEnPassant {
@@ -75,6 +89,8 @@ struct Move: Equatable, Hashable, Sendable {
         return to.file == CastlingSide.kingSide.kingDestinationFile ? .kingSide : .queenSide
     }
     
+    /// Rook squares derived from the king's landing square: kingside g1 → h1/f1, queenside c1 →
+    /// a1/d1. Standard-chess geometry, so the offsets are constants rather than a search.
     var rookFrom: Square? {
         guard let castlingSide else { return nil }
         return castlingSide == .kingSide ? to + 1 : to - 2
@@ -118,7 +134,7 @@ struct Move: Equatable, Hashable, Sendable {
         if isCastling       { raw |= castlingFlag }
         if isEnPassant      { raw |= enPassantFlag }
         if isDoublePawnPush { raw |= doublePawnPushFlag }
-
+        
         return Move(rawValue: raw)
     }
 }

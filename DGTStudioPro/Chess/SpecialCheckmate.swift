@@ -52,7 +52,8 @@ enum SpecialCheckmate: String, Codable, Sendable, CaseIterable {
 
     /// Precedence, narrowest motif first: a mate can honestly fit two shapes and the stored
     /// column holds one value, so the order is the decision. Data, not an `if`-chain. A new case
-    /// missing from *this list* never classifies, silently - the witness is the completeness pin.
+    /// missing from *this list* never classifies, silently - caught only by
+    /// `SpecialCheckmateTests`' `produced == Set(allCases)`.
     private static let precedence: [SpecialCheckmate] = [
         .smothered,
         .arabian,
@@ -161,9 +162,8 @@ extension SpecialCheckmate.Context {
         )
     }
 
-    /// Mating-side pawn attacks `square`; the offsets run backwards from the target, which is
-    /// `isSquareAttacked`'s convention and now literally its offsets - `Square.pawnAttackOrigins`
-    /// owns the pair, so the shared rule this doc always claimed is one value rather than two.
+    /// Mating-side pawn attacks `square`. The offsets run backwards from the target -
+    /// `Square.pawnAttackOrigins` owns that convention, shared with `isSquareAttacked`.
     func pawnAttacks(_ square: Square) -> Bool {
         position.hasPiece(
             Piece(attacker, .pawn),
@@ -216,9 +216,8 @@ extension SpecialCheckmate.Context {
     /// A checking mating **bishop**, found by walking the king's diagonals (a Boden bishop sits far
     /// away). Bishops only - a diagonal queen is a Dovetail, and the two must not blur.
     ///
-    /// This is `bishopAttacks(king)` and was written out again beside it, identically, until
-    /// 18 Aug 2026. The name earns its keep - "a bishop is checking" is the sentence the
-    /// recognisers below read - but the ray walk does not need a second copy.
+    /// A name over `bishopAttacks(king)`, kept because "a bishop is checking" is the sentence the
+    /// recognisers below read.
     var checkingBishopExists: Bool {
         bishopAttacks(king)
     }
@@ -285,8 +284,9 @@ extension SpecialCheckmate.Context {
         return bishopAttacks(rook)
     }
 
-    /// Two bishops on criss-crossing diagonals, king boxed by its own men. The square-colour
-    /// argument removes the need to identify which bishop covers which flight.
+    /// Two bishops on criss-crossing diagonals, king boxed by its own men. Coverage is asked of
+    /// each neighbour directly, so the recogniser never has to work out which bishop covers which
+    /// flight square - and never has to count the bishops.
     var isBoden: Bool {
         guard checkingBishopExists else { return false }
         guard orthogonalNeighbours.contains(where: bishopAttacks) else { return false }

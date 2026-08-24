@@ -180,7 +180,7 @@ struct AnalysisQueueStatusWindowView: View {
     /// batch wants the newest where the eyes already are.
     private var finishedSection: some View {
         section("Finished", count: controller.queue.finished.count) {
-            ForEach(controller.queue.finished.reversed(), id: \.id) { record in
+            ForEach(controller.queue.finished.reversed()) { record in
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Image(systemName: outcomeSymbol(record.outcome))
                         .foregroundStyle(outcomeTint(record.outcome))

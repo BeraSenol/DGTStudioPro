@@ -164,7 +164,9 @@ final class GameAnalysisDriver {
             Self.logger?.error(
                 "Engine start failed: \(String(describing: error), privacy: .public)"
             )
-            status = .failed(message: "Engine failed to start: \(error).")
+            // `localizedDescription`, not `\(error)` - interpolation prints Swift case syntax
+            // (`startupFailed("…")`) into a row the user reads; the log above keeps the case form.
+            status = .failed(message: "Engine failed to start: \(error.localizedDescription)")
             return
         }
 

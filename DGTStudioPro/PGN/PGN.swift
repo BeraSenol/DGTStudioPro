@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-enum GameResult: String, CaseIterable, Codable {
+enum GameResult: String, CaseIterable, Codable, Sendable {
     case whiteWins = "1-0"
     case blackWins = "0-1"
     case draw      = "1/2-1/2"

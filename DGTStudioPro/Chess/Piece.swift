@@ -1,3 +1,5 @@
+/// White is 0 and black is 1, which `PieceType.fenCharacter(for:)` multiplies by 32 to pick ASCII
+/// case. Renumbering these would silently lowercase the wrong side.
 enum PieceColor: UInt8, CaseIterable, Codable, Sendable {
     case white = 0
     case black = 1
@@ -8,6 +10,8 @@ enum PieceColor: UInt8, CaseIterable, Codable, Sendable {
     }
 }
 
+/// Raw values start at 1 so that 0 can mean "none" in `Move`'s packed captured and promotion
+/// fields, and so `fenBytes` can index directly.
 enum PieceType: UInt8, CaseIterable, Codable, Sendable {
     case pawn   = 1
     case knight = 2
@@ -27,9 +31,11 @@ enum PieceType: UInt8, CaseIterable, Codable, Sendable {
         UInt8(ascii: "K"), // 6: King
     ]
     
-    /// The four pieces a pawn may become, in SAN's conventional order - which
-    /// is also the order `appendPromotions` emits, and therefore the order the
-    /// perft counts were taken against.
+    /// The four pieces a pawn may become, in SAN's conventional order - best first - which is also
+    /// the order `appendPromotions` emits.
+    ///
+    /// **Nothing pins that order.** Perft counts leaves, so it is order-blind, and both promotion
+    /// tests compare a `Set`. A reorder here is invisible to the whole suite.
     static let promotionTypes: [PieceType] = [.queen, .rook, .bishop, .knight]
     
     var notation: String {
@@ -43,19 +49,21 @@ enum PieceType: UInt8, CaseIterable, Codable, Sendable {
         }
     }
     
+    /// The uppercase FEN byte - 80 for `P`, and so on.
     var fenByte: UInt8 {
-        // Uppercase FEN byte for this piece type (e.g. 80 for 'P').
         Self.fenBytes[Int(rawValue)]
     }
     
     // MARK: Instance Methods
     func fenCharacter(for color: PieceColor) -> Character {
-        // Adding 32 (0x20) converts uppercase ASCII to lowercase.
+        // +32 (0x20) is uppercase ASCII → lowercase, and black's raw value is exactly 1.
         let byte = fenByte + (color.rawValue * 32)
         return Character(UnicodeScalar(byte))
     }
 }
 
+/// A piece packed into one `UInt8`: bits 0-2 the `PieceType` raw value, bit 3 the colour, 0 for an
+/// empty square. So the occupied values are 1-6 (white) and 9-14 (black).
 struct Piece: Codable, Equatable, Hashable, Sendable {
     
     // MARK: Static Constants
@@ -75,6 +83,8 @@ struct Piece: Codable, Equatable, Hashable, Sendable {
     static let blackQueen  = Piece(.black, .queen)
     static let blackKing   = Piece(.black, .king)
     
+    /// Sized to the packing's whole 4-bit range, not to the twelve real pieces - which is what lets
+    /// `imageName` subscript without a bounds check.
     private static let imageNames: [String?] = {
         let typeNames = ["", "Pawn", "Knight", "Bishop", "Rook", "Queen", "King"]
         var table = [String?](repeating: nil, count: 16)

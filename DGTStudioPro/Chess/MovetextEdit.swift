@@ -19,8 +19,7 @@ enum MovetextEdit {
         case illegalMove(index: Int, san: String, reason: SANParseError)
         /// The final ply carries `#` but the position is not checkmate.
         case claimsCheckmateButPositionIsNot(san: String)
-        /// The final position is checkmate; the result must be the mating
-        /// side's win, which `claimed` is not.
+        /// The position is checkmate and `claimed` is not the mating side's win.
         case checkmateResultMismatch(expected: GameResult, claimed: GameResult)
         /// The final position is stalemate; the result must be a draw.
         case stalemateRequiresDraw(claimed: GameResult)
@@ -34,6 +33,9 @@ enum MovetextEdit {
     
     /// Replays `proposed` from `start` - canonical storable edit, or the first refusal. Mirrors
     /// `GameState.replay` rather than calling it: this path needs every intermediate state.
+    ///
+    /// `start` is `.starting` at every call site today; it exists for a game whose draft carries a
+    /// non-standard `startFEN`.
     static func validate(
         _ proposed: [String],
         claimedResult: GameResult,
@@ -105,9 +107,9 @@ extension MovetextEdit {
     }
     
     private static let resultTokens: Set<String> = Set(GameResult.allCases.map(\.rawValue))
-
+    
     /// Drops a leading `<digits><dots>` run. Only when a dot follows the digits - real SAN is never
-    /// digit-led.
+    /// digit-led, and `1-0` / `1/2-1/2` must survive to be recognised as result tokens.
     private static func strippingMoveNumberPrefix(_ token: Substring) -> String {
         let afterDigits = token.drop(while: \.isNumber)
         guard afterDigits.count < token.count, afterDigits.first == "." else {
@@ -115,16 +117,19 @@ extension MovetextEdit {
         }
         return String(afterDigits.drop(while: { $0 == "." }))
     }
-
-    /// The character range of ply `index`'s SAN inside `movetext` - the token `tokenize` would
-    /// emit at that position, minus any move-number prefix - or nil when no such ply exists.
-    /// Character offsets, so a display layer can mark the offending move without re-tokenizing
-    ///. Walks by `tokenize`'s own rules - same splitter, same prefix stripper, same
-    /// result-token skip - so the two cannot disagree about which token is ply N.
+    
+    /// The character range of ply `index`'s SAN inside `movetext` - the token `tokenize` would emit
+    /// at that position, minus any move-number prefix - or nil when no such ply exists. Character
+    /// offsets, so a display layer can mark the offending move without re-tokenizing.
+    ///
+    /// Walks by `tokenize`'s own rules - same splitter, same prefix stripper, same result-token
+    /// skip - so the two cannot disagree about which token is ply N. The range arithmetic below
+    /// leans on the stripper removing only a *leading* run, which leaves the kept text as a suffix
+    /// of the raw token; a stripper that also trimmed the tail would misplace every mark.
     static func characterRange(ofPly index: Int, in movetext: String) -> Range<Int>? {
         guard index >= 0 else { return nil }
         var seen = 0
-
+        
         func match(_ token: String, endingAt end: Int) -> Range<Int>? {
             let stripped = strippingMoveNumberPrefix(Substring(token))
             guard !stripped.isEmpty, !resultTokens.contains(stripped) else { return nil }
@@ -132,7 +137,7 @@ extension MovetextEdit {
             guard seen == index else { return nil }
             return (end - stripped.count)..<end
         }
-
+        
         var position = 0
         var token = ""
         for character in movetext {

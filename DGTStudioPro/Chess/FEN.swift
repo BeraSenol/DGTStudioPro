@@ -10,6 +10,8 @@ struct FEN: Equatable, Sendable {
         fullmoveNumber: 1
     )
     
+    /// **Test-only by decision** (waiver register); `FENParsingTests` pins it against
+    /// `starting.string`, so the two constants cannot drift apart.
     static let startingString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
     
     // MARK: Stored Properties
@@ -21,10 +23,21 @@ struct FEN: Equatable, Sendable {
     let fullmoveNumber: Int
     
     // MARK: Computed Properties
+    
+    /// The full six-field FEN. An **interchange** shape, not an internal one: Stockfish receives it
+    /// as `position fen`, and the draft sidecar stores it as `startFEN`.
     var string: String {
         "\(positionKey) \(halfmoveClock) \(fullmoveNumber)"
     }
     
+    /// The four position-defining fields, clocks excluded.
+    ///
+    /// **Not a repetition key.** FIDE counts positions as repeated when the en-passant *right*
+    /// matches, and `enPassantTarget` is stamped after every double push whether or not a capture
+    /// is available - so two positions a player would call identical get different keys here.
+    /// Threefold detection built on this would under-report. There is no repetition consumer today;
+    /// `FENParsingTests.positionKeyCarriesEveryDoublePushEPTarget` pins the behaviour as
+    /// documentation rather than endorsement.
     var positionKey: String {
         let color: Character = activeColor == .white ? "w" : "b"
         let enPassant = enPassantTarget?.algebraicNotation ?? "-"
@@ -72,10 +85,9 @@ extension FEN {
     }
 }
 
-// MARK: String Parsing (folded in from FEN+Parsing.swift at M13 - 80 lines of type, 209 of extension)
+// MARK: String Parsing
+
 extension FEN {
-    
-    // MARK: String Parsing (7P prerequisite)
     
     /// Parses full six-field FEN and the four-field placement-only form.
     init(parsing string: String) throws(FENParseError) {
@@ -149,7 +161,6 @@ extension FEN {
         return position
     }
     
-    /// Parses the active-color field. Accepts `w` (white) or `b` (black).
     private static func parseActiveColor(_ field: String) throws(FENParseError) -> PieceColor {
         switch field {
         case "w": return .white
@@ -190,7 +201,6 @@ extension FEN {
         return square
     }
     
-    /// Parses the halfmove clock. Must be a non-negative integer.
     private static func parseHalfmoveClock(_ field: String) throws(FENParseError) -> Int {
         // Digits only: `Int(_:)` accepts a leading sign, so `+5` / `-0` would pass the range test.
         guard field.allSatisfy(\.isASCII), field.allSatisfy(\.isNumber),
@@ -200,8 +210,7 @@ extension FEN {
         return value
     }
     
-    /// Parses the fullmove number. Must be a positive integer (FEN spec
-    /// requires fullmove ≥ 1; the starting position has fullmove 1).
+    /// Fullmove is 1-based, so 0 is malformed rather than merely odd.
     private static func parseFullmoveNumber(_ field: String) throws(FENParseError) -> Int {
         // Digits only - see `parseHalfmoveClock`.
         guard field.allSatisfy(\.isASCII), field.allSatisfy(\.isNumber),
@@ -235,16 +244,13 @@ extension FEN {
 // MARK: Errors
 
 enum FENParseError: Error, Equatable {
-    /// The FEN string did not contain 4 or 6 whitespace-separated fields.
     case wrongFieldCount(Int)
     /// Wrong rank count, bad file total, unknown piece character, or invalid digit.
     case malformedPlacement(String)
-    /// The active-color field was not `w` or `b`.
     case malformedActiveColor(String)
     /// A character outside `-KQkq`, or a duplicate right.
     case malformedCastling(String)
-    /// The en-passant field was not `-` or a parseable algebraic square.
     case malformedEnPassant(String)
-    /// Halfmove < 0 or fullmove < 1, or not an integer.
+    /// One case for both clocks: halfmove < 0, fullmove < 1, or not an integer at all.
     case malformedInteger(String)
 }
