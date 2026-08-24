@@ -52,11 +52,33 @@ six months" is the test.
 
 ## Where things stand
 
-Tree: **`c8eea2d`** plus the 18 August session-window work, uncommitted as this
-is written. Committed beneath it: the collection split and the Get Info merge
-(`ed876a3`), and the dead-code pass (`c8eea2d`). Uncommitted and belonging to
-this sitting: D84′ — the session surface becomes a scene — and the ledger
-corrections it forced. Nothing else is dirty.
+Tree: **`4d3761e`** — the 23–24 August sitting's source, committed 24 August
+with its two new files tracked — plus the documents commit carrying this file
+and the roadmap, which lands with it; nothing else dirty. The sitting:
+the context-menu standardization (both cards shed their menus, every host
+attaches the shared menu with subjects resolved through one rule), the icons
+grid's `GeometryReader` replaced by a quantized column-count observation (the
+inspector-toggle lag fix), and the Library card's inscription becoming a View
+Options choice (`LibraryCardInscription`: index / result / date / round, two
+new suites); the ROADMAP's Landed entry carries all three accounts. The
+accessibility registry moves 145 → **146** with the picker's entry.
+Committed beneath it, all on 21 August: the coverage key
+(`1018add`), the perf fixes (`ef082dd`), the label pass (`2c1030c`), the
+convention pass (`9bffce8`), and the audit verification (`28b45eb`).
+
+**The first build happened on 24 August, and the headline risk is retired.**
+The four 21 August commits (66 files edited with no toolchain, "a reviewed
+patch awaiting its first build") and the whole 23 August sitting compiled and
+ran together: **one** compile error surfaced across the combined set —
+`CollectionViewOptions.inset`, isolated static read from a nonisolated
+context, fixed the same hour and recorded as a build-diagnostic lesson — and
+none of AUDIT-VERIFICATION §6's predicted break points broke. ⌘U green,
+reported by Bera, 24 August. What remains of **M15's gate**: the suite count
+read off the report (the denominator, ~105 expected), the coverage baseline
+read off the same report (the plan has carried `codeCoverage` scoped to the
+app target since `1018add` — the number already exists in the Report
+navigator), the column-layout reset confirmation (the two `customizationID`
+renames), and the commit.
 
 **This line has now decayed five recorded times, and the fifth is the worst.**
 The four earlier instances were the same failure — written at the moment of
@@ -71,17 +93,17 @@ this section is touched.**
 
 | | |
 |---|---|
-| Sources on disk | **272** — 164 app, 108 unit-test, 0 UITest |
-| Tracked (`git ls-files '*.swift'`) | **272** |
-| Accessibility registry | **142** constants + **23** functions |
+| Sources on disk | **275** — 166 app, 109 unit-test, 0 UITest |
+| Tracked (`git ls-files '*.swift'`) | **275** |
+| Accessibility registry | **146** constants + **23** functions |
 
-*Re-measured 18 Aug 2026, after D83′, the dead-code pass and D84′.* The two source
-counts **agree** for the first time since 4 August, and the reason the gap closed
-is that `Tools/` is gone: `make-cues.swift` was the whole of the discrepancy this
-table used to explain, and it went with the cue sets. Three files left the app
-target this week — `PlayerProfilePanels.swift` and `PlayerMatchupWindow.swift`
-deleted, `SessionSidebarPanel.swift` renamed to `SessionWindow.swift` — and two
-arrived, `PlayerMatchupView.swift` and `RecordChart.swift`.
+*Re-measured 24 Aug 2026, at `4d3761e`.* The sitting added the inscription
+pair (both tracked with the commit — the untracked-but-referenced hazard was
+flagged here for a day and closed by staging, not by luck) and the picker's
+registry entry. The registry line had corrected 142 → 145 the day before —
+the 18 August figure was wrong when written (AUDIT-VERIFICATION §0 counted
+145 literal values at `c8eea2d`, the same snapshot), which is this table's
+own lesson re-taught: the number lives in the grep, not here.
 
 All three counts are dated snapshots. The registry count lives in its grep (D42′)
 and the source counts in `find` / `git ls-files`, because a number in prose decays
@@ -100,14 +122,15 @@ unchecked-`Sendable` or the unsafe-`nonisolated` opt-out anywhere in the app
 target. No TODO/FIXME/HACK markers, no commented-out code, no `#if DEBUG`
 regions.
 
-**⌘U:** green as reported by Bera on **12 August 2026**, on the tree carrying
-D81′ and D82′ — counts not reported that run, and it predates the Settings
-five-tab split, which is pure relocation and adds no test. Green on 10 August
-before it, on the tree carrying D74′–D80′. The last counted run (8 August,
-against `275f037`) was **1108 tests, 101 suites**; the tree since adds four
-suites (the analysis plan, the heal gate, scoped collection, the display keys)
-and D80′ deleted one with its type, so a run reporting around 104 suites is
-the expected denominator. Never claimed — ⌘U runs locally and Bera reports.
+**⌘U:** green as reported by Bera on **24 August 2026**, on the working tree
+carrying the 21 August patch and the whole 23 August sitting — the first run
+since 12 August and the first ever over the patch. Counts not reported that
+run. The last counted run (8 August, against `275f037`) was **1108 tests,
+101 suites**; the tree since adds four suites (the analysis plan, the heal
+gate, scoped collection, the display keys), D80′ deleted one with its type,
+and the 23 August sitting adds `LibraryCardInscriptionTests` — so a run
+reporting around **105 suites** is the expected denominator. Never claimed —
+⌘U runs locally and Bera reports.
 
 *The count is a dated snapshot and will decay; it is here because the
 denominator is the useful half — a run that reports far fewer suites than this
@@ -571,6 +594,13 @@ grep -rn '#if DEBUG' --include='*.swift' DGTStudioPro | grep -v ':[0-9]*:///\?\s
 - **A global actor isolates a type's members, not the types nested inside it.**
   `@MainActor class Outer { struct Inner {} }` leaves `Inner` nonisolated. The
   trap is that the members rule is true and adjacent.
+- **A `static let` on a globally-isolated type is isolated like any other
+  member — an immutable `Sendable` value earns no exemption.** A `nonisolated
+  static func` reading a plain `static let CGFloat` on its own `@MainActor`
+  class is a compile error, however raceless the constant is; the fix is
+  `nonisolated` on the constant, stated rather than assumed. Found by the
+  23 Aug sitting's first build (`CollectionViewOptions.inset`), against a
+  confident assumption that immutability implied reachability.
 - **A synchronous override cannot add isolation its superclass lacks; an async
   override can** — there is a suspension point to hop on. Hence
   `setUp() async throws` rather than an annotation on `setUpWithError`.
@@ -654,7 +684,8 @@ at GM, not automatically reversed.
 
 - Ownership and specialization for the perft hot path. `~Copyable` collides with
   chess-core purity, and generated move order is what the perft counts were taken
-  against — perft is both witness and veto. M7's Instruments pass gates it.
+  against — perft is both witness and veto. The Instruments pass (M17 since
+  the 23 August rewrite) gates it.
 - `ModelResultsObserver` / `HistoryObserver` — candidates are
   `backfillPlayerLinks()` and `backfillPlayerTagNames()`.
 - `@Attribute(.codable)` names D12′'s arrangement rather than changing it, and
@@ -741,8 +772,13 @@ be a real finding than an unavoidable one.
 
 ## Known open items — unscheduled
 
-Everything scheduled lives in ROADMAP.md. Closed items are not kept here; they
-are in `git log`.
+Everything scheduled lives in ROADMAP.md — and since the 23 August rewrite,
+**almost everything that stood here is scheduled**: the two launch-warning
+confirmations, the FocusedValue two-run check, the chevron's `EmptyView` gap,
+import cancellation, the export-numbering and log-format verifications, and
+the `LiveGameRosterForm` extraction are all **M16**; the FEN/GameState
+collapse and the deferred renames are **M18**. Closed items are not kept here;
+they are in `git log`.
 
 - **`DGTSerialPort.isOpen` is kept with no consumer**, decided M12.3, disposition
   written at the declaration. Not D41′'s shape — `createdAt` was deleted because
@@ -754,45 +790,13 @@ are in `git log`.
   `.selected` insert and `SquareView`'s tint arm are unreachable — while a
   **preview passes `.selected` directly**, so the style renders on canvas and
   reads as live. A click-to-move or setup surface consumes all three by passing
-  one value. The transferable part: a name scan reports a symbol as *referenced*
-  and says nothing about whether its consumer's branch can execute.
-- **Two launch warnings — resolved structurally 8 Aug 2026, confirmation
-  owed.** `Geometry action is cycling between duplicate values` fired at
-  launch in icons view and vanished in List; the two suspects were the icons
-  grids' two geometry actions. The two-build experiment this entry prescribed
-  was superseded by removing both suspects in one pass, each on its own
-  merits: the container-width action is **deleted with `IconGridWidthBox`**
-  (`.onMoveCommand` sits inside the `GeometryReader`'s scope, so the arrow
-  keys take `geometry.size.width` as a parameter — the mirror never needed to
-  exist), and the per-card frame transforms are **gated on an active rubber
-  band** (idle they return one constant, so launch wobble has no value stream
-  to cycle; the frames were only ever read mid-drag). The fifth correction on
-  this warning, and the first that removes observation rather than tuning
-  quantization — `IconGridSelection.stableFrame`'s doc carries all five.
-
-  **Owed:** a launch in icons view with the console open — expected silent —
-  and one rubber-band sweep confirming selection still tracks the band (the
-  gate's first 4 pt select nothing, Finder's own feel; a band that never
-  selects means the transform gate did not re-arm on the drag's first
-  render, and the fallback is ungating the transform). Then re-observe the
-  `FocusedValue` warning — **partly answered 18 Aug 2026** and now a two-run
-  check rather than an open question. A Library-side cause was found and fixed
-  (both collection destinations read back the focused key they publish; see the
-  ROADMAP entry). Launch into **Library** — the line should be gone. Launch into
-  **Board** — if it returns, the second cause is the one the 6 Aug reading
-  named, `$getInfoRequested` minting a non-`Equatable` `Binding` per pass, and
-  that half is still unfixed.
-- **The chevron's gap rests on `EmptyView` not being laid out.** The one thing in
-  D45′ written from reasoning rather than read off a compiler. It compiles either
-  way, so ⌘U cannot answer it; the *Collapsible, No Actions* row in the **Actions
-  — Every Arity** preview is where it becomes visible.
-- **Import batches are uncancellable** — implement cancellation or relabel.
-- **FEN / GameState collapse** — a rename-scale mechanical change.
-- **Export filename numbering** is unconfirmed against DGT's own convention.
-- **Log-format leftovers from 20 July**, still unverified against a live session.
-- **File-menu Export** — horizon; unblocked on appetite.
-- **Known costs, deferred until measured** (M7 measures; none scale-critical at
-  personal size). `parseSAN` generates all legal moves per ply; the ECO table's
+  one value. Since the roadmap rewrite this carries an explicit contract: the
+  wiring stays **because** the Horizon entries that consume it stay; if either
+  entry is struck, its wiring goes in the same commit. The transferable part:
+  a name scan reports a symbol as *referenced* and says nothing about whether
+  its consumer's branch can execute.
+- **Known costs, deferred until measured** (M17 measures — the census stays
+  here because this document owns it; none scale-critical at personal size). `parseSAN` generates all legal moves per ply; the ECO table's
   ~3,800-row parse is warmed off-actor but never measured; `ECOClassifier`'s
   quadratic prefix re-join, bounded at 36 plies; pawn movegen builds its
   two-element capture-offset array per pawn per call in `legalMoves()` — the one
@@ -832,6 +836,45 @@ are in `git log`.
 
 ### Owed — not yet run, or run with an unresolved result
 
+*Since the 23 August rewrite these are batched: everything boardless below
+runs as **M16**'s recorded checklist pass; everything board-required runs in
+**M21**'s single sitting, after the feature milestones, so nothing added later
+invalidates the witness.*
+
+- **The context-menu standardization (23 Aug 2026), all four modes × both
+  collections.** Library: ⌘A in icons and in gallery, right-click a selected
+  card — the menu must read counted plurals ("Open N in New Tabs", "Analyze",
+  "Export N PGNs", "Delete N Games") with **no Get Info item**; right-click an
+  *unselected* card — singular menu with Get Info, acting on that card alone;
+  the menu's Open item opens the selection in **new tabs** (it opened one game
+  in place until this pass). Columns: select five, "Delete 5 Games" must
+  delete five after one confirmation — the fan-out bug deleted the last one —
+  and "Export 5 PGNs" must run one panel. Players: multi-selection right-click
+  shows **no menu items in any mode** (single-subject guard — it named an
+  arbitrary member in list and columns before); single selection shows
+  Get Info + Show in Library everywhere.
+- **The inspector toggle, re-felt (23 Aug 2026).** In icons view (both
+  destinations), toggle the inspector repeatedly on a full Library: the grid
+  must track the slide smoothly, reflowing only at column boundaries — the
+  per-frame whole-grid rebuild went with `IconGridView`'s `GeometryReader`.
+  Confirm arrow-key ↑/↓ still step by the *visible* column count after a
+  resize (the keys read the same settled count the layout used), and confirm
+  the launch console stays free of the geometry-cycling line — the sixth
+  arrangement that could have minted it, avoided by construction. Then toggle
+  in **list** view: any remaining hitch there is `Table` live-resize,
+  framework-side — record how bad it is; M17's SwiftUI lane adjudicates
+  whether anything app-side is left in it.
+- **The card inscription picker (23 Aug 2026).** ⌘J over the Library in icons
+  mode: the Icon section's "Shows" picker offers Index / Result / Date /
+  Round. Pick each and confirm the sheets rewrite immediately — the date as
+  month-over-day, a drawn game as "½-½", never "1/2-1/2" — and that the
+  gallery's filmstrip cards follow the same choice. An undated or unrounded
+  game shows the dash, not an empty sheet. Quit and relaunch: the choice
+  holds. Switch to list or columns, reopen ⌘J: no Icon section (the picker
+  renders only where cards do); Players likewise. At the default (Index),
+  compare a card against memory of the old rendering — it must be identical,
+  because the default is the pre-picker pair verbatim.
+
 - **D81′'s cues, and the first item is the one that already failed once.** Open
   any game and press → once. **The app must not quit.** As first shipped it did:
   CoreAudio killed the sandboxed process on the first playback for want of a
@@ -868,16 +911,13 @@ are in `git log`.
   under Sounds; depth/hash/threads and Syzygy under Engine. The split moved no
   control, default, key or identifier — **anything that behaves differently after
   it is a defect, not a design choice.**
-- **The set picker auditions (D82′).** Switch Felt → Wood → Marble and confirm
-  each plays its move cue *as you pick it*, and that the three are obviously
-  different: felt dark and soft, wood the knock, marble higher and snappier.
-  **Then turn Move off and switch sets again — it must still audition**, because
-  you are choosing a set rather than a cue, and silence there would read as a
-  broken picker. Re-picking the set already selected should do nothing at all.
-- **The set survives a relaunch, and every cue follows it.** Choose Marble, quit,
-  relaunch, and step through a capture, a check and a mate: all three must be
-  marble, not one leftover wood sample. That is the cache being dropped on the
-  set change rather than per cue.
+- (**The two D82′ set-picker checks stood here until 23 Aug 2026** — audition
+  on pick, set surviving a relaunch — six days after the feature they check
+  was deleted: sound packs went to one voice on 17 August (`141b9fa`, nine
+  cues over seven samples), and the checks outlived the picker the same way
+  the make-cues generator entry below outlived its generator. Struck rather
+  than run. The surviving D81′ cue checks above still apply to the one voice;
+  M16 re-reads them against it as part of the stale-check purge.)
 - **Live play, with the board.** Play a move over the DGT and confirm the cue
   fires when the app *registers* it — roughly 300 ms after the piece lands, on
   the settle, not on the touch. That delay is the feature rather than lag: it is
