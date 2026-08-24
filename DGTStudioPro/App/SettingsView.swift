@@ -9,15 +9,11 @@ struct SettingsView: View {
     
     // MARK: Private Properties
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
-    /// Twin default with `autoConnectAtLaunch()`'s `?? true` - unavoidable (`@AppStorage` initials
-    /// live at the read site). `StorageKeys` documents the contract.
+    /// The last `@AppStorage` twin default in this file - it pairs with `autoConnectAtLaunch()`'s
+    /// `?? true` and is unavoidable, since `@AppStorage` initials live at the read site and the
+    /// function has no owning type to move it to. `StorageKeys` documents the contract.
     @AppStorage(StorageKeys.autoConnectOnLaunch) private var autoConnectOnLaunch = true
     
-    // The illegal-move toggle used to sit here as a second `@AppStorage`, twinned with the App's
-    // `onDesync` closure. It is now `boardSounds.playsIllegal` like every other cue, which retires
-    // that twin - the pairing above survives only because `autoConnectAtLaunch()` has no owner to
-    // move it to.
-
     // Engine values bind to the keys `EngineConfiguration.current` reads; initials come from
     // `EngineConfiguration.default`, so the numbers live exactly once.
     @AppStorage(StorageKeys.analysisDepth) private var analysisDepth
@@ -36,9 +32,8 @@ struct SettingsView: View {
     
     @Environment(\.modelContext) private var modelContext
     @Environment(SleepInhibitor.self) private var sleepInhibitor
-    /// The nine cue gates (four until 17 Aug 2026). An owning type, not nine more `@AppStorage`
-    /// twins: playback and this form must agree about the defaults, and the way to guarantee that
-    /// is to have one.
+    /// The nine cue gates. An owning type, not nine more `@AppStorage` twins: playback and this
+    /// form must agree about the defaults, and the way to guarantee that is to have one owner.
     @Environment(BoardSounds.self) private var boardSounds
     @Query private var allGames: [PGN]
     
@@ -47,16 +42,8 @@ struct SettingsView: View {
     @State private var eraseErrorMessage = ""
     
     // MARK: Body
-
-    /// Five tabs, split out of three on 12 Aug 2026 by request. General had grown to six sections
-    /// - connection, an alert, the board cues, engine options, tablebases and the sleep gates -
-    /// which is a drawer rather than a category.
-    ///
-    /// The split is **pure relocation**: not one control, default, storage key or identifier
-    /// changed, only which tab draws it. Kept that way deliberately, per "mechanical changes travel
-    /// alone", so a behaviour regression cannot hide inside a reshuffle.
-    ///
-    /// Order is by how often a setting is touched, not alphabetically: the two that answer "why is
+    
+    /// Ordered by how often a setting is touched, not alphabetically: the two that answer "why is
     /// the app doing that" come first, the two that are set once sit behind them, and Data is last
     /// because it holds the destructive button.
     var body: some View {
@@ -77,26 +64,24 @@ struct SettingsView: View {
                 dataTab
             }
         }
-        // Unchanged at five tabs: the five labels are short and the bar was not close to full at
-        // three. If a sixth ever crowds it, this is the number to raise.
+        // Comfortable at five tabs; if a sixth ever crowds the bar, this is the number to raise.
         .frame(width: 500)
     }
     
     // MARK: General
-
-    /// What is left once sounds and the engine have their own tabs: the board connection and the
-    /// sleep gates. Energy stays here rather than following the engine, because only *half* of it
-    /// is engine-shaped - one gate is about analysis and one about live play, under a single
-    /// footer that deliberately covers both causes at once. Splitting it to satisfy a tab
+    
+    /// The board connection and the sleep gates. Energy stays here rather than following the
+    /// engine, because only *half* of it is engine-shaped - one gate is about analysis and one
+    /// about live play, under a single footer covering both causes. Splitting it to satisfy a tab
     /// would mean splitting that footer.
     private var generalTab: some View {
         // The sleep gates are observable properties on the inhibitor, not `@AppStorage`
         // mirrors: the tracking loop must see the flip mid-game. No twin default to document.
         @Bindable var inhibitor = sleepInhibitor
-
+        
         return Form {
-            // M7.3 deliberately has no toggle: standing down reconnection is per-incident ("Stop Trying"),
-            // not a preference. The footer states the split.
+            // Reconnection deliberately has no toggle: standing it down is per-incident ("Stop
+            // Trying"), not a preference. The footer states the split.
             Section {
                 Toggle("Connect to board automatically", isOn: $autoConnectOnLaunch)
                     .accessibilityIdentifier(AccessibilityID.settingsAutoConnectToggle)
@@ -105,8 +90,8 @@ struct SettingsView: View {
             } footer: {
                 // One multiline literal per footer, never literal `+` chains: the canvas thunk wraps
                 // each literal in `__designTimeString`, and a `+` chain of those against `Text`'s
-                // overloads is un-type-checkable in reasonable time (16 Aug 2026, canvas-only failure
-                // - the app target compiled fine). The `\` continuations keep the bytes identical.
+                // overloads is un-type-checkable in reasonable time - a canvas-only failure, since
+                // the app target compiles fine. The `\` continuations keep the bytes identical.
                 Text(
                     """
                     At launch, silently connects to your board, if it's \
@@ -121,7 +106,7 @@ struct SettingsView: View {
                     isOn: $inhibitor.preventsSleepDuringPlay
                 )
                 .accessibilityIdentifier(AccessibilityID.settingsPreventSleepDuringPlayToggle)
-
+                
                 Toggle(
                     "Keep the Mac awake during analysis",
                     isOn: $inhibitor.preventsSleepDuringAnalysis
@@ -130,8 +115,8 @@ struct SettingsView: View {
             } header: {
                 Text("Energy")
             } footer: {
-                // One footer for two toggles, naming each cause's own consequence; the display sentence is last
-                // because it is true of both (the non-goal, still structural).
+                // One footer for two toggles, naming each cause's own consequence; the display
+                // sentence is last because it is true of both.
                 Text(
                     """
                     During play, keeps the Mac from sleeping and dropping the \
@@ -145,51 +130,42 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
     }
-
+    
     // MARK: Sounds
-
-    /// Everything the app can make a noise with, in one place for the first time.
-    ///
-    /// Board Sounds leads because it is the section with a choice in it; Alerts follows as the one
-    /// switch. **That section was headed "Live Play" under General and is renamed here**, which is
-    /// the one non-mechanical edit in the whole split and is worth its sentence: "Live Play"
-    /// describes *when* a sound happens, which was a useful label while the section sat beside
-    /// connection settings, and is the wrong axis beside a section describing *what* a sound is.
-    /// "Alerts" also puts the distinction on screen - an alert about the board contradicting
-    /// the game, at the system alert volume, against feedback that a move landed, at app volume.
+    
+    /// Two sections on two axes: Board Sounds is *what a move sounds like* and carries the choice;
+    /// Alerts is the board contradicting the game, or the game beginning and ending.
     private var soundsTab: some View {
-        // An owning type, not `@AppStorage`: playback and this form must agree about the
-        // four defaults, and the way to guarantee that is to have one owner.
         @Bindable var sounds = boardSounds
-
+        
         return Form {
             Section {
-                // Listed in precedence order, most general first, which is the order the footer
-                // then explains. Alphabetical would put Capture above Castle and Checkmate above
-                // Check, and the list would stop teaching the rule.
+                // The precedence ladder, reversed - most general first, which is the order the
+                // footer then explains. Alphabetical would put Capture above Castle and Checkmate
+                // above Check, and the list would stop teaching the rule.
                 Toggle("Move", isOn: $sounds.playsMove)
                     .accessibilityIdentifier(AccessibilityID.settingsMoveSoundToggle)
-
+                
                 Toggle("Castle", isOn: $sounds.playsCastle)
                     .accessibilityIdentifier(AccessibilityID.settingsCastleSoundToggle)
-
+                
                 Toggle("Capture", isOn: $sounds.playsCapture)
                     .accessibilityIdentifier(AccessibilityID.settingsCaptureSoundToggle)
-
+                
                 Toggle("Promotion", isOn: $sounds.playsPromote)
                     .accessibilityIdentifier(AccessibilityID.settingsPromoteSoundToggle)
-
+                
                 Toggle("Check", isOn: $sounds.playsCheck)
                     .accessibilityIdentifier(AccessibilityID.settingsCheckSoundToggle)
-
+                
                 Toggle("Checkmate", isOn: $sounds.playsCheckmate)
                     .accessibilityIdentifier(AccessibilityID.settingsCheckmateSoundToggle)
             } header: {
                 Text("Board Sounds")
             } footer: {
-                // States the precedence rule, because it is the one thing about this section that
-                // is not obvious from the labels and the one that reads as a bug when unexplained:
-                // turning Move off does not silence a capture, and a checking capture is one sound.
+                // The footer's job is the precedence rule: it is the one thing here the labels do
+                // not say, and the one that reads as a bug unexplained - turning Move off does not
+                // silence a capture, and a checking capture is one sound.
                 Text(
                     """
                     Plays as moves land on the live board and as you step \
@@ -202,20 +178,19 @@ struct SettingsView: View {
                     """
                 )
             }
-
+            
             Section {
                 Toggle("Game start", isOn: $sounds.playsGameStart)
                     .accessibilityIdentifier(AccessibilityID.settingsGameStartSoundToggle)
-
+                
                 Toggle("Game end", isOn: $sounds.playsGameEnd)
                     .accessibilityIdentifier(AccessibilityID.settingsGameEndSoundToggle)
-
+                
                 Toggle("Illegal move", isOn: $sounds.playsIllegal)
                     .accessibilityIdentifier(AccessibilityID.settingsIllegalMoveSoundToggle)
             } header: {
                 Text("Alerts")
             } footer: {
-                // The volume sentence that used to live here is gone with the beep it described.
                 Text(
                     """
                     Game start and end play as a game begins and as it reaches \
@@ -229,28 +204,27 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
     }
-
+    
     // MARK: Engine
-
-    /// The engine's own settings and the tablebases it probes. Syzygy follows the steppers here
-    /// rather than staying in General because it is engine configuration in every sense - it sets
-    /// probe depth and limits, and it verifies by *launching an engine*.
+    
+    /// The engine's own settings and the tablebases it probes. Syzygy sits here rather than in
+    /// General because it is engine configuration in every sense - it sets probe depth and limits,
+    /// and it verifies by *launching an engine*.
     private var engineTab: some View {
         Form {
-            // M11.4: this section once had one Stepper labelled "Threads" editing `analysisDepth`.
             Section {
                 Stepper(value: $analysisDepth, in: EngineConfiguration.depthRange) {
                     LabeledContent("Search Depth", value: "\(analysisDepth)")
                 }
                 .accessibilityIdentifier(AccessibilityID.settingsEngineDepthStepper)
-
+                
                 Picker("Hash", selection: $engineHashMB) {
                     ForEach(EngineConfiguration.hashChoicesMB, id: \.self) { size in
                         Text("\(size) MB").tag(size)
                     }
                 }
                 .accessibilityIdentifier(AccessibilityID.settingsEngineHashPicker)
-
+                
                 Stepper(value: $engineThreads, in: EngineConfiguration.threadsRange) {
                     LabeledContent("Threads", value: "\(engineThreads)")
                 }
@@ -266,18 +240,17 @@ struct SettingsView: View {
                     """
                 )
             }
-
+            
             // Syzygy is its own file: unlike the steppers it carries a state machine - a folder
             // re-openable across launches and a verification that starts an engine.
             SyzygySettingsSection()
         }
         .formStyle(.grouped)
     }
-
+    
     // MARK: Board
-
-    /// The Board tab in the grouped-form language of the other tabs. Swatches stay the control - a
-    /// visual style is picked visually.
+    
+    /// Swatches stay the control - a visual style is picked visually.
     private var boardTab: some View {
         Form {
             Section {

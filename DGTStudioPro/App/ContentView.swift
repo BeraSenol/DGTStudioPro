@@ -2,15 +2,15 @@ import os
 import SwiftData
 import SwiftUI
 
-/// Root of every tab: per-tab sidebar selection, per-tab `TabState`, bound to the window's
-/// `PersistentIdentifier?`. `SidebarSelection` carries identifiers, never models - selections
-/// must stay `Hashable` and survive deletion. `.player` is programmatic-only (no sidebar row).
+/// Root of every tab: per-tab sidebar selection and `TabState`, bound to the window's
+/// `PersistentIdentifier?`. `SidebarSelection` carries identifiers, never models — a selection must
+/// stay `Hashable` and survive its subject's deletion.
 struct ContentView: View {
-
+    
     // MARK: Static Constants
-
+    
     private static let logger = AppLog.logger(.smarttags)
-
+    
     // MARK: Window-Bound State
     
     @Binding var loadedGameID: PersistentIdentifier?
@@ -20,22 +20,20 @@ struct ContentView: View {
     @State private var selection: SidebarSelection
     @State private var tabState = TabState()
     
-    // MARK: Tags (M-prs.5)
+    // MARK: Tags
     
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
-    /// `sortIndex` first (drag-to-reorder, 16 Aug 2026), `createdAt` breaking the all-zero tie
-    /// exactly into the pre-reorder order - so the migration is invisible until the first drag.
+    /// `sortIndex` first, `createdAt` breaking the all-zero tie into exactly the pre-reorder order,
+    /// so the migration is invisible until the first drag.
     @Query(sort: [
         SortDescriptor(\SmartTag.sortIndex),
         SortDescriptor(\SmartTag.createdAt),
     ]) private var tags: [SmartTag]
-    /// The menu-bar door's trigger (the `boardGetInfoRequest` shape) - the editor is a window
-    /// since 16 Aug 2026, so the focused value carries a request, no longer a draft.
     @State private var newTagRequested = false
     @State private var pendingTagDeletion: SmartTag?
     
-    // MARK: Players (M-prs.6)
+    // MARK: Players
     
     @Query(sort: \Player.name) private var players: [Player]
     
@@ -43,8 +41,6 @@ struct ContentView: View {
     
     init(loadedGameID: Binding<PersistentIdentifier?>) {
         self._loadedGameID = loadedGameID
-        // Start on Board for tabs opened with a specific game, on
-        // Library for tabs opened blank.
         let initial: SidebarSelection = loadedGameID.wrappedValue != nil
         ? .destination(.board)
         : .destination(.library)
@@ -101,15 +97,13 @@ struct ContentView: View {
                         }
                         .buttonStyle(.borderless)
                         .help("Create a new smart tag")
-                        // Pointer-only affordance: macOS exposes no AXButton for a borderless button in a List section
-                        // header - proven 29 July; the menu-bar door is the AX-reachable one.
+                        // Pointer-only: macOS exposes no AXButton for a borderless button in a List
+                        // section header, so the identifier below is unreachable and the menu-bar
+                        // door is the AX route.
                         .accessibilityIdentifier(AccessibilityID.sidebarTagsAdd)
                     }
                 }
             }
-            // (The session surface was pinned here, under every tab's sidebar list, until
-            // 16 Aug 2026. It topped the Board inspector, then floated over the board, and is
-            // its own scene as of 18 Aug - `SessionWindow`, D84′.)
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
             .accessibilityIdentifier(AccessibilityID.sidebar)
         } detail: {
@@ -136,7 +130,7 @@ struct ContentView: View {
                     onOpenInPlace: openGameInThisTab
                 )
             case .player(let id):
-                // Programmatic only: the chip is this selection's one visible face and exit. Same
+                // The chip is this selection's one visible face and its only exit. Same
                 // stale-degrade contract as `.tag`.
                 LibraryDestination(
                     filter: players.first(where: { $0.id == id }).map(LibraryFilter.player),
@@ -146,8 +140,8 @@ struct ContentView: View {
                 )
             }
         }
-        // The menu-bar door: File ▸ New Smart Tag… sets the trigger; this view opens the window
-        // (a `Commands` scene has no `openWindow` - the Get Info trigger's arrangement, fourth use).
+        // File ▸ New Smart Tag… sets the trigger and this view opens the window, because a
+        // `Commands` scene has no `openWindow`.
         .focusedSceneValue(\.newSmartTagRequested, $newTagRequested)
         .onChange(of: newTagRequested) { _, requested in
             guard requested else { return }
@@ -169,25 +163,22 @@ struct ContentView: View {
     }
     
     // MARK: Opening Games
-
-    /// Double-click's route since 17 Aug 2026: the game lands in **this** tab. Only this view
-    /// can do it - the window's `loadedGameID` and the sidebar selection are both its state,
-    /// and `BoardDestination` reads the first while `selection` decides which destination is
-    /// on screen. Every Library variant (plain, tag-filtered, player-filtered) hands the same
-    /// closure down, so the gesture means one thing wherever the reader is standing.
+    
+    /// Double-click's route: the game lands in **this** tab. Only this view can do it — the
+    /// window's `loadedGameID` and the sidebar selection are both its state. Every Library variant
+    /// hands the same closure down, so the gesture means one thing wherever the reader is standing.
     private func openGameInThisTab(_ pgn: PGN) {
         loadedGameID = pgn.persistentModelID
         selection = .destination(.board)
     }
-
-    // MARK: Tag CRUD (M-prs.5)
-
-    // `commit` moved whole into `SmartTagEditorWindow` with the editor (16 Aug 2026): a window
-    // owns its own save, where a sheet handed the draft back. Delete stays - the alert is this
-    // view's, and the selection fallback below needs `selection`.
-
-    /// Reorder from the sidebar drag (16 Aug 2026): rewrite the whole run 0..n - a handful of
-    /// rows, and partial renumbering is how two tags end up sharing an index.
+    
+    // MARK: Tag CRUD
+    
+    // Save lives in `SmartTagEditorWindow`, which owns the editor. Delete stays here: the alert is
+    // this view's, and the selection fallback below needs `selection`.
+    
+    /// Rewrites the whole run 0..n — a handful of rows, and partial renumbering is how two tags
+    /// end up sharing an index.
     private func moveTags(from source: IndexSet, to destination: Int) {
         var reordered = tags
         reordered.move(fromOffsets: source, toOffset: destination)
@@ -196,7 +187,7 @@ struct ContentView: View {
         }
         saveTags(after: "reorder")
     }
-
+    
     private func delete(_ tag: SmartTag) {
         // Fall back to Library *before* the model dies, so the detail switch never renders a stale id.
         if selection == .tag(tag.id) {
@@ -205,9 +196,9 @@ struct ContentView: View {
         modelContext.delete(tag)
         saveTags(after: "delete")
     }
-
+    
     /// Tag edits are the one Library write outside `PGNStore`, so they owe the same
-    /// must-reach-somewhere trace - the bare `try?` this replaces could lose a delete silently.
+    /// must-reach-somewhere trace: a bare `try?` can lose a delete silently.
     private func saveTags(after operation: String) {
         do {
             try modelContext.save()
@@ -224,7 +215,7 @@ struct ContentView: View {
 enum SidebarSelection: Hashable {
     case destination(Destination)
     case tag(PersistentIdentifier)
-    /// Programmatic only: set by "Show in Library"; the filter chip renders and clears it.
+    /// Programmatic only, with no sidebar row: set by "Show in Library", cleared by the filter chip.
     case player(PersistentIdentifier)
 }
 
@@ -232,21 +223,13 @@ enum Destination: String, CaseIterable, Identifiable, Hashable {
     case board
     case library
     case players
-    // `rankings` retired - the selection stores the enum, so the deletion is total at
-    // compile time.
-
+    
     var id: String { rawValue }
-
-    /// `displayName`, not `title` (21 Aug 2026). Thirteen types in the tree spell this accessor
-    /// `displayName`; this was the one holdout, and the only non-private `var title: String` there
-    /// was - the other four are private view-local computeds correctly named for what they are.
-    /// `CollectionViewOptionsSubject.Collection` is the parallel enum over two of these same cases
-    /// and already used this name, so the two now rhyme where they used to diverge on both the
-    /// accessor's name and its derivation.
+    
     var displayName: String {
         rawValue.capitalized
     }
-
+    
     var systemImage: String {
         switch self {
         case .board:    "checkerboard.rectangle"
@@ -260,22 +243,19 @@ enum Destination: String, CaseIterable, Identifiable, Hashable {
 
 #Preview {
     ContentView(loadedGameID: .constant(nil))
-        // All three models explicitly - `SmartTag` has no relationships, so inference from `PGN` never
-        // pulls it in and the canvas would trap on the query.
+    // All three models explicitly - `SmartTag` has no relationships, so inference from `PGN` never
+    // pulls it in and the canvas would trap on the query.
         .modelContainer(for: [PGN.self, Player.self, SmartTag.self], inMemory: true)
+    // Every environment object the destinations read must be injected here, or the canvas traps
+    // on the first read rather than rendering an empty state.
         .environment(OpenGamesRegistry())
         .environment(DGTConnection())
         .environment(DGTLiveSession())
         .environment(DGTSessionLog())
-        // The 16 Aug registries - `LibraryDestination` reads both, and this preview predates
-        // them, so the canvas trapped on the first uninjected read (found 17 Aug 2026, while
-        // the strip-test put this file in the editor). The crash class the App's own registry
-        // comment records, mirrored: the App injected, the preview didn't.
         .environment(AnalysisQueueController())
         .environment(PreviewFixtures.viewOptions())
         .frame(width: 800, height: 600)
         .environment(InspectorSectionCollapse.preview)
-        // `BoardDestination` reads it, so the canvas traps without it. The `.preview`
-        // instance is inaudible: a canvas that re-renders on every keystroke must not click.
+    // Inaudible: a canvas that re-renders on every keystroke must not click.
         .environment(BoardSounds.preview)
 }

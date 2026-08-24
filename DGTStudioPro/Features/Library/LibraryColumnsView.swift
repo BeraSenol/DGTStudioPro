@@ -152,7 +152,7 @@ struct LibraryColumnsView: View {
         } else {
             ContentUnavailableView(
                 "No Game Selected",
-                systemImage: "square.dashed",
+                systemImage: "document.fill",
                 description: Text("Select a game in the list to see its details.")
             )
         }

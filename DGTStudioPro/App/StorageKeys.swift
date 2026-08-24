@@ -1,145 +1,98 @@
+/// Every `UserDefaults` key the app writes.
+///
+/// **A constant's name is its stored string**, with five exceptions, each noted where it sits.
+///
+/// **Never rename a key** - the stored value is orphaned and the preference silently resets.
+/// **Retired keys are left inert**: code that deletes keys it no longer understands will one day
+/// delete one it does.
 enum StorageKeys {
     static let boardStyle = "boardStyle"
-
-    // Board coordinates. Absent reads true; the two read sites (SettingsView, BoardView)
-    // must agree - documented twin.
+    
+    // Absent reads true. A **twin** - `SettingsView` and `BoardView` each state that default.
     static let showBoardCoordinates = "showBoardCoordinates"
-
-    // Glide duration, seconds. Absent reads `BoardPieceLayer.defaultDuration` at both read sites,
-    // each spelled off the owning static so the number lives once.
+    
+    // Seconds; both read sites take the default from `BoardPieceLayer`.
     static let pieceAnimationDuration = "pieceAnimationDuration"
-
-    // Seed guard for default smart tags: the flag, not tag count, so deleting all defaults sticks.
+    
+    // The flag, not a tag count, so deleting all the default tags sticks.
     static let didSeedDefaultSmartTags = "didSeedDefaultSmartTags"
-    // View mode, **per destination** (18 Aug 2026, by request). This was one key for both, on the
-    // argument that browsing style is a preference about browsing rather than about a destination;
-    // it is not, in practice - a table of games and a grid of people are wanted in different
-    // shapes. Splitting it also retires the `.list` twin, since two keys have nothing to agree on.
-    //
-    // Owned by `CollectionViewOptions` rather than read here by `@AppStorage`, which is what makes
-    // the migration below possible: an `@AppStorage` default must be a literal, so it can never
-    // fall back to a retired key.
+    
+    // View mode, icon size, spacing and sort are all per destination. `CollectionViewOptions` owns
+    // them rather than `@AppStorage` reading them here, which is what makes the legacy fallback
+    // below possible: an `@AppStorage` default must be a literal, so it can never read a retired key.
     static let libraryViewMode = "libraryViewMode"
     static let playersViewMode = "playersViewMode"
-
-    // What the Library card writes on its document sheet (23 Aug 2026). Library-only - the
-    // Players card has no sheet - so deliberately not a pair. Owned by `CollectionViewOptions`.
+    
+    // Library-only, deliberately not a pair: the Players card has no document sheet to inscribe.
     static let libraryCardInscription = "libraryCardInscription"
-
-    // Retired, read once each as the fallback for the pair that replaced them, never written.
-    // Kept rather than deleted so an install that had tuned its grid keeps it: the new key is
-    // absent on first launch after the split, and reading the old one is the difference between
-    // carrying a preference over and silently resetting it. Safe to delete once no install
-    // predates the split.
+    
+    // Read-only fallbacks for the pair that replaced them, so a tuned grid survives the split.
+    // Deletable once no install predates it.
     static let legacyCollectionViewMode    = "collectionViewMode"
     static let legacyCollectionIconSize    = "collectionIconSize"
     static let legacyCollectionGridSpacing = "collectionGridSpacing"
-
-    /// What rank 1 means. Absent reads `.wins`. A new key, not the retired
-    /// `playersSortOrder`: its stale rank/name values would read as an unknown method - a migration
-    /// disguised as a coincidence.
+    
+    /// What rank 1 means; absent reads `.wins`. A new key rather than the retired
+    /// `playersSortOrder`, whose stale values would decode as an unknown method.
     static let playersRanking = "playersRanking"
-
-    // The two tables' column layouts. Two keys, not one: a column set is per-table. One
-    // `@AppStorage` site each - no twins. Absent reads the shipped layout.
-    //
-    // **The file's two undocumented exceptions to `name == value`**, now stated (21 Aug 2026).
-    // Every other key in this file spells its constant and its stored string identically, which is
-    // what makes the invariant greppable; these two, and the three `legacyCollection*` keys above,
-    // are the whole exception list. The stored names carry `Customization` because that is what
-    // `TableColumnCustomization` writes and the value already shipped under them - renaming the
-    // string would reset a reader's column layout to buy a symmetry nobody reads.
+    
+    // `Customization` because that is what `TableColumnCustomization` wrote, and the layouts
+    // already shipped under these names.
     static let libraryColumns = "libraryColumnCustomization"
     static let playersColumns = "playersColumnCustomization"
-
-    // The converged stamp gating the two player backfills. Absent reads false - scan until
-    // one clean pass. Cleared only by Erase Library, which retires the store the stamp described.
+    
+    // Gates the two player backfills. Absent reads false; cleared only by Erase Library.
     static let playerBackfillsConverged = "playerBackfillsConverged"
-
-    // New-game dialog defaults: pre-filled on open, written back on Start. Recurring tags only.
-    // Built-in fallbacks for absent keys live at the one read site (`NewLiveGameSheet`).
+    
+    // New-game dialog: recurring tags only, pre-filled on open and written back on Start.
+    // Fallbacks live at the one read site, `NewLiveGameSheet`.
     static let defaultEvent       = "defaultEvent"
     static let defaultSite        = "defaultSite"
     static let defaultWhitePlayer = "defaultWhitePlayer"
-
-    // Launch auto-connect; absent reads true everywhere.
+    
+    // Absent reads true. A **twin** - `SettingsView` and `autoConnectAtLaunch()` each state it.
     static let autoConnectOnLaunch = "autoConnectOnLaunch"
-
-    // Illegal-move sound. Absent reads true. **The twin is gone**: this used to be read in two
-    // places - `SettingsView` via `@AppStorage` and the App's `onDesync` closure via a bare
-    // `UserDefaults` lookup - each spelling its own `?? true`. It is now owned by `BoardSounds`
-    // like every other cue, so the default is stated once, in that type's `init`. The key name is
-    // kept as-is on purpose: renaming it would silently reset the preference of every existing
-    // install to the default, which for an opt-out toggle means switching a sound back *on* for
-    // anyone who had turned it off.
+    
+    // The nine cue gates. Absent reads **true** for each, stated once in `BoardSounds.init`. One
+    // key per cue: a stored set would make "which cue is off" a decoding question.
     static let illegalMoveSoundEnabled = "illegalMoveSoundEnabled"
-
-    // The six move-family cues (four until 17 Aug 2026, when promote and check joined them).
-    // Absent reads **true** for each. Single read site apiece - `BoardSounds` owns the values and
-    // Settings binds to the properties, so unlike the key above these have no twin to document.
-    // One key per cue rather than one shared set, because one toggle per cue was asked for, and a
-    // single stored set would make "which cue is off" a decoding question.
-    // `boardSoundSet` lived here and is gone with `BoardSoundSet`: the app ships one set of
-    // sounds, so there is nothing to store. The key is deliberately **not** cleaned up on launch -
-    // a stale string in an existing install's defaults is inert, and code that deletes keys it no
-    // longer understands is code that will one day delete a key it does.
-    static let moveSoundEnabled      = "moveSoundEnabled"
-    static let captureSoundEnabled   = "captureSoundEnabled"
-    static let castleSoundEnabled    = "castleSoundEnabled"
-    static let promoteSoundEnabled   = "promoteSoundEnabled"
-    static let checkSoundEnabled     = "checkSoundEnabled"
-    static let checkmateSoundEnabled = "checkmateSoundEnabled"
-
-    // The two lifecycle cues. Separate keys rather than one shared "game sounds" flag, for the
-    // same reason the six above are separate: one flag per cue is what makes the gate a lookup
-    // instead of a rule, and a shared flag would make "start is on, end is off" unrepresentable
-    // for no saving. Absent reads **true**, like every cue.
-    static let gameStartSoundEnabled = "gameStartSoundEnabled"
-    static let gameEndSoundEnabled   = "gameEndSoundEnabled"
-
-    // Idle-sleep play gate. Absent reads **true**. Single read site - `SleepInhibitor` owns
-    // the value; Settings binds to the property. The shape the twins above should eventually take.
-    static let preventSleepDuringPlay = "preventSleepDuringPlay"
-
-    // The analysis sleep gate: same semantics, same single-read-site shape. Two keys because
-    // the causes share nothing; renaming would silently reset the stored choice.
+    static let moveSoundEnabled        = "moveSoundEnabled"
+    static let captureSoundEnabled     = "captureSoundEnabled"
+    static let castleSoundEnabled      = "castleSoundEnabled"
+    static let promoteSoundEnabled     = "promoteSoundEnabled"
+    static let checkSoundEnabled       = "checkSoundEnabled"
+    static let checkmateSoundEnabled   = "checkmateSoundEnabled"
+    static let gameStartSoundEnabled   = "gameStartSoundEnabled"
+    static let gameEndSoundEnabled     = "gameEndSoundEnabled"
+    
+    // Absent reads **true**; `SleepInhibitor` states both.
+    static let preventSleepDuringPlay     = "preventSleepDuringPlay"
     static let preventSleepDuringAnalysis = "preventSleepDuringAnalysis"
-
-    // Collapsed inspector sections: the *collapsed* set is stored, so "default open" is a
-    // property of the representation, not a fourth `?? true`.
+    
+    // The *collapsed* set is stored, so "default open" is a property of the representation.
     static let collapsedInspectorSections = "collapsedInspectorSections"
-
-    // Engine options. Absent reads `EngineConfiguration.default`, clamped on every read.
+    
+    // Absent reads `EngineConfiguration.default`, clamped on every read.
     static let analysisDepth = "analysisDepth"
     static let engineHashMB  = "engineHashMB"
     static let engineThreads = "engineThreads"
-
-    // Icon size and grid spacing, per destination like the sorts beneath them and the view mode
-    // above. Game cards and person monograms want different sizes; one slider setting both was
-    // the reason changing either felt like it fought the other surface.
-    //
-    // (A Syzygy paragraph stood above this one until 21 Aug 2026, describing keys that live twenty
-    // lines further down - it had been appended to rather than replaced when these keys arrived.
-    // It is back with the keys it describes.)
+    
     static let libraryIconSize       = "libraryIconSize"
     static let playersIconSize       = "playersIconSize"
     static let libraryGridSpacing    = "libraryGridSpacing"
     static let playersGridSpacing    = "playersGridSpacing"
     static let librarySort           = "librarySort"
     static let playersSort           = "playersSort"
-    /// Recent-games caps in the Players surfaces: 3 by default (17 Aug 2026, by request),
-    /// 5 and 10 a menu away. One key, read by the inspector section and the columns detail,
-    /// so the two lists always agree on "recent".
+    /// One key, read by the inspector section and the columns detail, so the two lists agree on
+    /// what "recent" means.
     static let playersRecentGames    = "playersRecentGames"
-    /// The evaluation bar's spoiler switch (17 Aug 2026): hidden draws a flat grey bar with no
-    /// score. App-wide and persisted deliberately - a reader replaying a game they haven't seen
-    /// wants it off until they choose otherwise, and wants that to survive the next launch.
+    /// The evaluation bar's spoiler switch. App-wide and persisted deliberately: a reader replaying
+    /// an unseen game wants it off until they choose otherwise, and wants that to last.
     static let evaluationBarHidden   = "evaluationBarHidden"
-
-    // Syzygy tablebases: four options plus a location as two keys (bookmark opens the folder; path
-    // is a label Settings renders without holding a scoped resource). Defaults stated once, in the
-    // owning type's `init`. `syzygy50MoveRule` mirrors Stockfish's own `Syzygy50MoveRule` option
-    // name - the spelling belongs to the engine, not to this file.
+    
+    // One Syzygy location as **two** keys: the bookmark opens the folder, the path is a label
+    // Settings renders without holding a scoped resource. `syzygy50MoveRule` mirrors Stockfish's
+    // own option name - that spelling belongs to the engine, not to this file.
     static let syzygyBookmark    = "syzygyBookmark"
     static let syzygyDisplayPath = "syzygyDisplayPath"
     static let syzygyProbeDepth  = "syzygyProbeDepth"

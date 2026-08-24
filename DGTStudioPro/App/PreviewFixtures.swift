@@ -1,8 +1,9 @@
 import Foundation
 
-/// Shared Players preview fixtures. Records, not memberwise stats: stats and ladder are
-/// *derived*, so previews build through the same folds. **Not `#if DEBUG`** - previews
-/// are stripped at link time, and the guard once broke six canvases in release schemes.
+/// Shared Players preview fixtures. Records, not memberwise stats: stats and ladder are *derived*,
+/// so previews build through the same folds and a canvas is a witness that they still work.
+/// **Not `#if DEBUG`** - previews compile in Release and are stripped at link time, and the guard
+/// once broke six canvases in release schemes.
 enum PreviewFixtures {
     
     /// Fixed epoch - previews must not shift with wall-clock time.
@@ -64,8 +65,8 @@ enum PreviewFixtures {
         PlayerStats.index(of: records()).sorted(by: PlayerStats.rankingOrder)
     }
     
-    /// Reaches the upper win bands `records()` never produces - 10+ / 5–9 / 1–4 / none at once.
-    /// Built by appending games, not hand-writing stats: the folds stay in the loop.
+    /// Reaches the upper win bands `records()` never produces - 10+ / 5-9 / 1-4 / none at once.
+    /// Appends games rather than hand-writing stats, so the folds stay in the loop.
     static func deepRecords() -> [GameRecord] {
         var records = self.records()
         for offset in 0..<12 {
@@ -77,7 +78,7 @@ enum PreviewFixtures {
         return records
     }
     
-    /// The shared ladder construction - one implementation, so a fold change shows in every canvas.
+    /// One implementation, so a fold change shows in every canvas.
     private static func ladder(from records: [GameRecord]) -> [RankedPlayer] {
         let histories = Glicko1.histories(from: records)
         return PlayerStats.index(of: records)
@@ -101,10 +102,10 @@ enum PreviewFixtures {
     }
     
     static func topStats() -> PlayerStats { playerStats()[0] }
-
+    
     /// A `CollectionViewOptions` on a wiped scratch suite. **Never `.standard`** - a canvas reading
     /// the developer's icon size renders wrong, and one writing it edits real preferences. Wiped on
-    /// every call. `subject:` is required - defaulting it to nil hid the unlatched branch.
+    /// every call. Omitting `subject:` gives the unlatched branch, which is what most canvases want.
     @MainActor
     static func viewOptions(
         subject: CollectionViewOptionsSubject? = nil,
@@ -112,11 +113,12 @@ enum PreviewFixtures {
         spacing: CGFloat? = nil
     ) -> CollectionViewOptions {
         let suite = "preview.collectionViewOptions"
-        // `?? .standard` is unreachable in practice (`init?(suiteName:)` fails only for reserved
-        // names) and preferred over `!` here: a trap in a preview helper takes the whole canvas down.
+        // `init?(suiteName:)` fails only for reserved names, so the fallback is unreachable in
+        // practice - which is the whole defence, since `.standard` is the one value forbidden
+        // above. Chosen over `!` because a trap here takes the whole canvas down.
         let defaults = UserDefaults(suiteName: suite) ?? .standard
         defaults.removePersistentDomain(forName: suite)
-
+        
         let options = CollectionViewOptions(defaults: defaults)
         options.activeSubject = subject
         // Both destinations, since the geometry split per destination: a canvas passing `iconSize:`
