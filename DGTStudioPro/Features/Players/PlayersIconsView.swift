@@ -34,14 +34,30 @@ struct PlayersIconsView: View {
                 onSelect: select,
                 rank: player.rank,
                 rating: player.rating,
-                onShowInLibrary: { onShowInLibrary(player.id) },
                 onOpen: { onOpenInfo(player.id) },
                 // The Library card's `glyphWidth` arrangement with the monogram's own calibration:
                 // 64 pt at the default 120, scaling linearly.
                 monogramSide: options.iconSize(for: .players)
                     * (64 / CollectionViewOptions.defaultIconSize)
             )
+            // Host-attached with the subject set (23 Aug 2026) - the Library grid's arrangement.
+            // The menu's single-subject guard decides what renders: a card inside a
+            // multi-selection yields no player verbs, the same answer the tables give, instead
+            // of a menu describing one card while N are selected.
+            .contextMenu {
+                PlayerActionsMenu(
+                    keys: subjectKeys(for: player),
+                    onShowInLibrary: onShowInLibrary
+                )
+            }
         }
+    }
+
+    // MARK: Instance Methods
+
+    /// Finder's rule, the Library grids' spelling, projected to the keys the menu speaks.
+    private func subjectKeys(for player: RankedPlayer) -> [PlayerStats.ID] {
+        IconGridSelection.subjects(for: player, in: players, selection: selectedKeys).map(\.id)
     }
 }
 

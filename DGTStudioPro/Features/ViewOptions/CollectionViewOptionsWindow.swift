@@ -21,6 +21,11 @@ struct CollectionViewOptionsSubject: Equatable, Sendable {
     
     /// Only the icons grid packs columns; list and columns are tables, the gallery is a strip.
     var hasSizableGrid: Bool { mode == .icons }
+
+    /// The modes that render document cards - where the Library's inscription picker has
+    /// something to change. List and columns draw table rows; offering the picker there would
+    /// be a control whose effect is on another screen.
+    var hasCards: Bool { mode == .icons || mode == .gallery }
 }
 
 private struct CollectionViewOptionsSubjectKey: FocusedValueKey {
@@ -55,6 +60,11 @@ struct CollectionViewOptionsWindow: View {
             if let subject {
                 Form {
                     sortSection(for: subject, options: $options)
+                    // Library cards only: the Players card is a monogram, and list/columns draw
+                    // rows - the picker renders exactly where its effect is visible.
+                    if subject.collection == .library, subject.hasCards {
+                        inscriptionSection(options: $options)
+                    }
                     if subject.hasSizableGrid {
                         gridSection(for: subject.collection, options: $options)
                     } else {
@@ -115,6 +125,20 @@ struct CollectionViewOptionsWindow: View {
         }
     }
     
+    /// What the Library card writes on its document sheet - index, result, date, or round
+    /// (23 Aug 2026, by request). One picker; the vocabulary and its persistence live on
+    /// `LibraryCardInscription` and `CollectionViewOptions.libraryCardInscription`.
+    private func inscriptionSection(options: Bindable<CollectionViewOptions>) -> some View {
+        Section("Icon") {
+            Picker("Shows", selection: options.libraryCardInscription) {
+                ForEach(LibraryCardInscription.allCases) { inscription in
+                    Text(inscription.displayName).tag(inscription)
+                }
+            }
+            .accessibilityIdentifier(AccessibilityID.viewOptionsCardInscription)
+        }
+    }
+
     /// Words, not an arrow glyph: "descending" reads correctly for dates, counts, ratings and names;
     /// ↑ beside "Last Played" says nothing about which end is recent.
     private func directionPicker(isReverse: Binding<Bool>) -> some View {

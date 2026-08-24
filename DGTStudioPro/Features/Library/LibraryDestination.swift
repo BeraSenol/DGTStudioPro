@@ -486,9 +486,12 @@ struct LibraryDestination: View {
                 boardStyle: boardStyle,
                 onOpen:    openGames,
                 onOpenInPlace: openInPlace,
-                onAnalyze: requestAnalysis,
-                onExport:  requestExport,
-                onDelete:  { pendingDeletion = $0 },
+                // The list's doors (23 Aug 2026). The singular trio this mode took fanned the
+                // menu's counted verbs into per-game calls - `pendingDeletion` assigned N times
+                // kept one, so "Delete 5 Games" deleted the last of the five after confirming.
+                onAnalyzeIDs: { requestAnalysis(ids: $0) },
+                onExportIDs:  { requestExport(ids: $0) },
+                onDeleteIDs:  { requestDelete(ids: $0) },
                 sortOrder: sortOrder
             )
             .accessibilityIdentifier(AccessibilityID.libraryModeColumns)
@@ -500,9 +503,11 @@ struct LibraryDestination: View {
                 boardStyle: boardStyle,
                 onOpen:    openGames,
                 onOpenInPlace: openInPlace,
-                onAnalyze: requestAnalysis,
-                onExport:  requestExport,
-                onDelete:  { pendingDeletion = $0 }
+                // The icons grid's set doors (23 Aug 2026) - the gallery card's menu now hands
+                // the whole ⌘A selection here, where it handed one game before.
+                onAnalyze: { requestAnalysis(ids: Set($0.map(\.id))) },
+                onExport:  { requestExport(ids: Set($0.map(\.id))) },
+                onDelete:  { requestDelete(ids: Set($0.map(\.id))) }
             )
             .accessibilityIdentifier(AccessibilityID.libraryModeGallery)
         }

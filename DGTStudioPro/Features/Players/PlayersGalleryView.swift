@@ -54,10 +54,24 @@ struct PlayersGalleryView: View {
                 onSelect: select,
                 rank: player.rank,
                 rating: player.rating,
-                onShowInLibrary: { onShowInLibrary(player.id) },
                 onOpen: { onOpenInfo(player.id) }
             )
+            // Host-attached with the subject set (23 Aug 2026) - the icons grid's comment
+            // carries the why; a card menu wins over the gallery's background menu inside the
+            // card's bounds, the scaffold's stated contract.
+            .contextMenu {
+                PlayerActionsMenu(
+                    keys: subjectKeys(for: player),
+                    onShowInLibrary: onShowInLibrary
+                )
+            }
         }
+    }
+
+    /// Finder's rule projected to keys - the icons grid's spelling; ⌘A makes the plural case
+    /// reachable in a gallery that selects one-at-a-time by gesture.
+    private func subjectKeys(for player: RankedPlayer) -> [PlayerStats.ID] {
+        IconGridSelection.subjects(for: player, in: players, selection: selectedKeys).map(\.id)
     }
 
     /// Selection-driven, no `players.first` fallback - "never preview what the user didn't pick"

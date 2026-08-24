@@ -12,15 +12,19 @@ struct LibraryColumnsView: View {
     let analyzedIDs: Set<PGN.ID>
     @Binding var selectedPGNs: Set<PGN.ID>
     let boardStyle: BoardStyle
-    /// Takes the set. Deliberately not adapted with a `forEach` like the others: those fan
-    /// out to per-game doors, while Open's door owns the count threshold.
+    /// Takes the set - Open's door owns the count threshold.
     let onOpen: ([PGN]) -> Void
     /// The detail pane's Open button (17 Aug 2026): this tab, not a new one - the gesture's
     /// meaning is now uniform across every mode.
     var onOpenInPlace: (PGN) -> Void = { _ in }
-    let onAnalyze: (PGN) -> Void
-    let onExport: (PGN) -> Void
-    let onDelete: (PGN) -> Void
+    /// The list's set doors, verbatim, since 23 Aug 2026. These were `(PGN) -> Void` with the
+    /// menu fanning out through `forEach` - which read fine and was wrong twice: "Delete 5
+    /// Games" assigned `pendingDeletion` five times so the confirmation deleted only the last,
+    /// and "Export 5 PGNs" would have run the single-export door five times. A verb whose label
+    /// counts must reach a door that takes the count.
+    let onAnalyzeIDs: (Set<PGN.ID>) -> Void
+    let onExportIDs: (Set<PGN.ID>) -> Void
+    let onDeleteIDs: (Set<PGN.ID>) -> Void
 
     /// Shared with list mode through the destination - one binding, so a sort survives the mode switch.
     @Binding var sortOrder: [KeyPathComparator<PGN>]
@@ -101,9 +105,9 @@ struct LibraryColumnsView: View {
                 GameActionsMenu(
                     games: games.filter { ids.contains($0.id) },
                     onOpen: onOpen,
-                    onAnalyze: { $0.forEach(onAnalyze) },
-                    onExport: { $0.forEach(onExport) },
-                    onDelete: { $0.forEach(onDelete) }
+                    onAnalyze: { onAnalyzeIDs(Set($0.map(\.id))) },
+                    onExport: { onExportIDs(Set($0.map(\.id))) },
+                    onDelete: { onDeleteIDs(Set($0.map(\.id))) }
                 )
             }
         }
@@ -207,7 +211,9 @@ struct LibraryColumnsView: View {
                 .help("Open this game in this tab")
 
                 Button {
-                    onAnalyze(game)
+                    // The set door with a one-game set - singular by construction (the pane
+                    // renders only for a count of one), and one door for both surfaces.
+                    onAnalyzeIDs([game.id])
                 } label: {
                     // The projection overload - the same input the row badges read, so button and badge
                     // cannot disagree.
@@ -254,9 +260,9 @@ struct LibraryColumnsView: View {
         selectedPGNs: $selection,
         boardStyle: .walnut,
         onOpen: { _ in },
-        onAnalyze: { _ in },
-        onExport: { _ in },
-        onDelete: { _ in },
+        onAnalyzeIDs: { _ in },
+        onExportIDs: { _ in },
+        onDeleteIDs: { _ in },
         sortOrder: $sort
     )
     .frame(width: 900, height: 620)
@@ -278,9 +284,9 @@ struct LibraryColumnsView: View {
         selectedPGNs: $selection,
         boardStyle: .walnut,
         onOpen: { _ in },
-        onAnalyze: { _ in },
-        onExport: { _ in },
-        onDelete: { _ in },
+        onAnalyzeIDs: { _ in },
+        onExportIDs: { _ in },
+        onDeleteIDs: { _ in },
         sortOrder: $sort
     )
     .frame(width: 900, height: 620)
@@ -300,9 +306,9 @@ struct LibraryColumnsView: View {
         selectedPGNs: $selection,
         boardStyle: .rosewood,
         onOpen: { _ in },
-        onAnalyze: { _ in },
-        onExport: { _ in },
-        onDelete: { _ in },
+        onAnalyzeIDs: { _ in },
+        onExportIDs: { _ in },
+        onDeleteIDs: { _ in },
         sortOrder: $sort
     )
     .frame(width: 900, height: 620)
@@ -319,9 +325,9 @@ struct LibraryColumnsView: View {
         selectedPGNs: $selection,
         boardStyle: .walnut,
         onOpen: { _ in },
-        onAnalyze: { _ in },
-        onExport: { _ in },
-        onDelete: { _ in },
+        onAnalyzeIDs: { _ in },
+        onExportIDs: { _ in },
+        onDeleteIDs: { _ in },
         sortOrder: $sort
     )
     .frame(width: 900, height: 620)

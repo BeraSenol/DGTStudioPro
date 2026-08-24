@@ -172,10 +172,10 @@ struct PlayerCardView: View {
     /// The caption under the name (16 Aug 2026, by request - it replaced the games count, which
     /// lives in the profile grid). Nil renders the placeholder; provisional keeps its `*`.
     var rating: Glicko1.Rating? = nil
-    /// Presents "Show in Library" when set; optional so previews stay unchanged.
-    var onShowInLibrary: (() -> Void)? = nil
     /// Double-click - the matchup window's door (17 Aug 2026). Defaulted so previews and any
-    /// host with no window to offer stay valid.
+    /// host with no window to offer stay valid. The card carries **no context menu since
+    /// 23 Aug 2026** - `PlayerActionsMenu` moved to the hosts, which own the selection its
+    /// single-subject guard must count; the Library card's comment carries the full argument.
     var onOpen: () -> Void = {}
 
     /// Monogram side. A parameter, not an environment read - the Library card's `glyphWidth`
@@ -250,14 +250,6 @@ struct PlayerCardView: View {
         // tappable element.
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier(AccessibilityID.playerCard(stats.name))
-        // The conditional Show in Library moved into `PlayerActionsMenu` - this card is the host whose
-        // shape the shared type absorbed.
-        .contextMenu {
-            PlayerActionsMenu(
-                key: stats.id,
-                onShowInLibrary: onShowInLibrary.map { show in { _ in show() } }
-            )
-        }
     }
 }
 
@@ -279,8 +271,7 @@ struct PlayerCardView: View {
                 isSelected: false,
                 onSelect: {},
                 rank: ranked.rank,
-                rating: ranked.rating,
-                onShowInLibrary: {}
+                rating: ranked.rating
             )
         }
     }

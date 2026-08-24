@@ -15,12 +15,20 @@ struct LibraryGameCardView: View {
     /// production hosts pass state, never the model - no blob decode per card.
     var analysisState: AnalysisGlyph.State = .unanalyzed
 
+    /// What the sheet is inscribed with - the View Options "Icon" picker's choice, passed by
+    /// both hosts from `CollectionViewOptions.libraryCardInscription`. Defaulted to the
+    /// pre-picker inscription so previews and any future host render as before.
+    var inscription: LibraryCardInscription = .index
+
     let isSelected: Bool
     let onSelect: () -> Void
+    /// Double-click's door. The card carries **no context menu since 23 Aug 2026** - it drew
+    /// `GameActionsMenu(games: [game])`, so however many cards were selected the menu read
+    /// singular ("Export PGN" over a fifty-game selection, Get Info always present) while the
+    /// closures underneath acted on the whole set. The menu lives on the hosts now, which own
+    /// the selection the labels must count - the columns row's rule ("a per-row menu would
+    /// shadow it"), applied to the card.
     let onOpen: () -> Void
-    let onAnalyze: () -> Void
-    let onExport: () -> Void
-    let onDelete: () -> Void
 
     // MARK: Body
     var body: some View {
@@ -38,17 +46,6 @@ struct LibraryGameCardView: View {
         // mouse-down; only open waits.
         .onTapGesture(count: 2, perform: onOpen)
         .simultaneousGesture(TapGesture().onEnded { onSelect() })
-        // The card's closures are argument-free - it draws one game its hosts close over. Item order
-        // comes from `GameActionsMenu`, no longer from here.
-        .contextMenu {
-            GameActionsMenu(
-                games: [game],
-                onOpen: { _ in onOpen() },
-                onAnalyze: { _ in onAnalyze() },
-                onExport: { _ in onExport() },
-                onDelete: { _ in onDelete() }
-            )
-        }
         // Collapse into one addressable element - without `.combine`, macOS exposes only the inner
         // static texts and the identifier never lands on a tappable element.
         .accessibilityElement(children: .combine)
@@ -77,18 +74,8 @@ struct LibraryGameCardView: View {
 
             // `.black` is ink on the explicitly-`.white` sheet - the pair must be stated together or Light
             // Mode gets white on white. 14/60 is the pre-slider pair, so the default renders byte-identically.
-            Text(displayIndex)
-                .font(
-                    .system(
-                        size: glyphWidth * (7.0 / 30.0),
-                        weight: .semibold,
-                        design: .monospaced
-                    )
-                )
+            inscriptionText
                 .foregroundStyle(.black)
-                .lineLimit(1)
-            // An ordinal is unbounded - shrink rather than clip: a clipped number is a *wrong* number.
-                .minimumScaleFactor(0.6)
                 .frame(maxWidth: glyphWidth * (42.0 / 60.0))
                 .offset(x: glyphWidth * (3.0 / 60.0), y: glyphWidth * (4.0 / 60.0))
         }
@@ -120,11 +107,57 @@ struct LibraryGameCardView: View {
             .foregroundStyle(isSelected ? Color.white : .primary)
     }
 
-    /// The file's ordinal, written on the sheet. The placeholder glyph renders a state that is meant
-    /// to be unreachable - not a fourth vocabulary. The `#` prefix and the result went 7 Aug 2026
-    /// by request; the result still lives in the list's cell.
-    private var displayIndex: String {
-        game.libraryIndex.map(String.init) ?? RosterSummary.displayUnknown
+    /// The inscription, rendered. One `.single` spelling for index, result and round; the date is
+    /// the two-tier calendar form - month abbreviated small above, day large below. Every size is
+    /// a fraction of `glyphWidth` so the slider scales the writing with the sheet, and the
+    /// `.index` arm reproduces the pre-picker card byte-for-byte (7/30 semibold monospaced,
+    /// 0.6 shrink floor). The placeholder for an absent value is the derivation's, stated once
+    /// at `LibraryCardInscription.content` - the card no longer spells its own.
+    @ViewBuilder
+    private var inscriptionText: some View {
+        let content = inscription.content(
+            index: game.libraryIndex,
+            result: game.result,
+            date: game.date,
+            round: game.round
+        )
+        switch content {
+        case .single(let text):
+            Text(text)
+                .font(
+                    .system(
+                        size: glyphWidth * (7.0 / 30.0),
+                        weight: .semibold,
+                        design: .monospaced
+                    )
+                )
+                .lineLimit(1)
+            // Unbounded values shrink rather than clip: a clipped number is a *wrong* number.
+                .minimumScaleFactor(0.6)
+        case .stacked(let top, let bottom):
+            VStack(spacing: 0) {
+                Text(top)
+                    .font(
+                        .system(
+                            size: glyphWidth * (4.0 / 30.0),
+                            weight: .semibold,
+                            design: .monospaced
+                        )
+                    )
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                Text(bottom)
+                    .font(
+                        .system(
+                            size: glyphWidth * (8.0 / 30.0),
+                            weight: .semibold,
+                            design: .monospaced
+                        )
+                    )
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
+        }
     }
 }
 
@@ -134,7 +167,9 @@ private func sampleGame(
     black: String = "Nepomniachtchi",
     result: GameResult = .whiteWins,
     name: String? = nil,
-    index: Int? = 101
+    index: Int? = 101,
+    date: Date? = nil,
+    round: Int? = nil
 ) -> PGN {
     let pgn = PGN(
         event: "World Championship",
@@ -145,6 +180,8 @@ private func sampleGame(
         result: result
     )
     pgn.libraryIndex = index
+    pgn.date = date
+    pgn.round = round
     return pgn
 }
 
@@ -157,15 +194,59 @@ private func sampleGame(
                 game: sampleGame(index: index),
                 isSelected: false,
                 onSelect: {},
-                onOpen: {},
-                onAnalyze: {},
-                onExport: {},
-                onDelete: {}
+                onOpen: {}
             )
         }
     }
     .padding()
     .frame(width: 720, height: 200)
+    .modelContainer(for: PGN.self, inMemory: true)
+}
+
+/// All four inscriptions side by side, then the two absent-value fallbacks - the stacked date
+/// form's proportions (month 4/30 over day 8/30 in a 42/60 slot) are a visual claim only a
+/// canvas can check, and the draw card witnesses the compact "½-½" fitting without the shrink
+/// floor. The undated and unrounded cards must read the same dash the unnumbered card does.
+#Preview("Inscriptions") {
+    let dated = Calendar.current.date(from: DateComponents(year: 2026, month: 8, day: 23))
+    return VStack(spacing: 12) {
+        HStack(spacing: 12) {
+            LibraryGameCardView(
+                game: sampleGame(date: dated, round: 7),
+                inscription: .index,
+                isSelected: false, onSelect: {}, onOpen: {}
+            )
+            LibraryGameCardView(
+                game: sampleGame(result: .draw, date: dated, round: 7),
+                inscription: .result,
+                isSelected: false, onSelect: {}, onOpen: {}
+            )
+            LibraryGameCardView(
+                game: sampleGame(date: dated, round: 7),
+                inscription: .date,
+                isSelected: false, onSelect: {}, onOpen: {}
+            )
+            LibraryGameCardView(
+                game: sampleGame(date: dated, round: 7),
+                inscription: .round,
+                isSelected: false, onSelect: {}, onOpen: {}
+            )
+        }
+        HStack(spacing: 12) {
+            LibraryGameCardView(
+                game: sampleGame(),
+                inscription: .date,
+                isSelected: false, onSelect: {}, onOpen: {}
+            )
+            LibraryGameCardView(
+                game: sampleGame(),
+                inscription: .round,
+                isSelected: true, onSelect: {}, onOpen: {}
+            )
+        }
+    }
+    .padding()
+    .frame(width: 720, height: 420)
     .modelContainer(for: PGN.self, inMemory: true)
 }
 
@@ -177,19 +258,13 @@ private func sampleGame(
             game: sampleGame(index: nil),
             isSelected: false,
             onSelect: {},
-            onOpen: {},
-            onAnalyze: {},
-            onExport: {},
-            onDelete: {}
+            onOpen: {}
         )
         LibraryGameCardView(
             game: sampleGame(index: nil),
             isSelected: true,
             onSelect: {},
-            onOpen: {},
-            onAnalyze: {},
-            onExport: {},
-            onDelete: {}
+            onOpen: {}
         )
     }
     .padding()
@@ -206,30 +281,21 @@ private func sampleGame(
             analysisState: .unanalyzed,
             isSelected: false,
             onSelect: {},
-            onOpen: {},
-            onAnalyze: {},
-            onExport: {},
-            onDelete: {}
+            onOpen: {}
         )
         LibraryGameCardView(
             game: sampleGame(),
             analysisState: .analyzed,
             isSelected: true,
             onSelect: {},
-            onOpen: {},
-            onAnalyze: {},
-            onExport: {},
-            onDelete: {}
+            onOpen: {}
         )
         LibraryGameCardView(
             game: sampleGame(),
             analysisState: .analyzing,
             isSelected: false,
             onSelect: {},
-            onOpen: {},
-            onAnalyze: {},
-            onExport: {},
-            onDelete: {}
+            onOpen: {}
         )
     }
     .padding()
@@ -247,10 +313,7 @@ private func sampleGame(
             ),
             isSelected: true,
             onSelect: {},
-            onOpen: {},
-            onAnalyze: {},
-            onExport: {},
-            onDelete: {}
+            onOpen: {}
         )
         LibraryGameCardView(
             game: sampleGame(
@@ -260,10 +323,7 @@ private func sampleGame(
             ),
             isSelected: true,
             onSelect: {},
-            onOpen: {},
-            onAnalyze: {},
-            onExport: {},
-            onDelete: {}
+            onOpen: {}
         )
     }
     .padding()

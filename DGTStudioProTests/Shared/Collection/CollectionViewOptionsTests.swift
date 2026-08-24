@@ -130,10 +130,27 @@ struct CollectionViewOptionsTests {
             StorageKeys.libraryIconSize, StorageKeys.playersIconSize,
             StorageKeys.libraryGridSpacing, StorageKeys.playersGridSpacing,
             StorageKeys.libraryViewMode, StorageKeys.playersViewMode,
-            StorageKeys.librarySort,
+            StorageKeys.librarySort, StorageKeys.libraryCardInscription,
         ] {
             #expect(defaults.object(forKey: key) == nil, "construction wrote \(key)")
         }
+    }
+
+    /// The inscription's whole persistence contract in two reloads: a chosen value survives, and
+    /// a stored spelling this build no longer understands falls back to the default rather than
+    /// trapping - the view modes' retired-raw-value rule, asserted for the newest key.
+    @Test func theCardInscriptionRoundTripsAndUnknownFallsBack() {
+        let defaults = Self.scratch()
+        let first = CollectionViewOptions(defaults: defaults)
+        #expect(first.libraryCardInscription == CollectionViewOptions.defaultCardInscription)
+
+        first.libraryCardInscription = .date
+        let reloaded = CollectionViewOptions(defaults: defaults)
+        #expect(reloaded.libraryCardInscription == .date)
+
+        defaults.set("opening", forKey: StorageKeys.libraryCardInscription)
+        let fallenBack = CollectionViewOptions(defaults: defaults)
+        #expect(fallenBack.libraryCardInscription == .index)
     }
 
     /// The `object(forKey:)` pin: `double(forKey:)` answers 0 for absent, and clamping 0 hands

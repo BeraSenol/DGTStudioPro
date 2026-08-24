@@ -26,9 +26,19 @@ final class CollectionViewOptions {
     /// an `@AppStorage` initial value at each destination, which is the twin this replaced.
     static let defaultViewMode: CollectionViewMode = .list
 
+    /// The pre-picker sheet verbatim: an install that never opens the panel renders exactly as
+    /// before the inscription became a choice.
+    static let defaultCardInscription: LibraryCardInscription = .index
+
     /// Deliberately not on the panel: insets the grid from the window's dividers - destination
     /// chrome, not cards. Finder doesn't offer it either.
-    static let inset: CGFloat = 16
+    ///
+    /// `nonisolated` because the fit math below reads it and is itself `nonisolated` for the
+    /// `@Sendable` transform's sake - and **a `static let` on a globally-isolated type is
+    /// actor-isolated like any other member; being an immutable `Sendable` value does not exempt
+    /// it** (first build of the 23 Aug sitting, caught by the compiler against a confident
+    /// assumption to the contrary). Harmless to widen: a `CGFloat` constant has no state to race.
+    nonisolated static let inset: CGFloat = 16
 
     // MARK: Stored Properties
 
@@ -127,6 +137,16 @@ final class CollectionViewOptions {
         }
     }
 
+    /// What the Library card writes on its sheet (23 Aug 2026). Library-only - the Players card
+    /// is a monogram with nothing to inscribe - so a single property, not a keyed pair. `didSet`
+    /// is safe here for the sorts' reason: the value is already valid by construction.
+    var libraryCardInscription: LibraryCardInscription {
+        didSet {
+            guard libraryCardInscription != oldValue else { return }
+            defaults.set(libraryCardInscription.rawValue, forKey: StorageKeys.libraryCardInscription)
+        }
+    }
+
     // MARK: Session State
 
     /// Which surface the panel describes. **Session state, deliberately unpersisted** - a fact
@@ -185,6 +205,10 @@ final class CollectionViewOptions {
 
         self.libraryViewMode = storedMode(StorageKeys.libraryViewMode) ?? Self.defaultViewMode
         self.playersViewMode = storedMode(StorageKeys.playersViewMode) ?? Self.defaultViewMode
+
+        // No legacy key to fall back to - the inscription was born per-destination.
+        self.libraryCardInscription = defaults.string(forKey: StorageKeys.libraryCardInscription)
+            .flatMap(LibraryCardInscription.init(rawValue:)) ?? Self.defaultCardInscription
     }
 
     // MARK: Per-Collection Access
@@ -211,28 +235,20 @@ final class CollectionViewOptions {
         iconSize(for: collection) * Self.glyphWidthFraction
     }
 
-    func columnCount(
-        containerWidth: CGFloat,
-        for collection: CollectionViewOptionsSubject.Collection
-    ) -> Int {
-        Self.columnCount(
-            containerWidth: containerWidth,
-            iconSize: iconSize(for: collection),
-            spacing: spacing(for: collection)
-        )
-    }
-
-    /// `.flexible`, not `.fixed`: the count is ours; the width inside it is SwiftUI's to distribute.
-    func columns(
-        containerWidth: CGFloat,
-        for collection: CollectionViewOptionsSubject.Collection
-    ) -> [GridItem] {
+    /// `.flexible`, not `.fixed`: the count is ours; the width inside it is SwiftUI's to
+    /// distribute. Takes the **count**, not the width, since 23 Aug 2026: the grid quantizes its
+    /// width observation to a column count before the value reaches any body (see
+    /// `IconGridView.columnCount`), so a width-taking overload here would hand the continuous
+    /// value back to the render pass this arrangement exists to keep it out of. The width-taking
+    /// `columns(containerWidth:for:)` and instance `columnCount(containerWidth:for:)` went with
+    /// the grid's `GeometryReader`; the static below is the one spelling of the fit math.
+    func columns(count: Int, for collection: CollectionViewOptionsSubject.Collection) -> [GridItem] {
         Array(
             repeating: GridItem(
                 .flexible(minimum: Self.iconSizeRange.lowerBound),
                 spacing: spacing(for: collection)
             ),
-            count: columnCount(containerWidth: containerWidth, for: collection)
+            count: count
         )
     }
 
@@ -240,7 +256,11 @@ final class CollectionViewOptions {
 
     /// Columns computed rather than `.adaptive` - `IconGridSelection` needs the count to answer
     /// "where does ↓ land", and `.adaptive` never reports one. Pinned from both ends.
-    static func columnCount(
+    /// `nonisolated` is load-bearing: the grid calls this from `onGeometryChange`'s `@Sendable`
+    /// transform, where a MainActor-isolated member (which a static on this `@MainActor` class
+    /// otherwise is) cannot be reached. Pure math over its arguments plus `inset`, which had to
+    /// become `nonisolated` with it - see the note there.
+    nonisolated static func columnCount(
         containerWidth: CGFloat,
         iconSize: CGFloat,
         spacing: CGFloat
@@ -254,7 +274,9 @@ final class CollectionViewOptions {
     }
 
     // The un-keyed `glyphWidth`, `columnCount(containerWidth:)` and `columns(containerWidth:)` are
-    // gone with the shared geometry they read. Their keyed replacements are above; a caller now
-    // has to say which collection it is laying out, which is the point - an overload that silently
-    // picked one would be the shared value back under a new name.
+    // gone with the shared geometry they read (18 Aug 2026); their keyed replacements followed on
+    // 23 Aug 2026 when the grid stopped reading continuous width in its body - `columns(count:for:)`
+    // and the nonisolated static above are what remains. A caller still has to say which collection
+    // it is laying out, which is the point - an overload that silently picked one would be the
+    // shared value back under a new name.
 }

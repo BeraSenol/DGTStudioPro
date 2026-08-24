@@ -22,6 +22,10 @@ enum StorageKeys {
     static let libraryViewMode = "libraryViewMode"
     static let playersViewMode = "playersViewMode"
 
+    // What the Library card writes on its document sheet (23 Aug 2026). Library-only - the
+    // Players card has no sheet - so deliberately not a pair. Owned by `CollectionViewOptions`.
+    static let libraryCardInscription = "libraryCardInscription"
+
     // Retired, read once each as the fallback for the pair that replaced them, never written.
     // Kept rather than deleted so an install that had tuned its grid keeps it: the new key is
     // absent on first launch after the split, and reading the old one is the difference between

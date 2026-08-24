@@ -14,12 +14,11 @@ struct LibraryIconsView: View {
     let analyzedIDs: Set<PGN.ID>
     @Binding var selectedPGNs: Set<PGN.ID>
 
-    /// **Currently unreached from this grid** (noted 18 Aug 2026, in the shared-grid pass, not
-    /// changed by it): the card has one Open door, and both double-click and the menu's Open item
-    /// route to `onOpenInPlace`. The destination still supplies this and its comment there still
-    /// calls it "the menu's new-tab door", which the grid has not been since the card's menu was
-    /// wired. Kept rather than deleted - removing a destination-supplied door is a behaviour
-    /// decision, not a de-duplication - but recorded so it reads as known, not as an oversight.
+    /// The menu's new-tab door - **reached again since 23 Aug 2026**: the menu moved off the card
+    /// and onto this grid, and its Open item routes here with the whole subject set, exactly as
+    /// the list's does. (From 17 to 23 Aug it was supplied and unreached - the card's own menu
+    /// sent every door to `onOpenInPlace`, so an item labelled "Open in New Tabs" opened one game
+    /// in place. The 18 Aug note recording that stood here.)
     let onOpen: ([PGN]) -> Void
     /// Double-click's door (17 Aug 2026): one game, into the tab the reader is already in.
     /// Defaulted so previews stand.
@@ -57,15 +56,27 @@ struct LibraryIconsView: View {
                     isAnalyzed: analyzedIDs.contains(game.id),
                     runningID: runningAnalysisID
                 ),
+                inscription: options.libraryCardInscription,
                 isSelected: isSelected,
                 onSelect: select,
                 // Double-click opens THIS card in place - never the whole selection, which would be
                 // N tabs from one gesture.
-                onOpen:    { onOpenInPlace(game) },
-                onAnalyze: { onAnalyze(subjects(for: game)) },
-                onExport:  { onExport(subjects(for: game)) },
-                onDelete:  { onDelete(subjects(for: game)) }
+                onOpen: { onOpenInPlace(game) }
             )
+            // The host attaches the menu (23 Aug 2026), because only the host can count: the card
+            // rendered `GameActionsMenu(games: [game])`, so a fifty-game selection read "Export
+            // PGN" and offered Get Info while the verbs acted on the whole set - labels and
+            // actions disagreeing about the same click. One subject rule, one shared menu, all
+            // four modes; the verbs pass through untouched.
+            .contextMenu {
+                GameActionsMenu(
+                    games: subjects(for: game),
+                    onOpen: onOpen,
+                    onAnalyze: onAnalyze,
+                    onExport: onExport,
+                    onDelete: onDelete
+                )
+            }
         }
     }
 

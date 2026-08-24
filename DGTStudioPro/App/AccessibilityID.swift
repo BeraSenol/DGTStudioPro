@@ -287,6 +287,7 @@ enum AccessibilityID {
     static let viewOptionsUnavailable   = "viewOptions.unavailable"
     static let viewOptionsSortField     = "viewOptions.sort.field"
     static let viewOptionsSortDirection = "viewOptions.sort.direction"
+    static let viewOptionsCardInscription = "viewOptions.icon.inscription"
     static let viewOptionsIconSize      = "viewOptions.grid.iconSize"
     static let viewOptionsSpacing       = "viewOptions.grid.spacing"
     static let viewOptionsUseDefaults   = "viewOptions.grid.useDefaults"

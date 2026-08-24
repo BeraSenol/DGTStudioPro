@@ -71,11 +71,13 @@ struct PlayersColumnsView: View {
                 .width(min: 160, ideal: 200, max: .infinity)
             }
             .tableStyle(.inset)
-            // Selection-typed, but the menu stays single-subject: both verbs describe one player.
+            // The whole selection goes in; the menu's single-subject guard decides what renders
+            // (the list's `keys.first` correction, 23 Aug 2026 - applied here in the same pass).
             .contextMenu(forSelectionType: PlayerStats.ID.self) { keys in
-                if let key = keys.first {
-                    PlayerActionsMenu(key: key, onShowInLibrary: onShowInLibrary)
-                }
+                PlayerActionsMenu(
+                    keys: players.filter { keys.contains($0.id) }.map(\.id),
+                    onShowInLibrary: onShowInLibrary
+                )
             }
         }
     }

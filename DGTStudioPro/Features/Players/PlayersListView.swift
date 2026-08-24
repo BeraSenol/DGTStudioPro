@@ -102,11 +102,14 @@ struct PlayersListView: View {
             .width(100)
             .customizationID("lastPlayed")
         }
-        // Single-subject even though the selection is a set: both verbs describe one player.
+        // The whole selection goes in; the menu's own single-subject guard decides what renders.
+        // `keys.first` stood here until 23 Aug 2026 - on a multi-selection that is whichever
+        // member the `Set` orders first, so the menu offered Get Info for "some player".
         .contextMenu(forSelectionType: PlayerStats.ID.self) { keys in
-            if let key = keys.first {
-                PlayerActionsMenu(key: key, onShowInLibrary: onShowInLibrary)
-            }
+            PlayerActionsMenu(
+                keys: players.filter { keys.contains($0.id) }.map(\.id),
+                onShowInLibrary: onShowInLibrary
+            )
         } primaryAction: { keys in
             // Double-click / Return - the player info window's door (17 Aug 2026). First of the
             // set: an info window has one fixed subject.

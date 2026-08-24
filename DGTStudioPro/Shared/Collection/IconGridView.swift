@@ -59,6 +59,17 @@ struct IconGridView<Item: Identifiable, Card: View>: View {
     @State private var anchorID: Item.ID?
     @FocusState private var isFocused: Bool
 
+    /// The column count the grid lays out with - written by the width observation in `body`, read
+    /// by the `LazyVGrid` and the arrow keys. An `Int` in `@State` **by design**: the body depends
+    /// on the fitted count, never on the continuous width, so a width animation - the inspector
+    /// slide, a window drag - invalidates this view only at the frames where a column boundary is
+    /// actually crossed. The `GeometryReader` this replaces (23 Aug 2026) proposed the whole grid
+    /// again on **every frame** of such an animation: every card's view struct rebuilt, every
+    /// per-card observer re-registered, the full subtree diffed, at animation rate - which is what
+    /// made toggling the inspector visibly laggy in icons view. Starts at 1 and corrects in the
+    /// first layout pass, before drawing - the same one-pass settling the reader had.
+    @State private var columnCount = 1
+
     // MARK: Initializers
 
     init(
@@ -84,73 +95,86 @@ struct IconGridView<Item: Identifiable, Card: View>: View {
         // transform is `@Sendable`, and `View` conformance infers @MainActor onto this type - so the
         // closure must capture a `Sendable` local, never `self.space`. A `String` by value is both.
         let spaceName = space
-        return GeometryReader { geometry in
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVGrid(
-                        columns: options.columns(
-                            containerWidth: geometry.size.width,
-                            for: collection
-                        ),
-                        spacing: options.spacing(for: collection)
-                    ) {
-                        ForEach(items) { item in
-                            card(item, selection.contains(item.id), { select(item) })
-                                .id(item.id)
-                                .onGeometryChange(for: CGRect.self) { geometry in
-                                    // Gated on the sweep - the fifth "cycling between duplicate values"
-                                    // correction, and the first that removes the observation instead of
-                                    // tuning it: frames are only read mid-sweep.
-                                    isSweeping
-                                    ? IconGridSelection.stableFrame(
-                                        geometry.frame(in: .named(spaceName))
-                                    )
-                                    : .null
-                                } action: { frame in
-                                    // A box write: free, invisible to the render pass. `.null` lands once per
-                                    // card when a sweep ends; harmless - `.null` intersects nothing.
-                                    cardFrames.frames[item.id] = frame
-                                }
-                        }
-                    }
-                    .padding(CollectionViewOptions.inset)
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        // Empty space or gutters - a card's own tap wins before this fires.
-                        selection.removeAll()
-                        anchorID = nil
-                        isFocused = true
-                    }
-                    // Background context menu on the same `contentShape` as the clear-selection tap, so it
-                    // covers the gutters - Finder's behaviour; a card's own menu wins over its bounds.
-                    .contextMenu { ShowViewOptionsButton() }
-                    .gesture(rubberBandGesture)
-                    // Content-anchored: the space, the gesture coordinates and the band overlay live on this
-                    // container, inside the scroll.
-                    .coordinateSpace(name: space)
-                    .overlay(alignment: .topLeading) {
-                        if let band = rubberBand {
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(Color.accentColor.opacity(0.15))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 2)
-                                        .strokeBorder(Color.accentColor.opacity(0.6), lineWidth: 1)
+        // Hoisted for the width observation's transform, same rule: two `CGFloat`s by value.
+        let iconSize = options.iconSize(for: collection)
+        let spacing = options.spacing(for: collection)
+        return ScrollViewReader { proxy in
+            ScrollView {
+                LazyVGrid(
+                    columns: options.columns(count: columnCount, for: collection),
+                    spacing: spacing
+                ) {
+                    ForEach(items) { item in
+                        card(item, selection.contains(item.id), { select(item) })
+                            .id(item.id)
+                            .onGeometryChange(for: CGRect.self) { geometry in
+                                // Gated on the sweep - the fifth "cycling between duplicate values"
+                                // correction, and the first that removes the observation instead of
+                                // tuning it: frames are only read mid-sweep.
+                                isSweeping
+                                ? IconGridSelection.stableFrame(
+                                    geometry.frame(in: .named(spaceName))
                                 )
-                                .frame(width: band.width, height: band.height)
-                                .offset(x: band.minX, y: band.minY)
-                                .allowsHitTesting(false)
-                        }
+                                : .null
+                            } action: { frame in
+                                // A box write: free, invisible to the render pass. `.null` lands once per
+                                // card when a sweep ends; harmless - `.null` intersects nothing.
+                                cardFrames.frames[item.id] = frame
+                            }
                     }
                 }
-                .focusable()
-                .focusEffectDisabled()
-                .focused($isFocused)
-                // `geometry.size.width` directly - the proxy the layout reads, captured at key-press time
-                // when layout has settled.
-                .onMoveCommand { direction in
-                    move(direction, width: geometry.size.width, proxy: proxy)
+                .padding(CollectionViewOptions.inset)
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    // Empty space or gutters - a card's own tap wins before this fires.
+                    selection.removeAll()
+                    anchorID = nil
+                    isFocused = true
                 }
+                // Background context menu on the same `contentShape` as the clear-selection tap, so it
+                // covers the gutters - Finder's behaviour; a card's own menu wins over its bounds.
+                .contextMenu { ShowViewOptionsButton() }
+                .gesture(rubberBandGesture)
+                // Content-anchored: the space, the gesture coordinates and the band overlay live on this
+                // container, inside the scroll.
+                .coordinateSpace(name: space)
+                .overlay(alignment: .topLeading) {
+                    if let band = rubberBand {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color.accentColor.opacity(0.15))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 2)
+                                    .strokeBorder(Color.accentColor.opacity(0.6), lineWidth: 1)
+                            )
+                            .frame(width: band.width, height: band.height)
+                            .offset(x: band.minX, y: band.minY)
+                            .allowsHitTesting(false)
+                    }
+                }
+            }
+            .focusable()
+            .focusEffectDisabled()
+            .focused($isFocused)
+            // Width enters the view as a **count**: the transform quantizes, and `action` runs
+            // only when the transformed value changes - so the body re-evaluates at column
+            // boundaries, a handful of times across an inspector slide, instead of every frame.
+            // `LazyVGrid`'s flexible items track the continuous width in the layout pass, which
+            // needs no body involvement. No cycle by construction: the count cannot feed back
+            // into the container width the transform reads (the sixth "cycling" shape, avoided
+            // rather than corrected - see `IconGridSelection.stableFrame` for the first five).
+            .onGeometryChange(for: Int.self) { geometry in
+                CollectionViewOptions.columnCount(
+                    containerWidth: geometry.size.width,
+                    iconSize: iconSize,
+                    spacing: spacing
+                )
+            } action: { count in
+                columnCount = count
+            }
+            // The settled count the layout used - no longer a width captured at key-press time.
+            .onMoveCommand { direction in
+                move(direction, proxy: proxy)
             }
         }
     }
@@ -188,14 +212,16 @@ struct IconGridView<Item: Identifiable, Card: View>: View {
             }
     }
 
-    private func move(_ direction: MoveCommandDirection, width: CGFloat, proxy: ScrollViewProxy) {
+    private func move(_ direction: MoveCommandDirection, proxy: ScrollViewProxy) {
         guard !items.isEmpty else { return }
         let target: Int
         if let anchorID, let current = items.firstIndex(where: { $0.id == anchorID }) {
             target = IconGridSelection.destination(
                 from: current,
                 direction: direction,
-                columnCount: options.columnCount(containerWidth: width, for: collection),
+                // The same `columnCount` the grid laid out with - one value for layout and
+                // stepping, where the reader-era spelling recomputed it from a captured width.
+                columnCount: columnCount,
                 count: items.count
             )
         } else {
