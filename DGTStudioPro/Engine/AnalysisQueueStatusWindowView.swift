@@ -130,19 +130,24 @@ struct AnalysisQueueStatusWindowView: View {
         }
     }
 
+    /// The driver's spelling, not a second one - this window and the failure rows it will later show
+    /// must number the same ply the same way.
     private func moveLabel(_ search: GameAnalysisDriver.Search) -> String {
-        let number = search.plyIndex / 2 + 1
-        let separator = search.plyIndex.isMultiple(of: 2) ? ". " : "… "
-        return "\(number)\(separator)\(search.san)"
+        GameAnalysisDriver.moveLabel(plyIndex: search.plyIndex, san: search.san)
     }
 
-    /// "8.9 Mn/s" - the unit every engine front end shows; degrades to thousands below a million.
+    /// "8.9 Mn/s" - the unit every engine front end shows; degrades through thousands to bare nodes.
+    /// The third tier exists because the kn/s branch is integer division: without it, the first
+    /// `info` line of a cold search reads "0 kn/s", which is what a stalled engine would show.
     private func speedLabel(_ nodesPerSecond: Int?) -> String {
         guard let nodesPerSecond else { return RosterSummary.displayUnknown }
         if nodesPerSecond >= 1_000_000 {
             return String(format: "%.1f Mn/s", Double(nodesPerSecond) / 1_000_000)
         }
-        return "\(nodesPerSecond / 1_000) kn/s"
+        if nodesPerSecond >= 1_000 {
+            return "\(nodesPerSecond / 1_000) kn/s"
+        }
+        return "\(nodesPerSecond) n/s"
     }
 
     // MARK: Lists
@@ -218,6 +223,10 @@ struct AnalysisQueueStatusWindowView: View {
 
     /// "58 plies to search" - searchable, not total: the number the estimate is
     /// denominated in, so a jumped "about 9 min" is explicable.
+    ///
+    /// Empty string for an unknown id, not the em dash `speedLabel` uses: a missing count means
+    /// there is nothing to say about this row, where a missing speed means a named fact is
+    /// unavailable. Two spellings of "unknown" in one file, on purpose.
     private func plyLabel(for id: PersistentIdentifier) -> String {
         guard let plies = controller.plyCount(for: id) else { return "" }
         return "\(plies) plies to search"

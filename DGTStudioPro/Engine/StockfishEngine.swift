@@ -114,10 +114,12 @@ actor StockfishEngine {
         proc.qualityOfService = .utility
         let stdin = Pipe()
         let stdout = Pipe()
-        let stderr = Pipe()  // discarded
         proc.standardInput = stdin
         proc.standardOutput = stdout
-        proc.standardError = stderr
+        // `nullDevice`, not a `Pipe`: an attached pipe nobody drains is a 64 KB ceiling, and an engine
+        // that started chattering on stderr would block on write and hang mid-search. Discarding at the
+        // kernel has no ceiling. Stockfish is quiet here either way - this removes the failure mode.
+        proc.standardError = FileHandle.nullDevice
         
         // Ordered stdout pipeline (F2). The handler captures no `self`; raw `read(2)` keeps a dead pipe
         // from raising through `availableData` - 0/-1 becomes the end-of-stream signal.
@@ -367,8 +369,10 @@ actor StockfishEngine {
             // Abort the prior search first - Stockfish is serial, so stop → position → go applies in order.
             if hadPriorAnalysis {
                 try writeLine("stop")
-                // The abandoned search owes one stale `bestmove`. Counted only after the write succeeds -
-                // a failed write means the engine is gone, and teardown resets the budget.
+                // The abandoned search owes one stale `bestmove`. Counted only after the write succeeds,
+                // and **not** unwound if a later write throws: `stop` was delivered to a search that was
+                // still live (`hadPriorAnalysis` means its continuation had not been finished), so that
+                // reply is genuinely coming. Decrementing here would hand it to the next analysis.
                 staleBestMovesOwed += 1
             }
             try writeLine("position fen \(fen.string)")
@@ -412,7 +416,6 @@ actor StockfishEngine {
         }
     }
     
-    /// Dispatches one complete stdout line.
     /// Stockfish's tablebase sentence, or nil. Matched on "Found" + "tablebase", not the full
     /// sentence - the wording varies across versions.
     nonisolated static func tablebaseReport(in line: String) -> String? {
@@ -423,6 +426,8 @@ actor StockfishEngine {
         return body
     }
 
+    /// Dispatches one complete stdout line. (This sentence sat on `tablebaseReport` above until
+    /// 24 Aug 2026 - a re-homed `///` block, which nothing compiles and nothing checks.)
     private func handleStdoutLine(_ line: String) {
         Self.uciLogger?.debug("recv: \(line, privacy: .public)")
 

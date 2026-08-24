@@ -1,28 +1,32 @@
 import Foundation
 
 /// One engine evaluation, normalized to **white's perspective** (the `[%eval]` convention).
+///
+/// **`Codable` here is a storage format, not a convenience.** `PGN.evaluations` is a `@Model`
+/// property, so every analyzed game in the Library holds these encoded (D12′'s arrangement):
+/// renaming a case or an associated value stops every stored evaluation from decoding.
 enum Evaluation: Equatable, Sendable, Codable {
-    
+
     // MARK: Cases
-    
+
     /// Centipawns, signed from white's perspective; 100 ≈ a pawn.
     case centipawns(Int)
-    
-    /// Mate in N plies, signed. `mate(0)` = already checkmate, treated as 0.5 by the probability
-    /// projection to dodge sign-of-zero.
+
+    /// Mate in N plies, signed. `mate(0)` = already checkmate, projected as 0.5 to dodge
+    /// sign-of-zero.
     case mate(Int)
-    
+
     // MARK: Static Constants
-    
+
     /// Dead equal: the sigmoid's fixed point (probability exactly 0.5), its own mirror under
-    /// `flipped`. The bar folds a nil per-ply evaluation to this.
+    /// `flipped`. `EvaluationBarReading` folds a nil evaluation to it.
     static let drawn = Evaluation.centipawns(0)
-    
+
     // MARK: Computed Properties
-    
-    /// White's win probability in [0, 1]: **base-e** logistic at k=400 - +100 cp ≈ 56%, gentler
-    /// than the base-10 reading of "k=400" (≈ 64%), which a test literal once assumed and ⌘U
-    /// corrected. Mates clamp to 1/0. Every consumer (bar, graph, swing) shares this one curve.
+
+    /// White's win probability in [0, 1]: **base-e** logistic at k=400, so +100 cp ≈ 56%. Reading
+    /// "k=400" as base-10 gives ≈ 64% and is the mistake to expect. Mates clamp to 1/0. Bar,
+    /// graph and swing all read this one curve rather than restating it.
     var whiteWinProbability: Double {
         switch self {
         case .centipawns(let cp):
@@ -32,7 +36,7 @@ enum Evaluation: Equatable, Sendable, Codable {
             return n > 0 ? 1.0 : 0.0
         }
     }
-    
+
     /// Sign flipped - the UCI parser normalizes side-to-move output to white-relative storage.
     var flipped: Evaluation {
         switch self {
@@ -45,16 +49,17 @@ enum Evaluation: Equatable, Sendable, Codable {
 // MARK: PGN `[%eval ...]` Tag Format
 
 extension Evaluation {
-    
-    /// The widest centipawn magnitude accepted - rejects only nonsense, but finite and inside
-    /// `Int`, which keeps `Int(_: Double)` from trapping on a hostile file.
+
+    /// The widest centipawn magnitude accepted. Rejects only nonsense, but it is what keeps
+    /// `Int(_: Double)` below from trapping on a hostile file - that conversion traps on infinity,
+    /// NaN and anything past `Int.max`, so the rejection has to happen at the parse boundary.
     private static let centipawnLimit: Double = 1_000_000
-    
-    /// Parses the *content* of `[%eval …]` (wrapping syntax already stripped).
+
+    /// Parses the *content* of `[%eval …]` (wrapping syntax already stripped). The importer's door.
     init?(parsingEvalTagContent content: String) {
         let trimmed = content.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return nil }
-        
+
         if trimmed.hasPrefix("#") {
             let mateStr = String(trimmed.dropFirst())
             guard let n = Int(mateStr) else { return nil }
@@ -64,17 +69,17 @@ extension Evaluation {
             let normalized = trimmed.hasPrefix("+")
             ? String(trimmed.dropFirst())
             : trimmed
-            // `Double(_:)` accepts "inf"/"nan"/overflow and `Int(_: Double)` traps on all of them - the
-            // rejection belongs at the parse boundary.
+            // `Double(_:)` happily accepts "inf", "nan" and overflow - see `centipawnLimit`.
             guard let pawns = Double(normalized), pawns.isFinite else { return nil }
             let cp = (pawns * 100).rounded()
             guard cp >= -Self.centipawnLimit, cp <= Self.centipawnLimit else { return nil }
             self = .centipawns(Int(cp))
         }
     }
-    
-    /// Parses a complete `[%eval …]` tag, the exact Lichess/Chess.com shape. Kept as the pinned
-    /// round-trip pair with `evalTag` - export writes no evals.
+
+    /// Parses a complete `[%eval …]` tag, the exact Lichess/Chess.com shape. **Test-only**: the
+    /// importer strips the wrapper itself and calls the initializer above. This and `evalTag` are
+    /// each other's round-trip witness, which is the whole reason both exist.
     init?(parsingEvalTag tag: String) {
         let trimmed = tag.trimmingCharacters(in: .whitespaces)
         let prefix = "[%eval "
@@ -87,8 +92,9 @@ extension Evaluation {
         )
         self.init(parsingEvalTagContent: inner)
     }
-    
+
     /// Content in the Lichess convention: centipawns as pawns to two places, mates as `#N`.
+    /// **Test-only** - export writes no evaluations.
     var evalTagContent: String {
         switch self {
         case .centipawns(let cp):
@@ -98,8 +104,8 @@ extension Evaluation {
             return "#\(n)"
         }
     }
-    
-    /// The full tag. Unused in production (export writes no evaluations) - the round-tripped pair.
+
+    /// The full tag - the emitting half of the round-trip pair above.
     var evalTag: String {
         "[%eval \(evalTagContent)]"
     }

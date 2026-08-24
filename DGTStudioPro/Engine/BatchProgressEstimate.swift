@@ -7,6 +7,10 @@ enum BatchProgressEstimate {
 
     /// Seconds remaining, or nil when there is nothing to project from - nil and zero are different
     /// statements; `elapsed <= 0` is guarded (a stopped clock projects nothing).
+    ///
+    /// `pliesCompleted` is a `Double` and `pliesRemaining` an `Int` because they are different
+    /// quantities: the controller folds the running game's fractional progress into the first, while
+    /// the second counts whole plies still queued.
     static func secondsRemaining(
         pliesCompleted: Double,
         pliesRemaining: Int,
@@ -19,10 +23,14 @@ enum BatchProgressEstimate {
 
     /// "about 4 min" - kept beside the arithmetic so the two cannot drift. Vague on purpose: a
     /// format implying second-accuracy this projection lacks is the more expensive lie.
+    ///
+    /// Sub-minute steps truncate to 5, so 59 s reads "about 55 sec" - under-promising, which is the
+    /// right direction. **The branch tests the rounded value, not the raw one**: rounding first is
+    /// what stops 59.5-59.99 rendering as "about 60 sec" instead of "about 1 min".
     static func describe(secondsRemaining seconds: TimeInterval) -> String {
-        if seconds < 60 {
-            let steps = max(5, (Int(seconds.rounded()) / 5) * 5)
-            return "about \(steps) sec"
+        let whole = Int(seconds.rounded())
+        if whole < 60 {
+            return "about \(max(5, (whole / 5) * 5)) sec"
         }
         let minutes = Int((seconds / 60).rounded())
         return "about \(minutes) min"

@@ -45,6 +45,10 @@ final class GameAnalysisDriver {
 
     private var engine: StockfishEngine?
     private var task: Task<Void, Never>?
+
+    /// UserDefaults seam (F9), matching `DGTConnection`'s: the depth default below is a preference
+    /// read, and ⌘U must not take it from the real domain.
+    @ObservationIgnored var defaults: UserDefaults = .standard
     
     // MARK: Public API
     
@@ -52,11 +56,15 @@ final class GameAnalysisDriver {
     @discardableResult
     func analyze(
         pgn: PGN,
-        // The one depth default in the codebase; evaluated per call, so a batch queued after a Settings
-        // change analyzes at the new depth.
-        depth: Int = EngineConfiguration.current.depth,
+        // Nil resolves from preferences *inside*, per call - so a batch queued after a Settings change
+        // analyzes at the new depth. A default argument cannot do this: it could not read `defaults`,
+        // so it read `.standard` and made every ⌘U run depend on the real domain.
+        depth requestedDepth: Int? = nil,
         modelContext: ModelContext
     ) async -> Status {
+        let depth = requestedDepth
+        ?? EngineConfiguration.current(syzygyPath: nil, in: defaults).depth
+
         guard task == nil else {
             Self.logger?.info(
                 "Analysis request ignored, a prior analysis is already in flight"
@@ -173,6 +181,11 @@ final class GameAnalysisDriver {
         // Storage rebuilds only when the arrays don't fit - narrower than the old blanket reset:
         // a fitting pass keeps every evaluation the plan is about to skip. Still after a
         // successful start, so a broken binary costs nothing stored.
+        //
+        // **The second check is not redundant with `resetsStorage`.** That flag speaks for
+        // `evaluations` alone; `depths` fits or not independently, and a legacy game (evaluations
+        // fitting, depths empty) arrives with the flag false. Without this line the indexed write
+        // below is out of bounds on the first scored ply.
         if plan.resetsStorage {
             pgn.evaluations = Array(repeating: nil, count: total)
         }
@@ -233,15 +246,13 @@ final class GameAnalysisDriver {
             // Cancellation exit persists what stands below - skip the write to avoid a "still analyzing" flicker.
             if Task.isCancelled { break }
 
-            // Nil only when the stream yielded nothing - engine died mid-ply; leaving the slot nil keeps
-            // "this ply was never scored" readable (the Analysis Data window's placeholder rows).
-            if let deepest {
-                pgn.evaluations[index] = deepest
-                pgn.analysisDepths[index] = depth   // what makes the next pass incremental
-            }
-
-            // A dead engine finishes every remaining stream instantly - the old loop raced to `.done` with
-            // nothing evaluated (M1 9b). One actor hop per ply is nothing next to the search.
+            // **Health check before the write, and the order is the point.** The write below records
+            // the depth *requested*, not the depth reached, so a ply whose stream ended early - the
+            // engine dying mid-search after a few shallow lines - would be stamped with the full
+            // target and read as satisfied by every later pass, permanently. `deepest == nil` covers
+            // only the engine that emitted nothing at all; this covers the one that emitted a little.
+            // A dead engine also finishes every remaining stream instantly, which is the older reason
+            // for asking (M1 9b). One actor hop per ply is nothing next to the search.
             guard await engine.isRunning else {
                 Self.logger?.error(
                     "Engine died mid-pass at ply \(index + 1)/\(total) for pgn='\(pgn.name, privacy: .public)'"
@@ -257,9 +268,18 @@ final class GameAnalysisDriver {
                 return
             }
 
+            // The engine outlived the ply, so the stream ran to `bestmove` and `depth` is the depth
+            // actually reached. Nil only when it yielded nothing; leaving the slot nil keeps "this ply
+            // was never scored" readable (the Analysis Data window's placeholder rows).
+            if let deepest {
+                pgn.evaluations[index] = deepest
+                pgn.analysisDepths[index] = depth   // what makes the next pass incremental
+            }
+
             searched += 1
             // Denominated in *searchable* plies - over the full count, a skipped book would
-            // freeze the fraction below 1 forever.
+            // freeze the fraction below 1 forever. The `max` never fires: an empty plan returned
+            // above, so reaching here means the count is at least 1.
             status = .analyzing(
                 progress: Double(searched) / Double(max(plan.searchable.count, 1))
             )
@@ -308,7 +328,10 @@ final class GameAnalysisDriver {
 
     /// Ply → "2. Nf3" / "2… Nc6". Failure messages used to print "Move N", which reads as a
     /// full-move number and points at the wrong move for every Black ply. Logs keep ply indices.
-    private static func moveLabel(plyIndex: Int, san: String) -> String {
+    ///
+    /// Internal rather than private since 24 Aug 2026: the queue window renders the same grammar for
+    /// the running search, and had its own character-identical copy. One spelling, two readers.
+    static func moveLabel(plyIndex: Int, san: String) -> String {
         "\(plyIndex / 2 + 1)\(plyIndex.isMultiple(of: 2) ? ". " : "… ")\(san)"
     }
 }

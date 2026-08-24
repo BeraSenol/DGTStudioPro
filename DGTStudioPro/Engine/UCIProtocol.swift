@@ -8,8 +8,12 @@ enum UCIProtocol {
     /// One line → response, or nil for empty / unrecognized / deliberately-ignored `option` lines
     /// (the app sends its options; it never negotiates against advertisements).
     static func parse(_ line: String) -> UCIResponse? {
-        // `.whitespacesAndNewlines`, not `.whitespaces` (space+tab only): a bare "\n" must take the
-        // empty exit. Pinned.
+        // `.whitespacesAndNewlines`, not `.whitespaces` (space+tab only). The case that decides it
+        // is a *keyword* wearing a line ending - `"readyok\n"` matches nothing under the narrower
+        // set. A bare `"\n"` does not decide anything: it returns nil either way, through the empty
+        // exit here or through the unknown-keyword default below, which is why
+        // `keywordSurvivesTrailingNewlineOrCR` is the pin and `parse("\n") == nil` is not.
+        // Defensive in production - `ingestStdoutChunk` strips `\n` and `\r` before this sees a line.
         let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         
@@ -46,7 +50,8 @@ enum UCIProtocol {
 
     // MARK: info Line Parsing
     
-    /// `info` fields, walked by keyword; PV terminates the line.
+    /// `info` fields, walked by keyword; PV terminates the line. Optional for symmetry with its two
+    /// siblings only - **this one never returns nil**, so a bare `info` yields an empty `UCIInfo`.
     private static func parseInfo(_ tokens: [String]) -> UCIResponse? {
         var info = UCIInfo()
         var i = 0
@@ -76,13 +81,17 @@ enum UCIProtocol {
                 // Recognized, not stored.
                 _ = consumeToken(tokens, at: &i)
             case "lowerbound", "upperbound":
-                // Aspiration-window qualifiers on `score`; no payload.
+                // Aspiration-window qualifiers on `score`, and the only payload-less keywords in
+                // the set. Enumerated *because* they are: the default below would eat the keyword
+                // after them, costing the field it names.
                 break
             case "string":
                 // `string` runs to end of line - engine debug text.
                 i = tokens.count
             default:
-                // Unknown keyword: best-effort skip one token in case it had a payload.
+                // Best-effort skip one token in case it had a payload. The bet is that unknown
+                // keywords carry values; an unknown payload-less one swallows its successor, which
+                // is what the two cases above exist to prevent.
                 _ = consumeToken(tokens, at: &i)
             }
         }
@@ -167,12 +176,15 @@ struct UCIInfo: Equatable, Sendable {
     var nodesPerSecond: Int? = nil
 }
 
+/// Shape-identical to `Evaluation` and **deliberately not collapsed into it**: this one is
+/// side-to-move relative, `Evaluation` is white-relative, and the two are unmixable only because
+/// they are different types. `toEvaluation(sideToMove:)` is the single crossing.
 enum UCIScore: Equatable, Sendable {
     /// Centipawns, side-to-move perspective (UCI native).
     case centipawns(Int)
     /// Mate distance, side-to-move perspective.
     case mate(Int)
-    
+
     /// → white-relative `Evaluation`; UCI scores are always side-to-move relative.
     func toEvaluation(sideToMove: PieceColor) -> Evaluation {
         let raw: Evaluation

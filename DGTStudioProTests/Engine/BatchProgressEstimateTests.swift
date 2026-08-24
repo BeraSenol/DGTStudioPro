@@ -87,6 +87,21 @@ struct BatchProgressEstimateTests {
         #expect(BatchProgressEstimate.describe(secondsRemaining: seconds) == expected)
     }
 
+    /// The seam between the two spellings. The branch used to test the raw value while the step
+    /// arithmetic used the rounded one, so anything from 59.5 up rendered "about 60 sec" - a unit
+    /// the vocabulary does not otherwise contain.
+    @Test(
+        "The minute boundary is decided on the rounded value, so 'about 60 sec' is unreachable",
+        arguments: [
+            (59.4, "about 55 sec"),
+            (59.5, "about 1 min"),
+            (59.9, "about 1 min"),
+        ]
+    )
+    func describesTheMinuteBoundary(seconds: TimeInterval, expected: String) {
+        #expect(BatchProgressEstimate.describe(secondsRemaining: seconds) == expected)
+    }
+
     /// Elapsed is spelled unlike the projection, deliberately: one is a measurement, one a guess,
     /// and a reader should be able to tell which.
     @Test(

@@ -1,10 +1,13 @@
 import Foundation
 import os
 
-/// Where the Syzygy tablebases live, and whether anything can read them. Exists because the
-/// answer is not obvious under the sandbox: the *engine subprocess* does the reading, and
-/// inheritance covers only static entitlements - so the type reports **two numbers** (what the
-/// app sees, what Stockfish says it loaded) rather than assuming they agree.
+/// Where the Syzygy tablebases live, and whether the **app** can read them. Exists because the
+/// answer is not obvious under the sandbox: the *engine subprocess* does the actual reading, and
+/// inheritance covers only static entitlements, so the two can disagree.
+///
+/// This type supplies one half of that comparison - the census below. The other half is
+/// `StockfishEngine.tablebaseReport`, and `SyzygySettingsSection` is where they are put beside each
+/// other rather than assumed equal.
 enum SyzygyLocation {
 
     // MARK: Static Constants
@@ -23,13 +26,19 @@ enum SyzygyLocation {
     // MARK: Access Token
 
     /// Holds a security-scoped resource open for its lifetime - the `ActivityToken` shape: balance
-    /// as a fact about object lifetime. The engine holds one per run.
+    /// as a fact about object lifetime. Two holders: `StockfishEngine` keeps one for the whole run,
+    /// and `SyzygySettingsSection` takes a transient one to run the census. Concurrent tokens on the
+    /// same URL are fine - the system refcounts start/stop - which is what makes that safe.
     final class Access {
         private let url: URL
         private let didStart: Bool
 
         var path: String { url.path(percentEncoded: false) }
 
+        /// **Non-nil is not proof of access.** This fails only when the bookmark won't resolve;
+        /// `startAccessingSecurityScopedResource()` returning false still yields a token, because
+        /// false is also what a URL that needs no scoping returns. The symptom of a genuine refusal
+        /// is a census of zeros, which reads identically to an empty folder.
         init?(resolving bookmark: Data) {
             var stale = false
             guard let url = try? URL(
@@ -62,6 +71,9 @@ enum SyzygyLocation {
     /// App-scoped bookmarks are what `com.apple.security.files.bookmarks.app-scope` is for; the
     /// key is in the entitlements file since 24 Aug 2026 with the argument, because a creation
     /// failure here would surface only as the `catch` below logging once.
+    ///
+    /// `@discardableResult` covers exactly one call site - the nil-clear, which is the branch that
+    /// cannot fail. The store path is checked.
     @discardableResult
     static func store(
         _ url: URL?,

@@ -10,7 +10,9 @@ struct EngineConfiguration: Equatable, Sendable {
     /// 8 = floor where per-ply evals stop being noise; 30 = ceiling where a pass stops being interactive.
     static let depthRange = 8...30
     
-    /// Fixed menu of hash sizes - legible, and the clamp gets a nearest-size snap target.
+    /// Fixed menu of hash sizes - legible, and the clamp gets a nearest-size snap target. The snap
+    /// below breaks ties **downward** (40 → 16, 96 → 64, 192 → 128), because `min(by:)` keeps the
+    /// first of equals.
     static let hashChoicesMB = [16, 64, 128, 256, 512, 1024]
     
     /// One thread minimum; active cores as ceiling. Computed - core count is a fact about the host.
@@ -24,8 +26,8 @@ struct EngineConfiguration: Equatable, Sendable {
     /// in the tree probing may go; 1 probes everywhere.
     static let syzygyProbeDepthRange = 1...100
 
-    /// `SyzygyProbeLimit` (`spin default 0..7`) - the largest piece count to probe. **7 is a
-    /// ceiling, not a promise**: with only 3-4-5 tables Stockfish probes what it has.
+    /// `SyzygyProbeLimit` (`spin default 7 min 0 max 7`) - the largest piece count to probe. **7 is
+    /// a ceiling, not a promise**: with only 3-4-5 tables Stockfish probes what it has.
     static let syzygyProbeLimitRange = 0...7
 
     // MARK: Values
@@ -59,6 +61,8 @@ struct EngineConfiguration: Equatable, Sendable {
         syzygyProbeLimit: Int = 7
     ) {
         self.depth = depth.clamped(to: Self.depthRange)
+        // The `??` is unreachable - `hashChoicesMB` is a non-empty literal - and is here only
+        // because `min(by:)` is optional over a sequence that could in principle be empty.
         self.hashMB = Self.hashChoicesMB.min {
             abs($0 - hashMB) < abs($1 - hashMB)
         } ?? Self.hashChoicesMB[0]
@@ -75,6 +79,11 @@ struct EngineConfiguration: Equatable, Sendable {
     
     /// Persisted configuration, clamped on read. `UserDefaults` is thread-safe, so callable from
     /// the actor at launch and the driver per call - Settings apply to the *next* run, no restart story.
+    ///
+    /// **No defaults seam - always `.standard`.** Kept for `SettingsView`, whose bindings are the
+    /// real domain by definition. Anything a suite can reach must call the overload below with an
+    /// injected suite instead; the analysis path was moved off this one on 24 Aug 2026 for exactly
+    /// that reason.
     static var current: EngineConfiguration {
         current(syzygyPath: nil)
     }
@@ -122,8 +131,11 @@ struct EngineConfiguration: Equatable, Sendable {
 }
 
 extension Comparable {
-    /// The standard clamp the stdlib doesn't ship - two hand-rolled `min(max())` pairs were the
-    /// file's only arithmetic.
+    /// The standard clamp the stdlib doesn't ship.
+    ///
+    /// **An extension on `Comparable` lands on every comparable type in the app** - `Square.swift`
+    /// makes the same warning about a bare `Int`, and this one is wider. It has already escaped this
+    /// file: `CollectionViewOptions` clamps `CGFloat`s with it in eight places.
     func clamped(to range: ClosedRange<Self>) -> Self {
         min(max(self, range.lowerBound), range.upperBound)
     }

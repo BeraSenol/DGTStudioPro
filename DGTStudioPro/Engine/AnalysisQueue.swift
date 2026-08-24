@@ -1,6 +1,9 @@
 /// Pure decisions behind batch analysis - ordering, dedupe, advancement, outcomes - extracted
 /// so the interesting choices are suited without an engine. FIFO; enqueue dedupes against line
 /// and running; a fresh batch clears the finished log; the running item is the controller's to stop.
+///
+/// Generic over `ID` for one reason: production instantiates `PersistentIdentifier`, and the suite
+/// instantiates `String`, so none of this needs SwiftData to be exercised.
 struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
     
     // MARK: Outcomes
@@ -40,7 +43,10 @@ struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
     private(set) var finished: [Finished] = []
     
     // MARK: Initializers
-    
+
+    /// Load-bearing by *suppression*: all three properties above carry defaults, so without this
+    /// the synthesized memberwise init would let a caller fabricate a queue with a `current` and
+    /// an empty line, or a finished record for an id also waiting. Empty is the only valid start.
     init() {}
     
     // MARK: Derived
@@ -59,11 +65,15 @@ struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
 
     /// The 1-based position the batch is on - one spelling, because there were two: the window and
     /// the toolbar once disagreed by one.
+    ///
+    /// The `min` never clamps: `isActive` means `remainingCount >= 1`, which makes `totalCount` at
+    /// least `completedCount + 1` by construction. It reads as a bound and is a restatement.
     var batchPosition: Int {
         isActive ? min(completedCount + 1, totalCount) : completedCount
     }
-    
-    /// Failed items, completion order.
+
+    /// Failed items, completion order. **Test-only** - production asks `hasFailures` instead, for
+    /// the reason below.
     var failures: [Finished] {
         finished.filter(\.outcome.isFailure)
     }
@@ -125,7 +135,10 @@ struct AnalysisQueue<ID: Hashable & Sendable>: Sendable {
     
     // MARK: Queries
     
-    /// The most recent word on `id` - a re-queued game reports its place in line, never its dropped outcome.
+    /// The most recent word on `id` - a re-queued game reports its place in line, never its dropped
+    /// outcome. Two mechanisms hold that: `enqueue` drops the finished record, and waiting is asked
+    /// first. `last(where:)` is therefore equivalent to `first` - `finished` cannot hold two records
+    /// for one id, because entering the line removes the old one.
     func status(of id: ID) -> ItemStatus {
         if current == id { return .running }
         if let index = waiting.firstIndex(of: id) {

@@ -7,6 +7,10 @@ import SwiftData
 /// Decisions: (1) one driver, one engine - never two racing; (2) app-owned, not per-tab
 /// (reversed 6 Aug 2026 - a scene receives values, not a tab's instance); (4) the subprocess is
 /// released at drain; the next batch pays one fresh handshake.
+///
+/// **The gap at (3) is real** - it went when provenance was stripped from the comments, and (4)
+/// stayed put because two other sites cite it by number (`stopAll` below, `GameAnalysisDriver`'s
+/// `shutdown`). Renumbering would cost those; nothing here answers to 3.
 @Observable
 @MainActor
 final class AnalysisQueueController {
@@ -28,6 +32,15 @@ final class AnalysisQueueController {
     
     private let driver = GameAnalysisDriver()
     private var runTask: Task<Void, Never>?
+
+    /// UserDefaults seam (F9). Set through `init` so the driver's copy can never diverge from this
+    /// one - the plan denominator here and the depth the driver searches at must read one domain.
+    @ObservationIgnored private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        driver.defaults = defaults
+    }
     
     /// Captured on each `enqueue` - the controller is built before any environment exists.
     private var modelContext: ModelContext?
@@ -66,6 +79,11 @@ final class AnalysisQueueController {
 
     /// Ply count for a queued id, or nil. Read-only by design - only `enqueue` writes, or the
     /// estimate would be denominated in two different things.
+    ///
+    /// That write is unconditional and lands *before* the queue's dedupe, so re-enqueueing the
+    /// running game rewrites its denominator mid-pass while `currentProgress` is still a fraction of
+    /// the old one. Not reachable from the UI - the control row switches on `status(of:)` - but it
+    /// is the one way the two-denominators hazard above can still happen.
     func plyCount(for id: PersistentIdentifier) -> Int? {
         plyCounts[id]
     }
@@ -116,7 +134,7 @@ final class AnalysisQueueController {
                 evaluations: pgn.evaluations,
                 depths: pgn.analysisDepths,
                 bookPlies: pgn.ecoDepth ?? 0,
-                targetDepth: EngineConfiguration.current.depth
+                targetDepth: EngineConfiguration.current(syzygyPath: nil, in: defaults).depth
             ).searchable.count
         }
         let accepted = queue.enqueue(pgns.map(\.persistentModelID))
@@ -237,7 +255,11 @@ final class AnalysisQueueController {
             currentGameName = nil
         }
         
-        // Teardown can cancel between `startNext` and the walk - don't leave a phantom running item.
+        // A no-op as the loop stands: every path through the body reaches a `finishCurrent` - the
+        // tombstone guard's `continue` does, and the switch above is exhaustive over `Status` - so
+        // `current` is already nil here. Cancellation cannot leave a phantom either; it is
+        // cooperative and never aborts the body mid-iteration. This is insurance against a future
+        // `break` or early `return` in that loop, not against anything reachable today.
         queue.finishCurrent(.cancelled)
         currentGameName = nil
         

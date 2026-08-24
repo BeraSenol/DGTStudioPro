@@ -98,6 +98,8 @@ struct SyzygySettingsSection: View {
     }
 
     /// The two numbers as one sentence, ordered by which failure is most likely to be misread.
+    /// **Exhaustive**, unlike `verificationRow`'s switch: a new `Verification` case is a compile
+    /// error here and a silent fall into the row's `default` there.
     private var reading: String {
         switch verification {
         case .idle:
@@ -122,6 +124,10 @@ struct SyzygySettingsSection: View {
         }
     }
 
+    /// **The same three conditions `reading` branches on, spelled a second time.** They agree today
+    /// (`wdl` is a count, so `> 0` and `!= 0` coincide); if they drift, the good-news sentence renders
+    /// in secondary grey or the sandbox-failure one in primary black - wrong emphasis, right words,
+    /// which is the hard kind to notice.
     private var readingIsGood: Bool {
         if case .checked(let census, let report) = verification {
             return !census.isEmpty && census.wdl > 0 && report != nil
@@ -199,6 +205,11 @@ struct SyzygySettingsSection: View {
 /// Both arms a canvas can reach. The verification states need Stockfish and a real folder -
 /// the boardless checklist's; faking "engine says…" would preview the one thing this section
 /// exists to report honestly.
+///
+/// **The name holds only when no folder is configured.** `.defaultAppStorage` redirects the three
+/// `@AppStorage` properties, but `displayPath` is plain `@State` seeded from
+/// `SyzygyLocation.displayPath()`, which takes its `.standard` default - so on a Mac with Syzygy
+/// set up this canvas shows the folder and every control below it.
 #Preview("No Folder") {
     Form { SyzygySettingsSection() }
         .formStyle(.grouped)

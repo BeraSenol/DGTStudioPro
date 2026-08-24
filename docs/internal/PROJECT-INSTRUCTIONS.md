@@ -659,9 +659,13 @@ grep -rn '#if DEBUG' --include='*.swift' DGTStudioPro | grep -v ':[0-9]*:///\?\s
   codebase enables `MemberImportVisibility`. `firstRange(of:)` and `drop(while:)`
   are stdlib; `range(of:)`, `trimmingCharacters(in:)`, `padding(toLength:)` are
   Foundation. Reads perfectly, fails at compile.
-- **Key paths do not reach tuple elements**, and `map` over a zipped sequence
-  takes the pair as **one** argument — the two-parameter spelling is the tuple
-  splat removed in Swift 3.
+- ~~**Key paths do not reach tuple elements**~~ — **struck 24 Aug 2026, refuted by
+  a green build.** Two app-target sites compile a key path into an `enumerated()`
+  pair: `AnalysisQueueStatusWindowView`'s `id: \.element` and `ImportStatusView`'s
+  `id: \.element.id`. Whatever the original diagnostic was, it was not this. The
+  other half of the sentence stands: `map` over a zipped sequence takes the pair
+  as **one** argument — the two-parameter spelling is the tuple splat removed in
+  Swift 3.
 - **Never assign to a property from inside its own `didSet` on an `@Observable`
   type.** The macro rewrites stored properties into computed ones, so the
   self-assignment goes through the setter, the observer re-enters, and it
@@ -798,7 +802,13 @@ the others had consumers); `DGTReconstructor.move(from:to:promotion:in:)` (same
 sitting — `reconstruct` matches against its own `legal` array and never calls
 it, so both callers are suites);
 `AnalysisQueueController.shutdown()` (teardown, not a feature — one line from an
-app-termination hook); `OpenGamesRegistry.markDirty` (dormant with a *named*
+app-termination hook); `Evaluation.init?(parsingEvalTag:)`, `.evalTagContent`
+and `.evalTag` (added 24 Aug 2026 — the importer strips the wrapper itself and
+calls `init?(parsingEvalTagContent:)`, and export writes no evaluations, so the
+full-tag pair exists as its own round-trip witness; the register previously named
+only "the eval-tag emitting half", which left the parsing half unwritten);
+`AnalysisQueue.failures` (same sitting — five sites ask `hasFailures`, which
+exists precisely because the array form built the whole list to test emptiness); `OpenGamesRegistry.markDirty` (dormant with a *named*
 future consumer and a live read side); `CollectionFoldCache.isCached` (the
 property worth pinning is *that a hit is a hit*, and a cache whose only door
 computes on demand cannot be asked that question without also answering it —

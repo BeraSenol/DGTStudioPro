@@ -5,8 +5,8 @@ struct EngineProgress: Equatable, Sendable {
     // MARK: Stored Properties
 
     /// The score, already flipped to white's perspective by
-    /// ``UCIScore/toEvaluation(sideToMove:)``. The one field every consumer
-    /// has always wanted, and the only one the model stores.
+    /// ``UCIScore/toEvaluation(sideToMove:)``. The one field the model stores; the three below are
+    /// the queue window's live read-out and never reach a `PGN` (D71′).
     let evaluation: Evaluation
 
     /// Nominal search depth in plies - the iteration this line came from,
@@ -22,17 +22,7 @@ struct EngineProgress: Equatable, Sendable {
     /// shows for the same line.
     let nodesPerSecond: Int?
 
-    // MARK: Initializers
-
-    init(
-        evaluation: Evaluation,
-        depth: Int? = nil,
-        nodes: Int? = nil,
-        nodesPerSecond: Int? = nil
-    ) {
-        self.evaluation = evaluation
-        self.depth = depth
-        self.nodes = nodes
-        self.nodesPerSecond = nodesPerSecond
-    }
+    // The synthesized memberwise init is the only one, deliberately. A hand-written twin stood here
+    // until 24 Aug 2026 adding `= nil` defaults that nothing used - the single construction site
+    // (`StockfishEngine`) passes all four - while suppressing the init it was copying.
 }
