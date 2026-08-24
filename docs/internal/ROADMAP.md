@@ -68,7 +68,7 @@ the two new memo-key types (`OpponentsKey`, `SelectionKey`) and their
 `CollectionFoldCache` instantiations, and `coreContent`'s widened signature in
 `PlayersDestination`.
 
-- **Cold build against a scratch derived-data path, all three targets.** Fix
+- **Cold build against a scratch derived-data path, both targets.** Fix
   what surfaces; each fix stays inside the finding it repairs, and anything
   larger than a touch-up gets its own commit with its own reason.
 - **⌘U, counted.** The 8 August run was 1108 tests / 101 suites; the tree

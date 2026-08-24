@@ -53,8 +53,10 @@ six months" is the test.
 ## Where things stand
 
 Tree: **`4d3761e`** — the 23–24 August sitting's source, committed 24 August
-with its two new files tracked — plus the documents commit carrying this file
-and the roadmap, which lands with it; nothing else dirty. The sitting:
+with its two new files tracked — then the documents commit carrying this file
+and the roadmap (`e9ca488`), and atop both the 24 August (late) audit-fix
+sitting, described after the first-build paragraph below, committed with this
+file's update riding it; nothing else dirty. The 23–24 August sitting:
 the context-menu standardization (both cards shed their menus, every host
 attaches the shared menu with subjects resolved through one rule), the icons
 grid's `GeometryReader` replaced by a quantized column-count observation (the
@@ -79,6 +81,22 @@ read off the same report (the plan has carried `codeCoverage` scoped to the
 app target since `1018add` — the number already exists in the Report
 navigator), the column-layout reset confirmation (the two `customizationID`
 renames), and the commit.
+
+**Committed atop it, 24 August (late): the audit-fix sitting.** A
+whole-project scan against current Apple documentation found five things, and
+the commit is the five fixes: the game form's `.tabItem`s — the one deprecated
+API in the tree — became the `Tab(_:systemImage:)` its two siblings already
+used, both site comments corrected (the old one defended `.tabItem` against
+the wrong alternative); `com.apple.security.files.bookmarks.app-scope` joined
+the entitlements, argued at the key, at `SyzygyLocation.store`, and in the
+Syzygy owed check, with the plist now naming the build-settings half of the
+grant story (`ENABLE_USER_SELECTED_FILES = readwrite`); the gear's repeat
+question closed on the API side at `AnalyzingGear` and in its owed check;
+"all three targets" became "both" in this file's two present-tense homes and
+the roadmap's M15 bullet (DECISIONS keeps three as provenance); and four
+scene modifiers came back from column 0. No source added or removed — the
+count block re-ran unchanged. The `Tab` migration is the sitting's one
+code-shape change and awaits its ⌘U.
 
 **This line has now decayed five recorded times, and the fifth is the worst.**
 The four earlier instances were the same failure — written at the moment of
@@ -115,7 +133,8 @@ Not counted, because they are not sources: **seven** `.wav` samples under
 This read "twelve samples, 268 KB, three sets × four cues" until 18 Aug 2026, six
 days after D82′ was reversed and the packs deleted.
 
-**Language mode 6 on all three targets (D43′).** Two warnings in the whole
+**Language mode 6 on both targets (D43′, which landed it on three — D51′ took
+the UITest target).** Two warnings in the whole
 project, both `Binding(present:)`, both waived below with a sunset condition.
 No `DispatchQueue`, `Combine`, `NotificationCenter`, `Thread.sleep`,
 unchecked-`Sendable` or the unsafe-`nonisolated` opt-out anywhere in the app
@@ -650,7 +669,7 @@ xcodebuild -scheme DGTStudioPro -testPlan DGTStudioPro \
 ```
 
 Delete the scratch path first. `build-for-testing` with the full plan is what
-compiles all three targets; a plain ⌘B covers only the app target. Settings can
+compiles both targets; a plain ⌘B covers only the app target. Settings can
 be overridden per-run without touching the project file.
 
 **Runtime verification:** `pmset -g assertions` shows the held activity by its
@@ -947,19 +966,25 @@ invalidates the witness.*
   chosen in an open panel is granted after launch; the options then are turning
   `ENABLE_APP_SANDBOX` off (no App Store requirement here) or copying the tables
   into the app's own container. *"The app sees no .rtbw or .rtbz files here"* is
-  the wrong folder. **This is a genuine open question about the architecture, not
-  a formality.**
+  the wrong folder — or, since 24 Aug 2026, no longer plausibly the app-side
+  bookmark: `com.apple.security.files.bookmarks.app-scope` is in the
+  entitlements file now, the key Apple's reference requires for the app-scoped
+  bookmark `SyzygyLocation` stores (current macOS was observed granting without
+  it; the line ends the disagreement with the docs rather than betting on it).
+  **This is a genuine open question about the architecture, not a formality.**
 - **⌘⌫, ⌘E and ⌘R with no menu open.** Select two games in list mode and press
   ⌘⌫. If nothing happens, **delete-by-keyboard no longer exists in this app** —
   the toolbar button carried the only known-live copy and was removed by request;
   the row menu's copy is known only to *render*. Whatever the answer, write it
   down; if they are dead, the remedy is a menu-bar `Commands` scene, and skipping
   it was decided with that on the table.
-- **Does the gear loop?** `.symbolEffect(.rotate)` is confirmed to turn `gear`;
-  whether the rotation *repeats* was never settled, because a state bug was
-  pulling the glyph out from under the effect. Watch the queue item for a full
-  minute of batch. A still gear after one turn means the fallback named at
-  `AnalyzingGear`. The **Every State, Both Titles** preview is the cheaper place.
+- **Does the gear loop?** The API half settled 24 Aug 2026: `.rotate` is an
+  indefinite effect and `.repeat(.continuous)` is documented as repeating until
+  disabled, so a still gear is no longer an API question. What the watch still
+  owes is view identity — a state bug once pulled the glyph out from under the
+  effect. Watch the queue item for a full minute of batch; a still gear after
+  one turn means identity churn, per the note at `AnalyzingGear`. The
+  **Every State, Both Titles** preview is the cheaper place.
 - **Sleep inhibition, flipped mid-batch.** `pmset -g assertions` is the only
   witness the token has. The item worth running is toggling the *analysis*
   preference **during** a queue — an implementation that only releases when the

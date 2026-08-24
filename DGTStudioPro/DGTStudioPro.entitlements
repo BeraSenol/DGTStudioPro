@@ -4,6 +4,15 @@
 <dict>
 	<key>com.apple.security.device.serial</key>
 	<true/>
+	<!-- Syzygy (24 Aug 2026). `SyzygyLocation` persists the tablebase folder as an app-scoped
+	     security bookmark, and Apple's reference lists this key as what `.withSecurityScope`
+	     requires. Current macOS has been observed granting without it (TrozWare hands-on,
+	     Mar 2026); one line ends the disagreement with the docs rather than betting on that.
+	     NOTE this file is not the whole grant story: open/save-panel file access is
+	     ENABLE_USER_SELECTED_FILES = readwrite in BUILD SETTINGS, which is why the six panel
+	     sites work with no key here. -->
+	<key>com.apple.security.files.bookmarks.app-scope</key>
+	<true/>
 	<!-- D81′ — board cues. CoreAudio raises a hard PRECONDITION FAILURE, killing the
 	     process, the first time a sandboxed app initialises audio playback without a
 	     mach-lookup exception for the analytics daemon. Not optional and not a warning:

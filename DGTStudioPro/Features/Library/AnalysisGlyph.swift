@@ -143,7 +143,10 @@ extension EnvironmentValues {
 // MARK: Running Gear
 
 /// The badgeless turning gear - one spelling of "working now" for the queue toolbar item and
-/// `AnalysisLabel`. `.rotate` is confirmed to turn `gear`; that it *repeats* is not.
+/// `AnalysisLabel`. `.rotate` is an indefinite effect and `.repeat(.continuous)` is documented as
+/// repeating until disabled, so the API side is settled (24 Aug 2026). What the checklist's
+/// minute-watch still owes is view identity: a state bug once pulled the glyph out from under the
+/// effect, and no reading of this line can see that failure.
 struct AnalyzingGear: View {
     
     var body: some View {

@@ -223,17 +223,21 @@ extension GetInfoWindow {
     /// Details = the nine exported tags the reader can rewrite, File = what the app derived (read-only),
     /// Move Text = the editor - named "Move Text", not "PGN", because it shows half the file.
     /// Move Text exists on the game form only: a live game has no stored movetext.
-    /// `.tabItem`, not the 2027 `Tab(role:)` spelling - beta.
+    /// `Tab(_:systemImage:)` since 24 Aug 2026, matching the player form below and Settings. The
+    /// line that stood here defended `.tabItem` against the wrong alternative: the beta
+    /// `Tab(role:)` (D27′, still unadopted) was never the replacement - the plain init shipped
+    /// with macOS 15, and `.tabItem` is the deprecated spelling ("use Tab" is Apple's own note).
     private func gameForm(_ pgn: PGN) -> some View {
         TabView {
-            detailsTab(pgn)
-                .tabItem { Label("Details", systemImage: "list.bullet.rectangle") }
-
-            moveTextTab(pgn)
-                .tabItem { Label("Move Text", systemImage: "text.line.first.and.arrowtriangle.forward") }
-
-            fileTab(pgn)
-                .tabItem { Label("File", systemImage: "doc.text.magnifyingglass") }
+            Tab("Details", systemImage: "list.bullet.rectangle") {
+                detailsTab(pgn)
+            }
+            Tab("Move Text", systemImage: "text.line.first.and.arrowtriangle.forward") {
+                moveTextTab(pgn)
+            }
+            Tab("File", systemImage: "doc.text.magnifyingglass") {
+                fileTab(pgn)
+            }
         }
         .padding(.top, 8)
         .accessibilityIdentifier(AccessibilityID.getInfoGame)
@@ -623,8 +627,9 @@ private struct PlayerInfoTabs<IdentityTab: View>: View {
 
     // MARK: Body
 
-    /// `Tab(_:systemImage:)`, where the game form one file up uses `.tabItem` - the two spellings
-    /// are the two ages of this file, not a distinction. Neither is the beta `Tab(role:)`.
+    /// `Tab(_:systemImage:)`, same as the game form since 24 Aug 2026 - the file briefly held both
+    /// of its ages' spellings, until `.tabItem`'s deprecation retired the older one. Still not the
+    /// beta `Tab(role:)` (D27′).
     var body: some View {
         TabView {
             // **Info leads** (Bera, 18 Aug 2026 - the merge's second pass): the first tab is what

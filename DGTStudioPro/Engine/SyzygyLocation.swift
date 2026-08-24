@@ -59,6 +59,9 @@ enum SyzygyLocation {
 
     /// Stores the folder as a security-scoped bookmark (nil clears). Returns whether it stuck -
     /// swallowing a failed bookmark leaves Settings showing a path the next launch cannot open.
+    /// App-scoped bookmarks are what `com.apple.security.files.bookmarks.app-scope` is for; the
+    /// key is in the entitlements file since 24 Aug 2026 with the argument, because a creation
+    /// failure here would surface only as the `catch` below logging once.
     @discardableResult
     static func store(
         _ url: URL?,

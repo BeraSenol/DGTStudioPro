@@ -206,7 +206,8 @@ struct DGTStudioProApp: App {
         }
         .modelContainer(sharedContainer)
         .defaultSize(width: 460, height: 520)
-.windowManagerRole(.associated)        .restorationBehavior(.disabled) // companion - see the graph above
+        .windowManagerRole(.associated)
+        .restorationBehavior(.disabled) // companion - see the graph above
 
         // M10 Get Info - one group for all three subjects, so info windows tab with *each other*, never
         // behind a board. Not floating.
@@ -228,7 +229,8 @@ struct DGTStudioProApp: App {
         // monogram, a four-column grid and a 160 pt chart, and the old Matchup window's 460 × 340
         // cannot hold it. The tallest subject sets the default; the others get a roomier window.
         .defaultSize(width: 520, height: 620)
-.windowManagerRole(.associated)        .restorationBehavior(.disabled) // companion - see the graph above
+        .windowManagerRole(.associated)
+        .restorationBehavior(.disabled) // companion - see the graph above
 
         // The smart-tag editor as its own window (16 Aug 2026; was ContentView's sheet). Sixth
         // wrapper in the `openWindow(value:)` family. Not floating; sized by its own fixed frame.
@@ -263,7 +265,8 @@ struct DGTStudioProApp: App {
         // quit. Both singletons carried it and both came back anyway.
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
-.windowManagerRole(.associated)
+        .windowManagerRole(.associated)
+
         // The New Game dialog (16 Aug 2026; was BoardDestination's sheet) - singleton: one
         // session, one offer. Floating like its connection sibling below.
         Window("New Game", id: NewLiveGameWindow.sceneID) {
@@ -328,7 +331,8 @@ struct DGTStudioProApp: App {
         // The panel's own frame bounds it; automatic resizability derives its limits from
         // content.
         .windowLevel(.floating)
-.windowManagerRole(.associated)
+        .windowManagerRole(.associated)
+
         Settings {
             SettingsView()
                 .environment(sleepInhibitor)
