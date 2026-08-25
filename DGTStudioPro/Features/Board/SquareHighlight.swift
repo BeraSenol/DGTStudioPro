@@ -2,7 +2,7 @@
 /// and one consumer, `SquareView`, which is what makes "the views render a style, the owner knows
 /// the meaning" true rather than aspirational. `UInt8` leaves room for two more.
 struct SquareHighlight: OptionSet, Sendable {
-
+    
     // MARK: Static Constants
     static let lastMove = SquareHighlight(rawValue: 1 << 0)
     static let check    = SquareHighlight(rawValue: 1 << 1)

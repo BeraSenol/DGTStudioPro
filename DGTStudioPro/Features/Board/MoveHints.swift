@@ -9,7 +9,7 @@
 /// decorates is exactly the speculation the mirror rule forbids. Same family as `RecoveryGuidance`:
 /// view-computed, session-gated, pure.
 enum MoveHints {
-
+    
     /// Destinations of the one lifted piece; empty unless the lift is exactly one square.
     ///
     /// An opponent's piece lifted on your turn yields the empty set for free - `legalMoves()`
@@ -22,13 +22,13 @@ enum MoveHints {
     /// overlays' "recompute per observable change" family, and user-paced either way.
     static func destinations(for game: GameState?, physical: Position) -> Set<Square> {
         guard let game else { return [] }
-
+        
         let diff = DGTBoardDiff(from: game.position, to: physical)
         guard diff.placed.isEmpty,
               diff.vacated.count == 1,
               let origin = diff.vacated.keys.first
         else { return [] }
-
+        
         return Set(game.legalMoves().filter { $0.from == origin }.map(\.to))
     }
 }

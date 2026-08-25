@@ -41,7 +41,7 @@ struct BoardDestination: View {
     /// Set by the Game menu's ⌘I (a `Commands` scene cannot open windows); cleared as soon as this
     /// view has. A trigger, not a stored request - the subject is derivable here (`getInfoSubject`).
     @State private var getInfoRequested = false
-
+    
     /// The Library ordinal the live game will carry, cached (21 Aug 2026). **Was a computed
     /// property**, which put a `PGNStore` construction and a `FetchDescriptor` execution inside
     /// `liveInspector`'s render path - and `.inspector`'s content builder runs whether the panel
@@ -49,11 +49,11 @@ struct BoardDestination: View {
     /// during live play means every board settle. The value only moves when a game archives, so
     /// it is refreshed on arrival and on `session.archivedPGN` instead.
     @State private var prospectiveGameNumber: Int?
-
+    
     /// Registry for the archive sheet's seat pickers. Queried *here*: `EditGameInfoSheet` is
     /// container-free so its previews build - a `@Query` inside it would trap the canvas.
     @Query(sort: \Player.name) private var knownPlayers: [Player]
-
+    
     // MARK: Body
     
     var body: some View {
@@ -77,8 +77,8 @@ struct BoardDestination: View {
             DestinationSubtitle.board(
                 phase: .current(session: session, connection: connection),
                 reviewing: tabState.boardPGN == nil
-                    ? nil
-                    : tabState.boardGame?.currentState.activeColor
+                ? nil
+                : tabState.boardGame?.currentState.activeColor
             ) ?? ""
         )
         .toolbar { boardToolbarContent }
@@ -112,7 +112,7 @@ struct BoardDestination: View {
         // `Binding` is not `Equatable` - M16's owed FocusedValue check, argued at `GetInfoRequestKey`.
         .focusedSceneValue(
             \.boardGetInfoRequest,
-            getInfoSubject == nil ? nil : $getInfoRequested
+             getInfoSubject == nil ? nil : $getInfoRequested
         )
         // Cleared before opening, so a second ⌘I is a fresh request, not a no-op against a stale flag.
         .onChange(of: getInfoRequested) { _, requested in
@@ -165,16 +165,16 @@ struct BoardDestination: View {
     }
     
     // MARK: Board Surface
-
+    
     /// Gap between bar and board. The *width* is deliberately not here - `EvaluationBarView.width`,
     /// stated once by the view that draws it (the two disagreed for a month).
     private static let evaluationBarGap: CGFloat = 10
-
+    
     /// The score label's slot, trailing the bar. **Reserved, not measured**: the board's side derives
     /// from the leftover width, and a slot that tracked the text would resize the board per score.
     /// Being wrong here is a cosmetic clip, never a layout break.
     private static let evaluationLabelWidth: CGFloat = 38
-
+    
     /// The board, shared by game view and live mirror - one place, so the identifier and modifier
     /// tail can't drift. Nil evaluation (the live branch's only value) renders no bar: the bar is
     /// review furniture, and live engine eval is assumed-never.
@@ -205,7 +205,7 @@ struct BoardDestination: View {
             hintSquares:      hintSquares,
             liftedGhosts:     liftedGhosts
         )
-
+        
         return Group {
             if let evaluation {
                 GeometryReader { geometry in
@@ -217,15 +217,15 @@ struct BoardDestination: View {
                     // width budget loses BOTH flanks, so a scored game's board is smaller
                     // than an unscored one's at the same window size.
                     let flank = EvaluationBarView.width
-                        + Self.evaluationBarGap
-                        + Self.evaluationLabelWidth
+                    + Self.evaluationBarGap
+                    + Self.evaluationLabelWidth
                     // Reserved, not measured - the board must not resize as the score's text
                     // width changes.
                     let side = max(0, min(
                         geometry.size.width - 2 * flank,
                         geometry.size.height
                     ))
-
+                    
                     HStack(spacing: 0) {
                         HStack(spacing: Self.evaluationBarGap) {
                             EvaluationBarView(
@@ -235,7 +235,7 @@ struct BoardDestination: View {
                             )
                             // Height only: the bar states its own width - framing it again re-opens the closed twin.
                             .frame(height: side)
-
+                            
                             // The always-visible label, in the gap, never on the bar - a thin losing share would swallow it.
                             // Blank while hidden (17 Aug 2026): the same `StorageKeys.evaluationBarHidden`
                             // the bar reads, so a hidden bar can't sit beside a printed score. The slot
@@ -250,11 +250,11 @@ struct BoardDestination: View {
                                 )
                         }
                         .frame(width: flank, alignment: .leading)
-
+                        
                         board
                             .frame(width: side, height: side)
                             .frame(maxWidth: .infinity)
-
+                        
                         // The invisible twin. `Color.clear`, not `Spacer()`: a spacer's width
                         // is negotiated, and the whole point is a flank that matches the bar
                         // column to the point.
@@ -290,8 +290,8 @@ struct BoardDestination: View {
             // The bar exists iff `hasScoredPly` - **was** `!evaluations.isEmpty`, which is true of an
             // all-nil array: a pass that scored nothing drew a fabricated 50/50 bar.
             evaluation:  pgn.hasScoredPly
-                ? EvaluationBarReading(game.currentEvaluation)
-                : nil
+            ? EvaluationBarReading(game.currentEvaluation)
+            : nil
         )
         // No session panel on the review branch (17 Aug 2026, by request): a tab reviewing a
         // PGN is not party to the live session, and the connected-board card floating over an
@@ -312,7 +312,7 @@ struct BoardDestination: View {
             )
         }
     }
-
+    
     // MARK: Live Surface
     
     /// The live surface: mirror board, resume/corrupt forks, archive confirmation.
@@ -383,7 +383,7 @@ struct BoardDestination: View {
             set: { _ in }
         )
     }
-
+    
     /// Presents the load-error alert while the tab holds one. The setter clears the message
     /// rather than ignoring the write, unlike its two siblings above: those read session state
     /// the session owns and re-answers, where this reads a `TabState` field nothing else clears -
@@ -464,7 +464,7 @@ struct BoardDestination: View {
             )
         }
     }
-
+    
     /// Recomputes "Recording 112." - the number the game will carry in the Library, D58′'s own
     /// max+1 (via `PGNStore.highestLibraryIndex`, predicated + limit 1, not a fetch-all). Why it is
     /// this and not the roster's round is argued at `GameHeadline.text`.
@@ -476,14 +476,14 @@ struct BoardDestination: View {
         let highest = (try? PGNStore(modelContext: modelContext).highestLibraryIndex()) ?? nil
         prospectiveGameNumber = (highest ?? 0) + 1
     }
-
+    
     /// What ⌘I would open, or nil. Review before live, matching `body`'s branch. The live case
     /// carries nothing - a live game has no identifier until it archives (why the request is an enum).
     private var getInfoSubject: GetInfoRequest? {
         if let pgn = tabState.boardPGN { return .game(pgn.persistentModelID) }
         return session.liveGame == nil ? nil : .live
     }
-
+    
     /// Live-branch inspector: game details when one exists, otherwise a connection-aware hint -
     /// the toggle is never a dead switch on the mirror.
     @ViewBuilder
@@ -549,11 +549,11 @@ struct BoardDestination: View {
             // would decorate one square with contradicting instructions. Live-mirror only - the
             // review board's pieces don't lift.
             hintSquares:      guidance == nil
-                ? MoveHints.destinations(
-                    for: session.liveGame?.currentState,
-                    physical: connection.physicalBoard
-                )
-                : [],
+            ? MoveHints.destinations(
+                for: session.liveGame?.currentState,
+                physical: connection.physicalBoard
+            )
+            : [],
             // The hoisted `guidance`, not a second read of the computed property (21 Aug 2026).
             // Cheap either way - `RecoveryGuidance.current` short-circuits on `needsRecovery`, so
             // outside a desync the second read cost a Bool - but inside one it rebuilt the whole
@@ -561,7 +561,7 @@ struct BoardDestination: View {
             liftedGhosts:     liftedGhostPieces(guidance: guidance)
         )
     }
-
+    
     /// Pieces in a hand: squares the committed game holds and the physical board doesn't,
     /// handed to the board as 25% ghosts (17 Aug 2026, by request) instead of vanishing.
     /// Overlay vocabulary - the castling ghost's sibling - so D47′'s layer invariant is
@@ -618,9 +618,9 @@ struct BoardDestination: View {
             )
             return
         }
-
+        
         Self.logger?.debug("Board load: resolving id \(String(describing: id), privacy: .public)")
-
+        
         // Blessed id→model resolution + tombstone guard: `model(for:)` resurrects deleted ids, and
         // `as?` alone waves the ghost through.
         guard let loadedPGN = modelContext.model(for: id) as? PGN, !loadedPGN.isDeleted else {

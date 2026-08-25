@@ -7,11 +7,11 @@ import SwiftUI
 /// input skips unoccupied squares and the ghost is always a real king or rook, so the only way in is
 /// a `Piece` built from a raw value outside 1-6 and 9-14.
 struct PieceGlyph: View {
-
+    
     // MARK: Stored Properties
     let piece: Piece
     let squareSize: CGFloat
-
+    
     // MARK: Body
     var body: some View {
         if let imageName = piece.imageName {
@@ -30,15 +30,15 @@ struct PieceGlyph: View {
 /// board-dump case needs - identity churn expresses it free (a dump re-keys wholesale, so 32
 /// pieces fade rather than fly). Reduce Motion drops the animation, not the layer.
 struct BoardPieceLayer: View {
-
+    
     // MARK: Static Constants
-
+    
     /// Glide guardrails and default (user preference). 0.22 s is the shipped feel; the range
     /// deliberately passes the 300 ms quiescence - above it a glide can still be in flight at the
     /// settle. Visual only: the animation retargets mid-flight, nothing about commit timing reads it.
     nonisolated static let durationRange: ClosedRange<Double> = 0.1...1.0
     nonisolated static let defaultDuration: Double = 0.22
-
+    
     /// Hand-rolled, though `Comparable.clamped(to:)` is in scope and does exactly this - the
     /// difference is that this one is a *named, pinned* entry point (`BoardPieceLayerTests` asserts
     /// eight values through it, `.infinity` included). Swapping the body for `raw.clamped(to:)`
@@ -46,24 +46,24 @@ struct BoardPieceLayer: View {
     nonisolated static func clampedDuration(_ raw: Double) -> Double {
         min(max(raw, durationRange.lowerBound), durationRange.upperBound)
     }
-
+    
     /// The glide at an already-clamped duration - `.snappy` stays the curve.
     static func glide(duration: Double) -> Animation {
         .snappy(duration: duration)
     }
-
+    
     // MARK: Stored Properties
     let pieces: [ResolvedPiece]
     let squareSize: CGFloat
     let perspective: PieceColor
-
+    
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
+    
     /// Read here because the layer is the duration's one consumer; Settings binds the same key,
     /// both defaults spelled off `BoardPieceLayer.defaultDuration`.
     @AppStorage(StorageKeys.pieceAnimationDuration)
     private var animationDuration = BoardPieceLayer.defaultDuration
-
+    
     // MARK: Body
     var body: some View {
         ZStack {
@@ -80,9 +80,9 @@ struct BoardPieceLayer: View {
         )
         .allowsHitTesting(false)
     }
-
+    
     // MARK: Instance Methods
-
+    
     /// The inverse of `BoardView.square(visualRow:visualColumn:)` - involutive XOR, so a flip moves
     /// every cell and the layer follows without a second rule.
     ///
@@ -143,7 +143,7 @@ struct BoardPieceLayer: View {
         "gxh8=Q", "e5", "Bc4", "Bd6", "Nf3", "d4", "O-O"
     ]
     let state = LibraryGamePreviewState.compute(from: Array(script.prefix(plyCount)))
-
+    
     return VStack(spacing: 12) {
         BoardView(
             position: state.position,

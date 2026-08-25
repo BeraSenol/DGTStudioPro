@@ -77,7 +77,7 @@ struct MoveHistoryView: View {
                 .padding(.vertical, 4)
         }
     }
-
+    
     /// `id: \.self` is load-bearing, not redundant: it selects `ForEach`'s
     /// `RandomAccessCollection` initializer. Dropping it picks the constant-`Range<Int>` one,
     /// which SwiftUI supports only for a range that never changes - and `pairCount` grows on
@@ -100,7 +100,7 @@ struct MoveHistoryView: View {
                 .foregroundStyle(.tertiary)
                 .frame(width: 20, alignment: .leading)
                 .padding(.trailing, 35)
-
+            
             moveCell(at: whiteIndex)
             
             if blackIndex < moves.count {
@@ -115,7 +115,7 @@ struct MoveHistoryView: View {
     private func moveCell(at index: Int) -> some View {
         let san = moves[index]
         let isSelected = index == currentMoveIndex
-
+        
         // The Button is built either way, so a nil handler leaves a control that does nothing -
         // live play passes nil, and every SAN there is clickable and announced as a button while
         // acting on nothing. `.disabled(onMoveTapped == nil)` would fix the semantics at the cost

@@ -3,7 +3,7 @@ import SwiftUI
 struct EvaluationGraphView: View {
     
     // MARK: Stored Properties
-
+    
     /// `[Double]`, already flattened: `PGN.winProbabilityCurve` folds an unscored ply to 0.5
     /// before it arrives, so this view cannot tell the unsearched opening book from a genuinely
     /// level game. Drawing that gap would need the optionality kept across the boundary, not a
@@ -136,12 +136,12 @@ struct EvaluationGraphView: View {
     /// reader opened the graph to find.
     private func curvePath(through points: [CGPoint]) -> Path {
         guard points.count >= 2 else { return Path() }
-
+        
         let slopes = monotoneSlopes(through: points)
-
+        
         return Path { path in
             path.move(to: points[0])
-
+            
             // Hermite → Bézier: the control points sit a third of the span along each
             // endpoint's tangent. Two points degenerate to a straight line on their own, so
             // the old `count == 2` special case retired with the old interpolation.
@@ -149,7 +149,7 @@ struct EvaluationGraphView: View {
                 let p1 = points[i]
                 let p2 = points[i + 1]
                 let third = (p2.x - p1.x) / 3
-
+                
                 path.addCurve(
                     to: p2,
                     control1: CGPoint(x: p1.x + third, y: p1.y + third * slopes[i]),
@@ -179,20 +179,20 @@ struct EvaluationGraphView: View {
     private func monotoneSlopes(through points: [CGPoint]) -> [CGFloat] {
         let count = points.count
         guard count >= 2 else { return Array(repeating: 0, count: count) }
-
+        
         let secants: [CGFloat] = (0 ..< count - 1).map { i in
             let dx = points[i + 1].x - points[i].x
             return dx == 0 ? 0 : (points[i + 1].y - points[i].y) / dx
         }
-
+        
         var slopes = [CGFloat](repeating: 0, count: count)
         slopes[0] = secants[0]
         slopes[count - 1] = secants[count - 2]
-
+        
         for i in 1 ..< count - 1 {
             let before = secants[i - 1]
             let after = secants[i]
-
+            
             if before * after <= 0 {
                 slopes[i] = 0
             } else {
@@ -201,7 +201,7 @@ struct EvaluationGraphView: View {
                 slopes[i] = min(abs(average), limit) * (average < 0 ? -1 : 1)
             }
         }
-
+        
         return slopes
     }
 }

@@ -50,33 +50,33 @@ extension FocusedValues {
 /// no-ops at the bound, so the cost is an enabled control rather than a wrong one - and per D81′'s
 /// step/jump split, a no-op `advance()` makes no sound either.
 struct GameNavigationCommands: Commands {
-
+    
     @FocusedValue(\.activeGame) private var game: Game?
     @FocusedValue(\.boardGetInfoRequest) private var getInfo: Binding<Bool>?
-
+    
     // No step throttle (removed): pacing ←/→ to the glide duration made a held arrow lag the key
     // repeat. If revisited: extend the in-flight repeat, never drop the input.
-
+    
     var body: some Commands {
         CommandMenu("Game") {
             Button("First Move") { game?.toStart() }
                 .keyboardShortcut(.home, modifiers: [])
                 .disabled(game == nil)
-
+            
             Button("Previous Move") { game?.retreat() }
                 .keyboardShortcut(.leftArrow, modifiers: [])
                 .disabled(game == nil)
-
+            
             Button("Next Move") { game?.advance() }
                 .keyboardShortcut(.rightArrow, modifiers: [])
                 .disabled(game == nil)
-
+            
             Button("Last Move") { game?.toEnd() }
                 .keyboardShortcut(.end, modifiers: [])
                 .disabled(game == nil)
-
+            
             Divider()
-
+            
             // The Board's only Get Info door - a Board tab has no row to right-click. The live case carries
             // nothing (a live game has no identifier until it archives).
             GetInfoMenuItem(

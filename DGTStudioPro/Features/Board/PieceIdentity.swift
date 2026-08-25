@@ -2,7 +2,7 @@
 /// The layer keys its `ForEach` on `key` - a persisting key glides, a churned key fades; there
 /// is no third behaviour, because an unproven piece never gets a key that can persist.
 struct ResolvedPiece: Equatable, Hashable, Sendable, Identifiable {
-
+    
     /// A proven tracker identity or a square-bound anonymous one. `anonymous` carries the `Piece`
     /// too: a replaced occupant must produce a fresh key (a fade, never a morph - morphing is
     /// promotion's grammar alone).
@@ -14,11 +14,11 @@ struct ResolvedPiece: Equatable, Hashable, Sendable, Identifiable {
         case tracked(PieceID)
         case anonymous(Square, Piece)
     }
-
+    
     let key: Key
     let piece: Piece
     let square: Square
-
+    
     var id: Key { key }
 }
 
@@ -27,7 +27,7 @@ struct ResolvedPiece: Equatable, Hashable, Sendable, Identifiable {
 /// pure function, pinned across every fixture). Identity is proven or absent, never guessed:
 /// parity per square, then the reconstructor's own verified move, then anonymous.
 enum PieceIdentity {
-
+    
     /// The review arm: parity is total, the per-ply tracker vouches for every square. An `.empty`
     /// tracker degrades to all-anonymous (what style previews pass).
     static func resolved(
@@ -38,12 +38,12 @@ enum PieceIdentity {
             let piece = position[square]
             guard piece.isOccupied else { return nil }
             let key: ResolvedPiece.Key =
-                tracker[square].map(ResolvedPiece.Key.tracked)
-                ?? .anonymous(square, piece)
+            tracker[square].map(ResolvedPiece.Key.tracked)
+            ?? .anonymous(square, piece)
             return ResolvedPiece(key: key, piece: piece, square: square)
         }
     }
-
+    
     /// The mirror arm; nil game/tracker means all anonymous, nothing glides - the pre-M6 mirror exactly.
     static func resolved(
         physical: Position,
@@ -53,20 +53,20 @@ enum PieceIdentity {
         guard let game, let tracker else {
             return resolved(position: physical, tracker: .empty)
         }
-
+        
         // Source 2, computed once per resolve - only consulted for squares parity couldn't explain.
         let proven = provenPlacements(game: game, physical: physical)
-
+        
         return Square.all.compactMap { square in
             let piece = physical[square]
             guard piece.isOccupied else { return nil }
-
+            
             let key: ResolvedPiece.Key
             if game.position[square] == piece, let identity = tracker[square] {
                 key = .tracked(identity)
-            // The second `let identity` is the "proven or absent" rule enforced: a proven arrival
-            // whose *origin* the tracker cannot name falls through to anonymous rather than
-            // borrowing one. Nothing here invents an identity.
+                // The second `let identity` is the "proven or absent" rule enforced: a proven arrival
+                // whose *origin* the tracker cannot name falls through to anonymous rather than
+                // borrowing one. Nothing here invents an identity.
             } else if let placement = proven.first(where: {
                 $0.square == square && $0.piece == piece
             }), let identity = tracker[placement.origin] {
@@ -77,16 +77,16 @@ enum PieceIdentity {
             return ResolvedPiece(key: key, piece: piece, square: square)
         }
     }
-
+    
     // MARK: Private Helpers
-
+    
     /// A square the reconstructor proved an arrival on; the origin carries the identity.
     private struct Placement {
         let square: Square
         let piece: Piece
         let origin: Square
     }
-
+    
     /// The landing squares a recognized move explains, across **all six** reconstruction cases -
     /// exhaustive on purpose, so a seventh is a compile error here rather than a silent fade.
     ///
@@ -100,13 +100,13 @@ enum PieceIdentity {
     ) -> [Placement] {
         switch DGTReconstructor.reconstruct(from: game, physical: physical) {
         case .move(let move), .castlingInProgress(let move),
-             .correctable(let move, _, _):
+                .correctable(let move, _, _):
             return placements(for: move)
         case .noChange, .inProgress, .unresolved:
             return []
         }
     }
-
+    
     /// The move's landing square - promotion lands the promoted piece under the pawn's identity
     /// (`PieceTracker.applyMove`'s rule) - plus the rook's for a castle.
     private static func placements(for move: Move) -> [Placement] {

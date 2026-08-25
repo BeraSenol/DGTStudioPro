@@ -6,9 +6,9 @@ import SwiftUI
 /// one. Deliberately not numbered: an ordinal in prose decays with the next window, and this
 /// one's disagreed with `SmartTagEditorRequest`'s.
 struct AnalysisDataRequest: Codable, Hashable, Sendable {
-
+    
     let gameID: PersistentIdentifier
-
+    
     init(gameID: PersistentIdentifier) {
         self.gameID = gameID
     }
@@ -19,7 +19,7 @@ struct AnalysisDataRequest: Codable, Hashable, Sendable {
 /// **nil for an unscored ply**, deliberately unlike the display surfaces: this table is stored
 /// truth, and `0.0` for a never-scored ply would be a lie.
 struct AnalysisDataRow: Equatable, Sendable, Identifiable {
-
+    
     /// 0-based ply - the array position, unique by construction.
     let ply: Int
     /// "12. Nf3" / "12… Nf6".
@@ -35,9 +35,9 @@ struct AnalysisDataRow: Equatable, Sendable, Identifiable {
     /// |swing| ≥ 15 pp of the **printed** step - the emphasis threshold, a judgement call
     /// documented as one.
     let swingIsMajor: Bool
-
+    
     var id: Int { ply }
-
+    
     /// The whole table; tolerates both invariant shapes of `evaluations` - an index past the end is
     /// an unscored ply, not a crash.
     static func rows(
@@ -76,16 +76,16 @@ struct AnalysisDataRow: Equatable, Sendable, Identifiable {
 /// own group (data windows tab with each other, never boards); deliberately not floating,
 /// unlike the graph - a table is consulted, not glanced.
 struct AnalysisDataWindow: View {
-
+    
     // MARK: Stored Properties
     let request: AnalysisDataRequest?
-
+    
     // MARK: Private Properties
     @Environment(\.modelContext) private var modelContext
-
+    
     /// Resolved once per request - a store lookup does not belong on a render path.
     @State private var pgn: PGN?
-
+    
     // MARK: Body
     var body: some View {
         Group {
@@ -101,9 +101,9 @@ struct AnalysisDataWindow: View {
         .navigationTitle(pgn.map { "Analysis - \($0.name)" } ?? "Analysis Data")
         .task(id: request) { resolve() }
     }
-
+    
     // MARK: Instance Methods
-
+    
     /// Blessed cast + tombstone check, per the standing invariant.
     private func resolve() {
         guard let request,
@@ -114,7 +114,7 @@ struct AnalysisDataWindow: View {
         }
         pgn = model
     }
-
+    
     private func table(for pgn: PGN) -> some View {
         // Per resolved game, not per render tick - a pure fold over stored values.
         let rows = AnalysisDataRow.rows(moves: pgn.moves, evaluations: pgn.evaluations)
@@ -149,7 +149,7 @@ struct AnalysisDataWindow: View {
         }
         .accessibilityIdentifier(AccessibilityID.analysisDataWindowTable)
     }
-
+    
     /// Two causes, one state - the graph window's fold, for its reason.
     private var unavailable: some View {
         InspectorEmptyState(
@@ -166,13 +166,13 @@ struct AnalysisDataWindow: View {
 /// The magnifier's sibling in the Evaluation header - fourth open-coded glyph button; shares
 /// only the pair that must not drift (`.font(.body)`, one label for `.help` + AX).
 struct AnalysisDataButton: View {
-
+    
     // MARK: Stored Properties
     let gameID: PersistentIdentifier
-
+    
     // MARK: Private Properties
     @Environment(\.openWindow) private var openWindow
-
+    
     // MARK: Body
     var body: some View {
         Button {
@@ -217,7 +217,7 @@ struct AnalysisDataButton: View {
         result: .whiteWins
     )
     container.mainContext.insert(pgn)
-
+    
     return AnalysisDataWindow(request: AnalysisDataRequest(gameID: pgn.persistentModelID))
         .frame(width: 460, height: 400)
         .modelContainer(container)

@@ -48,7 +48,7 @@ struct BoardView: View {
             ZStack {
                 BoardFrame(size: totalSide, frameThickness: layout.squareSize, style: style)
                     .equatable()
-
+                
                 VStack(spacing: 0) {
                     fileStrip(layout: layout, isTop: true)
                     
@@ -265,11 +265,11 @@ private struct Layout {
 /// wood would change appearance. `.equatable()` skips the work without changing the picture, which
 /// is the only kind of performance fix worth making to a rendering path.
 private struct BoardFrame: View, Equatable {
-
+    
     let size: CGFloat
     let frameThickness: CGFloat
     let style: BoardStyle
-
+    
     var body: some View {
         let trapezoid = Path { path in
             path.move(to: CGPoint(x: 0, y: 0))
@@ -278,16 +278,16 @@ private struct BoardFrame: View, Equatable {
             path.addLine(to: CGPoint(x: frameThickness, y: frameThickness))
             path.closeSubpath()
         }
-
+        
         return ZStack {
             Rectangle()
                 .fill(style.dark)
                 .frame(width: size, height: size)
-
+            
             ForEach(0..<4, id: \.self) { side in
                 ZStack(alignment: .top) {
                     trapezoid.fill(style.dark)
-
+                    
                     if style != .leather {
                         Image("WoodGrainFine")
                             .resizable()
@@ -310,9 +310,9 @@ private struct BoardFrame: View, Equatable {
 /// a pure function of `style`, previously re-declared per redraw inside `squareGrid`'s `.overlay`.
 /// Leather draws nothing, which is why the empty arm is a state and not an absence.
 private struct BoardGrainOverlay: View, Equatable {
-
+    
     let style: BoardStyle
-
+    
     var body: some View {
         if style != .leather {
             Image("WoodGrainCoarse")
@@ -425,7 +425,7 @@ private struct BoardGrainOverlay: View, Equatable {
     position[Squares.d7] = .empty          // ...d5 answered,
     position[Squares.d5] = .blackPawn
     // ...and the e4-pawn is up (e4 stays empty on the physical board).
-
+    
     return BoardView(
         position: position,
         pieces: PieceIdentity.resolved(position: position, tracker: .empty),
@@ -448,7 +448,7 @@ private struct BoardGrainOverlay: View, Equatable {
     position[Squares.d7] = .empty          // ...d5 answered,
     position[Squares.d5] = .blackPawn
     // ...and the e4-pawn is in the player's hand (e4 stays empty).
-
+    
     return BoardView(
         position: position,
         pieces: PieceIdentity.resolved(position: position, tracker: .empty),

@@ -16,7 +16,7 @@ struct EditGameInfoSheet: View {
     
     /// Called with the normalized roster; the caller applies, rehashes, and syncs the live roster.
     let onSave: (LiveGame.Roster) -> Void
-
+    
     /// Known-player tag forms, forwarded verbatim. **A parameter, not a `@Query`** - this sheet is
     /// deliberately container-free so its previews build; the presenter has the context.
     let knownPlayers: [String]

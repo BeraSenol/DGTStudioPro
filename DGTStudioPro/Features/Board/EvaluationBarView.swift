@@ -17,15 +17,15 @@ struct EvaluationBarView: View {
     let reading: EvaluationBarReading
     let perspective: PieceColor
     let style: BoardStyle
-
+    
     // MARK: Spoiler Switch
-
+    
     /// Hidden draws a flat grey bar and no score (17 Aug 2026, by request) - the spoiler
     /// guard for replaying a game you haven't seen. App-wide and persisted: the state is
     /// about the reader, not about one game or one window. The hosts read the same key for
     /// their score labels, so bar and label can never disagree about being hidden.
     @AppStorage(StorageKeys.evaluationBarHidden) private var isHidden = false
-
+    
     /// Pointer-only affordance: canvases have no pointer, and a hover state with no witness is how
     /// it silently stops working.
     ///
@@ -33,7 +33,7 @@ struct EvaluationBarView: View {
     /// switch - the evaluation-bar checklist predates it (17 Aug 2026) and was never extended, and
     /// no preview covers `isHidden`. Three witnesses short: no test, no canvas, no written check.
     @State private var isHovering = false
-
+    
     // MARK: Derived
     
     /// The share drawn from the *bottom* - white's under white perspective (the one flip, geometry only).

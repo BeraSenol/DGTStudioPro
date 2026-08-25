@@ -5,9 +5,9 @@ import SwiftUI
 /// `openWindow(value:)` routes by type, and the main group already claims `PersistentIdentifier`
 /// - a second group over it would make every existing call unspecified.
 struct EvaluationGraphRequest: Codable, Hashable, Sendable {
-
+    
     let gameID: PersistentIdentifier
-
+    
     init(gameID: PersistentIdentifier) {
         self.gameID = gameID
     }
@@ -18,23 +18,23 @@ struct EvaluationGraphRequest: Codable, Hashable, Sendable {
 /// the first board click, killing the companion-while-scrubbing use). Hover read-outs are what
 /// 100 pt in a sidebar cannot afford - bigger makes a different question askable.
 struct EvaluationGraphWindow: View {
-
+    
     // MARK: Static Constants
-
+    
     /// Matches the inspector graph's inset so the two read as one object at two sizes.
     private static let contentPadding: CGFloat = 20
-
+    
     // MARK: Stored Properties
     let request: EvaluationGraphRequest?
-
+    
     // MARK: Private Properties
     @Environment(\.modelContext) private var modelContext
     @AppStorage(StorageKeys.boardStyle) private var boardStyle: BoardStyle = .walnut
-
+    
     /// Resolved once per request - a store lookup does not belong on a render path; the pointer
     /// lives inside `EvaluationGraphContent`.
     @State private var pgn: PGN?
-
+    
     // MARK: Body
     var body: some View {
         Group {
@@ -51,9 +51,9 @@ struct EvaluationGraphWindow: View {
         .navigationTitle(pgn?.name ?? "Evaluation")
         .task(id: request) { resolve() }
     }
-
+    
     // MARK: Instance Methods
-
+    
     /// Cast paired with `isDeleted`, per the standing invariant - `model(for:)` hands back
     /// tombstones, and every property read on one traps.
     private func resolve() {
@@ -65,7 +65,7 @@ struct EvaluationGraphWindow: View {
         }
         pgn = model
     }
-
+    
     private func graph(for pgn: PGN) -> some View {
         // The curve maps *here*, once per resolved game - not per pointer move. Both arrays go
         // down: the curve draws, `evaluations` answers the read-out. See `winProbabilityCurve` on
@@ -77,7 +77,7 @@ struct EvaluationGraphWindow: View {
             style: boardStyle
         )
     }
-
+    
     /// Two causes, one state: gone, or never analyzed. Splitting would explain a deletion the
     /// reader performed; the remedy is identical.
     private var unavailable: some View {
@@ -95,15 +95,15 @@ struct EvaluationGraphWindow: View {
 /// Graph + read-out, split from the window so the pointer invalidates only this subtree -
 /// `hoveredPly` as window `@State` re-ran the whole body per mouse move, including the curve map.
 private struct EvaluationGraphContent: View {
-
+    
     // MARK: Stored Properties
     let moves: [String]
     let evaluations: [Evaluation?]
     let curve: [Double]
     let style: BoardStyle
-
+    
     @State private var hoveredPly: Int?
-
+    
     // MARK: Body
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -111,7 +111,7 @@ private struct EvaluationGraphContent: View {
             graph
         }
     }
-
+    
     /// Above the graph in a fixed-height slot: below, the cursor would sit on the answer; an
     /// appearing/vanishing read-out makes the layout jump on hover. The "N plies" count is `moves`
     /// while the curve and the pointer map against `evaluations` - equal lengths for any stored
@@ -141,7 +141,7 @@ private struct EvaluationGraphContent: View {
         .frame(height: 24)
         .accessibilityIdentifier(AccessibilityID.evaluationWindowReadout)
     }
-
+    
     private var graph: some View {
         GeometryReader { proxy in
             EvaluationGraphView(
@@ -174,13 +174,13 @@ private struct EvaluationGraphContent: View {
 /// `InspectorEditButtonView` - that hardcodes the pencil on purpose; shares only `.font(.body)`
 /// plus one label for both `.help` and `.accessibilityLabel`.
 struct EvaluationMagnifierButton: View {
-
+    
     // MARK: Stored Properties
     let gameID: PersistentIdentifier
-
+    
     // MARK: Private Properties
     @Environment(\.openWindow) private var openWindow
-
+    
     // MARK: Body
     var body: some View {
         Button {

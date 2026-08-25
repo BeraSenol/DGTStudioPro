@@ -86,7 +86,7 @@ struct RecoveryGuidance: Equatable, Sendable {
     var isEmpty: Bool { items.isEmpty }
     
     // MARK: Initializer
-
+    
     /// **The diff runs backwards here, and that is the point.** Every other construction in the app
     /// asks `(from: game, to: physical)` - "what did the player do?". This one asks
     /// `(from: physical, to: target)` - "what must the player still do?" - so the type's vocabulary

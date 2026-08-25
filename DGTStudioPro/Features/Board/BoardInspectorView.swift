@@ -15,7 +15,7 @@ struct BoardInspectorView: View {
     // movetext is append-only. Kept as a plain note because there is no declaration left to
     // document - a `///` block for a removed edit-request callback floated here until
     // 24 Aug 2026, detached from anything by a blank line.
-
+    
     var body: some View {
         List {
             metadataSection

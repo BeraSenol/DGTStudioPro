@@ -14,15 +14,15 @@ enum BoardStyle: String, CaseIterable, Codable, Sendable {
     case rosewood
     case walnut
     case wenge
-
+    
     // MARK: Computed Properties
-
+    
     /// Works only because every case is a single lowercase word - `.capitalized` would render a
     /// camelCase case as "Blondemaple". A two-word wood needs a switch here, not a fifth case.
     var displayName: String {
         self.rawValue.capitalized
     }
-
+    
     /// Asset-catalog symbols: `.leatherLight` is `LeatherLight.colorset`, generated, so a renamed or
     /// missing colorset is a build error rather than a blank square.
     var light: Color {
@@ -33,7 +33,7 @@ enum BoardStyle: String, CaseIterable, Codable, Sendable {
         case .wenge:    .wengeLight
         }
     }
-
+    
     var dark: Color {
         switch self {
         case .leather:  .leatherDark

@@ -18,26 +18,26 @@
 /// `rawValue + ".wav"` and nothing parses the name further. The two hyphenated values are spelled
 /// out rather than derived from their case names, which would put a capital in a filename.
 enum BoardCue: String, CaseIterable, Sendable {
-
+    
     // MARK: Move family - what a landed move sounds like
-
+    
     case move
     case capture
     case castle
     case promote
     case check
     case checkmate
-
+    
     // MARK: Event family - what happened to the session
-
+    
     /// The pieces on the board stopped agreeing with the position. Fired on desync *entry*, once,
     /// not per scan.
     case illegal
     case gameStart = "game-start"
     case gameEnd = "game-end"
-
+    
     // MARK: Family
-
+    
     /// Which half of the enum a cue belongs to. Exists so the invariant below is testable rather
     /// than merely documented: `cue(for:landing:)` must never return an event - asserted from both
     /// sides in `BoardCueTests`, and the split itself is asserted total, so a case added and
@@ -46,16 +46,16 @@ enum BoardCue: String, CaseIterable, Sendable {
         case move
         case event
     }
-
+    
     var family: Family {
         switch self {
         case .move, .capture, .castle, .promote, .check, .checkmate: .move
         case .illegal, .gameStart, .gameEnd: .event
         }
     }
-
+    
     // MARK: Samples
-
+    
     /// The bundled `.wav` files this cue plays, **layered** - every entry fires at once.
     ///
     /// A list rather than a single name, because two cues have no recording of their own and are
@@ -84,9 +84,9 @@ enum BoardCue: String, CaseIterable, Sendable {
         case .gameEnd:   [Self.gameEnd.rawValue]
         }
     }
-
+    
     // MARK: Classification
-
+    
     /// The cue `move` earns, given the position it lands in. `landing` is the state *after* the
     /// move, so `isInCheck` is asked of the side receiving it - which is what "check" means.
     ///

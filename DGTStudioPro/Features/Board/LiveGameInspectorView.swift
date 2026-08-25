@@ -149,7 +149,7 @@ struct LiveGameInspectorView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .accessibilityIdentifier(AccessibilityID.liveInspectorResign)
-
+                    
                     Button {
                         isConfirmingDraw = true
                     } label: {
@@ -158,7 +158,7 @@ struct LiveGameInspectorView: View {
                     }
                     .accessibilityIdentifier(AccessibilityID.liveInspectorDraw)
                 }
-
+                
                 Button(role: .destructive) {
                     isConfirmingDiscard = true
                 } label: {

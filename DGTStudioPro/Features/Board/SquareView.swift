@@ -50,7 +50,7 @@ struct SquareView: View {
                 PieceGlyph(piece: ghostPiece, squareSize: squareSize)
                     .opacity(0.25)
             }
-
+            
             // Legal-destination hint: dot on an empty square, ring around an occupied one (a
             // capture) - the ring survives visually because the piece layer's glyphs carry 6%
             // padding. Fixed black rather than `.primary`: the board's colours are

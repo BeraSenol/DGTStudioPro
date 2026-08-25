@@ -12,21 +12,21 @@ import SwiftUI
 /// `LiveGameRosterForm` stay where they are: they are shared by three sheets, and the file that
 /// declares them is the one that names the form.
 struct EditLiveGameDetailsSheet: View {
-
+    
     // MARK: Stored Properties
-
+    
     let onSave: (LiveGame.Roster) -> Void
-
+    
     // MARK: Environment
-
+    
     @Environment(\.dismiss) private var dismiss
-
+    
     // MARK: View State
-
+    
     @State private var roster: LiveGame.Roster
-
+    
     // MARK: Initializer
-
+    
     init(
         initialRoster: LiveGame.Roster,
         onSave: @escaping (LiveGame.Roster) -> Void
@@ -47,9 +47,9 @@ struct EditLiveGameDetailsSheet: View {
         seed.black = formValue(initialRoster.black)
         _roster = State(initialValue: seed)
     }
-
+    
     // MARK: Body
-
+    
     var body: some View {
         VStack(spacing: 0) {
             // "Edit Details", matching the seven controls that open it (21 Aug 2026). The control
@@ -59,18 +59,18 @@ struct EditLiveGameDetailsSheet: View {
                 .font(.title2.bold())
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding([.horizontal, .top])
-
+            
             LiveGameRosterForm(roster: $roster)
-
+            
             Divider()
-
+            
             HStack {
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
                     .accessibilityIdentifier(AccessibilityID.liveEditDetailsCancel)
-
+                
                 Spacer()
-
+                
                 // Gated since 16 Aug 2026 - this Save was the one roster door with *no* guard: the
                 // shared form drew the seat warning here and nothing stopped the gesture, so an
                 // edit could mint by hand what the self-play guard scoped out. Site joins under the same rule.

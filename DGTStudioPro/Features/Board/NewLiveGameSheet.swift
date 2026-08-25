@@ -109,7 +109,7 @@ struct LiveGameRosterForm: View {
                         identifier: AccessibilityID.formBlackPicker(identifierPrefix)
                     )
                 }
-
+                
                 // The guard: the two seats are one `Roster`, so the check needs no drafts to compare.
                 // A warning line plus a disabled Start - the alert belongs to Get Info's commit model.
                 if roster.seatsNameOnePlayer {
@@ -140,7 +140,7 @@ struct LiveGameRosterForm: View {
                     prompt: Text(verbatim: "City, Region BEL")
                 )
                 .accessibilityIdentifier(AccessibilityID.formSite(identifierPrefix))
-
+                
                 // The seat guard's shape, applied to format: a warning line here, the disabled
                 // affirmative button at each host. Empty is exempt - it folds to "?" at the door.
                 if roster.siteViolatesFormat {
@@ -155,7 +155,7 @@ struct LiveGameRosterForm: View {
                         AccessibilityID.formSiteFormat(identifierPrefix)
                     )
                 }
-
+                
                 DatePicker(
                     "Date",
                     selection: dateBinding,
@@ -184,12 +184,12 @@ struct LiveGameRosterForm: View {
 /// closing the window is "Not Now" - `onDisappear` dismisses the offer, so the next
 /// start-position settle can raise it again.
 struct NewLiveGameWindow: View {
-
+    
     static let sceneID = "newLiveGame"
-
+    
     @Environment(DGTLiveSession.self) private var session
     @Environment(\.dismiss) private var dismiss
-
+    
     var body: some View {
         NewLiveGameSheet(
             onStart: { roster in
@@ -205,7 +205,7 @@ struct NewLiveGameWindow: View {
             // A resumable draft counts as unfinished: starting fresh overwrites its file, so same
             // destructive confirmation (a *corrupt* file is not a game).
             replacesUnfinishedGame: session.liveGame?.isFinished == false
-                || session.resumableDraft != nil
+            || session.resumableDraft != nil
         )
         // A game beginning under the dialog - this window's own Start, or play simply beginning
         // on the board - makes it stale; close rather than offer a second game over a first.
@@ -411,7 +411,7 @@ struct NewLiveGameSheet: View {
         white: "Senol, Bera",
         black: "Baelus, Lorenzo"
     )
-
+    
     LiveGameRosterForm(roster: $roster)
         .frame(width: 420, height: 400)
 }
@@ -424,7 +424,7 @@ struct NewLiveGameSheet: View {
         white: "Lopez, Ruy",
         black: "Ruy Lopez"
     )
-
+    
     LiveGameRosterForm(roster: $roster)
         .frame(width: 420, height: 380)
 }
