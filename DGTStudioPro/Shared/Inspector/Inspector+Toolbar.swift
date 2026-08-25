@@ -18,7 +18,21 @@ struct InspectorToggleContent: ToolbarContent {
     var body: some ToolbarContent {
         ToolbarItem {
             Button {
-                isPresented.toggle()
+                // **Unanimated, and the reason is measured** (25 Aug 2026, M17). The column's width
+                // animation is what costs: `LazyVGrid` re-places every subview per frame and each
+                // card re-resolves its text, so one toggle in Library icons mode spent ~170 ms of
+                // SwiftUI update time - `LazySubviewPlacements<LazyVGridLayout>` at 1.65 ms a pass,
+                // ~285,000 `LayoutChildGeometries` calls, and interpolated display lists throughout.
+                // Body invalidation was already dealt with by `IconGridView`'s column-count
+                // quantization; this is the layout pass that fix deliberately left alone.
+                //
+                // `applyInspectorPolicy(for:)` is the second door - it writes the same flags on a
+                // view-mode change and still animates. Left animating on purpose: that path was
+                // measured as `LibraryDestination.body`-dominated, a different shape, and is not
+                // what this change is a fix for.
+                withTransaction(Transaction(animation: nil)) {
+                    isPresented.toggle()
+                }
             } label: {
                 Label("Inspector", systemImage: "sidebar.trailing")
             }

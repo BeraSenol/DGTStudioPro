@@ -11,3 +11,4 @@ xcuserdata/
 # either. Ignored by pattern rather than by name so the next one needs no edit.
 *-AUDIT.md
 *-AUDIT-*.md
+docs/internal/traces/

@@ -14,7 +14,9 @@ enum GetInfoRequest: Codable, Hashable, Sendable {
     /// only while one is in progress.
     case live
 
-    /// A player, by `Player.normalizedName` - a key, not an id: the view modes render folds, and a
-    /// request must be `Codable` scene state.
+    /// A player, by `Player.normalizedName` - a key, not a `PersistentIdentifier`, because no
+    /// Players surface has a `Player` in hand: they render folds over `GameRecord`s and address
+    /// rows by this key throughout (it *is* `PlayerStats.ID`). The window fetches on it.
+    /// Codability is not the reason - `.game` above proves `PersistentIdentifier` is `Codable`.
     case player(key: String)
 }

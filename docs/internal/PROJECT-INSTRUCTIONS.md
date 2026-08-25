@@ -867,7 +867,9 @@ they are in `git log`.
   info line; `Position`'s `[Piece]` storage heap-allocates per `applying`; the
   New Game sheet folds `games.map(\.gameRecord)` per seat edit; the Library
   inspector's PGN section re-serializes per body pass while expanded
-  (collapse-gated), and the columns detail is a second such site, ungated.
+  (collapse-gated) — the columns detail was listed here as a second, *ungated*
+  site and is not: it reads through `pgnTextCache`, keyed on `contentHash`. The
+  entry had the two the wrong way round until 25 Aug 2026.
 
   *Corrected 7 Aug 2026:* the destination folds are **no longer** on this list.
   `Glicko1.histories` and `PlayerStats.index` per render, `LibraryFilter`'s
@@ -880,6 +882,23 @@ they are in `git log`.
   and sort sit inside the memo (D78′), so the ECO comparator's `ECOOpening`
   rehydration runs per recompute rather than per render, and the tag-rule walk
   with it.
+
+  *Measured 25 Aug 2026 (M17's first real measurement, Release build):* **none of
+  the above is what hitches.** Toggling the Library inspector in icons mode spends
+  **~170 ms of SwiftUI update time per toggle**, and the PGN section is not in it —
+  `LibraryInspectorView`'s body totalled **0.2 ms across 79 s** and `PGNSerializer`
+  appeared **zero times in 2.25 M update rows**. The cost is the inspector column's
+  *width animation*: `LazySubviewPlacements<LazyVGridLayout>` at 1.65 ms a pass
+  (535 ms total), ~285,000 `LayoutChildGeometries` calls, and interpolated display
+  lists for every card's text. Body invalidation was already handled by
+  `IconGridView`'s column-count quantization (23 Aug) and that fix is working —
+  `IconGridView.body` ran 118 times, card bodies ~220 per toggle rather than the
+  ~1,200 an animation-rate rebuild would give. `InspectorToggleContent` now writes
+  the flag inside a `Transaction(animation: nil)`; re-measure before believing it.
+  **Two findings that stand on their own:** `LibraryDestination.body` costs **5.4 ms
+  per evaluation** (43 evaluations, 232 ms) — 65% of a 120 Hz frame for one body —
+  and the app issues ~90,000 SwiftUI updates in a second containing a toggle against
+  2–7 ms in an idle one. Protocol and full numbers: `M17-HITCH-CAPTURE.md`.
 
   *Added 12 Aug 2026 (D81′):* `BoardCue.cue` pays a `legalMoves()` **in check
   positions only** — `isInCheck` is asked first and is a single attack scan, so

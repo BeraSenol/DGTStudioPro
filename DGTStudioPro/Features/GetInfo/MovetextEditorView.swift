@@ -55,12 +55,16 @@ struct MovetextEditorView: View {
     /// are decoration the validator never sees. Sharp edge, accepted: delete a ply mid-game and
     /// every number below is wrong and nothing complains - Save re-renders from accepted moves.
     /// (Tabs were tried and reverted: `TextEditor` gives no way to set tab stops.)
+    ///
+    /// `nonisolated` is load-bearing, not decoration: `MovetextScoreSheetTests` is a nonisolated
+    /// suite and calls this directly, so removing the keyword is a compile error there.
     nonisolated static func scoreSheet(_ moves: [String]) -> String {
         guard !moves.isEmpty else { return "" }
         
         let lastNumber = (moves.count + 1) / 2
         let numberWidth = String(lastNumber).count
-        // The widest ply governs the column, so "Qa1xd4#" doesn't push its row out of line.
+        // The widest ply governs the column, so "Qa1xd4#" doesn't push its row out of line. The
+        // `2` seed never binds - the shortest legal SAN is two characters.
         let sanWidth = moves.reduce(2) { max($0, $1.count) }
         
         return stride(from: 0, to: moves.count, by: 2).map { index -> String in
@@ -183,6 +187,9 @@ struct MovetextEditorView: View {
                         text = AttributedString(sheet)
                         seed = sheet
                     } else {
+                        // Unreachable: the gate below disables Save unless this same `check` is
+                        // `.success`, and the text cannot move between the render that computed it
+                        // and this closure. Kept as the arm a loosened gate would need.
                         seed = plain
                     }
                 }

@@ -49,13 +49,18 @@ struct GetInfoMenuItem: View {
         } label: {
             Label("Get Info", systemImage: "info.circle")
         }
+        // The shortcut rides the *item*, so every host renders the same key equivalent - the drift
+        // this type exists to prevent. Only the menu-bar instance is a live binding; whether the
+        // two context-menu ones fire while their menu is shut is unmeasured, per `GameActionsMenu`.
         .keyboardShortcut("i", modifiers: .command)
         .disabled(isDisabled)
         .accessibilityIdentifier(identifier)
     }
 
-    /// Only the menu-bar form can be disabled: a context menu is raised *from*
-    /// the row it describes, so its subject exists by construction.
+    /// Only the menu-bar form can be disabled - the context-menu form always has a subject. Not
+    /// because a context menu is raised from one row (it is raised from a whole selection), but
+    /// because `GameActionsMenu` and `PlayerActionsMenu` each render this item only at arity one.
+    /// A third host that skipped that guard would put an unsubjected item on screen.
     private var isDisabled: Bool {
         if case .requests(let trigger) = door { return trigger == nil }
         return false

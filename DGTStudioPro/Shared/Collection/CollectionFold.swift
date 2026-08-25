@@ -72,8 +72,10 @@ extension CollectionFoldKey {
 
 /// One-entry memo for a fold a `View` body needs on the same pass its inputs change.
 /// **A box, not `@State`** - mutation during render is exactly the licence a memo needs and
-/// exactly what `@State` forbids; `.onChange` lands a frame late. One entry, not an LRU: both
-/// call sites read one value per pass.
+/// exactly what `@State` forbids; `.onChange` lands a frame late. One entry, not an LRU - which
+/// is a *requirement on every user*, not an observation about two: read one key per render pass,
+/// or every pass is a miss. (It read "both call sites" until 25 Aug 2026, by which point the
+/// Library, Players and the movetext editor held several boxes between them.)
 final class CollectionFoldCache<Key: Equatable, Value> {
 
     private var stored: (key: Key, value: Value)?
