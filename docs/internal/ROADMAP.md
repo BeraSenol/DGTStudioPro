@@ -419,6 +419,23 @@ off the model for no pinnable gain. With `GetInfoWindow`'s disposition
 above, every Phase 2 line item is now extracted-and-pinned or
 dispositioned-with-reason. One new suite (≈117 expected).
 
+**Structure, first slice (26 Aug 2026, same day): the best finding lands.**
+`SessionPhase` is its own type in `Game/SessionPhase.swift` — the register
+and one doc comment had called it that for days while the code spelled it
+`LiveGameHUDView.Phase`; the code now agrees with what the documents knew.
+The derivation's connection gate takes `isReconnecting` / `isConnected` as
+named scalars, which is what retires the register's regret: the whole
+ladder runs off a headless session, and `SessionPhaseTests` pins every arm
+— reconnecting outranking a live game (and the gate itself), disconnected
+as no-phase, idle, setup, playing with its live payload, the EP correction
+outranking playing, recovery off an inexplicable board, the finished
+banner, and a failed archive outranking it. The `SessionPhase` waiver row
+is struck. `GameResult` re-filed to `Chess/GameResult.swift` by meaning
+(five use sites in `MovetextEdit`; the chess core decides results before
+the store sees one), its hash-input warning written at the new home. The
+deferred renames travel alone, next slice — mechanical changes do. One new
+suite (≈118 expected).
+
 ---
 
 ## M19 — Discard, and the review layer

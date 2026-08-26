@@ -1,12 +1,8 @@
 import Foundation
 import SwiftData
 
-enum GameResult: String, CaseIterable, Codable, Sendable {
-    case whiteWins = "1-0"
-    case blackWins = "0-1"
-    case draw      = "1/2-1/2"
-    case ongoing   = "*"
-}
+// (`GameResult` moved to `Chess/GameResult.swift`, M18 - filed by meaning: the chess core
+// decides results before the store sees one.)
 
 enum SevenTagRoster: String, CaseIterable, Sendable {
     case event  = "Event"

@@ -75,7 +75,11 @@ struct BoardDestination: View {
         // re-suspecting.
         .navigationSubtitle(
             DestinationSubtitle.board(
-                phase: .current(session: session, connection: connection),
+                phase: .current(
+                    isReconnecting: connection.isReconnecting,
+                    isConnected: connection.isConnected,
+                    session: session
+                ),
                 reviewing: tabState.boardPGN == nil
                 ? nil
                 : tabState.boardGame?.currentState.activeColor

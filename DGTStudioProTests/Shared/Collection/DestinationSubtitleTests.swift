@@ -10,7 +10,7 @@ struct DestinationSubtitleTests {
 
     /// The words themselves - a change to window chrome should have to touch a test.
     @Test func exceptionalPhasesRenderAsOneShortWord() {
-        func subtitle(_ phase: LiveGameHUDView.Phase) -> String? {
+        func subtitle(_ phase: SessionPhase) -> String? {
             DestinationSubtitle.board(phase: phase, reviewing: nil)
         }
 

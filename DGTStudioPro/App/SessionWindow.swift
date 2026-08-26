@@ -105,7 +105,7 @@ struct SessionWindow: View {
         hudPhase != nil || showsRestoredFlash
     }
     
-    /// Status-card phase, priority-ordered by `LiveGameHUDView.Phase.current` - connection truth
+    /// Status-card phase, priority-ordered by `SessionPhase.current` - connection truth
     /// first, a pulled cable outranking everything. The ordering is the content, and the toolbar
     /// subtitle reads the same function, so neither surface re-spells it.
     ///
@@ -113,9 +113,11 @@ struct SessionWindow: View {
     /// toolbar subtitle and the board already say whose move it is. Every arrival, exception and
     /// exit still shows - setup, corrections, recovery, reconnects, the result, a failed archive.
     /// Visibility policy only; the subtitle deliberately keeps `.playing`, whose words are its job.
-    private var hudPhase: LiveGameHUDView.Phase? {
-        guard let phase = LiveGameHUDView.Phase.current(
-            session: session, connection: connection
+    private var hudPhase: SessionPhase? {
+        guard let phase = SessionPhase.current(
+            isReconnecting: connection.isReconnecting,
+            isConnected: connection.isConnected,
+            session: session
         ) else { return nil }
         if case .playing = phase { return nil }
         return phase

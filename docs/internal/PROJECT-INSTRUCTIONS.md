@@ -52,12 +52,14 @@ six months" is the test.
 
 ## Where things stand
 
-Tree: **`3fe6ae4`** — 26 August's five committed slices (M16 `7e0b3e6`, M18
-Phase 1 `925648e` + `4cb2dac`, Phase 2 `b3a9b96` + `3fe6ae4`, ⌘U green
-reported on each) — plus the Phase 2 closing set: `CollectionSelection`
-with its suite, both destinations rewired onto it, nothing else dirty.
-**Two new files must be staged with the commit** (one app source, one test
-file), the standing hazard. Beneath the day's slices,
+Tree: **`32c5d46`** — 26 August's six committed slices (M16 `7e0b3e6`, M18
+Phase 1 `925648e` + `4cb2dac`, Phase 2 `b3a9b96` + `3fe6ae4` + `32c5d46`,
+⌘U green reported on each) — plus the structure working set: `SessionPhase`
+as its own type with its suite (the waiver row struck), `GameResult`
+re-filed to `Chess/`, five files rewired, nothing else dirty. **Two new
+files must be staged** (`Chess/GameResult.swift`,
+`Game/SessionPhaseTests.swift`), the standing hazard. Beneath the day's
+slices,
 24–25 August: seven comment-trim / review-fix commits ending in the M17
 inspector measurement (`c1e57fb`, with `M17-HITCH-CAPTURE.md` and the
 census's first real numbers), the audit-fix sitting (`eb0906d`), the
@@ -115,8 +117,8 @@ which is the rule above doing its job rather than a new failure mode.)
 
 | | |
 |---|---|
-| Sources on disk | **291** — 170 app, 121 unit-test, 0 UITest |
-| Tracked (`git ls-files '*.swift'`) | **291** once the Phase 2 closing pair is staged (289 at `3fe6ae4`) |
+| Sources on disk | **293** — 171 app, 122 unit-test, 0 UITest |
+| Tracked (`git ls-files '*.swift'`) | **293** once the structure pair is staged (291 at `32c5d46`) |
 | Accessibility registry | **148** constants + **23** functions |
 
 *Re-measured 26 Aug 2026, at `4cb2dac` plus the Phase 2 working set.* The
@@ -801,7 +803,7 @@ not listed individually; a view with **no preview** needs its own entry.
 | Illegal-move audio transport | thin system-alert playback; the decision is the `enterRecovery` edge | `onDesync` spy test + audibility check |
 | `BoardSounds` — **the playback only** | `AVAudioPlayer` over a bundled file, which is transport. Every decision came out pure and is pinned rather than waived: `BoardCue.cue` classifies, `isEnabled(_:moves:captures:checks:checkmates:)` gates, `isAudible(in:)` decides. What is left is loading a URL and restarting a clip (D81′) | `BoardCueTests`, `BoardSoundPreferenceTests`, plus the audible checklist above — which is also the only witness that the four samples are **in the bundle**, since a missing file and an off toggle sound identical |
 | `SleepInhibitor` — **the token only** | a `ProcessInfo` activity handle, which is transport. The *decision* came out as the pure `activityReason(…)` and is pinned rather than waived | `SleepInhibitorPreferenceTests`; `pmset -g assertions` |
-| `SessionPhase` | reads two `@MainActor` app-global observables whose flags are computed, not settable — a suite would have to fabricate a connection to assert an ordering | its two consumers, which must agree, plus the sidebar checklist. **The ordering is the content**, and nothing automated checks it |
+| ~~`SessionPhase`~~ | **Retired 26 Aug 2026 (M18):** the enum left `LiveGameHUDView.Phase` for its own type, and the connection gate now takes its two facts as named scalars — so the whole ladder runs off a headless session and `SessionPhaseTests` pins every arm, priority pairs included. The row read "the ordering is the content, and nothing automated checks it"; that sentence is why the gate changed shape | `SessionPhaseTests` |
 
 **Test-only by decision, not gaps:** `FEN.legalMoves()`; `CastlingRights`' no-arg
 init; `Square.dgtField`; `DGTBoardDiff.changedSquares`; `Evaluation`'s eval-tag

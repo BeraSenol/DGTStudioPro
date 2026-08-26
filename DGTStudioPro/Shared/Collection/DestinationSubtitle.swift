@@ -14,7 +14,7 @@ enum DestinationSubtitle {
     /// (Dropped from the Board 16 Aug 2026 as a crash hypothesis, re-added 17 Aug by request
     /// once the hypothesis was disproven - the round trip is recorded at `BoardDestination`.)
     static func board(
-        phase: LiveGameHUDView.Phase?,
+        phase: SessionPhase?,
         reviewing sideToMove: PieceColor?
     ) -> String? {
         if let sideToMove {
