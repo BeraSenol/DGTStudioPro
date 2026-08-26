@@ -917,8 +917,19 @@ they are in `git log`.
   `Glicko1.histories` and `PlayerStats.index` per render, `LibraryFilter`'s
   `GameRecord` per game per render, and `AnalysisGlyph.isAnalyzed`'s per-row array
   scan were all memoized behind `CollectionFoldKey`. The remaining per-render cost
-  in both destinations is the key build — two stored scalars per game, no blob
-  decode.
+  in both destinations is the key build — which the 26 Aug perf sweep re-priced
+  honestly: **five stored scalars *and two relationship traversals* per game**
+  (`whitePlayer`/`blackPlayer` → `persistentModelID`), not the "two stored
+  scalars, no blob decode" this entry claimed, plus an O(n) key *compare* per
+  cache lookup. The same sweep found the Library building and comparing that key
+  **twice per body evaluation** — the Players destination's 21 Aug
+  thread-the-key-down fix had never crossed over — and applied it: one build,
+  one lookup per evaluation, the action paths keeping their per-call rebuild by
+  contract. A plausible core of the M17 capture's 5.4 ms
+  `LibraryDestination.body`; the re-measure adjudicates. Two smaller sweep
+  prices, stated: `headToHead` folds O(records) per render while exactly two
+  players are selected (uncached, rare state); the matchup band's cached folds
+  cost an O(records) key *compare* per frame during a live window resize.
 
   *Corrected 9 Aug 2026:* the Library's per-render sort followed — narrowing
   and sort sit inside the memo (D78′), so the ECO comparator's `ECOOpening`

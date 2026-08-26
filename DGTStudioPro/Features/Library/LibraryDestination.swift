@@ -145,9 +145,10 @@ struct LibraryDestination: View {
         )
     }
 
-    /// Games paired with records, memoized. Zipped - index is the correspondence.
-    private var pairedGames: [(game: PGN, record: GameRecord)] {
-        let records = foldCache.value(for: currentFoldKey) {
+    /// Games paired with records, memoized. Zipped - index is the correspondence. Takes the
+    /// evaluation's already-built key (26 Aug sweep) so the miss path builds it zero extra times.
+    private func pairedGames(foldKey: FoldKey) -> [(game: PGN, record: GameRecord)] {
+        let records = foldCache.value(for: foldKey) {
             games.map(\.gameRecord)
         }
         // One argument: a two-parameter closure here is the tuple splat Swift 3 removed - reads right, won't compile.
@@ -156,17 +157,17 @@ struct LibraryDestination: View {
 
     /// Sidebar filter → search → chips → sort, memoized as one unit: the walk and the sort
     /// re-run only when a `NarrowKey` input moves, not per render.
-    private var narrowed: NarrowResult {
+    private func narrowedResult(for foldKey: FoldKey) -> NarrowResult {
         narrowCache.value(
             for: NarrowKey(
-                fold: currentFoldKey,
+                fold: foldKey,
                 filter: filter?.signature,
                 query: searchText,
                 tokens: searchTokens,
                 sort: sortOrder.wrappedValue
             )
         ) {
-            var result = pairedGames
+            var result = pairedGames(foldKey: foldKey)
             if let filter {
                 result = result.filter { filter.matches($0.game, record: $0.record) }
             }
@@ -195,13 +196,18 @@ struct LibraryDestination: View {
         }
     }
 
+    /// The zero-argument doors, for the **action paths only** since the 26 Aug sweep - the
+    /// render pass threads one key through `narrowedResult(for:)` instead (`coreContent`'s
+    /// locals; the Players destination's own arrangement). An action's per-call key rebuild is
+    /// the recorded contract: a re-read of the cache recomputes iff an input moved.
+    private var narrowed: NarrowResult { narrowedResult(for: currentFoldKey) }
+
     /// Sidebar filter → search → chips, narrowing only; every bulk action reads this same narrowed set.
     /// Narrowed but not sorted - the sort is `filteredGames`' last stage.
     private var narrowedPairs: [(game: PGN, record: GameRecord)] { narrowed.pairs }
 
     /// The narrowed list in display order - what every consumer outside the render pass wants.
-    /// Render reads it once; actions re-derive fresh (a re-read of the cache recomputes iff an
-    /// input moved, which is the same correctness, cheaper). Sort is unconditional.
+    /// Sort is unconditional.
     private var filteredGames: [PGN] { narrowed.sorted }
     
     /// A game's searchable strings - every field, always; a query already names its own field.
@@ -332,14 +338,21 @@ struct LibraryDestination: View {
     
     /// Split from the deletion alerts: one combined modifier chain blew SwiftUI's type-check budget.
     private var coreContent: some View {
-        // One walk per render - consumers below read these locals; none re-runs the filter.
-        let narrowed = narrowedPairs
-        // **`filteredGames`, not a second sort** (21 Aug 2026): `NarrowResult.sorted` already holds
+        // **Fold-key built once per evaluation, then threaded down (26 Aug 2026 perf sweep)** -
+        // `PlayersDestination`'s own 21 Aug arrangement, which this destination never received:
+        // reading `narrowedPairs` and `filteredGames` as separate computed properties built the
+        // O(n) `CollectionFoldKey` - five scalars *and two relationship traversals per game* -
+        // twice per body, and compared it against the cache twice more. One build, one lookup,
+        // both locals off the same result. The zero-argument accessors below survive for the
+        // action paths, whose per-call rebuild is the recorded contract.
+        let result = narrowedResult(for: currentFoldKey)
+        let narrowed = result.pairs
+        // **`result.sorted`, not a second sort** (21 Aug 2026): `NarrowResult.sorted` already holds
         // exactly `pairs.map(\.game).sorted(using: sortOrder)`, memoized under the same `NarrowKey`.
         // Spelling the expression again here bypassed the memo and paid the O(n log n) - and the ECO
         // comparator's per-comparison rehydration - a second time, every render. The memo's whole
         // reason for existing was that this sort was the last unconditional per-render sort.
-        let games = filteredGames
+        let games = result.sorted
         let unanalyzedCount = narrowed.count { !$0.record.hasAnalysis }
         // Row badges: membership built once per render off the same records - one spelling of "analyzed?".
         let analyzedIDs = Set(

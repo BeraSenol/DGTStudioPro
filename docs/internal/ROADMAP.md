@@ -756,6 +756,47 @@ the ladder closes; the method doesn't.*
 ---
 ## Landed
 
+### The 26 August performance sweep — the render paths of both destinations × four modes *(recorded 26 August 2026, the same evening)*
+
+By request, immediately after the comment sweep: a structural pass over
+everything that runs per render or per row in the eight mode surfaces,
+measured against `M17-HITCH-CAPTURE.md`'s ground truth rather than against
+intuition (the capture's own lesson — its code-read suspect was wrong).
+
+**Two structural bugs found and fixed, both freshness-safe by construction:**
+(1) **the Library built and compared its O(n) fold key twice per body
+evaluation** — `narrowedPairs` and `filteredGames` as separate computed
+properties each rebuilt `CollectionFoldKey` (five scalars *plus two
+relationship traversals* per game) and paid the O(n) cache compare again;
+the Players destination's 21 Aug thread-one-key-down arrangement had never
+crossed to its twin. Now one build, one lookup per evaluation; the
+zero-argument accessors survive for the action paths, whose per-call rebuild
+is the recorded contract. A plausible core of the capture's 5.4 ms
+`LibraryDestination.body`; the M17 re-run adjudicates. (2) **D86′'s
+accuracy summary decoded every selected game's evaluations blob per render**
+— per keystroke, while a player was selected: the D70′ shape, one day old.
+Memoized under a new `AccuracyKey` whose third field is the analysis queue's
+completed counter — the Library `FoldKey`'s own freshness signal, so batch
+exits refresh it and the stale-after-batch trap D86′ records cannot open;
+it is the one thing Players now reads off the queue, its display fold
+staying queue-blind.
+
+**Adjudicated clean, named so the next sweep needn't re-derive:** formatter
+allocations (every date and percent rides a value-type `FormatStyle` — no
+per-call `DateFormatter` anywhere); `ForEach` identity in all grid and
+filmstrip surfaces (`Identifiable` throughout, `.id` only as scroll
+targets); filmstrip laziness (`LazyHStack`, `ef082dd`'s claim verified);
+context menus on every surface built lazily on open; the inspector
+serializer (0.2 ms across the whole capture — SwiftUI's child diffing plus
+the collapse gate hold it off the hot path); the icons grid's quantization
+(re-verified working in the capture at ~220 card bodies per toggle). The
+matchup band's folds turned out **already cached** — the gallery's
+stated-cost comment predated its own caches and overstated them; corrected
+at the site. The census entry for the key build was understated the other
+way ("two stored scalars") and now prices the relationship traversals and
+the O(n) compare honestly, with `headToHead`'s uncached two-selected fold
+and the resize-time key compare added as stated costs.
+
 ### The 26 August sweep — stale comments and dead code, full battery plus three new hunts *(recorded 26 August 2026)*
 
 By request, the evening the ladder's code side finished: the standing battery

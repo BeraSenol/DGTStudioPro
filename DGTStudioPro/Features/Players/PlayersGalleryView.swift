@@ -22,9 +22,11 @@ struct PlayersGalleryView: View {
     /// know, or fold for all of them to serve one. It already holds this array - `fold.records`,
     /// computed once per body - so passing it costs a reference.
     ///
-    /// Cost, stated rather than discovered: two O(records) folds per render while a player is
-    /// selected. Same order as the `Glicko1.histories` fold this surface already pays, and it joins
-    /// the known-costs census rather than being optimised ahead of M7's measurement.
+    /// Cost, restated by the 26 Aug perf sweep: the matchup band's folds have been *cached*
+    /// (`OpponentsKey` and kin) since the band arrived, so the per-render price while a player
+    /// is selected is the key compare - O(records) equality, no refold - paid per frame only
+    /// during a live window resize, where the reader's cell re-proposes. (This sentence said
+    /// "two O(records) folds per render", which predated the caches and overstated them.)
     let records: [GameRecord]
 
     /// The selection's accuracy pair (D86′), resolved by the destination beside `history` -

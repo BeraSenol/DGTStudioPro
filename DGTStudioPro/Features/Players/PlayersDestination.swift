@@ -125,10 +125,32 @@ struct PlayersDestination: View {
     @State private var selectedGamesCache =
         CollectionFoldCache<SelectionKey, [PGN]>()
 
+    /// D86′'s summary, memoized (26 Aug perf sweep): computing it per render decoded every
+    /// selected game's evaluations blob per keystroke while a player was selected - the D70′
+    /// shape. Keyed on `AccuracyKey`, so it recomputes on content edits, selection moves, and
+    /// batch exits, and on nothing else.
+    @State private var accuracyCache =
+        CollectionFoldCache<AccuracyKey, (accuracy: Double, analyzedGames: Int)?>()
+
+    /// The freshness signal for `AccuracyKey.completed` alone - see the key's doc.
+    @Environment(AnalysisQueueController.self) private var analysisQueue
+
     /// Content plus the selection - the two things the recent-games walk reads.
     struct SelectionKey: Equatable {
         let content: CollectionFoldKey
         let keys: Set<String>
+    }
+
+    /// The accuracy summary's inputs (26 Aug perf sweep). `completed` is the analysis queue's
+    /// completed counter - the Library `FoldKey`'s own freshness signal, here for the same
+    /// reason: evaluations move on batch exits without touching content, and a summary cached
+    /// without that signal would go stale until an unrelated edit (the exact trap D86′ records
+    /// against putting accuracy in the fold). This is the one thing Players reads off the
+    /// queue; its display fold stays deliberately queue-blind.
+    struct AccuracyKey: Equatable {
+        let content: CollectionFoldKey
+        let keys: Set<String>
+        let completed: Int
     }
 
     // MARK: Search (2 Aug 2026)
@@ -260,16 +282,23 @@ struct PlayersDestination: View {
         // One walk per render, threaded to both consumers - it was read twice.
         let recentGames = selectedGames(content: contentKey)
 
-        // D86′: per selection, never in the fold (the stale-after-batch argument in the
-        // entry). The seats ride the memoized walk above; the summary itself recomputes per
-        // render while one player is selected - O(that player's plies), decoding each game's
-        // evaluations blob, stated here and in the census rather than optimised ahead of
-        // M17's method.
-        let accuracySummary = soleKey.flatMap { key in
-            GameReview.accuracySummary(of: recentGames.map { game in
-                (game.whitePlayer?.normalizedName == key ? PieceColor.white : .black,
-                 game.evaluations)
-            })
+        // D86′: per selection, never in the fold. Memoized under `AccuracyKey` since the
+        // 26 Aug perf sweep - the per-render spelling decoded every selected game's
+        // evaluations blob per keystroke, the D70′ shape; the queue counter in the key is
+        // what keeps a batch exit refreshing it (the trap the D-entry records).
+        let accuracySummary = accuracyCache.value(
+            for: AccuracyKey(
+                content: contentKey,
+                keys: selectedKeys,
+                completed: analysisQueue.queue.completedCount
+            )
+        ) {
+            soleKey.flatMap { key in
+                GameReview.accuracySummary(of: recentGames.map { game in
+                    (game.whitePlayer?.normalizedName == key ? PieceColor.white : .black,
+                     game.evaluations)
+                })
+            }
         }
 
         return coreContent(
@@ -518,4 +547,6 @@ struct PlayersDestination: View {
         // Read since 16 Aug (the View Options pass); uninjected, the canvas traps - the
         // ContentView preview's find, applied here in the same sweep.
         .environment(PreviewFixtures.viewOptions())
+        // Read since the 26 Aug perf sweep (`AccuracyKey.completed`); same rule, same trap.
+        .environment(AnalysisQueueController())
 }
