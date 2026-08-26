@@ -217,8 +217,12 @@ one logging door and policy (D63′), the View Options panel (⌘J) driving icon
 size, grid spacing and sort for both collection destinations, the analysis
 badge in all four Library view modes off one projection (D72′), exit-cadence
 analysis saves with the engine at utility QoS (D71′), one batch counter on
-both progress surfaces, the Players gallery preview at eight facts plus the
-rating trend, and the Analysis Data window — per-ply move / evaluation /
+both progress surfaces, the Players gallery preview at eight facts (ten with
+D86′'s Accuracy/Analyzed pair, when the selection has analysis) plus the
+rating trend, the review layer (D85′/D86′: the mode-decided Discard with one
+confirmation copy, NAG badges on the move list, per-game accuracy in the
+Library inspector and the Players grid's fifth pair, Game ▸ Biggest Swing),
+and the Analysis Data window — per-ply move / evaluation /
 win % behind the button beside the magnifier, superseding Get Info's removed
 Analysis section, with the queue window's Depth fact pinned to the configured
 target (D73′). Analysis is incremental since D74′ — the opening book is never
@@ -570,7 +574,13 @@ find DGTStudioPro -name '*.swift' -exec sh -c 'sed "s|//.*||" "$1"' _ {} \; \
   | grep -oE '(func|var|let|struct|enum|final class|class|actor)[[:space:]]+[a-zA-Z_][a-zA-Z0-9_]*' \
   | awk '{print $NF}' | sort -u > decls
 awk 'NR==FNR { f[$2]=$1; next } { if (f[$1]==1) print $1 }' freq decls
-# Expected: DGTStudioProApp (@main), isOpen (kept by decision, M12.3).
+# Expected: DGTStudioProApp (@main), and nothing else. `isOpen` left the
+# expected set 26 Aug 2026 WITHOUT gaining a consumer: `DGTConnectionTests`'
+# fake port declares its own `isOpen`, and this scan speaks in names, not
+# symbols - the homonym now hides the app accessor from the frequency table,
+# so the disposition's only automated witness is gone. The disposition at
+# `DGTSerialPort.isOpen` stands; checking it is now a manual grep of that
+# symbol's qualified uses, which the sweep that recorded this performed.
 # makeNSView / updateNSView left the set with FullScreenAuxiliary (D80′ — the
 # scene-level windowManagerRole replaced the app's one NSViewRepresentable),
 # so a representable witness reappearing here means someone reached for
@@ -1192,6 +1202,9 @@ changed except the speed".
   filmstrip still pinned to the bottom edge. An unrated player: em dashes in
   Rating and Uncertainty, no chart, no gap where it would have been. The
   columns detail shows the same eight-fact grid — one grid, both hosts.
+  *(Since 26 Aug, D86′: an analyzed selection adds the Accuracy/Analyzed
+  fifth pair — ten facts; the eight-fact reading stays correct for an
+  unanalyzed one, and the D86′ owed entry above carries the new checks.)*
 - **The Analysis Data window (D73′).** The table button beside the magnifier
   in the Library inspector's Evaluation header opens the per-ply table; on a
   *skipped* game the unscored tail reads em dashes, never "0.0" — that is the

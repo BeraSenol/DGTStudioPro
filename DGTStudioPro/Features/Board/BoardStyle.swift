@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// The four board woods. `String`-backed because `@AppStorage` stores a `RawRepresentable` directly -
-/// five call sites bind `StorageKeys.boardStyle` to this type, and none of them go through `Codable`,
-/// which no code in the tree uses.
+/// The four board woods. `String`-backed because `@AppStorage` stores a `RawRepresentable`
+/// directly - every bind of `StorageKeys.boardStyle` reaches this type that way, and none goes
+/// through `Codable`, which no code in the tree uses. (The bind count lives in the grep, not
+/// here - this line said "five call sites" while six existed, the 26 Aug sweep's finding.)
 ///
 /// **The two switches below are deliberately not collapsed** into one returning a pair. Each is
 /// exhaustive, so adding a wood is two compile errors that name exactly what is missing; a single

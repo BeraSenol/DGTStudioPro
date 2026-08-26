@@ -66,8 +66,11 @@ struct PlayerStatsGrid: View {
 
     /// The fifth column-pair (D86′): mean accuracy over the number of games that produced it -
     /// the value and its denominator stacked, the same related-pair rule as the other four
-    /// columns. **Defaulted nil, and nil renders no column at all**: hosts without evaluations
-    /// in hand (the matchup window) keep the argued 4 × 2 exactly.
+    /// columns. **Defaulted nil, and nil renders no column at all**, keeping the argued 4 × 2
+    /// exactly - today that arm serves previews and an unanalyzed selection (all three hosts
+    /// pass the summary; a nil summary is "nothing analyzed", not "host opted out"). The
+    /// 26 Aug sweep corrected this sentence the day it was written: it had named "the matchup
+    /// window" as the opted-out host, a window that merged away on 18 Aug and never held the grid.
     var accuracySummary: (accuracy: Double, analyzedGames: Int)? = nil
 
     /// **Four columns, two rows** (by request, 18 Aug 2026). It was three columns and three rows,
@@ -83,9 +86,11 @@ struct PlayerStatsGrid: View {
     /// under the 1628 it qualifies), the first date and the last. The row order changed as a
     /// consequence, not as a preference.
     ///
-    /// The cost is width: this is four columns wide wherever it appears, and it appears in four
-    /// places (gallery card, columns detail pane, matchup window, profile window). The two narrow
-    /// hosts are the ones to check.
+    /// The cost is width: this is four-plus columns wide wherever it appears, and it appears in
+    /// **three** places - the gallery preview, the columns detail pane, and Get Info's profile
+    /// tab. (This sentence said "four places" naming the matchup and profile *windows* until the
+    /// 26 Aug 2026 sweep - both merged into Get Info as tabs on 18 Aug, and the grid never
+    /// followed the matchup half.) The narrow hosts are the ones to check.
     var body: some View {
         Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 6) {
             GridRow {
@@ -187,8 +192,9 @@ struct PlayerCardView: View {
     /// The caption under the name (16 Aug 2026, by request - it replaced the games count, which
     /// lives in the profile grid). Nil renders the placeholder; provisional keeps its `*`.
     var rating: Glicko1.Rating? = nil
-    /// Double-click - the matchup window's door (17 Aug 2026). Defaulted so previews and any
-    /// host with no window to offer stay valid. The card carries **no context menu since
+    /// Double-click - the player-info door (17 Aug 2026 as the Matchup window's; that window
+    /// merged into Get Info on 18 Aug, and the door now opens the profile there). Defaulted so
+    /// previews and any host with no window to offer stay valid. The card carries **no context menu since
     /// 23 Aug 2026** - `PlayerActionsMenu` moved to the hosts, which own the selection its
     /// single-subject guard must count; the Library card's comment carries the full argument.
     var onOpen: () -> Void = {}

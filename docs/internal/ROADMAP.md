@@ -668,8 +668,11 @@ true except M23's own.
 - **D27′ re-read**: every forward note promoted or struck on evidence, none
   carried forward — a closed project has no forward notes.
 - **The waiver register empties.** The 2027 SDK's `.alert(item:)` retires
-  `Binding(present:)`, its helper, and both waived warnings across the eleven
-  call sites the migration touches. The sunset condition written at the
+  `Binding(present:)`, its helper, and both waived warnings across every call
+  site the migration touches — the count lives in
+  `grep -rn 'Binding(present:' DGTStudioPro/`, per the waiver's own rule (this
+  line said "eleven" while the grep said ten; 26 Aug sweep). The sunset
+  condition written at the
   declaration in July executes here.
 - **Liquid Glass screenshot pass** over the board chrome and all four view
   modes × three destinations; the full window-chrome re-check (D80′'s
@@ -752,6 +755,52 @@ the ladder closes; the method doesn't.*
 
 ---
 ## Landed
+
+### The 26 August sweep — stale comments and dead code, full battery plus three new hunts *(recorded 26 August 2026)*
+
+By request, the evening the ladder's code side finished: the standing battery
+verbatim, then three hunts it doesn't carry — a backticked-name scan
+(identifiers cited in comments that exist nowhere in code), a numeric-claims
+audit (every "N call sites / places / hosts" checked against its grep), and a
+per-registry liveness pass over both constants files.
+
+**Clean, and meaningfully so:** tree clean; counter-grep clean; zero
+TODO/FIXME/HACK, `DispatchQueue`, `Combine`, `NotificationCenter`,
+`Thread.sleep`, `#if DEBUG` regions or unsafe opt-outs; **every
+`AccessibilityID` constant and function and every `StorageKeys` key is
+consumed**; the declaration scan returns `@main` alone; and the
+truly-unused-types pass over 51 zero-external-reference candidates found
+**every one consumed inside its own file** — no dead code in the app target.
+The `.disabled` census sits at 23 real sites (three more are one preview's
+step harness), every enabling value producible both ways, the two newest
+(D85′'s button, the Biggest Swing item) pinned or focus-gated.
+
+**Six findings, all comment-side, all fixed in the sitting:** (1)
+`PlayerStatsGrid`'s "four places" named two windows that merged into Get Info
+on 18 Aug — three places, named correctly now; (2) my own D86′ comment,
+hours old, repeated the dead "matchup window" name as the nil-default's
+justification — corrected the day it was written; (3) `PlayerCardView`'s
+double-click doc still called `onOpen` "the matchup window's door"; (4)
+`BoardCueTests` cited sibling test `everyCueIsProducible`, which lost its
+"Move" in a rename; (5) `BoardStyle`'s "five call sites" was six — the count
+now lives in the grep, per its own rule; (6) the roadmap's M23 "eleven call
+sites" was ten — same remedy, and the waiver had *already said* the count
+lives in the grep while M23 restated a number anyway.
+
+**One finding about a check:** `isOpen` left the declaration scan's expected
+set **without gaining a consumer** — `DGTConnectionTests`' fake port declares
+a homonym, and the scan speaks in names, not symbols, so the disposition's
+automated witness is gone. Recorded at the standing-greps block; the
+disposition at `DGTSerialPort.isOpen` stands, checked manually this sitting.
+The sweep's own false positive is also on record: the registry-liveness
+extractor first pattern-matched `[a-zA-Z]+` and truncated at the `5` in
+`…Syzygy50…`, reporting two live keys dead — caught before trusting it,
+which is the rule about a check's false positives doing its job.
+
+*Deliberate deletion-records were left standing throughout — seventeen
+comment-only names (`BoardSoundSet`, `PlayerMatchupWindow`,
+`PhaseStyle`, retired registry ids, and the rest) all turned out to be the
+protected class: comments that describe a deletion, filed with it.*
 
 ### The 23 August sitting — one menu rule, the grid stops re-proposing per frame, and the card sheet becomes a choice *(recorded 23 August 2026)*
 

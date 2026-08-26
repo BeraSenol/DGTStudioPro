@@ -45,7 +45,8 @@ struct BoardCueTests {
     // MARK: Fixtures
 
     /// One position per cue, kept in one place because two tests read it: the per-cue expectations
-    /// and `everyCueIsProducible` (`SpecialCheckmateTests`' arrangement).
+    /// and `everyMoveCueIsProducible` (`SpecialCheckmateTests`' arrangement; this citation
+    /// dropped the "Move" for two weeks - caught by the 26 Aug sweep's dead-name scan).
     /// The black king sits on e3 in the castle and promotion fixtures rather than on e8, which
     /// looks arbitrary and is not: a queen appearing on a8 or a rook landing on f1 checks a king
     /// on e8 down an empty rank or file, and the fixture would then be testing `check` while
