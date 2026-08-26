@@ -13,6 +13,10 @@ struct PlayersColumnsView: View {
     @Binding var selectedKeys: Set<PlayerStats.ID>
     /// The selected player's games, newest first - threaded exactly as the inspector gets it.
     let recentGames: [PGN]
+
+    /// The selection's accuracy pair (D86′), resolved by the destination - per selection,
+    /// never in the fold.
+    var accuracySummary: (accuracy: Double, analyzedGames: Int)? = nil
     /// The shared recent-games cap - `StorageKeys.playersRecentGames`'s second reader; the
     /// inspector section holds the twin menu, one key keeps them agreeing.
     @AppStorage(StorageKeys.playersRecentGames) private var recentCount = 3
@@ -151,7 +155,11 @@ struct PlayersColumnsView: View {
                         .font(.title2.weight(.semibold))
                 }
 
-                PlayerStatsGrid(stats: player.stats, rating: player.rating)
+                PlayerStatsGrid(
+                    stats: player.stats,
+                    rating: player.rating,
+                    accuracySummary: accuracySummary
+                )
 
                 Button {
                     onShowInLibrary(player.id)

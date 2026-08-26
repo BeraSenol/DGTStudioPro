@@ -64,6 +64,12 @@ struct PlayerStatsGrid: View {
     let stats: PlayerStats
     let rating: Glicko1.Rating?
 
+    /// The fifth column-pair (D86′): mean accuracy over the number of games that produced it -
+    /// the value and its denominator stacked, the same related-pair rule as the other four
+    /// columns. **Defaulted nil, and nil renders no column at all**: hosts without evaluations
+    /// in hand (the matchup window) keep the argued 4 × 2 exactly.
+    var accuracySummary: (accuracy: Double, analyzedGames: Int)? = nil
+
     /// **Four columns, two rows** (by request, 18 Aug 2026). It was three columns and three rows,
     /// which left the last row half empty with the two dates stranded under a gap. Eight stats
     /// divide into 4 × 2 exactly, so nothing is stranded and the dates land in the final column
@@ -91,6 +97,9 @@ struct PlayerStatsGrid: View {
                 PlayerStatCell("Win %", stats.winRate.formatted(.percent.precision(.fractionLength(0))))
                 PlayerStatCell("Rating", rating?.displaySummary ?? "Unrated")
                 PlayerStatCell("First Played", RosterSummary.displayDate(stats.firstPlayed))
+                if let accuracySummary {
+                    PlayerStatCell("Accuracy", "\(Int(accuracySummary.accuracy.rounded()))")
+                }
             }
             GridRow {
                 PlayerStatCell("Record", "\(stats.wins)–\(stats.draws)–\(stats.losses)")
@@ -100,6 +109,12 @@ struct PlayerStatsGrid: View {
                     rating.map { "±\(Int($0.deviation.rounded()))" } ?? RosterSummary.displayUnknown
                 )
                 PlayerStatCell("Last Played", RosterSummary.displayDate(stats.lastPlayed))
+                if let accuracySummary {
+                    PlayerStatCell(
+                        "Analyzed",
+                        "\(accuracySummary.analyzedGames) game\(accuracySummary.analyzedGames == 1 ? "" : "s")"
+                    )
+                }
             }
         }
     }

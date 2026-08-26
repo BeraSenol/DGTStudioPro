@@ -39,6 +39,23 @@ extension FocusedValues {
     }
 }
 
+/// The frontmost review tab's biggest-swing destination (D86′), as the *ply to jump to* -
+/// `BoardDestination` derives it from stored evaluations and publishes the `+1` already
+/// applied, so the menu never re-derives the after-the-move convention. A plain `Int?`:
+/// `Equatable`, so this publish cannot re-raise the FocusedValue churn the trigger binding
+/// above is on watch for. Nil while unanalyzed or live - the item disables, producible both
+/// ways (analyze the game; open one already analyzed).
+private struct BiggestSwingKey: FocusedValueKey {
+    typealias Value = Int
+}
+
+extension FocusedValues {
+    var boardBiggestSwingPly: Int? {
+        get { self[BiggestSwingKey.self] }
+        set { self[BiggestSwingKey.self] = newValue }
+    }
+}
+
 // MARK: Commands
 
 /// First/Previous/Next/Last with ←/→/Home/End. Gated on `game == nil` only - a bounds-based
@@ -53,6 +70,7 @@ struct GameNavigationCommands: Commands {
     
     @FocusedValue(\.activeGame) private var game: Game?
     @FocusedValue(\.boardGetInfoRequest) private var getInfo: Binding<Bool>?
+    @FocusedValue(\.boardBiggestSwingPly) private var biggestSwing: Int?
     
     // No step throttle (removed): pacing ←/→ to the glide duration made a held arrow lag the key
     // repeat. If revisited: extend the in-flight repeat, never drop the input.
@@ -74,7 +92,17 @@ struct GameNavigationCommands: Commands {
             Button("Last Move") { game?.toEnd() }
                 .keyboardShortcut(.end, modifiers: [])
                 .disabled(game == nil)
-            
+
+            Divider()
+
+            // D86′: the game's turning point, one jump. `jump(to:)` deliberately - per the
+            // D81′ step/jump split a jump makes no sound, which is right for navigation. No
+            // keyboard shortcut: consulted, not driven (the Show Session argument).
+            Button("Biggest Swing") {
+                if let biggestSwing { game?.jump(to: biggestSwing) }
+            }
+            .disabled(game == nil || biggestSwing == nil)
+
             Divider()
             
             // The Board's only Get Info door - a Board tab has no row to right-click. The live case carries

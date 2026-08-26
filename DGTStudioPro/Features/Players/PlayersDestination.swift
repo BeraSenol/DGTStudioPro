@@ -260,11 +260,24 @@ struct PlayersDestination: View {
         // One walk per render, threaded to both consumers - it was read twice.
         let recentGames = selectedGames(content: contentKey)
 
+        // D86′: per selection, never in the fold (the stale-after-batch argument in the
+        // entry). The seats ride the memoized walk above; the summary itself recomputes per
+        // render while one player is selected - O(that player's plies), decoding each game's
+        // evaluations blob, stated here and in the census rather than optimised ahead of
+        // M17's method.
+        let accuracySummary = soleKey.flatMap { key in
+            GameReview.accuracySummary(of: recentGames.map { game in
+                (game.whitePlayer?.normalizedName == key ? PieceColor.white : .black,
+                 game.evaluations)
+            })
+        }
+
         return coreContent(
             players: searched,
             history: history,
             records: records,
-            recentGames: recentGames
+            recentGames: recentGames,
+            accuracySummary: accuracySummary
         )
             .navigationTitle("Players")
             .navigationSubtitle(
@@ -362,7 +375,8 @@ struct PlayersDestination: View {
         players: [RankedPlayer],
         history: [Glicko1.Sample],
         records: [GameRecord],
-        recentGames: [PGN]
+        recentGames: [PGN],
+        accuracySummary: (accuracy: Double, analyzedGames: Int)?
     ) -> some View {
         // Nil when there is nobody to select, so the system menu item disables itself.
         let selectAllAction: (() -> Void)? = players.isEmpty
@@ -397,12 +411,14 @@ struct PlayersDestination: View {
                     PlayersColumnsView(players: players,
                                        selectedKeys: $selectedKeys,
                                        recentGames: recentGames,
+                                       accuracySummary: accuracySummary,
                                        onShowInLibrary: showInLibrary,
                                        sortOrder: sortOrder)
                 case .gallery:
                     PlayersGalleryView(players: players, selectedKeys: $selectedKeys,
                                        history: history,
                                        records: records,
+                                       accuracySummary: accuracySummary,
                                        onShowInLibrary: showInLibrary,
                                        onOpenInfo: { openPlayerInfo($0, in: players) })
                 }

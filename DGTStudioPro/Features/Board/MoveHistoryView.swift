@@ -6,6 +6,12 @@ struct MoveHistoryView: View {
     let moves: [String]
     let currentMoveIndex: Int?
     let onMoveTapped: ((Int) -> Void)?
+
+    /// Per-ply verdicts (D86′), parallel to `moves` when supplied - the review host derives
+    /// them from stored evaluations; live play passes nothing and shows no badges (live engine
+    /// eval is assumed-never, so there is nothing to derive). Defaulted so every existing call
+    /// site and preview stays valid.
+    var classifications: [GameReview.MoveClassification?]? = nil
     /// Whether this view brings its own `ScrollView` - `false` lets a host `List` own scrolling
     /// (a nested scroll view is a fixed-size box inside an infinite proposal).
     ///
@@ -112,18 +118,39 @@ struct MoveHistoryView: View {
         }
     }
     
+    /// D86′'s badge for one ply, or nil - bounds-tolerant like the data window's rows.
+    private func classification(at index: Int) -> GameReview.MoveClassification? {
+        guard let classifications, index < classifications.count else { return nil }
+        return classifications[index]
+    }
+
+    /// The badge tints: the two lighter tiers in the warning colour, the blunder in the error
+    /// colour - the swing column's own emphasis logic, worded as chess.
+    private func badgeTint(_ classification: GameReview.MoveClassification) -> Color {
+        classification == .blunder ? .red : .orange
+    }
+
     private func moveCell(at index: Int) -> some View {
         let san = moves[index]
         let isSelected = index == currentMoveIndex
-        
+        let badge = classification(at: index)
+
         // The Button is built either way, so a nil handler leaves a control that does nothing -
         // live play passes nil, and every SAN there is clickable and announced as a button while
         // acting on nothing. `.disabled(onMoveTapped == nil)` would fix the semantics at the cost
         // of greying the text.
+        // One interpolated `Text` so the NAG suffix rides the SAN's layout - "Qxf7??" is a
+        // single word to wrap and centre on, not a label plus an ornament. Interpolation, not
+        // `+` (deprecated, macOS 26 - the first build's finding); the inner `Text` keeps its
+        // tint through the interpolation.
+        let label = badge.map {
+            Text("\(san)\(Text($0.annotation).foregroundStyle(badgeTint($0)))")
+        } ?? Text(san)
+
         return Button {
             onMoveTapped?(index)
         } label: {
-            Text(san)
+            label
                 .font(.body)
                 .fontWeight(isSelected ? .medium : .regular)
                 .fontDesign(.monospaced)

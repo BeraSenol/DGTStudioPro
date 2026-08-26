@@ -80,6 +80,9 @@ struct BoardInspectorView: View {
                 moves: moves,
                 currentMoveIndex: currentMoveIndex,
                 onMoveTapped: onMoveTapped,
+                // D86′'s badges - derived per body pass like the win curve above it, one
+                // arithmetic scan over the same stored evaluations (nil pgn = live = none).
+                classifications: pgn.map { GameReview.classifications(evaluations: $0.evaluations) },
                 scrollsIndependently: false
             )
             .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))

@@ -27,6 +27,10 @@ struct PlayersGalleryView: View {
     /// the known-costs census rather than being optimised ahead of M7's measurement.
     let records: [GameRecord]
 
+    /// The selection's accuracy pair (D86′), resolved by the destination beside `history` -
+    /// per selection, never in the fold.
+    var accuracySummary: (accuracy: Double, analyzedGames: Int)? = nil
+
     let onShowInLibrary: (PlayerStats.ID) -> Void
     /// Double-click's door - the player's info window (17 Aug 2026; it opened the separate Matchup
     /// window until that merged into Get Info, 18 Aug 2026). Defaulted so previews stand.
@@ -99,7 +103,11 @@ struct PlayersGalleryView: View {
                         }
 
                         // One grid, each fact once, shared so both hosts widen together.
-                        PlayerStatsGrid(stats: player.stats, rating: player.rating)
+                        PlayerStatsGrid(
+                            stats: player.stats,
+                            rating: player.rating,
+                            accuracySummary: accuracySummary
+                        )
                             .padding(.top, 4)
 
                         // The same line the inspector draws (`RatingTrendChart` - one chart, two

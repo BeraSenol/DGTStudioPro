@@ -68,7 +68,24 @@ struct BoardDestination: View {
         )
     }
 
-    var body: some View {
+    /// The published jump target (D86′), `+1` applied so the value IS the position after the
+    /// swing's move. A property, not an inline chain: inlining the flatMap/map into `body`'s
+    /// modifier stack pushed expression type-checking past its budget on the first build.
+    /// One arithmetic scan over stored evaluations per body pass - the win curve reads the
+    /// same array each pass.
+    private var biggestSwingJumpTarget: Int? {
+        guard let pgn = tabState.boardPGN,
+              let swing = GameReview.biggestSwingPly(evaluations: pgn.evaluations)
+        else { return nil }
+        return swing + 1
+    }
+
+    /// `body`'s first half - content, chrome and the dialogs. **Split for the type-checker,
+    /// not the reader** (26 Aug 2026): the D85′/D86′ additions took the single modifier chain
+    /// past the expression budget, and hoisting one sub-expression was not enough - the chain
+    /// is one expression however its parts are spelled. Two halves, each within budget; the
+    /// seam is where the presentation modifiers end and the scene plumbing begins.
+    private var chromeAndDialogs: some View {
         Group {
             if let pgn = tabState.boardPGN, let game = tabState.boardGame {
                 content(pgn: pgn, game: game)
@@ -135,8 +152,16 @@ struct BoardDestination: View {
         } message: { message in
             Text(message)
         }
+    }
+
+    var body: some View {
+        chromeAndDialogs
         // No editing surface on this destination: an archived game's roster is edited in Get Info.
         .focusedSceneValue(\.activeGame, tabState.boardGame)
+        // D86′: the turning point - see `biggestSwingJumpTarget` for the derivation, hoisted
+        // out of this chain after the inline flatMap/map pushed expression type-checking past
+        // its budget (the first build's finding).
+        .focusedSceneValue(\.boardBiggestSwingPly, biggestSwingJumpTarget)
         // Get Info trigger published only when this tab has a subject, so the menu item's `disabled(_:)`
         // reads a condition producible both ways. The `Binding` is minted fresh per body pass and
         // `Binding` is not `Equatable` - M16's owed FocusedValue check, argued at `GetInfoRequestKey`.

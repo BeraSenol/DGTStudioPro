@@ -546,7 +546,16 @@ extension GetInfoWindow {
             // less than its absence, and the registry row above still says the player exists.
             if let stats {
                 Section("Statistics") {
-                    PlayerStatsGrid(stats: stats, rating: rating)
+                    // The fifth pair (D86′), computed off the relationships this window already
+                    // holds - per body pass, which for a profile window means per draft edit.
+                    PlayerStatsGrid(
+                        stats: stats,
+                        rating: rating,
+                        accuracySummary: GameReview.accuracySummary(
+                            of: player.whiteGames.map { (PieceColor.white, $0.evaluations) }
+                                + player.blackGames.map { (PieceColor.black, $0.evaluations) }
+                        )
+                    )
                 }
             }
 

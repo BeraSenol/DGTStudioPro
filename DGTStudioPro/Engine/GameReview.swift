@@ -19,6 +19,17 @@ enum GameReview {
         case inaccuracy
         case mistake
         case blunder
+
+        /// The annotation suffix the move list appends - PGN's own NAG vocabulary ("?!", "?",
+        /// "??"), which every chess reader parses on sight. One home; the tint stays with the
+        /// views (`Color` is presentation).
+        var annotation: String {
+            switch self {
+            case .inaccuracy: "?!"
+            case .mistake:    "?"
+            case .blunder:    "??"
+            }
+        }
     }
 
     /// Thresholds as data, in percentage points of the mover's win-probability loss, checked
@@ -89,6 +100,20 @@ enum GameReview {
         guard !own.isEmpty else { return nil }
         let mean = own.reduce(0, +) / Double(own.count)
         return min(100, max(0, 100 - 2 * mean))
+    }
+
+    // MARK: Player Summary
+
+    /// A player's mean accuracy over their seats, with how many games contributed - the number
+    /// and its denominator travel together because the grid renders them as a column pair.
+    /// Games without a classifiable step for that seat contribute nothing; nil when none do.
+    /// **Computed per selection, never in the fold** - D86′'s stale-after-batch argument.
+    static func accuracySummary(
+        of seats: [(color: PieceColor, evaluations: [Evaluation?])]
+    ) -> (accuracy: Double, analyzedGames: Int)? {
+        let accuracies = seats.compactMap { accuracy(for: $0.color, evaluations: $0.evaluations) }
+        guard !accuracies.isEmpty else { return nil }
+        return (accuracies.reduce(0, +) / Double(accuracies.count), accuracies.count)
     }
 
     // MARK: Navigation

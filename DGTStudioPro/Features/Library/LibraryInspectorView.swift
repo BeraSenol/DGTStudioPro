@@ -106,6 +106,12 @@ private struct LoadedSection: View {
             )
             .frame(height: 140)
             .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
+
+            // D86′'s summary - the row exists only when a side has a number, so an unanalyzed
+            // game shows nothing rather than a dash pair. Collapse-gated with the graph.
+            if let accuracyLine {
+                LabeledContent("Accuracy", value: accuracyLine)
+            }
         } actions: {
             // Two controls in the slot (`actionsInset` spaces them). Data before the magnifier so the graph
             // control keeps the position a reader's hand learned.
@@ -114,8 +120,20 @@ private struct LoadedSection: View {
         }
     }
     
+    /// Both sides rounded, an absent side dashed (D86′): "White 87 · Black 62". Nil - no row
+    /// at all - when neither side has a classifiable step.
+    private var accuracyLine: String? {
+        let white = GameReview.accuracy(for: .white, evaluations: pgn.evaluations)
+        let black = GameReview.accuracy(for: .black, evaluations: pgn.evaluations)
+        guard white != nil || black != nil else { return nil }
+        func rounded(_ value: Double?) -> String {
+            value.map { "\(Int($0.rounded()))" } ?? RosterSummary.displayUnknown
+        }
+        return "White \(rounded(white)) · Black \(rounded(black))"
+    }
+
     // MARK: PGN Section
-    
+
     /// The game as a file: `PGN.pgnText`, byte-identical to Export - an inspector formatting
     /// its own tag block would be a third PGN shape, free to drift from the reference bytes.
     private var pgnSection: some View {

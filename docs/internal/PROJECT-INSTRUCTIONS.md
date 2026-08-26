@@ -52,15 +52,14 @@ six months" is the test.
 
 ## Where things stand
 
-Tree: **`bd3be0b`** — 26 August's nine committed slices (M16 `7e0b3e6`, M18
-`925648e` `4cb2dac` `b3a9b96` `3fe6ae4` `32c5d46` `6170af7` `a842c56`
-`bd3be0b`, ⌘U green reported on each code slice) — plus the M19 core
-working set: D85′ (the Discard button, `BoardDiscard` + toolbar + shared
-dialog copy) and D86′ (`GameReview` — classifications, accuracy, biggest
-swing), with their two suites; both D-entries appended to DECISIONS.md
-(next free: D87′). **Four new files must be staged** (`BoardDiscard.swift`,
-`GameReview.swift`, and their two test files), the standing hazard. Beneath
-the day's slices,
+Tree: **`65731cf`** — 26 August's ten committed slices through the M19
+cores (D85′/D86′ landed with their suites, ⌘U green reported) — plus the
+M19 surfaces working set: move-list NAG badges, the Game-menu Biggest
+Swing item over a new focused `Int?`, the Library inspector's accuracy
+row, and the Players grid's fifth column-pair (Accuracy over Analyzed,
+per-selection, the matchup window untouched at 4 × 2); two pins added to
+`GameReviewTests`. No new files this slice — nine sources and one test
+file modified. Beneath the day's slices,
 24–25 August: seven comment-trim / review-fix commits ending in the M17
 inspector measurement (`c1e57fb`, with `M17-HITCH-CAPTURE.md` and the
 census's first real numbers), the audit-fix sitting (`eb0906d`), the
@@ -119,7 +118,7 @@ which is the rule above doing its job rather than a new failure mode.)
 | | |
 |---|---|
 | Sources on disk | **298** — 174 app, 124 unit-test, 0 UITest |
-| Tracked (`git ls-files '*.swift'`) | **298** once the M19 core's four files are staged (294 at `bd3be0b`) |
+| Tracked (`git ls-files '*.swift'`) | **298** at `65731cf`; the surfaces slice adds none |
 | Accessibility registry | **150** constants + **23** functions |
 
 *Re-measured 26 Aug 2026, at `4cb2dac` plus the Phase 2 working set.* The
@@ -676,6 +675,17 @@ grep -rn '#if DEBUG' --include='*.swift' DGTStudioPro | grep -v ':[0-9]*:///\?\s
   other half of the sentence stands: `map` over a zipped sequence takes the pair
   as **one** argument — the two-parameter spelling is the tuple splat removed in
   Swift 3.
+- **`Text` concatenation (`+`) is deprecated in macOS 26; interpolation replaces
+  it** — `Text("\(san)\(Text(suffix).foregroundStyle(tint))")`, and the inner
+  `Text` keeps its style through the interpolation. Found by D86′'s badges on
+  their first build. Same build, same file family: **a long `body` modifier
+  stack is one expression to the solver, and additions can push it past the
+  type-checking budget** — the diagnostic points at a nearby line, not the
+  addition, and hoisting one sub-expression into a property is *not* enough
+  (tried first, failed on the very next build: the chain's length is the
+  problem, not any part's shape). The remedy is splitting the chain itself
+  into two properties at a natural seam — `BoardDestination.chromeAndDialogs`
+  / `body` is the worked example.
 - **Never assign to a property from inside its own `didSet` on an `@Observable`
   type.** The macro rewrites stored properties into computed ones, so the
   self-assignment goes through the setter, the observer re-enters, and it
@@ -975,6 +985,21 @@ invalidates the witness.*
   arm and that the *inspector's* Discard dialog still reads word-for-word
   the same (its copy moved onto `BoardDiscard` unchanged - any drift is a
   defect).
+
+- **The review layer's surfaces (26 Aug 2026, D86′), boardless.** Open an
+  analyzed game with a known blunder (game 98 ends `52… Qf2#`; any game
+  with a big swing works): the move list shows the NAG suffix on the lapse
+  - "??" red on the blunder, "?"/"?!" orange - as one word with the SAN,
+  and quiet moves carry nothing. An *unanalyzed* game shows no badges at
+  all. Game ▸ Biggest Swing jumps to the position after the turning move,
+  silently (a jump, not a step); on an unanalyzed game the item is
+  disabled. The Library inspector's Evaluation section shows "Accuracy -
+  White N · Black N" on an analyzed game and no row at all on an
+  unanalyzed one. Players: select an analyzed player in gallery or columns
+  - the grid shows a fifth column, Accuracy over Analyzed ("N games");
+  select a player with no analyzed games - the grid is the old 4 × 2, no
+  fifth column, no dashes. Get Info's player profile tab shows the same
+  pair. The matchup window must be unchanged.
 
 - **Import cancellation (26 Aug 2026, M16).** Import a dozen files and press
   Cancel mid-run: the button disables at once (the request is in flight), the

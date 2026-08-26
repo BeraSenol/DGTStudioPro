@@ -102,6 +102,33 @@ struct GameReviewTests {
         #expect(GameReview.accuracy(for: .white, evaluations: []) == nil)
     }
 
+    /// The NAG suffixes, one distinct expectation per tier - the move list renders these
+    /// verbatim, so a swap is a wrong verdict on screen in chess vocabulary.
+    @Test func annotationsAreTheNAGSuffixes() {
+        #expect(GameReview.MoveClassification.inaccuracy.annotation == "?!")
+        #expect(GameReview.MoveClassification.mistake.annotation == "?")
+        #expect(GameReview.MoveClassification.blunder.annotation == "??")
+    }
+
+    // MARK: Player Summary
+
+    /// The pair travels together: mean over exactly the seats that produced a number, with
+    /// that count as the denominator - one clean 100, one floored 0, mean 50 over 2, the
+    /// third seat contributing nothing.
+    @Test func accuracySummaryAveragesOnlyTheClassifiableSeats() {
+        let clean: [Evaluation?] = [Self.even, Self.even, Self.even]          // white: 0 loss
+        let hung: [Evaluation?] = [Self.even, Self.even, Self.blackWinning]   // white: 50 pp
+        let unanalyzed: [Evaluation?] = []
+
+        let summary = GameReview.accuracySummary(of: [
+            (.white, clean), (.white, hung), (.black, unanalyzed)
+        ])
+        #expect(summary?.accuracy == 50)
+        #expect(summary?.analyzedGames == 2)
+        #expect(GameReview.accuracySummary(of: [(.black, unanalyzed)]) == nil)
+        #expect(GameReview.accuracySummary(of: []) == nil)
+    }
+
     // MARK: Biggest Swing
 
     /// The destination is the largest absolute white-relative step; a tie keeps the first

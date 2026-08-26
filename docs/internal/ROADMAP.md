@@ -551,6 +551,35 @@ argument, in D86′). Still owed: the surfaces (move-list badges, the
 inspector accuracy summary, Players grid/gallery accuracy,
 jump-to-biggest-swing) and the boardless checks. Two new suites (≈120).
 
+**The surfaces, same day.** Move-list badges: `MoveHistoryView` takes an
+optional per-ply classification array (live passes nothing - nothing to
+derive) and appends the NAG suffix ("?!"/"?"/"??", pinned) to the SAN as
+one concatenated word, blunders red, the lighter tiers orange; the review
+host derives per body pass like the win curve beside it. Jump to Biggest
+Swing: a Game-menu item under the navigation four, driven by a new
+`Int?` focused value `BoardDestination` publishes with the after-the-move
+`+1` already applied (`Equatable`, so no FocusedValue churn); `jump(to:)`
+deliberately, so it makes no sound; no shortcut - consulted, not driven.
+The Library inspector's Evaluation section gains the accuracy row ("White
+87 · Black 62", absent side dashed), rendered only when a side has a
+number and collapse-gated with the graph. **The Players grid grows to a
+fifth column-pair, deliberately**: Accuracy over Analyzed - the value and
+its denominator, the grid's own related-pair rule - rendered only when a
+host supplies it, so the matchup window keeps the argued 4 × 2 untouched;
+the destination computes the pair per sole selection off the memoized
+selected-games walk (per-render blob decode, stated in the census's
+spirit), the gallery and columns thread it, and Get Info's profile tab
+computes off its relationships. `accuracySummary` and the annotations are
+pinned. **⌘U green on the whole of M19, reported by Bera, 26 August** —
+after two first-build findings, both now build-diagnostic lessons: `Text`
+concatenation is deprecated in macOS 26 (interpolation carries the inner
+run's style), and a long `body` modifier chain is one expression to the
+solver — hoisting a sub-expression failed on the very next build, and the
+working remedy is splitting the chain at a seam
+(`BoardDestination.chromeAndDialogs` / `body` is the worked example). What
+M19's gate still owes: the boardless checks, written in the instructions'
+§ Owed, and D85′'s live arm in M21's sitting.
+
 ---
 
 ## M20 — *withdrawn to Horizon, 26 August 2026*
