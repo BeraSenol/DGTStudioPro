@@ -436,6 +436,33 @@ the store sees one), its hash-input warning written at the new home. The
 deferred renames travel alone, next slice — mechanical changes do. One new
 suite (≈118 expected).
 
+**The renames slice (26 Aug 2026, same day) — executed or struck, none
+carried.** Executed: `AnalysisQueueStatusWindowView` → `AnalysisQueueWindow`
+(type + file, `sceneID` string untouched so nothing resets, four source
+sites and both live doc homes updated; the dated audit snapshots keep the
+old name as history); `DGTCommandTests` → `DGTProtocolTests` (the type now
+matches its file and its own display name, which always said "Protocol");
+`DGTSessionRecorder` split into its own file (the recorder/recording pair's
+real mismatch was two types in one file, each with its own suite —
+`Duration.inMilliseconds` widened from `fileprivate` with the reason at the
+site, both halves timestamp through it). Struck, each with its disposition:
+**`Square.swift`/`Squares`** stays — the file's primary declaration *is*
+`Square`, and `Squares` is its named-indices companion argued at the
+declaration; **`LibraryChrome.swift`** stays — a deliberate grouping of
+five small chrome views with no standalone meaning, the
+`Inspector+Toolbar` precedent; **the `Board` namespace recipe is struck
+for good** — its argument text was deleted with the July review documents
+and has gone unre-argued since, and `BoardGeometry` now satisfies its
+motivation (one home for board arithmetic) as a type rather than a
+namespace; **the FEN/GameState collapse is struck** — FEN is a named
+chess-core type in the purity invariant with its own rejection suite and
+two test-only register entries, `GameState.parsing` already fronts it for
+consumers, and the merge's argument survives in no document — a collapse
+would edit the invariant's type list to retire one 256-line value type,
+churn without a reader. *(Both strikes reverse scheduled work by
+disposition; flagged at the checkpoint for veto rather than executed
+silently.)*
+
 ---
 
 ## M19 — Discard, and the review layer

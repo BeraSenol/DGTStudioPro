@@ -4,7 +4,7 @@ import Testing
 /// The wire-level contract: command bytes, message IDs, `DGTPiece → Piece` mapping. A hardware
 /// contract - the values must match the DGT protocol doc exactly; the compiler can't pin *values*.
 @Suite("DGT Protocol Constants & Piece Mapping")
-struct DGTCommandTests {
+struct DGTProtocolTests {
     
     // MARK: Outbound Command Bytes
     

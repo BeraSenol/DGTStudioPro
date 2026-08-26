@@ -52,14 +52,14 @@ six months" is the test.
 
 ## Where things stand
 
-Tree: **`32c5d46`** — 26 August's six committed slices (M16 `7e0b3e6`, M18
-Phase 1 `925648e` + `4cb2dac`, Phase 2 `b3a9b96` + `3fe6ae4` + `32c5d46`,
-⌘U green reported on each) — plus the structure working set: `SessionPhase`
-as its own type with its suite (the waiver row struck), `GameResult`
-re-filed to `Chess/`, five files rewired, nothing else dirty. **Two new
-files must be staged** (`Chess/GameResult.swift`,
-`Game/SessionPhaseTests.swift`), the standing hazard. Beneath the day's
-slices,
+Tree: **`6170af7`** — 26 August's seven committed slices (M16 `7e0b3e6`,
+M18 Phase 1 `925648e` + `4cb2dac`, Phase 2 `b3a9b96` + `3fe6ae4` +
+`32c5d46`, structure `6170af7`, ⌘U green reported on each) — plus the
+renames working set: `AnalysisQueueWindow` (type + file),
+`DGTProtocolTests` (type), the `DGTSessionRecorder` file split, and four
+strikes recorded in the roadmap's M18 status. **One new file must be
+staged** (`DGT/DGTSessionRecorder.swift`) and one was `git mv`'d, the
+standing hazard. Beneath the day's slices,
 24–25 August: seven comment-trim / review-fix commits ending in the M17
 inspector measurement (`c1e57fb`, with `M17-HITCH-CAPTURE.md` and the
 census's first real numbers), the audit-fix sitting (`eb0906d`), the
@@ -117,8 +117,8 @@ which is the rule above doing its job rather than a new failure mode.)
 
 | | |
 |---|---|
-| Sources on disk | **293** — 171 app, 122 unit-test, 0 UITest |
-| Tracked (`git ls-files '*.swift'`) | **293** once the structure pair is staged (291 at `32c5d46`) |
+| Sources on disk | **294** — 172 app, 122 unit-test, 0 UITest |
+| Tracked (`git ls-files '*.swift'`) | **294** once the recorder file is staged (293 at `6170af7`) |
 | Accessibility registry | **148** constants + **23** functions |
 
 *Re-measured 26 Aug 2026, at `4cb2dac` plus the Phase 2 working set.* The
@@ -669,7 +669,8 @@ grep -rn '#if DEBUG' --include='*.swift' DGTStudioPro | grep -v ':[0-9]*:///\?\s
   Foundation. Reads perfectly, fails at compile.
 - ~~**Key paths do not reach tuple elements**~~ — **struck 24 Aug 2026, refuted by
   a green build.** Two app-target sites compile a key path into an `enumerated()`
-  pair: `AnalysisQueueStatusWindowView`'s `id: \.element` and `ImportStatusView`'s
+  pair: `AnalysisQueueWindow`'s `id: \.element` (named `…StatusWindowView` until the
+  M18 rename) and `ImportStatusView`'s
   `id: \.element.id`. Whatever the original diagnostic was, it was not this. The
   other half of the sentence stands: `map` over a zipped sequence takes the pair
   as **one** argument — the two-parameter spelling is the tuple splat removed in
@@ -786,7 +787,7 @@ not listed individually; a view with **no preview** needs its own entry.
 | `DGTConnectionView` (dialog body) | `status` is `private(set)`, so a canvas can pass no state. The shipped not-found preview is honest **only with the board unplugged** — it takes a live `DGTConnection`, and `onAppear` runs a real IOKit walk and will open the port (24 Aug 2026; the old reason named `DeviceRow` and a load-error arm, neither of which exists) | connect-flow manual checks |
 | `Inspector+Toolbar` | toolbar content with no standalone visual | the destinations that apply them |
 | `DGTConnectionToolbarContent` | the `ToolbarContent` wrapper has no standalone visual — but `ConnectButton`, the plain `View` it wraps, has five (24 Aug 2026: splitting the button out retired this row's original reason, and nothing replaced the coverage) | connect-flow manual checks |
-| `AnalysisQueueStatusWindowView` | `queue` is `private(set)` by design; the states worth seeing need an engine subprocess and a container | ships the idle-branch preview; the rest is the batch checklist |
+| `AnalysisQueueWindow` (`AnalysisQueueStatusWindowView` until the M18 rename, 26 Aug 2026) | `queue` is `private(set)` by design; the states worth seeing need an engine subprocess and a container. Its prose is `AnalysisQueueReading`'s and pinned there | ships the idle-branch preview; the rest is the batch checklist |
 
 | Type | Reason | Witness |
 |---|---|---|

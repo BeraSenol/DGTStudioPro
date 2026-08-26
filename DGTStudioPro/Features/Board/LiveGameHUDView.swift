@@ -84,7 +84,7 @@ struct LiveGameHUDView: View {
         // SwiftUI replace the window's `NSToolbar` mid-frame: the toolbar-vanishes-and-layout-
         // zooms fault, in every home this panel ever had - which is why removing the panel was
         // the one thing that ever ran clean. **The hazard is `.bar` under a toolbar**, not `.bar`:
-        // `AnalysisQueueStatusWindowView`'s footer still paints it, in a window with no toolbar
+        // `AnalysisQueueWindow`'s footer still paints it, in a window with no toolbar
         // to replace.
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
         .overlay(

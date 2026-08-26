@@ -653,7 +653,7 @@ struct LibraryDestination: View {
             ToolbarItem {
                 Button {
                     // Window, not popover; `openWindow(id:)` - one queue, singleton scene, nothing to route (no request wrapper).
-                    openWindow(id: AnalysisQueueStatusWindowView.sceneID)
+                    openWindow(id: AnalysisQueueWindow.sceneID)
                 } label: {
                     LibraryQueueStatusLabel(queue: analysisQueue.queue)
                 }

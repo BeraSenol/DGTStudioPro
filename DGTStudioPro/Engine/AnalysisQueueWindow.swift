@@ -3,7 +3,7 @@ import SwiftUI
 
 /// The analysis queue in full: the live search, both clocks, everything in line, everything
 /// done with its outcome - the room the popover never had.
-struct AnalysisQueueStatusWindowView: View {
+struct AnalysisQueueWindow: View {
 
     // MARK: Static Constants
 
@@ -260,7 +260,7 @@ struct AnalysisQueueStatusWindowView: View {
 /// One preview, empty state only - a waiver: the queue is `private(set)` by design, so a canvas
 /// cannot seed a running batch without an engine and a container.
 #Preview("Idle") {
-    AnalysisQueueStatusWindowView()
+    AnalysisQueueWindow()
         .environment(AnalysisQueueController())
         .frame(width: 520, height: 560)
 }

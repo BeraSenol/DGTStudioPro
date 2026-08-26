@@ -233,8 +233,8 @@ struct DGTStudioProApp: App {
         
         // A `Window`, not a `WindowGroup`: exactly one queue, opened by `openWindow(id:)`, so the
         // wrapper-type trap above is sidestepped rather than paid.
-        Window("Analysis Queue", id: AnalysisQueueStatusWindowView.sceneID) {
-            AnalysisQueueStatusWindowView()
+        Window("Analysis Queue", id: AnalysisQueueWindow.sceneID) {
+            AnalysisQueueWindow()
                 .environment(analysisQueue)
         }
         .modelContainer(sharedContainer)
