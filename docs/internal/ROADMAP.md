@@ -337,6 +337,26 @@ debunked and stays dead; these stand on their own merits):*
 green, counted; every structure item fixed or carrying a disposition at the
 site; no rename landing without a clean build in the same sitting.
 
+**Status, 26 Aug 2026 — Phase 1's free points are suites; the refusal seams
+remain.** Six new suites: `LibraryMessagesTests` (the deletion clause's four
+arms against a real store, the backfill grammar's every branch with both
+truncation boundaries), `BoardStyleTests` (persisted raw spellings, plus the
+one-lowercase-word rule `displayName`'s doc stated and nothing enforced),
+`SquareHighlightTests` (six distinct single bits), `BindingPresentTests`
+(the dismissal contract, including true-is-not-a-command),
+`GetInfoRequestTests` (Codable routing round-trips, `.game` through a real
+inserted id), `SyzygyLocationTests` (the census summary shapes, the
+nil-clear taking both keys, access refusing garbage). Dispositions instead
+of decoration: `EngineProgress` joined the waiver table (pure payload, a
+suite could only re-assert the compiler); `BoardStyle` and `SquareHighlight`
+left the presentation-types waiver row in the same change; `TabState`,
+`Inspector+Toolbar`, `InspectorColumn` and `DGTDeviceDiscovery` stand on
+their existing waivers. Still Phase 1's: the refusal seams (`PGNStore`'s
+collision pre-flight and heal/resolve branches, `PGNParser`'s refusals,
+`DGTLiveSession`'s recovery arms) and the `DGTConnection` reconnect-policy
+extraction question the audit flags. Expected ⌘U denominator moves +6 from
+whatever M15's count lands on (≈112).
+
 ---
 
 ## M19 — Discard, and the review layer

@@ -52,12 +52,12 @@ six months" is the test.
 
 ## Where things stand
 
-Tree: **`c1e57fb`** plus this sitting's working set — the 26 August M16
-slice (the stale-check purge, the `LiveGameRosterForm` extraction, import
-cancellation) and the M20 withdrawal to Horizon, all described in the
-roadmap's M16 status block and M20 stub. **Two new files must be staged with
-the commit** (`LiveGameRosterForm.swift`, `ImportProgressTests.swift`) —
-both are referenced from tracked files, the standing hazard. Beneath HEAD,
+Tree: **`7e0b3e6`** — the 26 August M16 slice (the stale-check purge, the
+`LiveGameRosterForm` extraction, import cancellation, the M20 withdrawal to
+Horizon; ⌘U green reported) — plus the same day's M18 Phase 1 working set:
+six new test suites and their register/roadmap bookkeeping, nothing else
+dirty. **The six test files must be staged with their commit**, the standing
+hazard. Beneath `7e0b3e6`,
 24–25 August: seven comment-trim / review-fix commits ending in the M17
 inspector measurement (`c1e57fb`, with `M17-HITCH-CAPTURE.md` and the
 census's first real numbers), the audit-fix sitting (`eb0906d`), the
@@ -115,18 +115,18 @@ which is the rule above doing its job rather than a new failure mode.)
 
 | | |
 |---|---|
-| Sources on disk | **277** — 167 app, 110 unit-test, 0 UITest |
-| Tracked (`git ls-files '*.swift'`) | **277** once this sitting's two files are staged (275 before) |
+| Sources on disk | **283** — 167 app, 116 unit-test, 0 UITest |
+| Tracked (`git ls-files '*.swift'`) | **283** once the M18 Phase 1 suites are staged (277 at `7e0b3e6`) |
 | Accessibility registry | **148** constants + **23** functions |
 
-*Re-measured 26 Aug 2026, at `c1e57fb` plus the M16 working set.* The slice
-adds the roster-form file and the import-progress suite (stage both — the
-tracked line above is written for the commit, the 24 Aug precedent) and two
-registry entries for the import sheet's footer pair. The registry line had
-corrected 142 → 145 → 146 across the prior week — the 18 August figure was
-wrong when written (AUDIT-VERIFICATION §0 counted 145 literal values at
-`c8eea2d`, the same snapshot), which is this table's own lesson re-taught:
-the number lives in the grep, not here.
+*Re-measured 26 Aug 2026, at `7e0b3e6` plus the M18 Phase 1 working set.*
+The M16 slice committed as `7e0b3e6` (roster-form file, import-progress
+suite, two registry entries); the Phase 1 slice adds six test files — all
+new suites, no app sources — and they must be staged with their commit, the
+standing hazard. The registry line had corrected 142 → 145 → 146 across the
+prior week — the 18 August figure was wrong when written (AUDIT-VERIFICATION
+§0 counted 145 literal values at `c8eea2d`, the same snapshot), which is
+this table's own lesson re-taught: the number lives in the grep, not here.
 
 All three counts are dated snapshots. The registry count lives in its grep (D42′)
 and the source counts in `find` / `git ls-files`, because a number in prose decays
@@ -791,7 +791,8 @@ not listed individually; a view with **no preview** needs its own entry.
 | Serial transport (`DGTSerialPort`, `DGTSerialDevice`, `DGTDeviceDiscovery`) | hardware I/O; decisions extracted pure into `DGTAutoConnectPolicy` | manual hardware checks |
 | `DGTConnection` (port/timer half) | status machine suited; serial half is transport | manual hardware checks |
 | `GameAnalysisDriver`, `AnalysisQueueController` | engine + SwiftData transport; branching extracted pure into `AnalysisQueue` | `AnalysisQueueTests`, `AnalysisQueueControllerTests` |
-| `BoardStyle`, `CollectionViewMode`, `SquareHighlight`, `TagColor` | presentation value types, exhaustive switches | compiler exhaustiveness + previews |
+| `CollectionViewMode`, `TagColor` | presentation value types, exhaustive switches. `BoardStyle` and `SquareHighlight` left this row 26 Aug 2026 (M18 Phase 1) — each gained a suite pinning what the compiler cannot see (persisted raw spellings and the one-lowercase-word rule; six distinct single bits); their color and style switches stay compiler-witnessed | compiler exhaustiveness + previews |
+| `EngineProgress` | pure payload — four stored properties, a synthesized memberwise init, no branches; a suite could only re-assert the compiler (M18 Phase 1 disposition, 26 Aug 2026) | constructed by `StockfishEngine` (its gated suite), rendered by the queue window's formatters |
 | `StorageKeys` | constants namespace | compile-checked usage |
 | `DGTSessionLog.exportViaSavePanel()`, `DGTSessionRecording.exportViaSavePanel()` | AppKit modal panels | export flow, run in anger 18 July |
 | `PGNExporter` | AppKit panels + file writes; every byte from the pure serializer | `PGNSerializerTests` + export/re-import check |
