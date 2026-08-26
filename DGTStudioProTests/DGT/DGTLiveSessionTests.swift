@@ -230,7 +230,56 @@ struct DGTLiveSessionTests {
         #expect(session.liveGame?.sanMoves == ["e4"])
         #expect(session.needsRecovery == false)
     }
-    
+
+    /// The correction-hint lifecycle (M18 Phase 1 - the one playing overlay no test raised).
+    /// An EP capture with the captured pawn left standing settles as a *nudge*: the hint names
+    /// the square and the finished SAN, nothing commits, recovery stays out of it; clearing the
+    /// pawn commits the move and takes the hint with it.
+    @Test func aCorrectableSettleRaisesTheHintAndTheFixCommitsAndClearsIt() async throws {
+        let session = DGTLiveSession()
+        session.quiescence = .milliseconds(10)
+        session.boardChanged(.starting)
+        session.startNewGame(roster: roster())
+
+        // Play to the en passant stage: 1. e4 a6 2. e5 d5.
+        var state = GameState.starting
+        for san in ["e4", "a6", "e5", "d5"] {
+            state = state.applying(try state.parseSAN(san))
+            session.boardChanged(state.position)
+            try await settled(session)
+        }
+        #expect(session.liveGame?.plyCount == 4)
+        #expect(session.correctionHint == nil)
+
+        // The slip: attacker e5→d6 placed, the captured d5 pawn never lifted.
+        let ep = try state.parseSAN("exd6")
+        let midCorrection = DGTBoardSimulator.finalBoard(
+            from: state.position,
+            updates: [(Squares.e5, .empty), (Squares.d6, .whitePawn)]
+        )
+        session.boardChanged(midCorrection)
+        try await settled(session)
+
+        let hint = try #require(session.correctionHint)
+        #expect(hint.move == ep)
+        #expect(hint.squares == [Squares.d5])
+        #expect(hint.message == "Remove the captured pawn on d5 to complete exd6.")
+        #expect(session.liveGame?.plyCount == 4)     // a nudge commits nothing
+        #expect(session.needsRecovery == false)      // and is not a desync
+
+        // The fix: the captured pawn comes off - the move commits, the hint clears.
+        let fixed = DGTBoardSimulator.finalBoard(
+            from: midCorrection,
+            updates: [(Squares.d5, .empty)]
+        )
+        session.boardChanged(fixed)
+        try await settled(session)
+
+        #expect(session.correctionHint == nil)
+        #expect(session.liveGame?.plyCount == 5)
+        #expect(session.liveGame?.sanMoves.last == "exd6")
+    }
+
     /// `.unresolved` settles into recovery, and a manual result *during* recovery ends it.
     @Test func resignDuringRecoveryEndsRecoveryAndKeepsTheDecidedGame() async throws {
         let session = DGTLiveSession()

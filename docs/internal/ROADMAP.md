@@ -351,11 +351,22 @@ of decoration: `EngineProgress` joined the waiver table (pure payload, a
 suite could only re-assert the compiler); `BoardStyle` and `SquareHighlight`
 left the presentation-types waiver row in the same change; `TabState`,
 `Inspector+Toolbar`, `InspectorColumn` and `DGTDeviceDiscovery` stand on
-their existing waivers. Still Phase 1's: the refusal seams (`PGNStore`'s
-collision pre-flight and heal/resolve branches, `PGNParser`'s refusals,
-`DGTLiveSession`'s recovery arms) and the `DGTConnection` reconnect-policy
-extraction question the audit flags. Expected ⌘U denominator moves +6 from
-whatever M15's count lands on (≈112).
+their existing waivers.
+
+**The refusal seams, same day (second half).** Surveyed rather than assumed,
+and the audit's 21 Aug list was partly stale: retag's three rejection arms,
+the archive's `.ongoingGame`, the parser's tag/brace/paren refusals, and the
+session's recovery escalation and draft cadence all had pins the audit
+predated. Three genuinely missing pins added to their existing suites:
+`PGNParser.Error.multipleGames` (the one parser refusal with no test),
+`PGNStore.Error.fileReadFailed` naming its URL at the door, and the
+correction-hint lifecycle in `DGTLiveSessionTests` — the EP nudge raised
+with its exact message, committing nothing, not a desync; then the fix
+committing `exd6` and clearing it. What Phase 1 leaves for Phase 2's shape:
+the `DGTConnection` reconnect-policy extraction (a structural move, not a
+free point) and `StockfishEngine`'s teardown contract (engine-gated).
+Expected ⌘U denominator: +6 suites over M15's count (≈112), the three new
+pins riding existing suites.
 
 ---
 

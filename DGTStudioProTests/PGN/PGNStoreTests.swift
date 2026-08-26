@@ -96,7 +96,24 @@ struct PGNStoreTests {
             try secondStore.importPGN(text: Self.samplePGN())
         }
     }
-    
+
+    /// The URL door's refusal (M18 Phase 1): an unreadable path surfaces as `.fileReadFailed`
+    /// naming that URL - never as a parse error for a file that was never read.
+    @Test func importFromAMissingFileThrowsFileReadFailed() throws {
+        let context = try Self.makeContext()
+        let store = PGNStore(modelContext: context)
+        let missing = URL(fileURLWithPath: "/nonexistent/\(UUID().uuidString).pgn")
+
+        do {
+            _ = try store.importPGN(from: missing)
+            Issue.record("Expected .fileReadFailed for a missing file")
+        } catch PGNStore.Error.fileReadFailed(let url, _) {
+            #expect(url == missing)
+        } catch {
+            Issue.record("Expected .fileReadFailed, got \(error)")
+        }
+    }
+
     /// The hash's date rendering - a **persistence contract**: every stored hash was computed
     /// against "yyyy.MM.dd" in UTC; drift silently rots dedupe.
     @Test func hashDateRenderingIsPinnedToUTCDots() throws {

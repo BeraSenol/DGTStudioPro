@@ -63,7 +63,19 @@ struct PGNParserRejectionTests {
             _ = try PGNParser.parse(pgnText(movetext: "1. e4 (1... e5 *"))
         }
     }
-    
+
+    // MARK: One Game Per File
+
+    /// A second tag block after movetext has begun is a second game, refused as such rather
+    /// than mangled into the first - legal movetext never starts a line with `[Key "`. The
+    /// parser's one refusal that had no pin (M18 Phase 1).
+    @Test func aSecondGameInTheSameFileThrows() {
+        let twoGames = pgnText(movetext: "1. e4 e5 1-0") + "\n" + pgnText(movetext: "1. d4 d5 *")
+        #expect(throws: PGNParser.Error.multipleGames) {
+            _ = try PGNParser.parse(twoGames)
+        }
+    }
+
     // MARK: parseTag Edges
     
     @Test func tagLinesNeedBracketsAndAKeyValueSpace() {
