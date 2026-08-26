@@ -368,6 +368,22 @@ free point) and `StockfishEngine`'s teardown contract (engine-gated).
 Expected ⌘U denominator: +6 suites over M15's count (≈112), the three new
 pins riding existing suites.
 
+**Phase 2, first two extractions (26 Aug 2026, same day).**
+`AnalysisQueueReading` takes the queue window's prose pure — header, timing
+line, speed tiers, ply label, outcome symbol and detail — generic over the
+id so its suite runs on `Int` with no store; `outcomeTint` stays in the view
+(`Color` is presentation) and the move label stays
+`GameAnalysisDriver.moveLabel` (the driver is `@MainActor` and already the
+one spelling). `BoardGeometry` takes the board's arithmetic — `Layout`, the
+grid-border inset with its rosewood-fifteenth warning, and **the perspective
+mask, which was spelled four times across two files** (the grid's XOR, the
+piece layer's inverse, both coordinate strips' ternaries): the strips now
+derive from the one mapping and the layer reads the involution back, so the
+four-spellings hazard is unrepresentable, and `BoardGeometryTests` pins the
+orientation corners, the 128-cell involution, layout conservation per style,
+and the fifteenth. Two new suites (≈114 expected); rendering unchanged by
+construction — the checkpoint's eyes-on-board confirms.
+
 ---
 
 ## M19 — Discard, and the review layer

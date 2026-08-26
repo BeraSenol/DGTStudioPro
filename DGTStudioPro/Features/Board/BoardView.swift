@@ -67,15 +67,10 @@ struct BoardView: View {
     }
     
     // MARK: Instance Methods
-    private func layout(for totalSide: CGFloat) -> Layout {
-        let squareSize = totalSide / 10
-        let borderInset = gridBorderInset(squareSize: squareSize)
-        let innerSquareSize = (8 * squareSize - 2 * borderInset) / 8
-        return Layout(
-            squareSize: squareSize,
-            borderInset: borderInset,
-            innerSquareSize: innerSquareSize
-        )
+
+    /// Arithmetic via `BoardGeometry` (M18 Phase 2) - the view draws; the geometry counts.
+    private func layout(for totalSide: CGFloat) -> BoardGeometry.Layout {
+        BoardGeometry.layout(totalSide: totalSide, style: style)
     }
     
     private func fileStrip(layout: Layout, isTop: Bool) -> some View {
@@ -83,7 +78,8 @@ struct BoardView: View {
             Spacer().frame(width: layout.squareSize + layout.borderInset)
             
             ForEach(Square.files, id: \.self) { visualColumn in
-                let file = perspective == .white ? visualColumn : 7 - visualColumn
+                // Derived from the one mask, not restated as a ternary (M18 Phase 2).
+                let file = BoardGeometry.file(atVisualColumn: visualColumn, perspective: perspective)
                 coordinateLabel(Square.fileCharacter(file), squareSize: layout.squareSize)
                     .frame(width: layout.innerSquareSize, height: layout.squareSize)
                     .offset(y: layout.squareSize * -0.3)
@@ -99,7 +95,7 @@ struct BoardView: View {
             Spacer().frame(height: layout.borderInset)
             
             ForEach(Square.ranks, id: \.self) { visualRow in
-                let rank = perspective == .white ? 7 - visualRow : visualRow
+                let rank = BoardGeometry.rank(atVisualRow: visualRow, perspective: perspective)
                 coordinateLabel(Square.rankCharacter(rank), squareSize: layout.squareSize)
                     .frame(width: layout.squareSize, height: layout.innerSquareSize)
                     .offset(x: layout.squareSize * 0.3)
@@ -194,27 +190,10 @@ struct BoardView: View {
         }
     }
     
-    /// **Must equal what `gridBorder` above actually draws**, or the playing surface starts
-    /// somewhere other than where the frame ends. Walnut and wenge match their strokes exactly;
-    /// rosewood's three sum to `thin * 5/3` and this returns a fifteenth less on purpose - which is
-    /// why the expression stays a subtraction. Simplifying it to `thin * 5/3` moves the board.
-    private func gridBorderInset(squareSize: CGFloat) -> CGFloat {
-        let thin = squareSize / 28
-        switch style {
-        case .leather: return 0
-        case .walnut:   return thin * 19 / 15
-        case .rosewood: return thin * 5 / 3 - thin / 15
-        case .wenge:    return thin * 3 / 2
-        }
-    }
-    
-    /// Visual cell → board square: XOR the rank bits for White (`56`), the file bits for Black
-    /// (`7`). **The same flip is spelled three more times** - `BoardPieceLayer` runs this mask in
-    /// the opposite direction, and the two coordinate strips above restate it as ternaries rather
-    /// than deriving from here. They agree across all 128 cells today; nothing in the suite checks
-    /// that they still will.
+    /// The inset twin of `gridBorder` above lives at `BoardGeometry.gridBorderInset` with its
+    /// must-match warning - a stroke change here means a change there in the same commit.
     private func square(visualRow: Int, visualColumn: Int) -> Square {
-        (visualRow * 8 + visualColumn) ^ (perspective == .white ? 56 : 7)
+        BoardGeometry.square(visualRow: visualRow, visualColumn: visualColumn, perspective: perspective)
     }
     
     private func squareHighlight(for square: Square) -> SquareHighlight {
@@ -244,11 +223,9 @@ struct BoardView: View {
 }
 
 // MARK: Supporting Types
-private struct Layout {
-    let squareSize: CGFloat
-    let borderInset: CGFloat
-    let innerSquareSize: CGFloat
-}
+/// The private `Layout` triple moved to `BoardGeometry.Layout` with the arithmetic
+/// (M18 Phase 2); the alias keeps the helpers' signatures readable in board vocabulary.
+private typealias Layout = BoardGeometry.Layout
 
 /// The four mitred frame boards, as an `Equatable` view (21 Aug 2026).
 ///

@@ -83,19 +83,14 @@ struct BoardPieceLayer: View {
     
     // MARK: Instance Methods
     
-    /// The inverse of `BoardView.square(visualRow:visualColumn:)` - involutive XOR, so a flip moves
-    /// every cell and the layer follows without a second rule.
-    ///
-    /// **The mask itself is spelled twice**, here and at `BoardView:206`, in two files. Same rule,
-    /// two literals: change one and squares and pieces disagree about which end of the board is
-    /// which - pieces render on the wrong squares, visibly, but only at runtime.
+    /// The inverse of the square grid's mapping, read from the same mask at `BoardGeometry`
+    /// (M18 Phase 2) - the two-literals-in-two-files hazard this comment used to describe is
+    /// unrepresentable now, and the involution is pinned cell-by-cell in `BoardGeometryTests`.
     private func center(of square: Square) -> CGPoint {
-        let visual = square ^ (perspective == .white ? 56 : 7)
-        let row = visual / 8
-        let column = visual % 8
+        let cell = BoardGeometry.visualCell(of: square, perspective: perspective)
         return CGPoint(
-            x: (CGFloat(column) + 0.5) * squareSize,
-            y: (CGFloat(row) + 0.5) * squareSize
+            x: (CGFloat(cell.column) + 0.5) * squareSize,
+            y: (CGFloat(cell.row) + 0.5) * squareSize
         )
     }
 }

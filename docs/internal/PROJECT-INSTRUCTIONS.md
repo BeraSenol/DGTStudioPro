@@ -52,12 +52,13 @@ six months" is the test.
 
 ## Where things stand
 
-Tree: **`7e0b3e6`** — the 26 August M16 slice (the stale-check purge, the
-`LiveGameRosterForm` extraction, import cancellation, the M20 withdrawal to
-Horizon; ⌘U green reported) — plus the same day's M18 Phase 1 working set:
-six new test suites and their register/roadmap bookkeeping, nothing else
-dirty. **The six test files must be staged with their commit**, the standing
-hazard. Beneath `7e0b3e6`,
+Tree: **`4cb2dac`** — 26 August's three committed slices (M16 `7e0b3e6`,
+M18 Phase 1's six suites `925648e`, the refusal-seam pins `4cb2dac`, ⌘U
+green reported on each) — plus the Phase 2 working set: two extractions
+(`AnalysisQueueReading`, `BoardGeometry`) with their suites, four view files
+rewired onto them, nothing else dirty. **Four new files must be staged with
+the commit** (two app sources, two test files), the standing hazard.
+Beneath the day's slices,
 24–25 August: seven comment-trim / review-fix commits ending in the M17
 inspector measurement (`c1e57fb`, with `M17-HITCH-CAPTURE.md` and the
 census's first real numbers), the audit-fix sitting (`eb0906d`), the
@@ -115,18 +116,19 @@ which is the rule above doing its job rather than a new failure mode.)
 
 | | |
 |---|---|
-| Sources on disk | **283** — 167 app, 116 unit-test, 0 UITest |
-| Tracked (`git ls-files '*.swift'`) | **283** once the M18 Phase 1 suites are staged (277 at `7e0b3e6`) |
+| Sources on disk | **287** — 169 app, 118 unit-test, 0 UITest |
+| Tracked (`git ls-files '*.swift'`) | **287** once the Phase 2 files are staged (283 at `4cb2dac`) |
 | Accessibility registry | **148** constants + **23** functions |
 
-*Re-measured 26 Aug 2026, at `7e0b3e6` plus the M18 Phase 1 working set.*
-The M16 slice committed as `7e0b3e6` (roster-form file, import-progress
-suite, two registry entries); the Phase 1 slice adds six test files — all
-new suites, no app sources — and they must be staged with their commit, the
-standing hazard. The registry line had corrected 142 → 145 → 146 across the
-prior week — the 18 August figure was wrong when written (AUDIT-VERIFICATION
-§0 counted 145 literal values at `c8eea2d`, the same snapshot), which is
-this table's own lesson re-taught: the number lives in the grep, not here.
+*Re-measured 26 Aug 2026, at `4cb2dac` plus the Phase 2 working set.* The
+day so far: `7e0b3e6` added the roster-form file and the import-progress
+suite, `925648e` six Phase 1 suites, `4cb2dac` three pins in existing
+files; the Phase 2 set adds `AnalysisQueueReading` and `BoardGeometry` with
+their two suites. The registry line had corrected 142 → 145 → 146 across
+the prior week — the 18 August figure was wrong when written
+(AUDIT-VERIFICATION §0 counted 145 literal values at `c8eea2d`, the same
+snapshot), which is this table's own lesson re-taught: the number lives in
+the grep, not here.
 
 All three counts are dated snapshots. The registry count lives in its grep (D42′)
 and the source counts in `find` / `git ls-files`, because a number in prose decays

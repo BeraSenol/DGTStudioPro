@@ -61,25 +61,18 @@ struct AnalysisQueueStatusWindowView: View {
         }
     }
 
+    /// Prose via `AnalysisQueueReading` (M18 Phase 2) - the window renders; the reading words.
     private var headerTitle: String {
-        let queue = controller.queue
-        guard queue.isActive else {
-            return queue.hasFailures ? "Analysis finished with errors" : "Analysis finished"
-        }
-        // `batchPosition` is the one spelling of the numerator, shared with the toolbar's "3/18".
-        return "Analyzing \(queue.batchPosition) of \(queue.totalCount)"
+        AnalysisQueueReading.headerTitle(for: controller.queue)
     }
 
-    /// Only the knowable half: the projection drops off once the queue drains - "about 0 sec" is
-    /// not the same statement as no estimate.
     private func timingLine(now: Date, started: Date) -> String {
-        let elapsed = BatchProgressEstimate.describe(
-            elapsed: now.timeIntervalSince(started)
+        AnalysisQueueReading.timingLine(
+            now: now,
+            started: started,
+            isActive: controller.queue.isActive,
+            secondsRemaining: controller.secondsRemaining
         )
-        guard controller.queue.isActive,
-              let seconds = controller.secondsRemaining
-        else { return "\(elapsed) elapsed" }
-        return "\(elapsed) elapsed · \(BatchProgressEstimate.describe(secondsRemaining: seconds)) left"
     }
 
     // MARK: Running Search
@@ -136,18 +129,8 @@ struct AnalysisQueueStatusWindowView: View {
         GameAnalysisDriver.moveLabel(plyIndex: search.plyIndex, san: search.san)
     }
 
-    /// "8.9 Mn/s" - the unit every engine front end shows; degrades through thousands to bare nodes.
-    /// The third tier exists because the kn/s branch is integer division: without it, the first
-    /// `info` line of a cold search reads "0 kn/s", which is what a stalled engine would show.
     private func speedLabel(_ nodesPerSecond: Int?) -> String {
-        guard let nodesPerSecond else { return RosterSummary.displayUnknown }
-        if nodesPerSecond >= 1_000_000 {
-            return String(format: "%.1f Mn/s", Double(nodesPerSecond) / 1_000_000)
-        }
-        if nodesPerSecond >= 1_000 {
-            return "\(nodesPerSecond / 1_000) kn/s"
-        }
-        return "\(nodesPerSecond) n/s"
+        AnalysisQueueReading.speedLabel(nodesPerSecond)
     }
 
     // MARK: Lists
@@ -221,29 +204,19 @@ struct AnalysisQueueStatusWindowView: View {
         }
     }
 
-    /// "58 plies to search" - searchable, not total: the number the estimate is
-    /// denominated in, so a jumped "about 9 min" is explicable.
-    ///
-    /// Empty string for an unknown id, not the em dash `speedLabel` uses: a missing count means
-    /// there is nothing to say about this row, where a missing speed means a named fact is
-    /// unavailable. Two spellings of "unknown" in one file, on purpose.
     private func plyLabel(for id: PersistentIdentifier) -> String {
-        guard let plies = controller.plyCount(for: id) else { return "" }
-        return "\(plies) plies to search"
+        AnalysisQueueReading.plyLabel(plies: controller.plyCount(for: id))
     }
 
     // MARK: Outcomes
 
     private func outcomeSymbol(_ outcome: AnalysisQueue<PersistentIdentifier>.Outcome) -> String {
-        switch outcome {
-        case .done:      "checkmark.circle.fill"
-        case .cancelled: "minus.circle.fill"
-        case .failed:    "exclamationmark.triangle.fill"
-        }
+        AnalysisQueueReading.outcomeSymbol(outcome)
     }
 
     /// Cancelled is deliberately not a warning colour - reporting the user's own choice back as a
-    /// problem teaches people to ignore warnings.
+    /// problem teaches people to ignore warnings. `Color` is presentation, so the tint is the one
+    /// outcome switch that stays in the view rather than the reading.
     private func outcomeTint(_ outcome: AnalysisQueue<PersistentIdentifier>.Outcome) -> Color {
         switch outcome {
         case .done:      .green
@@ -253,11 +226,7 @@ struct AnalysisQueueStatusWindowView: View {
     }
 
     private func outcomeDetail(_ outcome: AnalysisQueue<PersistentIdentifier>.Outcome) -> String? {
-        switch outcome {
-        case .done:                    nil
-        case .cancelled:               "Stopped. Evaluations recorded before the stop were kept."
-        case .failed(let message):     message
-        }
+        AnalysisQueueReading.outcomeDetail(outcome)
     }
 
     // MARK: Footer
