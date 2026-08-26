@@ -71,13 +71,14 @@ struct LiveGameInspectorView: View {
             Text("Both players agree, the game ends 1/2-1/2.")
         }
         .confirmationDialog(
-            "Discard this game?",
+            // One spelling with the toolbar's dialog (D85′) - the copy lives on `BoardDiscard`.
+            BoardDiscard.confirmationTitle,
             isPresented: $isConfirmingDiscard
         ) {
-            Button("Discard Game", role: .destructive, action: onDiscard)
+            Button(BoardDiscard.confirmationButton, role: .destructive, action: onDiscard)
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("The game and its moves will be lost. It won't be saved to the Library.")
+            Text(BoardDiscard.confirmationMessage)
         }
     }
     

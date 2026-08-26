@@ -529,6 +529,28 @@ confirmation's producibility); the boardless manual checks for both features
 written into the instructions and run; D-numbers minted at recording for the
 classification vocabulary and the discard contract.
 
+**Status, 26 Aug 2026 — both cores are code with their D-numbers; the
+surfaces are next.** **D85′, the Discard button**: mode-decided by one
+predicate (`BoardDiscard.action` — reviewing clears the tab and the Library
+survives, no dialog; live confirms then `discardGame()`; nil disabled,
+producible both ways), one spelling of the destructive copy shared by the
+toolbar's dialog and the inspector's (the inspector's literals moved onto
+`BoardDiscard` unchanged), two registry entries, `BoardDiscardTests` pinning
+the mode table, the precedence, both escape routes and the copy. Locked
+decision #1's "Discard lives in the inspector" parenthetical is named in the
+entry, not sidestepped. **D86′, the review core**: `GameReview` with the
+three-tier vocabulary at 10/20/30 pp of mover loss (thresholds as data, no
+best-move tier), mover losses under D77′'s gap rule ply-0 included (the 50%
+seed was built and dropped the same hour — a fake delta in gap-rule
+clothes), accuracy as the stated monotone map with honest nils, and the
+biggest-swing destination; `GameReviewTests` pins the tier edges, the
+parity, the floor, the gap rule, both sides' accuracy from one game, and
+the asymmetric nil. Classifications are stored nowhere; Players surfaces
+will compute per selection, never in the fold (the stale-after-batch
+argument, in D86′). Still owed: the surfaces (move-list badges, the
+inspector accuracy summary, Players grid/gallery accuracy,
+jump-to-biggest-swing) and the boardless checks. Two new suites (≈120).
+
 ---
 
 ## M20 — *withdrawn to Horizon, 26 August 2026*

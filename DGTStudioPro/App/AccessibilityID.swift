@@ -43,6 +43,10 @@ enum AccessibilityID {
     // MARK: Board
     
     static let board                = "board"
+    /// The mode-decided Discard (D85′): one button, and its live-arm dialog's destructive
+    /// confirm - the inspector's dialog shares the copy, not the identifiers.
+    static let boardDiscardButton  = "board.discardButton"
+    static let boardDiscardConfirm = "board.discard.confirm"
     static let boardFlipButton      = "board.flipButton"
     static let boardInspectorToggle = "board.inspectorToggle"
     static let boardConnectButton   = "board.connectButton"

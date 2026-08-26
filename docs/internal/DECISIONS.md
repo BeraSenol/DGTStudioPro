@@ -26,7 +26,7 @@ Locked product decisions #1–#8 and their interpretation flags were recorded in
 
 Old milestone and finding tags (M7.2, M-prs.1, F1–F9…) survive in code comments as provenance only — they identify where a decision came from; they schedule nothing. **Not all survive *below*,** which this line claimed until 24 Aug 2026: of the F family only F5 is reconstructable from this document, and seven other tags are defined nowhere. PROJECT-INSTRUCTIONS' standing-greps block names them — hyphenated there, because spelling them straight in a document is what would stop the grep finding them in code. Every citing sentence in the tree reads correctly with its tag deleted, which is what makes the gap survivable rather than urgent.
 
-D-numbers are sequential and never reused. Next free number: **D85′**. (D84′ minted 18 Aug 2026 with the session window, by request — and it is the entry that corrects the one real breach of the rule above: the 17 Aug revision of the project instructions minted **D64′** for the session overlay, a number this document had already spent, along with every number through D83′. That revision's own next-free line read D65′, nineteen behind. The overlay was never written up here, which is how the collision survived a week; D84′ covers both arrangements and names the mistake rather than renumbering it away. D82′ minted 12 Aug 2026 with the cue sets, by request. D81′ minted 12 Aug 2026 with the board cues, by request. D80′ minted 10 Aug 2026 with the companion-window fix, by defect report. D79′ minted 9 Aug 2026 with the red-ply highlight, the game-98 sitting's feature. D74′–D78′ minted 9 Aug 2026, in the waste-audit sitting, *with* the work. D71′–D73′ minted 8 Aug 2026, in the release-audit sitting, *with* the work rather than after it. D69′ and D70′ were minted 8 Aug 2026 for the View Options panel and the memoized collection folds — both recording work that had already shipped into the working tree unnumbered, which is the failure their entries open by naming.) (This line said D47′ until the 3 Aug audit — it had not been advanced since the M6 revision while the header above was; the header is the owner and this line now just repeats it.)
+D-numbers are sequential and never reused. Next free number: **D87′**. (D86′ minted 26 Aug 2026 with the review layer's vocabulary and accuracy formula, M19's schedule. D85′ minted 26 Aug 2026 with the Board Discard button — M19's schedule, the entry at the document's tail. D84′ minted 18 Aug 2026 with the session window, by request — and it is the entry that corrects the one real breach of the rule above: the 17 Aug revision of the project instructions minted **D64′** for the session overlay, a number this document had already spent, along with every number through D83′. That revision's own next-free line read D65′, nineteen behind. The overlay was never written up here, which is how the collision survived a week; D84′ covers both arrangements and names the mistake rather than renumbering it away. D82′ minted 12 Aug 2026 with the cue sets, by request. D81′ minted 12 Aug 2026 with the board cues, by request. D80′ minted 10 Aug 2026 with the companion-window fix, by defect report. D79′ minted 9 Aug 2026 with the red-ply highlight, the game-98 sitting's feature. D74′–D78′ minted 9 Aug 2026, in the waste-audit sitting, *with* the work. D71′–D73′ minted 8 Aug 2026, in the release-audit sitting, *with* the work rather than after it. D69′ and D70′ were minted 8 Aug 2026 for the View Options panel and the memoized collection folds — both recording work that had already shipped into the working tree unnumbered, which is the failure their entries open by naming.) (This line said D47′ until the 3 Aug audit — it had not been advanced since the M6 revision while the header above was; the header is the owner and this line now just repeats it.)
 
 ### D9′ — Player is a machine-managed @Model
 
@@ -1626,3 +1626,74 @@ and spends permanent blank space); **moving the load-error card into the window*
 would have to lie about which tab it means); **a keyboard shortcut on Show Session** (a claim to own
 a verb globally, which D69′'s ⌘J note says only the menu may make, and this surface is not driven
 often enough to earn one).
+
+### D85′ — The Board Discard button: two meanings, one predicate, one copy
+
+Minted 26 Aug 2026, with the work — M19's first feature, on the roadmap's own schedule ("the
+Board gets its missing exit"). One toolbar button whose meaning is mode-decided by a single
+predicate, `BoardDiscard.action(isReviewing:hasLiveGame:)`:
+
+**Reviewing an archived game → `clearReview`.** The tab unloads (`loadedGameID = nil`, the same
+unbinding the load-error alert performs) and the window returns to the live mirror. **The
+Library row is untouched** — discard-from-board is not delete-from-Library, and the button's
+help says so ("Clear the board. The game stays in your Library."). Nondestructive, so no
+confirmation; a dialog protecting nothing would teach dialogs to mean nothing.
+
+**Live recording → `discardLive`.** The double-check the feature was asked for: a confirmation
+first, then the existing `session.discardGame()` path. The inspector's Discard stays, and **both
+doors read one spelling of the copy** — title, destructive button, message all live on
+`BoardDiscard`, because two doors with two dialogs is the twin-read-site shape in dialog
+clothes. Reviewing wins when both hold: the button acts on the tab's subject (the review board
+is what the reader sees), and the live game keeps its inspector door.
+
+**Nil → disabled, producible both ways**: an empty tab over no live game — D40′'s check at
+minting, pinned in `BoardDiscardTests` alongside the mode table and the copy spellings.
+Registry: `board.discardButton`, `board.discard.confirm`.
+
+**Locked decision #1's parenthetical, named rather than sidestepped.** #1 reads "Discard lives
+in the inspector"; that clause described the only door, not a rule that there be one. The
+substance of #1 — the board is truth, the live game is append-only, no takebacks — is
+untouched; the inspector door stays; this entry widens where the same confirmed verb is
+reachable, which the 23 Aug roadmap scheduled explicitly.
+
+Rejected: **confirming the review arm too** (protects nothing — the Library row survives; a
+warning without stakes is a boy who cried wolf on every later dialog); **two buttons** (Clear /
+Discard as separate toolbar items reintroduces the "which one am I" question the mode already
+answers); **the button acting on the live game while reviewing** (the surface shows the review
+board; acting on an invisible subject is the counted-menus bug in toolbar clothes).
+
+### D86′ — The review layer's vocabulary and accuracy formula
+
+Minted 26 Aug 2026, with the work — M19's second feature. `GameReview` derives move
+classifications and per-game accuracy from the win-probability curve the app already stores;
+it derives and stores nothing, exactly as the roadmap scheduled.
+
+**The vocabulary is three tiers, chosen once**: inaccuracy / mistake / blunder, at 10 / 20 /
+30 percentage points of the *mover's* win-probability loss — thresholds as data, checked
+worst-first, the tiers every chess reader already knows. **No "best move" tier**: the stored
+data cannot honestly say it without multipv, and a tier the data cannot produce is a lie with
+a green build. A quiet move is nil, not a case — the vocabulary names lapses. Classification
+reads the raw loss where the D77′ column rounds for display; display-vs-branch stays split.
+
+**The gap rule is D77′'s, inherited whole, ply 0 included.** A step classifies only when both
+ends are scored — the book and any skipped tail produce no badges and no accuracy
+contribution. A 50% seed for ply 0 was built and dropped the same hour: a "before" the engine
+never scored is a fake delta in gap-rule clothes, and ply 0 is book in practice anyway.
+
+**Accuracy is `100 − 2 × (mean win% loss in pp)`, clamped to 0…100, per side — a monotone map
+from mean loss, stated as ours.** Nil when the side has no classifiable step: an unanalyzed or
+all-book game has no accuracy, not a perfect one. The factor 2 puts zero at a 50 pp mean loss
+— hanging the game every move — the scale's honest floor.
+
+**Players surfaces compute per selection, never in the fold.** The fold key deliberately
+excludes `evaluations` (D70′'s memo argument), so a folded accuracy would go stale after every
+batch until unrelated content moved; the gallery and inspector already thread the selected
+player's records per selection, and that is where accuracy is computed. The census gains no
+entry unless M17's method says the per-selection fold is visible.
+
+Rejected: **chess.com's CAPS** (proprietary — a number we cannot recompute is a number we
+cannot pin); **lichess's exponential fit** (its constants without its harmonic-mean machinery
+reproduce neither its numbers nor ours honestly); **counting unscored plies as zero loss**
+(inflates accuracy exactly where the engine never looked); **storing classifications on the
+model** (derivable in one pass from what is stored; a backfill decision can revisit if a
+surface ever needs them queryable).

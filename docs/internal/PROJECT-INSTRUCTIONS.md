@@ -52,14 +52,15 @@ six months" is the test.
 
 ## Where things stand
 
-Tree: **`6170af7`** — 26 August's seven committed slices (M16 `7e0b3e6`,
-M18 Phase 1 `925648e` + `4cb2dac`, Phase 2 `b3a9b96` + `3fe6ae4` +
-`32c5d46`, structure `6170af7`, ⌘U green reported on each) — plus the
-renames working set: `AnalysisQueueWindow` (type + file),
-`DGTProtocolTests` (type), the `DGTSessionRecorder` file split, and four
-strikes recorded in the roadmap's M18 status. **One new file must be
-staged** (`DGT/DGTSessionRecorder.swift`) and one was `git mv`'d, the
-standing hazard. Beneath the day's slices,
+Tree: **`bd3be0b`** — 26 August's nine committed slices (M16 `7e0b3e6`, M18
+`925648e` `4cb2dac` `b3a9b96` `3fe6ae4` `32c5d46` `6170af7` `a842c56`
+`bd3be0b`, ⌘U green reported on each code slice) — plus the M19 core
+working set: D85′ (the Discard button, `BoardDiscard` + toolbar + shared
+dialog copy) and D86′ (`GameReview` — classifications, accuracy, biggest
+swing), with their two suites; both D-entries appended to DECISIONS.md
+(next free: D87′). **Four new files must be staged** (`BoardDiscard.swift`,
+`GameReview.swift`, and their two test files), the standing hazard. Beneath
+the day's slices,
 24–25 August: seven comment-trim / review-fix commits ending in the M17
 inspector measurement (`c1e57fb`, with `M17-HITCH-CAPTURE.md` and the
 census's first real numbers), the audit-fix sitting (`eb0906d`), the
@@ -117,9 +118,9 @@ which is the rule above doing its job rather than a new failure mode.)
 
 | | |
 |---|---|
-| Sources on disk | **294** — 172 app, 122 unit-test, 0 UITest |
-| Tracked (`git ls-files '*.swift'`) | **294** once the recorder file is staged (293 at `6170af7`) |
-| Accessibility registry | **148** constants + **23** functions |
+| Sources on disk | **298** — 174 app, 124 unit-test, 0 UITest |
+| Tracked (`git ls-files '*.swift'`) | **298** once the M19 core's four files are staged (294 at `bd3be0b`) |
+| Accessibility registry | **150** constants + **23** functions |
 
 *Re-measured 26 Aug 2026, at `4cb2dac` plus the Phase 2 working set.* The
 day so far: `7e0b3e6` added the roster-form file and the import-progress
@@ -964,6 +965,16 @@ invalidates the witness.*
   renders only where cards do); Players likewise. At the default (Index),
   compare a card against memory of the old rendering — it must be identical,
   because the default is the pre-picker pair verbatim.
+
+- **The Discard button (26 Aug 2026, D85′), boardless half.** A fresh Board
+  tab over no live game: Discard is disabled, and its help reads "Nothing to
+  discard." Open an archived game: enabled, help says the game stays in your
+  Library; click — the board clears to the mirror **with no dialog**, and
+  the Library row survives (check it). The live arm and the loop-stand-down
+  are M21's board sitting; what the boardless pass can check is the review
+  arm and that the *inspector's* Discard dialog still reads word-for-word
+  the same (its copy moved onto `BoardDiscard` unchanged - any drift is a
+  defect).
 
 - **Import cancellation (26 Aug 2026, M16).** Import a dozen files and press
   Cancel mid-run: the button disables at once (the request is in flight), the

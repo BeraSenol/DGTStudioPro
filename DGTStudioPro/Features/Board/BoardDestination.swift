@@ -41,6 +41,10 @@ struct BoardDestination: View {
     /// Set by the Game menu's ⌘I (a `Commands` scene cannot open windows); cleared as soon as this
     /// view has. A trigger, not a stored request - the subject is derivable here (`getInfoSubject`).
     @State private var getInfoRequested = false
+
+    /// The toolbar Discard's live-arm confirmation (D85′). Presentation state only - the copy
+    /// and the destructive action shape are `BoardDiscard`'s, shared with the inspector's dialog.
+    @State private var isConfirmingToolbarDiscard = false
     
     /// The Library ordinal the live game will carry, cached (21 Aug 2026). **Was a computed
     /// property**, which put a `PGNStore` construction and a `FetchDescriptor` execution inside
@@ -56,6 +60,14 @@ struct BoardDestination: View {
     
     // MARK: Body
     
+    /// One predicate for the Discard button's action, enablement and help (D85′).
+    private var discardAction: BoardDiscard.Action? {
+        BoardDiscard.action(
+            isReviewing: tabState.boardPGN != nil,
+            hasLiveGame: session.liveGame != nil
+        )
+    }
+
     var body: some View {
         Group {
             if let pgn = tabState.boardPGN, let game = tabState.boardGame {
@@ -93,6 +105,20 @@ struct BoardDestination: View {
         // `openWindow` itself (D84′ took the flag that used to hop through here).
         .onChange(of: session.shouldOfferNewGame && tabState.boardPGN == nil) { _, offered in
             if offered { openWindow(id: NewLiveGameWindow.sceneID) }
+        }
+        // The toolbar Discard's live-arm double-check (D85′) - the same words as the
+        // inspector's dialog, both read off `BoardDiscard`, so the two doors cannot drift.
+        .confirmationDialog(
+            BoardDiscard.confirmationTitle,
+            isPresented: $isConfirmingToolbarDiscard
+        ) {
+            Button(BoardDiscard.confirmationButton, role: .destructive) {
+                session.discardGame()
+            }
+            .accessibilityIdentifier(AccessibilityID.boardDiscardConfirm)
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(BoardDiscard.confirmationMessage)
         }
         // The per-tab load error, which could NOT follow those windows: an alert rather than a
         // card, because a failure to open *this tab's* game is a modal fact about this tab, and
@@ -156,6 +182,24 @@ struct BoardDestination: View {
             }
             // Enabled with no game: the manual orientation toggle for the live mirror (view-only flip).
             .accessibilityIdentifier(AccessibilityID.boardFlipButton)
+        }
+        ToolbarItem {
+            // The Board's missing exit (D85′): mode-decided by one predicate. Reviewing clears
+            // the tab (Library untouched, no dialog - nondestructive); a live recording gets
+            // the shared confirmation before `discardGame()`. Disabled is producible both ways:
+            // an empty tab over no live game.
+            Button {
+                switch discardAction {
+                case .clearReview: loadedGameID = nil
+                case .discardLive: isConfirmingToolbarDiscard = true
+                case nil:          break   // unreachable: the button is disabled
+                }
+            } label: {
+                Label("Discard", systemImage: "xmark.rectangle")
+            }
+            .disabled(discardAction == nil)
+            .help(BoardDiscard.help(for: discardAction))
+            .accessibilityIdentifier(AccessibilityID.boardDiscardButton)
         }
         DGTConnectionToolbarContent(
             status: connection.status,
