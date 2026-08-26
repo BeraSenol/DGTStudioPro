@@ -401,6 +401,24 @@ considered stays. Remaining in Phase 2: the destination fold and selection
 algebra, the one extraction that touches behaviourally live ordering
 contracts. Two new suites again (≈116 expected).
 
+**Phase 2 closes (26 Aug 2026, same day).** `CollectionSelection` extracts
+the two selection contracts both destinations ran inline — display-order
+subsequence (what queues and numbers exports) and ⌘A's every-visible-row —
+generic over `Identifiable`, pinned on plain values including the
+select-all-then-read-back identity. Two dispositions with findings, not
+shrugs: **`searchFields(of:)` stays view-side because retyping it onto
+`GameRecord` would change behaviour** — `record.white` is nil for an
+unlinked seat while `PGN.whiteDisplayName` always renders the stored tag,
+so the move would silently drop unlinked players' names from search (found
+by checking the projection before trusting the relocation); and **the
+narrowing pipeline stays the memo's body** per D78′ — its key completeness
+is `DestinationDisplayKeyTests`' to hold, its pieces are individually
+pinned (`SearchMatch`, `LibrarySearchToken`, `LibraryFilter` → `TagRule`),
+and extracting it would retype the Table's `KeyPathComparator<PGN>` sort
+off the model for no pinnable gain. With `GetInfoWindow`'s disposition
+above, every Phase 2 line item is now extracted-and-pinned or
+dispositioned-with-reason. One new suite (≈117 expected).
+
 ---
 
 ## M19 — Discard, and the review layer

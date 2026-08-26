@@ -52,13 +52,12 @@ six months" is the test.
 
 ## Where things stand
 
-Tree: **`b3a9b96`** — 26 August's four committed slices (M16 `7e0b3e6`, M18
-Phase 1 `925648e` + `4cb2dac`, Phase 2's first extractions `b3a9b96`, ⌘U
-green reported on each) — plus the Phase 2b working set: `monotoneSlopes`
-moved to `EvaluationGraphGeometry` with its property suite, the roster
-trio's pins, nothing else dirty. **Two new test files must be staged with
-the commit** (`EvaluationGraphSlopesTests`, `RosterNormalizationTests`),
-the standing hazard. Beneath the day's slices,
+Tree: **`3fe6ae4`** — 26 August's five committed slices (M16 `7e0b3e6`, M18
+Phase 1 `925648e` + `4cb2dac`, Phase 2 `b3a9b96` + `3fe6ae4`, ⌘U green
+reported on each) — plus the Phase 2 closing set: `CollectionSelection`
+with its suite, both destinations rewired onto it, nothing else dirty.
+**Two new files must be staged with the commit** (one app source, one test
+file), the standing hazard. Beneath the day's slices,
 24–25 August: seven comment-trim / review-fix commits ending in the M17
 inspector measurement (`c1e57fb`, with `M17-HITCH-CAPTURE.md` and the
 census's first real numbers), the audit-fix sitting (`eb0906d`), the
@@ -116,8 +115,8 @@ which is the rule above doing its job rather than a new failure mode.)
 
 | | |
 |---|---|
-| Sources on disk | **289** — 169 app, 120 unit-test, 0 UITest |
-| Tracked (`git ls-files '*.swift'`) | **289** once the Phase 2b suites are staged (287 at `b3a9b96`) |
+| Sources on disk | **291** — 170 app, 121 unit-test, 0 UITest |
+| Tracked (`git ls-files '*.swift'`) | **291** once the Phase 2 closing pair is staged (289 at `3fe6ae4`) |
 | Accessibility registry | **148** constants + **23** functions |
 
 *Re-measured 26 Aug 2026, at `4cb2dac` plus the Phase 2 working set.* The

@@ -351,7 +351,7 @@ struct PlayersDestination: View {
     /// ⌘A over all four modes - `LibraryDestination.selectAll(_:)` carries the full argument.
     /// Selects the rows on screen; a profile scrolled out by a query deliberately survives.
     private func selectAll(_ players: [RankedPlayer]) {
-        selectedKeys = Set(players.map(\.id))
+        selectedKeys = CollectionSelection.allIDs(of: players)
     }
 
     /// The sole selection's rating history, threaded for the gallery's trend chart; the other three

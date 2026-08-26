@@ -222,15 +222,16 @@ struct LibraryDestination: View {
         return games.first(where: { $0.id == id })
     }
     
-    /// Selection → models in display order. Load-bearing twice: queue order, and export numbers filenames from it.
+    /// Selection → models in display order. Load-bearing twice: queue order, and export numbers
+    /// filenames from it. The algebra is `CollectionSelection`'s (M18 Phase 2), pinned there.
     private func gamesInDisplayOrder(_ ids: Set<PGN.ID>) -> [PGN] {
-        filteredGames.filter { ids.contains($0.id) }
+        CollectionSelection.inDisplayOrder(ids, of: filteredGames)
     }
 
     /// ⌘A as the system's Edit ▸ Select All, riding the responder chain (search field and tables answer first;
     /// empty list disables the item). Selects the painted list; the icons grid's arrow anchor stays where clicked.
     private func selectAll(_ games: [PGN]) {
-        selectedPGNs = Set(games.map(\.id))
+        selectedPGNs = CollectionSelection.allIDs(of: games)
     }
 
     // MARK: Body
