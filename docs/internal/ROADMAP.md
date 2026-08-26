@@ -98,11 +98,18 @@ same hour, lesson recorded in Build-diagnostic lessons. None of
 AUDIT-VERIFICATION §6's predicted break points (`BoardFrame` /
 `BoardGrainOverlay`, the memo-key types, `coreContent`) actually broke. **⌘U
 green, reported by Bera.** The commit landed the same night as **`4d3761e`**,
-both new files tracked. Still owed before this milestone moves to Landed:
-the suite count off the report (~105 expected — a far-lower number means
-something was skipped), the coverage baseline off the same report (with and
-without `.slow`; note whether Stockfish was present), and the column-layout
-reset check.
+both new files tracked.
+
+**The denominator landed 26 Aug 2026, off the full log:** **1320 tests,
+127 suites, green in 905 s**, on the tree carrying the whole 26 August
+ladder — with `.slow` included (the depth-5 perft ran) and Stockfish
+present (the integration suite ran), which closes two of this gate's three
+riders in one report. Still owed before M15 moves to Landed: **the coverage
+percentage** (Report navigator ▸ Coverage on this same run's result — the
+plan has carried app-target-scoped `codeCoverage` since `1018add`, so the
+number already exists; read it and it lands here with its command) and
+**the column-layout reset check** (columns come back; `checkmateType` and
+`name` re-persist after a quit).
 
 ---
 
@@ -578,7 +585,11 @@ solver — hoisting a sub-expression failed on the very next build, and the
 working remedy is splitting the chain at a seam
 (`BoardDestination.chromeAndDialogs` / `body` is the worked example). What
 M19's gate still owes: the boardless checks, written in the instructions'
-§ Owed, and D85′'s live arm in M21's sitting.
+§ Owed, and D85′'s live arm in M21's sitting. **The counted run arrived the
+same evening: 1320 / 127, green, `.slow` and Stockfish both in** — every
+suite this milestone added is in the log by name, so M19's ⌘U-green-counted
+clause is satisfied; the milestone closes when its boardless checklist is
+run.
 
 ---
 

@@ -27,11 +27,6 @@
   "testTargets" : [
     {
       "parallelizable" : true,
-      "skippedTags" : {
-        "tags" : [
-          ".slow"
-        ]
-      },
       "target" : {
         "containerPath" : "container:DGTStudioPro.xcodeproj",
         "identifier" : "C5D920CF2F732FE9003D0A74",

@@ -149,20 +149,27 @@ unchecked-`Sendable` or the unsafe-`nonisolated` opt-out anywhere in the app
 target. No TODO/FIXME/HACK markers, no commented-out code, no `#if DEBUG`
 regions.
 
-**⌘U:** green as reported by Bera on **24 August 2026**, on the working tree
-carrying the 21 August patch and the whole 23 August sitting — the first run
-since 12 August and the first ever over the patch. Counts not reported that
-run. The last counted run (8 August, against `275f037`) was **1108 tests,
-101 suites**; the tree since adds four suites (the analysis plan, the heal
-gate, scoped collection, the display keys), D80′ deleted one with its type,
-and the 23 August sitting adds `LibraryCardInscriptionTests` — so a run
-reporting around **105 suites** is the expected denominator. Never claimed —
-⌘U runs locally and Bera reports.
+**⌘U:** green and **counted** on **26 August 2026**, full log reported by
+Bera, on the tree carrying the whole 26 August ladder (M16/M18/M19
+complete): **1320 tests, 127 suites, 905 s** — and the log answers two of
+M15's standing riders by itself: **`.slow` was included** (the Perft Deep
+depth-5 suite ran, `kiwipeteDepth5` alone at ~905 s wall) and **Stockfish
+was present** (the integration suite ran its engine cases). The 8 August
+baseline was 1108/101; the day-by-day estimates in these documents ran
+~7 suites low against the real 127, which is the estimate chain's own
+lesson re-taught: the denominator lives in the report, not in arithmetic
+about it. A run reporting far fewer suites than 127 — or finishing in
+seconds — skipped something, which is the failure a bare "green" cannot
+show. Note the default test plan *skips* `.slow`, so an ordinary daily ⌘U
+legitimately reports one suite fewer and runs in well under a minute.
 
-*The count is a dated snapshot and will decay; it is here because the
-denominator is the useful half — a run that reports far fewer suites than this
-is a run that skipped something, which is the failure a bare "green" cannot
-show.*
+*Ambient console noise, recorded so the "⌘U stays silent" check reads it
+correctly: the run opens with `com.apple.linkd.autoShortcut` /
+intents-framework 4097 errors (the sandboxed test host failing to register
+with system services — not the app speaking, not actionable) and one
+`BookmarkData: invalid bookmark length` line, which is
+`accessRefusesAnUnresolvableBookmark` feeding garbage to Foundation on
+purpose. App loggers stayed silent, which is what the check checks.*
 
 **Untracked files a tracked file references will not build.** **None are in
 that state at this recording** — the D73′ pair that stood here was committed
