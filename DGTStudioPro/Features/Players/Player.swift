@@ -5,6 +5,13 @@ import SwiftData
 /// `PGNStore.resolvePlayer(named:)`. Identity = display form lowercased, whitespace collapsed;
 /// diacritics preserved ("Bücher" ≠ "Bucher"); first-seen casing wins. Orphans are collected by
 /// every door that can strand one.
+///
+/// **Filed here by disposition (M18, 26 Aug 2026).** The audits asked whether a `@Model`
+/// co-owned by the store belongs in `PGN/` beside its creation door; considered and it stays:
+/// D9′ is about *ownership* (store-owned links), not folders, the verification showed the
+/// import cycles are not placement-caused, and this is the type the Players destination names
+/// on every surface — moving it would file the feature's namesake where the feature never
+/// looks. A considered stays closes the item.
 @Model
 final class Player: Identifiable {
     

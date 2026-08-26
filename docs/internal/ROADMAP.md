@@ -463,6 +463,24 @@ churn without a reader. *(Both strikes reverse scheduled work by
 disposition; flagged at the checkpoint for veto rather than executed
 silently.)*
 
+**The last two structure items close as dispositions (26 Aug 2026), and
+Phase 3 closes as its decision.** **`Player` stays in `Features/Players/`**
+— D9′ is about ownership, not folders; the verification showed the cycles
+are not placement-caused; and the type is the Players destination's
+namesake, named on its every surface — the disposition is written at the
+declaration per the gate. **`Shared/Collection` stays as the deliberate
+shared surface** — ten files, each consumed by both destinations or serving
+their parity invariant, none reachable from `Chess/`, `DGT/` or `Engine/`,
+so it cannot become a dependency hub for the core; "switchboard" was the
+audit's worry, and the check that would make it one (a core type importing
+through it) has nothing to find. **Phase 3, recorded rather than drifted
+into: the standing coverage gate is ≥ 90% on the logic core**, whole-target
+recorded but not chased; no UI suite reinstated and no third-party snapshot
+testing, both rejections re-affirmed on their existing arguments. What M18's
+gate still owes is measurement, not code: the coverage number with its
+command, and a counted ⌘U — both land at the next checkpoint off Bera's
+Report navigator.
+
 ---
 
 ## M19 — Discard, and the review layer
