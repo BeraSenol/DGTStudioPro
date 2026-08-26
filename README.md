@@ -98,7 +98,7 @@ One window over any game or player.
 ### Settings
 ![Auto-connect and two sleep guards](Screenshots/window-settings-general.png)
 ![Four board styles and the piece-glide duration](Screenshots/window-settings-board.png)
-![A sound set and per-event toggles](Screenshots/window-settings-sounds.png)
+![Per-event sound toggles](Screenshots/window-settings-sounds.png)
 ![Depth, hash, threads, and an optional Syzygy folder](Screenshots/window-settings-engine.png)
 ![The stored game count and Erase Library](Screenshots/window-settings-data.png)
 

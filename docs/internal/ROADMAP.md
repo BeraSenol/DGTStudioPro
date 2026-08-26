@@ -22,7 +22,9 @@ its run sheet → M17, the FocusedValue two-run check → M16, the
 `LiveGameRosterForm` extraction → M16, the Xcode 27 GM re-read → M23. Revision
 narrative is in `git log`, as before.*
 
-**Currently scheduled: M15 → M23, in sequence.** M15 blocks everything —
+**Currently scheduled: M15 → M23 in sequence, M20 excepted** — the clock was
+withdrawn to Horizon on 26 August 2026, by request: it is post-GM work, and
+its number stays vacated rather than reused. M15 blocks everything —
 nothing on this tree is trustworthy until the 21 August patch has its first
 build. The sequence is the argument: verify before measuring, measure before
 fixing, fix before extending, extend before the board sitting that witnesses
@@ -173,6 +175,22 @@ board; most need ten minutes and a written result.
 **Gate.** The instructions' § Known open items holds nothing answerable from a
 keyboard; § Owed holds only board-required lines; every experiment's answer
 written where the question stood. ⌘U green on whatever code moved, counted.
+
+**Status, 26 Aug 2026 — the three small builds are code, awaiting their ⌘U.**
+The stale-check purge ran: the D82′ re-read held for the cue checks and caught
+two more survivors (the five-tab check's set picker, README's Sounds caption)
+— fixed, with the screenshot re-capture owed. `LiveGameRosterForm` and the
+three placeholder helpers moved to their own file, proven a pure relocation by
+the comment-stripped projection (byte-identical code, the M13 method); the
+"stay where they are" note at `EditLiveGameDetailsSheet` reversed by name.
+Import cancellation implemented as decided: an `isCancelled` flag the loop
+reads between files, a live Cancel that disables once the request is in
+flight, "Import Stopped" plus an "N not imported" summary part, ⎋ untouched;
+`ImportProgressTests` pins the partition, the counts and the cancel
+arithmetic; two registry entries (`library.import.cancel`, `.done`). **⌘U
+green on the slice, reported by Bera, 26 August** — counts not reported, so
+M15's denominator ask stands. The experiments and the boardless batch remain
+Bera's; the checklist is in the instructions' § Owed.
 
 ---
 
@@ -369,61 +387,20 @@ classification vocabulary and the discard contract.
 
 ---
 
-## M20 — The clock
+## M20 — *withdrawn to Horizon, 26 August 2026*
 
-**Goal: the DGT 3000 becomes part of the daily driver — live times on the
-board surface, `%clk` in the archive.**
-
-**Research first, and the mode is the risk, not the message.** The board
-pushes clock messages only in UPDATE / UPDATE_NICE mode; this app deliberately
-runs UPDATE_BOARD (`DGTCommand.sendUpdateBoard = 0x44`), which pushes field
-updates alone. So clock support is not "parse one more message" — it is a
-**mode migration for the whole session pipeline**, and the framer, decoder and
-reconstructor were all written and fixture-pinned against the quieter wire.
-The protocol reference on hand covers the shape: `DGT_SEND_CLK` (`0x41`) for a
-one-shot read, the clock message carrying both times BCD-style plus a status
-byte (running side, flag fallen, low battery, clock present), and the two
-filters every serious implementation applies — **reject minutes/seconds ≥ 60**
-(garbage during connection and button presses) and **reject a time that
-increases for the running side** (corrupt packet, not a time addition;
-picochess filters exactly this way). Command bytes verified against `dgtbrd.h`
-before relying on them; picochess is the comparison implementation when a
-message does not decode.
-
-- **Phase A — a protocol note before any code.** With the clock attached,
-  capture real traffic (the session recorder already exists for exactly this);
-  write `docs/DGT-CLOCK.md` recording observed message bytes, cadence in each
-  mode, and — the load-bearing question — **what UPDATE mode does to
-  field-update traffic during live play**. Decide UPDATE vs UPDATE_NICE on
-  that evidence.
-- **Phase B — decode and model.** The clock message joins the decoder as a
-  typed message; a `ClockState` (both times, running side, flags) applies the
-  two filters at the boundary; fixtures come from the captured traffic, not
-  from the header's prose. The mode migration sits behind a
-  clock-present check (or a setting) so **a clockless board keeps today's
-  wire byte-for-byte** — the reconstructor suite is the regression net, and
-  it must pass untouched.
-- **Phase C — surfaces.** Times on the live HUD; `%clk` per ply into the PGN
-  at commit (`[%clk H:MM:SS]` per move — parser round-trip pinned, export
-  byte-shape decided against the DGT reference exports, since D24′ owns that
-  contract); flag-fall displayed, never adjudicated — the physical board is
-  truth and a result is Bera's to enter. **No low-time cue without its own
-  decision**: the voice has no such sound, and inventing one mid-milestone is
-  how vocabularies drift.
-
-**Gate.** ⌘U green (decoder fixtures from real traffic, both filter pins, the
-`%clk` round-trip, the clockless-wire regression); the protocol note in
-`docs/`; one real game recorded with times and exported with `%clk`. The desk
-half of the evidence lands in M21's sitting. **If the mode migration
-destabilizes move settling in any way the reconstructor fixtures cannot see,
-the milestone stops and records why: the move pipeline outranks the clock.**
+The clock left the ladder by request: inbound DGT 3000 support is post-GM
+work. The entry moved whole into Horizon below — research notes, phases and
+the mode-migration risk intact, so none of it is re-derived — and the number
+stays vacated; the namespace never renumbers. M21 loses only its clock
+lines, and the finish line never depended on this milestone.
 
 ---
 
 ## M21 — The board sitting
 
 **Goal: every check that needs hardware runs in one recorded sitting, on the
-finished feature set.** Scheduled after M19 and M20 so nothing added later
+finished feature set.** Scheduled after M19 so nothing added later
 invalidates the sitting — this is the witness pass, and a witness pass over a
 tree that then changes is a profile of a different app.
 
@@ -436,11 +413,11 @@ draft resume). D47′'s animation checks (a slid pawn glides; lift-think-place
 fades honestly; fast O-O animates; the connect dump **fades** — thirty-two
 flying pieces means the anonymous-key rule broke; recovery overlays and ghosts
 never animate). D81′'s live-cadence cue check (~300 ms settle — the delay is
-the feature; a cue for an uncommitted move is the F5 shape). M20's clock
-checks (times live and sane at connect, garbage filtered, `%clk` in the
-exported file, flag behaviour observed and written down). M19's discard
+the feature; a cue for an uncommitted move is the F5 shape). M19's discard
 button exercised live: the confirmation appears, a confirmed discard stands
-the loop down, a cancelled one changes nothing.
+the loop down, a cancelled one changes nothing. *(The clock checks that
+stood here left with M20 on 26 Aug 2026 — they run under the Horizon
+entry's own gate when it does, not in this sitting.)*
 
 **Gate.** Every line run with its result written into the instructions'
 manual-checks section; anything red becomes a scheduled fix **before M22** —
@@ -530,9 +507,41 @@ the ladder closes; the method doesn't.*
   fold.
 - **Print / PDF score sheet** — `MovetextScoreSheet` already renders the
   layout; print is the natural finisher for an over-the-board app.
+- **The clock, inbound** *(withdrawn from the ladder as M20, 26 Aug 2026 —
+  post-GM by request; the research stands here so it is never re-derived)*.
+  The DGT 3000 as part of the daily driver: live times on the board surface,
+  `%clk` in the archive. **The mode is the risk, not the message** — the
+  board pushes clock messages only in UPDATE / UPDATE_NICE, and this app
+  deliberately runs UPDATE_BOARD (`DGTCommand.sendUpdateBoard = 0x44`), so
+  clock support is a mode migration for the whole session pipeline; the
+  framer, decoder and reconstructor are all fixture-pinned against the
+  quieter wire. On hand: `DGT_SEND_CLK` (`0x41`) for a one-shot read; the
+  clock message carries both times BCD-style plus a status byte (running
+  side, flag fallen, low battery, clock present); the two filters every
+  serious implementation applies — **reject minutes/seconds ≥ 60** (garbage
+  during connection and button presses) and **reject a time that increases
+  for the running side** (corrupt packet; picochess filters exactly this
+  way). Command bytes verified against `dgtbrd.h` before relying on them;
+  picochess is the comparison implementation when a message does not decode.
+  Three phases when it runs: **(A)** a protocol note before any code —
+  capture real traffic with the session recorder, write `docs/DGT-CLOCK.md`,
+  and answer the load-bearing question of what UPDATE mode does to
+  field-update traffic during live play; **(B)** decode and model — a typed
+  clock message, a `ClockState` applying both filters at the boundary,
+  fixtures from captured traffic, the migration behind a clock-present check
+  so **a clockless board keeps today's wire byte-for-byte** with the
+  reconstructor suite as the untouched regression net; **(C)** surfaces —
+  HUD times, `[%clk H:MM:SS]` per ply at commit under D24′'s export
+  contract, flag-fall displayed never adjudicated, and no low-time cue
+  without its own decision. Gate when it runs: ⌘U green on the fixtures and
+  the clockless-wire regression, the protocol note in `docs/`, one real game
+  recorded with times and exported with `%clk`, plus its own board sitting
+  for the desk half. **If the mode migration destabilizes move settling in
+  any way the reconstructor fixtures cannot see, the work stops and records
+  why: the move pipeline outranks the clock.**
 - **Outbound clock control** (set time, display text, beep) — a separate,
-  firmware-version-sensitive command family; only after M20's inbound support
-  has survived a month of daily use.
+  firmware-version-sensitive command family; only after the inbound entry
+  above has survived a month of daily use.
 - **The custom Xcode agent skill** encoding the working agreements — after GM.
 
 ---

@@ -8,9 +8,10 @@ import SwiftUI
 /// **Its own file since 21 Aug 2026.** It was declared at the bottom of `NewLiveGameSheet.swift`
 /// while its sibling `EditGameInfoSheet` - the same round trip against the archive rather than the
 /// live game - had a file of its own, so one of a matched pair was findable by filename and the
-/// other was not. The three placeholder helpers it uses (`formValue`, `tagValue`, `normalized`) and
-/// `LiveGameRosterForm` stay where they are: they are shared by three sheets, and the file that
-/// declares them is the one that names the form.
+/// other was not. The shared form and its placeholder helpers (`formValue`, `tagValue`,
+/// `normalized`) followed on 26 Aug 2026 (M16) into `LiveGameRosterForm.swift` - this note said
+/// "stay where they are" for five days; a shared type carrying the D61′ refusal outgrew its host
+/// the same way this sheet did.
 struct EditLiveGameDetailsSheet: View {
     
     // MARK: Stored Properties

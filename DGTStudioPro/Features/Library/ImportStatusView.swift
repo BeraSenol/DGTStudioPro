@@ -37,13 +37,23 @@ struct ImportProgress {
     var total: Int
     var results: [ImportResult] = []
     var isFinished: Bool = false
-    
+
+    /// Set by the sheet's Cancel; the loop reads it **between files** (M16, 26 Aug 2026 - the
+    /// honest minimum the button's label always promised). The in-flight file completes: on one
+    /// main actor the tap can only land in the loop's yield window, so "between files" is the
+    /// only place a cancel can be seen, and a file is never half-imported.
+    var isCancelled: Bool = false
+
     var completed: Int { results.count }
-    
+
+    /// The cancel report's third number: files the batch never reached. Zero on a drained
+    /// batch by arithmetic, so the summary can show it unconditionally when finished.
+    var notImportedCount: Int { total - completed }
+
     var importedCount: Int  { count(of: .imported) }
     var duplicateCount: Int { count(of: .duplicate) }
     var failedCount: Int    { count(of: .failed) }
-    
+
     /// `count(where:)`, not `filter { … }.count` - the old form built three
     /// throwaway arrays to ask three questions about their sizes.
     private func count(of category: ImportResult.Outcome.Category) -> Int {
@@ -54,9 +64,13 @@ struct ImportProgress {
 // MARK: Sheet
 
 struct ImportStatusView: View {
-    
+
     let progress: ImportProgress
     let onDismiss: () -> Void
+
+    /// Requests a stop between files; the loop finishes the batch as cancelled and the
+    /// summary reports what landed. Distinct from `onDismiss`, which tears the sheet down.
+    let onCancel: () -> Void
     
     var body: some View {
         VStack(spacing: 0) {
@@ -102,8 +116,12 @@ struct ImportStatusView: View {
     
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(progress.isFinished ? "Import Complete" : "Importing…")
-                .font(.headline)
+            Text(
+                progress.isFinished
+                    ? (progress.isCancelled ? "Import Stopped" : "Import Complete")
+                    : "Importing…"
+            )
+            .font(.headline)
             
             ProgressView(
                 value: Double(progress.completed),
@@ -126,13 +144,23 @@ struct ImportStatusView: View {
                 summaryText
             }
             Spacer()
-            Button(progress.isFinished ? "Done" : "Cancel", action: onDismiss)
-                .keyboardShortcut(.defaultAction)
-                .disabled(!progress.isFinished)
+            if progress.isFinished {
+                Button("Done", action: onDismiss)
+                    .keyboardShortcut(.defaultAction)
+                    .accessibilityIdentifier(AccessibilityID.libraryImportDone)
+            } else {
+                // Click-only, deliberately: ⎋ stays inert mid-run - "⎋ during import keeps the
+                // sheet up" is a standing manual check, and wiring `.cancelAction` here would
+                // quietly change a checked behaviour. Disabled once a cancel is in flight so
+                // the request cannot be re-raised while the loop finishes the current file.
+                Button("Cancel", action: onCancel)
+                    .disabled(progress.isCancelled)
+                    .accessibilityIdentifier(AccessibilityID.libraryImportCancel)
+            }
         }
         .padding()
     }
-    
+
     @ViewBuilder
     private var summaryText: some View {
         let parts: [String] = {
@@ -140,6 +168,9 @@ struct ImportStatusView: View {
             if progress.importedCount > 0  { p.append("\(progress.importedCount) imported") }
             if progress.duplicateCount > 0 { p.append("\(progress.duplicateCount) duplicate") }
             if progress.failedCount > 0    { p.append("\(progress.failedCount) failed") }
+            // The cancel report: what the batch never reached. Unconditional when positive -
+            // a drained batch shows it never, by `notImportedCount`'s arithmetic.
+            if progress.notImportedCount > 0 { p.append("\(progress.notImportedCount) not imported") }
             return p
         }()
         Text(parts.isEmpty ? "Nothing imported" : parts.joined(separator: ", "))
@@ -229,7 +260,8 @@ private struct ImportResultRow: View {
             ],
             isFinished: false
         ),
-        onDismiss: {}
+        onDismiss: {},
+        onCancel: {}
     )
 }
 
@@ -244,7 +276,27 @@ private struct ImportResultRow: View {
             ],
             isFinished: true
         ),
-        onDismiss: {}
+        onDismiss: {},
+        onCancel: {}
+    )
+}
+
+/// The cancelled arm (M16): stopped after two of twelve, so the summary must carry
+/// "10 not imported" and the header must read Stopped, not Complete - the branch no
+/// drained fixture reaches, which is why it has a preview.
+#Preview("Cancelled Mid-Batch") {
+    ImportStatusView(
+        progress: ImportProgress(
+            total: 12,
+            results: [
+                ImportResult(fileName: "1. Bera vs Reinaud.pgn", outcome: .imported(name: "Bera vs Reinaud")),
+                ImportResult(fileName: "2. Bera vs Lorenzo.pgn", outcome: .imported(name: "Bera vs Lorenzo"))
+            ],
+            isFinished: true,
+            isCancelled: true
+        ),
+        onDismiss: {},
+        onCancel: {}
     )
 }
 
@@ -272,6 +324,7 @@ private struct ImportResultRow: View {
             ],
             isFinished: true
         ),
-        onDismiss: {}
+        onDismiss: {},
+        onCancel: {}
     )
 }

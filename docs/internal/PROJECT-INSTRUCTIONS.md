@@ -52,21 +52,22 @@ six months" is the test.
 
 ## Where things stand
 
-Tree: **`4d3761e`** — the 23–24 August sitting's source, committed 24 August
-with its two new files tracked — then the documents commit carrying this file
-and the roadmap (`e9ca488`), and atop both the 24 August (late) audit-fix
-sitting, described after the first-build paragraph below, committed with this
-file's update riding it; nothing else dirty. The 23–24 August sitting:
-the context-menu standardization (both cards shed their menus, every host
-attaches the shared menu with subjects resolved through one rule), the icons
-grid's `GeometryReader` replaced by a quantized column-count observation (the
-inspector-toggle lag fix), and the Library card's inscription becoming a View
-Options choice (`LibraryCardInscription`: index / result / date / round, two
-new suites); the ROADMAP's Landed entry carries all three accounts. The
-accessibility registry moves 145 → **146** with the picker's entry.
-Committed beneath it, all on 21 August: the coverage key
-(`1018add`), the perf fixes (`ef082dd`), the label pass (`2c1030c`), the
-convention pass (`9bffce8`), and the audit verification (`28b45eb`).
+Tree: **`c1e57fb`** plus this sitting's working set — the 26 August M16
+slice (the stale-check purge, the `LiveGameRosterForm` extraction, import
+cancellation) and the M20 withdrawal to Horizon, all described in the
+roadmap's M16 status block and M20 stub. **Two new files must be staged with
+the commit** (`LiveGameRosterForm.swift`, `ImportProgressTests.swift`) —
+both are referenced from tracked files, the standing hazard. Beneath HEAD,
+24–25 August: seven comment-trim / review-fix commits ending in the M17
+inspector measurement (`c1e57fb`, with `M17-HITCH-CAPTURE.md` and the
+census's first real numbers), the audit-fix sitting (`eb0906d`), the
+roadmap-finalizing documents commit (`e9ca488`), and the 23–24 August source
+sitting (`4d3761e` — context-menu standardization, the icons-grid
+quantization, the card inscription picker; the ROADMAP's Landed entry
+carries the accounts). Committed beneath those, all on 21 August: the
+coverage key (`1018add`), the perf fixes (`ef082dd`), the label pass
+(`2c1030c`), the convention pass (`9bffce8`), and the audit verification
+(`28b45eb`).
 
 **The first build happened on 24 August, and the headline risk is retired.**
 The four 21 August commits (66 files edited with no toolchain, "a reviewed
@@ -107,21 +108,25 @@ reading, because it reads perfectly. It was caught by a scan that compared every
 number in this file against the tree. The remedy the file prescribes — write it
 *before* the commit, in a form true when read — is used above, and the standing
 answer is now the audit, not the intention: **run the count block below whenever
-this section is touched.**
+this section is touched.** (A sixth instance followed anyway, mildest so far:
+seven comment-pass commits landed 24–25 Aug atop the paragraph's described
+tree while it stood; caught the next day by this section being touched again,
+which is the rule above doing its job rather than a new failure mode.)
 
 | | |
 |---|---|
-| Sources on disk | **275** — 166 app, 109 unit-test, 0 UITest |
-| Tracked (`git ls-files '*.swift'`) | **275** |
-| Accessibility registry | **146** constants + **23** functions |
+| Sources on disk | **277** — 167 app, 110 unit-test, 0 UITest |
+| Tracked (`git ls-files '*.swift'`) | **277** once this sitting's two files are staged (275 before) |
+| Accessibility registry | **148** constants + **23** functions |
 
-*Re-measured 24 Aug 2026, at `4d3761e`.* The sitting added the inscription
-pair (both tracked with the commit — the untracked-but-referenced hazard was
-flagged here for a day and closed by staging, not by luck) and the picker's
-registry entry. The registry line had corrected 142 → 145 the day before —
-the 18 August figure was wrong when written (AUDIT-VERIFICATION §0 counted
-145 literal values at `c8eea2d`, the same snapshot), which is this table's
-own lesson re-taught: the number lives in the grep, not here.
+*Re-measured 26 Aug 2026, at `c1e57fb` plus the M16 working set.* The slice
+adds the roster-form file and the import-progress suite (stage both — the
+tracked line above is written for the commit, the 24 Aug precedent) and two
+registry entries for the import sheet's footer pair. The registry line had
+corrected 142 → 145 → 146 across the prior week — the 18 August figure was
+wrong when written (AUDIT-VERIFICATION §0 counted 145 literal values at
+`c8eea2d`, the same snapshot), which is this table's own lesson re-taught:
+the number lives in the grep, not here.
 
 All three counts are dated snapshots. The registry count lives in its grep (D42′)
 and the source counts in `find` / `git ls-files`, because a number in prose decays
@@ -754,14 +759,18 @@ module selectors; `ProgressManager` / `Subprogress`; `ContentBuilder`.
 ## Assumed-never (do not design for these)
 
 Chess960; two same-colour kings; mid-game board flips; occupied-only boards;
-Bluetooth boards; live engine eval during play; DGT clock support / move
-timestamps; takebacks of committed legal moves.
+Bluetooth boards; live engine eval during play; takebacks of committed legal
+moves.
 
 Player rename/merge/delete left this list — built (D37′–D40′), with merge
 subsequently un-built by D52′ as *surface*, not as concept. Automatic orphan
 collection also left it, in two steps (D50′ then D60′), and took the whole idea
-with it: "nothing collects unasked" is no longer true of this app. A
-document-based architecture stays not-applicable rather than assumed-never.
+with it: "nothing collects unasked" is no longer true of this app. **DGT clock
+support / move timestamps left it 26 Aug 2026** — the 23 August rewrite had
+already scheduled it as M20 without correcting this list (the stale species,
+caught three days later), and the same week it was withdrawn to the roadmap's
+Horizon as post-GM work: planned-later now, never never. A document-based
+architecture stays not-applicable rather than assumed-never.
 
 ## Waiver register
 
@@ -951,6 +960,15 @@ invalidates the witness.*
   compare a card against memory of the old rendering — it must be identical,
   because the default is the pre-picker pair verbatim.
 
+- **Import cancellation (26 Aug 2026, M16).** Import a dozen files and press
+  Cancel mid-run: the button disables at once (the request is in flight), the
+  current file completes, the loop stops between files, the header reads
+  "Import Stopped", and the summary carries "N not imported" beside what
+  landed. ⎋ mid-run must still do nothing — the standing check holds; Cancel
+  is the button alone, deliberately. A full drain must show no "not imported"
+  part at all (zero is unrendered by arithmetic). Relaunch: everything the
+  batch reached before the cancel is in the Library; nothing after it is.
+
 - **D81′'s cues, and the first item is the one that already failed once.** Open
   any game and press → once. **The app must not quit.** As first shipped it did:
   CoreAudio killed the sandboxed process on the first playback for want of a
@@ -983,8 +1001,10 @@ invalidates the witness.*
 - **Settings has five tabs** (12 Aug 2026) — General, Board, Sounds, Engine,
   Data. Open each and confirm the tab bar is not crowded at the 500 pt frame, and
   that every control is present exactly once: connection and the two sleep gates
-  under General; the set picker, four cue toggles and the illegal-move alert
-  under Sounds; depth/hash/threads and Syzygy under Engine. The split moved no
+  under General; the four cue toggles and the illegal-move alert under Sounds
+  (the set picker this line named until 26 Aug 2026 left with the packs on
+  17 Aug — the one-voice reversal reached the Sounds tab, not the tab split);
+  depth/hash/threads and Syzygy under Engine. The split moved no
   control, default, key or identifier — **anything that behaves differently after
   it is a defect, not a design choice.**
 - (**The two D82′ set-picker checks stood here until 23 Aug 2026** — audition
@@ -993,7 +1013,12 @@ invalidates the witness.*
   cues over seven samples), and the checks outlived the picker the same way
   the make-cues generator entry below outlived its generator. Struck rather
   than run. The surviving D81′ cue checks above still apply to the one voice;
-  M16 re-reads them against it as part of the stale-check purge.)
+  M16's re-read ran 26 Aug 2026 and they hold as written — the precedence,
+  step/jump, retreat and per-toggle checks describe cues, not sets. The
+  re-read caught two more survivors instead: the five-tab check still seated
+  a set picker under Sounds, and README's Sounds caption still said "sound
+  set" over a screenshot of the deleted picker — text fixed, the re-capture
+  owed with the boardless batch.)
 - **Live play, with the board.** Play a move over the DGT and confirm the cue
   fires when the app *registers* it — roughly 300 ms after the piece lands, on
   the settle, not on the touch. That delay is the feature rather than lag: it is

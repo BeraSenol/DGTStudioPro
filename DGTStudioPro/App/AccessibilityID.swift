@@ -251,6 +251,10 @@ enum AccessibilityID {
     static let libraryGamesTable      = "library.gamesTable"
     
     static let libraryImportButton   = "library.importButton"
+    /// The import sheet's footer pair (M16): Cancel renders mid-run, Done when finished -
+    /// two buttons, so the enabled state cannot shadow the label.
+    static let libraryImportCancel   = "library.import.cancel"
+    static let libraryImportDone     = "library.import.done"
     static let libraryExport         = "library.exportButton"
     /// Absent unless some game lacks an ordinal.
     static let libraryBackfillButton = "library.backfillButton"

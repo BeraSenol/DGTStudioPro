@@ -436,10 +436,13 @@ struct LibraryDestination: View {
         }
         .sheet(isPresented: Binding(present: $importProgress)) {
             if let importProgress {
-                ImportStatusView(progress: importProgress) {
-                    self.importProgress = nil
-                }
-                // ⎋ bypasses the disabled footer button; dismissing mid-run would let the rest of the batch import invisibly.
+                ImportStatusView(
+                    progress: importProgress,
+                    onDismiss: { self.importProgress = nil },
+                    // The flag, not a Task cancel: the loop reads it between files (M16).
+                    onCancel: { self.importProgress?.isCancelled = true }
+                )
+                // ⎋ bypasses the footer buttons; dismissing mid-run would let the rest of the batch import invisibly.
                 .interactiveDismissDisabled(!importProgress.isFinished)
             }
         }
@@ -727,6 +730,11 @@ struct LibraryDestination: View {
         importProgress = ImportProgress(total: urls.count)
         
         for url in urls {
+            // Between files, and only here (M16): the sheet's Cancel sets the flag, the yield
+            // below is the window a tap can land in, and the current file always completes -
+            // stopped batches report what landed, never a half-imported file.
+            if importProgress?.isCancelled == true { break }
+
             let outcome: ImportResult.Outcome
             do {
                 let pgn = try store.importPGN(from: url)
@@ -738,17 +746,22 @@ struct LibraryDestination: View {
                 Self.logger?.error("Import failed for \(url.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
                 outcome = .failed(.fileReadFailed(url, underlying: error))
             }
-            
+
             importProgress?.results.append(
                 ImportResult(fileName: url.lastPathComponent, outcome: outcome)
             )
             // Let SwiftUI render the updated progress before the next file.
             await Task.yield()
         }
-        
+
         importProgress?.isFinished = true
         let imported = importProgress?.importedCount ?? 0
-        Self.logger?.info("Import batch complete: \(imported)/\(urls.count) imported")
+        if importProgress?.isCancelled == true {
+            let reached = importProgress?.completed ?? 0
+            Self.logger?.info("Import batch stopped by cancel: \(imported) imported, \(urls.count - reached) not reached")
+        } else {
+            Self.logger?.info("Import batch complete: \(imported)/\(urls.count) imported")
+        }
     }
     
     /// Delete for an id set: one game reuses the single-game flow (dirty confirmation); more go to batch confirmation.
