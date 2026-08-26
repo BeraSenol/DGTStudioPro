@@ -384,6 +384,23 @@ orientation corners, the 128-cell involution, layout conservation per style,
 and the fifteenth. Two new suites (≈114 expected); rendering unchanged by
 construction — the checkpoint's eyes-on-board confirms.
 
+**Phase 2, second slice (26 Aug 2026, same day).** `monotoneSlopes` moved to
+`EvaluationGraphGeometry` and the no-overshoot claim stopped resting on the
+17 Aug visual comparison: `EvaluationGraphSlopesTests` evaluates the cubic
+Hermite the view's Bézier *is* (the conversion is exact, which is what makes
+a test-side evaluator an oracle rather than a copy) against seeded random
+sequences at seven lengths — the curve never leaves any ply interval — plus
+the two Fritsch-Carlson clauses pinned singly and the NaN guard. The M16
+roster trio (`formValue` / `tagValue` / `normalized`) gained the pins it
+never had, the round trip and the touches-exactly-four-fields contract
+included. **`GetInfoWindow.title` / `resolve` close as a disposition, not an
+extraction**: `resolve` and `seedGameDrafts` are store transport under the
+tombstone invariant's existing pins, and `title` is a four-line model read
+whose one derivation (`PlayerName.displayForm`) is pinned at its owner — a
+considered stays. Remaining in Phase 2: the destination fold and selection
+algebra, the one extraction that touches behaviourally live ordering
+contracts. Two new suites again (≈116 expected).
+
 ---
 
 ## M19 — Discard, and the review layer

@@ -169,40 +169,10 @@ struct EvaluationGraphView: View {
         return area
     }
     
-    /// Fritsch-Carlson tangents: the whole anti-overshoot rule, in two clauses. **A ply that
-    /// reverses direction gets a flat tangent** (the neighbouring slopes disagree in sign), so
-    /// the curve arrives level at the turn instead of sailing through it - that clause alone
-    /// removes the invented peaks. Otherwise the average slope is clamped to three times the
-    /// gentler neighbour, which keeps a steep segment from bending its calm neighbour out of
-    /// range. Plies are evenly spaced so `dx` is never zero in practice; guarded anyway,
-    /// because a zero here would be a NaN in a `Path`.
+    /// Tangents via `EvaluationGraphGeometry.monotoneSlopes` (M18 Phase 2) - the
+    /// Fritsch-Carlson argument lives at the static with its property suite.
     private func monotoneSlopes(through points: [CGPoint]) -> [CGFloat] {
-        let count = points.count
-        guard count >= 2 else { return Array(repeating: 0, count: count) }
-        
-        let secants: [CGFloat] = (0 ..< count - 1).map { i in
-            let dx = points[i + 1].x - points[i].x
-            return dx == 0 ? 0 : (points[i + 1].y - points[i].y) / dx
-        }
-        
-        var slopes = [CGFloat](repeating: 0, count: count)
-        slopes[0] = secants[0]
-        slopes[count - 1] = secants[count - 2]
-        
-        for i in 1 ..< count - 1 {
-            let before = secants[i - 1]
-            let after = secants[i]
-            
-            if before * after <= 0 {
-                slopes[i] = 0
-            } else {
-                let average = (before + after) / 2
-                let limit = 3 * min(abs(before), abs(after))
-                slopes[i] = min(abs(average), limit) * (average < 0 ? -1 : 1)
-            }
-        }
-        
-        return slopes
+        EvaluationGraphGeometry.monotoneSlopes(through: points)
     }
 }
 
