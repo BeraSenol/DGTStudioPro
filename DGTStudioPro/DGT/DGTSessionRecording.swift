@@ -54,10 +54,12 @@ struct DGTSessionRecording: Codable, Equatable {
 
 extension DGTSessionRecording {
     
-    /// The snapshots the live session would have *settled* on - reproduces the 300 ms debounce from
-    /// recorded timestamps, deterministically: an entry settles when nothing follows it inside the
-    /// window. **Test-only**, like everything else in this extension.
-    func settledBoards(quiescence: Duration = .milliseconds(300)) -> [Position] {
+    /// The snapshots the live session would have *settled* on - reproduces the production
+    /// debounce from recorded timestamps, deterministically: an entry settles when nothing
+    /// follows it inside the window. The default IS the session's constant (26 Aug DRY sweep -
+    /// one spelling, so a replay can never settle on a different clock than live play did).
+    /// **Test-only**, like everything else in this extension.
+    func settledBoards(quiescence: Duration = DGTLiveSession.defaultQuiescence) -> [Position] {
         let gap = quiescence.inMilliseconds
         var settled: [Position] = []
         for (index, entry) in entries.enumerated() {
@@ -80,7 +82,7 @@ extension DGTSessionRecording {
     /// desync?").
     func reconstructions(
         from initialState: GameState,
-        quiescence: Duration = .milliseconds(300)
+        quiescence: Duration = DGTLiveSession.defaultQuiescence
     ) -> [Step] {
         var state = initialState
         var steps: [Step] = []

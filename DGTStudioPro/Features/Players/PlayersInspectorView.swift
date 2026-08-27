@@ -109,8 +109,8 @@ private struct RecentGamesSection: View {
 
     let playerKey: String
     let games: [PGN]
-
-    @Environment(\.openWindow) private var openWindow
+    // (`@Environment(\.openWindow)` left with the row extraction, 26 Aug - the shared
+    // `PlayerRecentGameRow` owns the door now, and nothing else here opens a window.)
 
     /// The reader's cap (17 Aug 2026, by request): last 3 by default - a sidebar section, not
     /// an archive - with 5 and 10 a menu away. `StorageKeys.playersRecentGames` is shared with
@@ -143,28 +143,10 @@ private struct RecentGamesSection: View {
         }
     }
 
-    /// Row tap opens the game - same `openWindow(value:)` route as the Library inspector.
+    /// `PlayerRecentGameRow` since the 26 Aug DRY sweep - the columns detail carried a
+    /// byte-identical private twin; one spelling now, at the shared view.
     private func row(for game: PGN) -> some View {
-        Button {
-            openWindow(value: game.persistentModelID)
-        } label: {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(game.name)
-                        .lineLimit(1)
-                    Text(game.displayDate)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Text(game.result.rawValue)
-                    .font(.callout.weight(.semibold).monospaced())
-                    .foregroundStyle(.secondary)
-                    .tracking(1)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
+        PlayerRecentGameRow(game: game)
     }
 }
 

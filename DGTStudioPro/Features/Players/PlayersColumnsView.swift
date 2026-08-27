@@ -215,27 +215,10 @@ struct PlayersColumnsView: View {
         .frame(maxWidth: 420, alignment: .leading)
     }
 
+    /// `PlayerRecentGameRow` since the 26 Aug DRY sweep - the inspector carried a byte-identical
+    /// private twin of this function; one spelling now, at the shared view.
     private func gameRow(for game: PGN) -> some View {
-        Button {
-            openWindow(value: game.persistentModelID)
-        } label: {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(game.name)
-                        .lineLimit(1)
-                    Text(game.displayDate)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Text(game.result.rawValue)
-                    .font(.callout.weight(.semibold).monospaced())
-                    .foregroundStyle(.secondary)
-                    .tracking(1)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
+        PlayerRecentGameRow(game: game)
     }
 }
 

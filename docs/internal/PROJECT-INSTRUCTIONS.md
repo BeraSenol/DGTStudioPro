@@ -117,8 +117,8 @@ which is the rule above doing its job rather than a new failure mode.)
 
 | | |
 |---|---|
-| Sources on disk | **298** — 174 app, 124 unit-test, 0 UITest |
-| Tracked (`git ls-files '*.swift'`) | **298** at `65731cf`; the surfaces slice adds none |
+| Sources on disk | **299** — 175 app, 124 unit-test, 0 UITest |
+| Tracked (`git ls-files '*.swift'`) | **299** once the DRY sweep's row file is staged (`PlayerRecentGameRow.swift`) |
 | Accessibility registry | **150** constants + **23** functions |
 
 *Re-measured 26 Aug 2026, at `4cb2dac` plus the Phase 2 working set.* The

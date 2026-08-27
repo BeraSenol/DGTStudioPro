@@ -756,6 +756,46 @@ the ladder closes; the method doesn't.*
 ---
 ## Landed
 
+### The 26 August DRY sweep — clone detection and the one-spelling contracts *(recorded 26 August 2026, the same evening)*
+
+By request, third sweep of the evening. Mechanical first: jscpd over the app
+target reported **0.89% duplicated tokens** across 29,149 lines — fifteen
+clones, adjudicated one by one against the recorded
+not-every-duplicate-should-be-collapsed position.
+
+**One real twin, collapsed:** the selected player's recent-game row lived as
+a **byte-identical 22-line private function in two files**
+(`PlayersColumnsView.gameRow` / `PlayersInspectorView.row`) with nothing
+tying them — the twin-read-site shape in row clothes. Now
+`PlayerRecentGameRow`, one view, both hosts forwarding; the inspector's
+`openWindow` environment left with it (the extraction's own residue, caught
+in the same pass). **One literal contract, one-sourced:** the 300 ms settle
+window was spelled three times — the session's default plus both of the
+recording's replay defaults — so a drift would have silently divorced
+fixture replays from live play; `DGTLiveSession.defaultQuiescence`
+(`nonisolated`, so the pure recording type reads it) is the one spelling
+now.
+
+**Kept, each on its recorded argument:** the shared-menu attachment glue in
+list and columns (the 23 Aug standardization's deliberate per-host shape —
+display-order resolution lives at the host); the gallery/columns identity
+row ("kept in both hosts", stated at the site); every preview-region clone
+(state-variant previews are self-contained by design). **And one near-miss
+worth the record:** the sweep initially clustered four `opacity(0.25)`
+literals as "the ghost's 25% spelled four times" — reading the sites showed
+one ghost (already one spelling, through `SquareView`'s single arm) beside
+two wood-grain layers and an unrelated Settings tint sharing the value by
+coincidence. Different meanings sharing a number is exactly what the
+protected-duplicates rule exists to keep apart; collapsing them would have
+been the bug.
+
+**The discipline greps, all empty:** zero raw `accessibilityIdentifier`
+strings outside the registry, zero raw `@AppStorage` or `UserDefaults` keys
+outside `StorageKeys`, zero raw window-id strings (every scene id a
+constant at both ends), and every recorded one-predicate contract
+(`seatsNameOnePlayer`, `isOrphaned`, `displayForm`, `batchPosition`,
+`retag`) resolving to exactly one definition.
+
 ### The 26 August performance sweep — the render paths of both destinations × four modes *(recorded 26 August 2026, the same evening)*
 
 By request, immediately after the comment sweep: a structural pass over

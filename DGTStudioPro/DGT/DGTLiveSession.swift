@@ -174,9 +174,15 @@ final class DGTLiveSession {
     /// (F7: fixed ceilings flake under a loaded ⌘U). Only `boardChanged` assigns it.
     @ObservationIgnored private(set) var quiescenceTask: Task<Void, Never>?
     
-    /// Stillness window before reconstruction; 300 ms in production. Internal-settable for tests
-    /// (F7); production code must never write it.
-    @ObservationIgnored var quiescence: Duration = .milliseconds(300)
+    /// The production stillness window, one spelling (26 Aug DRY sweep): the recording's
+    /// replay defaults read this same constant, so a fixture replay can never settle on a
+    /// different clock than live play did - three literals of one contract collapsed to one
+    /// source. `nonisolated` so the pure recording type can reference it.
+    nonisolated static let defaultQuiescence: Duration = .milliseconds(300)
+
+    /// Stillness window before reconstruction; `defaultQuiescence` in production.
+    /// Internal-settable for tests (F7); production code must never write it.
+    @ObservationIgnored var quiescence: Duration = DGTLiveSession.defaultQuiescence
     /// One game-end cue per game. Not `archivedPGN`: that is nil again after a failed archive, so
     /// Retry would re-announce an ending the player already heard. Set by the announcement, cleared
     /// by the lifecycle doors, and pre-set when a resumed draft ended in a previous run.
